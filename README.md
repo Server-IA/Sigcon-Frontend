@@ -31,8 +31,8 @@ Proyecto frontend desarrollado con **React + Vite**, estructurado bajo **arquite
 ### 1️⃣ Clonar el repositorio
 
 ```bash
-- git clone git remote add origin https://github.com/WilliamsBD8/sigcon-frontend.git
-- cd frontend
+- git clone https://github.com/WilliamsBD8/sigcon-frontend.git
+- cd sigcon-frontend
 
 ### 2️⃣ Levantar el proyecto (modo desarrollo)
 docker compose up --build frontend-dev
