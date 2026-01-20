@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 
-import Menu from "./menu";
+import Menu from "../organism/menu";
 
 const Main = () =>{
     return (
