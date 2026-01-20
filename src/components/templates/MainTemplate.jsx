@@ -1,13 +1,13 @@
 import { Outlet } from "react-router-dom";
 
-import Menu from "../organism/menu";
+import MenuNav from "../organism/MenuNav";
 
-const Main = () =>{
+const MainTemplate = () =>{
     return (
         <>
             <div className="layout-wrapper layout-content-navbar">
                 <div className="layout-container">
-                    <Menu />
+                    <MenuNav />
                     <div className="layout-page">
                         <div className="content-wrapper">
                             <div className="container-xxl flex-grow-1 container-p-y">
@@ -23,4 +23,4 @@ const Main = () =>{
     );
 };
 
-export default Main;
+export default MainTemplate;
