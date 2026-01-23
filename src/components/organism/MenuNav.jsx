@@ -1,46 +1,75 @@
 import { Link, useLocation } from "react-router-dom";
 import { Fragment } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import MenuItem from "../molecules/MenuItem";
 import MenuChildrenItem from "../molecules/MenuChildrenItem";
 
 import { isParentActive } from "../../utils/menu";
+import { fetchHelper } from "../../utils/fetch";
+import { base_url } from "../../utils/functions";
 
-const modules = [
-    {
-        id:1,
-        name: "Dashboard",
-        options: [
-            {
-                id:1,
-                option: "Home",
-                icon: "ri-home-smile-2-line",
-                path: "/dashboard",
-                childrens: []
-            },
-            {
-                id:2,
-                option: "Parametros",
-                icon: "ri-settings-2-line",
-                path: "/parametros",
-                childrens: [
-                    {
-                        id:3,
-                        option: "Usuarios",
-                        icon: "ri-user-line",
-                        path: "/users",
-                    }
-                ]
-            }
-        ]
-    }
-]
+
+// const modules = [
+//     {
+//         id:1,
+//         name: "Dashboard",
+//         options: [
+//             {
+//                 id:1,
+//                 option: "Home",
+//                 icon: "ri-home-smile-2-line",
+//                 path: "/dashboard",
+//                 childrens: []
+//             },
+//             {
+//                 id:2,
+//                 option: "Parametros",
+//                 icon: "ri-settings-2-line",
+//                 path: "/parametros",
+//                 childrens: [
+//                     {
+//                         id:3,
+//                         option: "Usuarios",
+//                         icon: "ri-user-line",
+//                         path: "/users",
+//                     }
+//                 ]
+//             }
+//         ]
+//     }
+// ]
+
 const MenuNav = () =>{
+    const [modules, setModules] = useState([]);
 
     const location = useLocation();
     const menuRef = useRef(null);
     const menuInstance = useRef(null);
+
+    const getModules = async () => {
+        try {
+            const url = base_url(["api", "modules"]);
+            const headers = {
+                // Authorization: `Bearer ${import.meta.env.VITE_TOKEN}`,
+            };
+
+            console.log(url, headers);
+    
+            const response = await fetchHelper.post(url, {}, headers, 0);
+    
+            if (!response?.error) {
+                setModules(response.content);
+            }
+    
+        } catch (error) {
+            // 🔴 error viene del reject de request()
+            console.error('Error obteniendo módulos:', error);
+    
+            // opcional: estado de error
+            setModules([]);
+        }
+    };
 
     useEffect(() => {
         if (menuRef.current && window.Menu) {
@@ -49,7 +78,7 @@ const MenuNav = () =>{
                 accordion: true
             });
         }
-
+        getModules();
         return () => {
             menuInstance.current?.destroy();
         };
