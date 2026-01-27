@@ -4,9 +4,9 @@ export const isActivePath = (menuPath, currentPath) => {
 };
 
 export const isParentActive = (option, pathname) => {
-    if (isActivePath(option.path, pathname)) return true;
+    if (isActivePath(option.url, pathname)) return true;
   
-    return option.children?.some(child =>
+    return option.childrens?.some(child =>
       isActivePath(child.path, pathname)
     );
 };  
