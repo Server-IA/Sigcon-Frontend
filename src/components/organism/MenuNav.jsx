@@ -49,17 +49,37 @@ const MenuNav = () =>{
 
     const getModules = async () => {
         try {
-            const url = base_url(["api", "modules"]);
+            const url = base_url(["api", "modules", "menu"]);
             const headers = {
-                // Authorization: `Bearer ${import.meta.env.VITE_TOKEN}`,
+                Authorization: `Bearer ${import.meta.env.VITE_TOKEN}`,
             };
-
-            console.log(url, headers);
     
-            const response = await fetchHelper.post(url, {}, headers, 0);
+            const response = await fetchHelper.get(url, headers, 0);
     
             if (!response?.error) {
-                setModules(response.content);
+                console.log(response);
+                const menus = [
+                    {
+                        id: 0,
+                        name: "Dashboard",
+                        url: "/dashboard",
+                        position: 0,
+                        menus: [
+                            {
+                                id: 0,
+                                label: "Home",
+                                url: "/dashboard",
+                                position: 0,
+                                childrens: []
+                            }
+                        ]
+                    },
+                    ...response
+                ];
+
+                console.log(menus);
+
+                setModules(menus);
             }
     
         } catch (error) {
@@ -122,13 +142,17 @@ const MenuNav = () =>{
                                         <span className="menu-header-text">{module.name}</span>
                                     </li>
                                     {
-                                        module.options.map((option) => {
-                                            const activeParent = isParentActive(option, location.pathname);
+                                        
+                                        module.menus.map((menu) => {
+                                            const activeParent = isParentActive(menu, location.pathname);
+                                            const hasChildren = menu?.childrens?.length > 0;
+
+                                            console.log(menu);
                                             
-                                            return option.childrens.length === 0 ? (
-                                                <MenuItem key={`${module.id}-${option.id}`} option={option} active={activeParent} />
+                                            return hasChildren ? (
+                                                <MenuChildrenItem key={`${module.id}-${menu.id}`} option={menu} active={activeParent} />
                                             ) : ( 
-                                                <MenuChildrenItem key={`${module.id}-${option.id}`} option={option} active={activeParent} />
+                                                <MenuItem key={`${module.id}-${menu.id}`} option={menu} active={activeParent} />
                                             )
                                                 
                                         })
