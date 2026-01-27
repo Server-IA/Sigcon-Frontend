@@ -1,7 +1,6 @@
 export const request = async (url, data = {}, method = 'POST', time = 500, headers = {}) => {
     const options = {
         method,
-        credentials: 'include', 
         headers: {
             'Content-Type': 'application/json',
             ...headers,
@@ -29,7 +28,6 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
           window.location.href = response.url;
         if (!response.ok) {
             const errorData = await response.json();
-            console.log(errorData);
             throw new Error(JSON.stringify({
                 msg: errorData.msg || 'Error desconocido',
                 title: errorData.title || 'Error en la consulta',
