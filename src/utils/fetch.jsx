@@ -1,9 +1,15 @@
 export const request = async (url, data = {}, method = 'POST', time = 500, headers = {}) => {
+
+    const token = localStorage.getItem('token');
+    if(token){
+        headers.Authorization = `Bearer ${token}`;
+    }
+
     const options = {
         method,
         headers: {
             'Content-Type': 'application/json',
-            ...headers,
+            ...headers
         },
     };
     if (data) {
