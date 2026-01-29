@@ -2,12 +2,12 @@ import { Outlet } from "react-router-dom";
 
 import MenuNav from "../organism/MenuNav";
 
-const MainTemplate = () =>{
+const MainTemplate = ({modules}) =>{
     return (
         <>
             <div className="layout-wrapper layout-content-navbar">
                 <div className="layout-container">
-                    <MenuNav />
+                    <MenuNav modules={modules} />
                     <div className="layout-page">
                         <div className="content-wrapper">
                             <div className="container-xxl flex-grow-1 container-p-y">
