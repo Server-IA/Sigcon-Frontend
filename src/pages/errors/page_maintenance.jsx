@@ -3,7 +3,7 @@ import "../../styles/page-misc.css";
 
 const PageMaintenance = () => {
     return <>
-        <div className="misc-wrapper">
+        <div className="misc-wrapper h-100">
             <h1 className="mb-2 mx-2">Under Maintenance! 🚧</h1>
             <p className="mb-6 mx-sm-2 text-center">
                 Sorry for the inconvenience but we're performing some maintenance at the moment

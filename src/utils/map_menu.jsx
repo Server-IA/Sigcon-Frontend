@@ -1,5 +1,5 @@
 import Home from "../pages/home/index";
-import Modules from "../pages/parametrizacion/modules";
+import IndexModules from "../pages/parametrizacion/modules/index";
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 import { base_url } from "./functions";
@@ -7,7 +7,7 @@ import { fetchHelper } from "./fetch";
 
 export const COMPONENT_MAP = {
     HOME: Home,
-    MODULES: Modules
+    MODULOS: IndexModules
 };
 export const getMenu = async () => {
     

@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 
 import MenuNav from "../organism/MenuNav";
+import NavHorizontal from "../organism/NavHorizontal";
 
 const MainTemplate = ({modules}) =>{
     return (
@@ -9,9 +10,10 @@ const MainTemplate = ({modules}) =>{
                 <div className="layout-container">
                     <MenuNav modules={modules} />
                     <div className="layout-page">
+                        <NavHorizontal />
                         <div className="content-wrapper">
                             <div className="container-xxl flex-grow-1 container-p-y">
-                                <div className="row g-6">
+                                <div className="row g-6 h-100">
                                     <Outlet />
                                 </div>
                             </div>

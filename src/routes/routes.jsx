@@ -1,11 +1,13 @@
 import { Route } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import MainTemplate from '../components/templates/MainTemplate';
 import AuthTemplate from '../components/templates/AuthTemplate';
 
-import Login from "../pages/Login/LoginPage";
+import { lazy } from 'react';
+const Login = lazy(() => import("../pages/Login/LoginPage"));
+const Page404 = lazy(() => import("../pages/errors/page_404"));
 
-import Page404 from '../pages/errors/page_404';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { getMenu } from '../utils/map_menu';
 
 export const RenderRoutes = () => {
@@ -13,18 +15,24 @@ export const RenderRoutes = () => {
     const [modules, setModules] = useState([]);
 
     useEffect(() => {
-        getMenu().then(modules => setModules(modules));
+        const token = localStorage.getItem('token');
+        if (token) {
+            getMenu().then(setModules);
+        }
     }, []);
-
-    useEffect(() => {
-        console.log(["modules routes", modules]);
-    }, [modules]);
 
     return (
         <>
             {/* Auth Routes */}
             <Route element={<AuthTemplate />}>
-                <Route path="/login" element={<Login />} />
+                <Route
+                    path="/login"
+                    element={
+                        <Suspense fallback={null}>
+                            <Login />
+                        </Suspense>
+                    }
+                />
             </Route>
 
 
@@ -41,7 +49,11 @@ export const RenderRoutes = () => {
                 ))}
             </Route>
 
-            <Route path="*" element={<Page404 />} />
+            <Route path="*" element={
+                <Suspense fallback={null}>
+                    <Page404 />
+                </Suspense>
+            } />
 
             
         </>

@@ -9,7 +9,9 @@ export const isActivePath = (menuPath, currentPath) => {
 
 export const isParentActive = (module, menu, pathname) => {
 
-  const menuFullPath = joinPaths(module.url, menu.url);
+  const menuFullPath = joinPaths(module.url, menu.path);
+
+  console.log(menuFullPath, pathname);  
 
   // 1️⃣ El menú en sí
   if (isActivePath(menuFullPath, pathname)) return true;
@@ -18,8 +20,8 @@ export const isParentActive = (module, menu, pathname) => {
   return menu.childrens?.some(child => {
       const childFullPath = joinPaths(
           module.url,
-          menu.url,
-          child.url
+          menu.path,
+          child.path
       );
 
       return isActivePath(childFullPath, pathname);

@@ -32,12 +32,25 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
     return fetch(url, options).then(async response => {
         if (response.redirected)
           window.location.href = response.url;
+
+        console.log(response.status);
+
+        if(response.status == 401){
+            throw new Error(JSON.stringify({
+                msg: 'Por favor inicia sesión nuevamente',
+                title: 'Sesión expirada',
+                error: 'Error general',
+                status: 401
+            }));
+        }
+
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(JSON.stringify({
-                msg: errorData.msg || 'Error desconocido',
+                msg: errorData.msg || errorData.message || 'Error desconocido',
                 title: errorData.title || 'Error en la consulta',
-                error: errorData.error || 'Error general'
+                error: errorData.error || 'Error general',
+                status: response.status
             }));
         }
         const responseData = await response.json();
@@ -48,6 +61,36 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
     }).catch(error => {
         window.Swal.close();
         console.error(error);
+
+    
+        // 🟡 Error controlado del backend (JSON)
+        let error_parse;
+        try {
+            error_parse = JSON.parse(error.message);
+        } catch {
+            error_parse = {
+                title: 'Error',
+                msg: 'Error inesperado',
+                error: error.message
+            };
+        }
+
+        if (error_parse.status === 401) {
+            localStorage.removeItem('token');
+        
+            window.Swal.fire({
+                title: error_parse.title,
+                text: error_parse.msg,
+                icon: "warning",
+                confirmButtonText: "Ir al login",
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+
+            window.location.href = '/login';
+        
+            return Promise.reject(error_parse);
+        }
     
         // 🔴 Error de red (backend caído, conexión rechazada, CORS)
         if (error instanceof TypeError) {
@@ -66,18 +109,6 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 msg: 'Servidor no disponible',
                 error: error.message
             });
-        }
-    
-        // 🟡 Error controlado del backend (JSON)
-        let error_parse;
-        try {
-            error_parse = JSON.parse(error.message);
-        } catch {
-            error_parse = {
-                title: 'Error',
-                msg: 'Error inesperado',
-                error: error.message
-            };
         }
     
         window.Swal.fire({
