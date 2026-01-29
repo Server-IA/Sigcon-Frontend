@@ -52,7 +52,13 @@ const LoginPage = () => {
     if(!token){setError('Error al validar las credenciales'); setIsLoading(false); return;}
     //guardartoken en localstorage 
     localStorage.setItem('token', token); 
-    localStorage.getItem("token");
+    //peticion para btener la informacion del usuario 
+    const userUrl = base_url(['users']);
+    const userResponse = await fetchHelper.get(userUrl, {}, 1000); 
+    if(userResponse){
+      localStorage.setItem('user', JSON.stringify(userResponse));
+      console.log('User info:', userResponse);
+    }
     //Redirigir al DashBoard 
     window.location.href = '/dashboard';
     } catch (err) {
