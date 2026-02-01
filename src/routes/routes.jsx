@@ -3,6 +3,7 @@ import MainTemplate from '../components/templates/MainTemplate';
 import AuthTemplate from '../components/templates/AuthTemplate';
 
 import Login from "../pages/Login/LoginPage";
+import RecoveryPassword from "../pages/RecoveryPassword/RecoveryPasswordPage";
 import Home from '../pages/home/index';
 
 import Page404 from '../pages/errors/page_404';
@@ -13,6 +14,7 @@ export const RenderRoutes = () => {
         {/* Auth Routes */}
         <Route element={<AuthTemplate />}>
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<RecoveryPassword />} />
         </Route>
 
 
