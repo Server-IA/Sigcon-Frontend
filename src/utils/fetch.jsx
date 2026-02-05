@@ -1,4 +1,4 @@
-export const request = async (url, data = {}, method = 'POST', time = 500, headers = {}) => {
+export const request = async (url, data = {}, method = 'POST', time = 500, headers = {}, showErrorAlert) => {
 
     const token = localStorage.getItem('token');
     if(token){
@@ -33,8 +33,6 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
         if (response.redirected)
           window.location.href = response.url;
 
-        console.log(response.status);
-
         if(response.status == 401){
             throw new Error(JSON.stringify({
                 msg: 'Por favor inicia sesión nuevamente',
@@ -46,13 +44,16 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
 
         if (!response.ok) {
             const errorData = await response.json();
+
             throw new Error(JSON.stringify({
                 msg: errorData.msg || errorData.message || 'Error desconocido',
                 title: errorData.title || 'Error en la consulta',
                 error: errorData.error || 'Error general',
-                status: response.status
+                status: response.status,
+                errors: errorData.errors || []
             }));
         }
+        
         const responseData = await response.json();
         return new Promise(resolve => {
             window.Swal.close();
@@ -61,8 +62,6 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
     }).catch(error => {
         window.Swal.close();
         console.error(error);
-
-    
         // 🟡 Error controlado del backend (JSON)
         let error_parse;
         try {
@@ -77,6 +76,7 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
 
         if (error_parse.status === 401) {
             localStorage.removeItem('token');
+            localStorage.removeItem('user');
         
             window.Swal.fire({
                 title: error_parse.title,
@@ -84,7 +84,9 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 icon: "warning",
                 confirmButtonText: "Ir al login",
                 allowOutsideClick: false,
-                showConfirmButton: false
+                showConfirmButton: true,
+                showCancelButton: false,
+                showCloseButton: false,
             });
 
             window.location.href = '/login';
@@ -110,24 +112,25 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 error: error.message
             });
         }
-    
-        window.Swal.fire({
-            icon: 'error',
-            title: error_parse.title,
-            text: error_parse.msg || error_parse.error,
-            allowOutsideClick: false,
-            customClass: {
-                confirmButton: 'btn btn-primary waves-effect'
-            }
-        });
+
+        if(showErrorAlert)
+            window.Swal.fire({
+                icon: 'error',
+                title: error_parse.title,
+                text: error_parse.msg || error_parse.error,
+                allowOutsideClick: false,
+                customClass: {
+                    confirmButton: 'btn btn-primary waves-effect'
+                }
+            });
     
         return Promise.reject(error_parse);
     });
 }
 
 export const fetchHelper = {
-    get: (url, headers = {}, time = 1) => request(url, null, 'GET', time, headers),
-    post: (url, data, headers = {}, time = 1) => request(url, data, 'POST', time, headers),
-    put: (url, data, headers = {}, time = 1) => request(url, data, 'PUT', time, headers),
-    delete: (url, data, headers = {}, time = 1) => request(url, null, 'DELETE', time, headers),
+    get: (url, headers = {}, time = 1, showErrorAlert = false) => request(url, null, 'GET', time, headers, showErrorAlert),
+    post: (url, data, headers = {}, time = 1, showErrorAlert = false) => request(url, data, 'POST', time, headers, showErrorAlert),
+    put: (url, data, headers = {}, time = 1, showErrorAlert = false) => request(url, data, 'PUT', time, headers, showErrorAlert),
+    delete: (url, data, headers = {}, time = 1, showErrorAlert = false) => request(url, null, 'DELETE', time, headers, showErrorAlert),
 };

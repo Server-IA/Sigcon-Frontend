@@ -1,4 +1,14 @@
+import { useSelector } from "react-redux";
+import { useEffect } from "react";
+
 const NavHorizontal = () => {
+
+    const user = useSelector(state => state.user).user;
+
+    useEffect(() => {
+        console.log(user);
+    }, [user]);
+
     return <>
         <nav
             className="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
@@ -120,8 +130,8 @@ const NavHorizontal = () => {
                                         </div>
                                     </div>
                                     <div className="flex-grow-1">
-                                        <span className="fw-medium d-block small">John Doe</span>
-                                        <small className="text-muted">Admin</small>
+                                        <span className="fw-medium d-block small">{user.name ?? ''} {user.last_name ?? ''}</span>
+                                        <small className="text-muted">{user.email ?? ''}</small>
                                     </div>
                                 </div>
                                 </a>

@@ -1,11 +1,10 @@
 import Link from "../../components/atoms/Link";
 import "../../styles/page-misc.css";
-
-
+import { useSelector } from "react-redux";
 
 const Page404 = () => {
     
-    const token = localStorage.getItem('token');
+    const user = useSelector(state => state.user).user;
 
     return <>
         <div className="misc-wrapper h-100">
@@ -15,8 +14,8 @@ const Page404 = () => {
             <div className="d-flex justify-content-center mt-9">
                 <div className="d-flex flex-column align-items-center">
                     <div>
-                        <Link to={token ? '/dashboard' : '/login'} className="btn btn-primary text-center my-10">{
-                            token ? 'Back to home' : 'Go to login'
+                        <Link to={user ? '/dashboard' : '/login'} className="btn btn-primary text-center my-10">{
+                            user ? 'Back to home' : 'Go to login'
                         }</Link>
                     </div>
                 </div>
