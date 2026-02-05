@@ -1,9 +1,14 @@
 import { Outlet } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 import MenuNav from "../organism/MenuNav";
 import NavHorizontal from "../organism/NavHorizontal";
 
 const MainTemplate = ({modules}) =>{
+
+    const user = useSelector(state => state.user);
+    console.log(user);
+
     return (
         <>
             <div className="layout-wrapper layout-content-navbar">
@@ -20,6 +25,7 @@ const MainTemplate = ({modules}) =>{
                         </div>
                     </div>
                 </div>
+                <div className="layout-overlay layout-menu-toggle"></div>
             </div>
         </>
     );

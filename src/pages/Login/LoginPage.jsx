@@ -3,11 +3,14 @@ import LoginForm from '../../components/organism/LoginForm';
 import '../../styles/auth-login.css'; 
 import {base_url} from '../../utils/functions'; 
 import { fetchHelper } from '../../utils/fetch';
+import { useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 const LoginPage = () => {
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'superadmin@gmail.com',
+    password: '123456',
     rememberMe: false
   });
   
@@ -36,8 +39,7 @@ const LoginPage = () => {
     const url = base_url(['auth', 'login'])
     
     try {
-    const response = await fetchHelper.post(url, formData, {}, 1000)
-    console.log('Login response:', response);
+    const response = await fetchHelper.post(url, formData, {}, 1000);
     
     //validar respuesta del login 
     if (!response) {
@@ -51,11 +53,15 @@ const LoginPage = () => {
     //Saaber si se recibio token 
     if(!token){setError('Error al validar las credenciales'); setIsLoading(false); return;}
     //guardartoken en localstorage 
-    localStorage.setItem('token', token); 
+    localStorage.setItem('token', token);
+    dispatch({ type: "SET_TOKEN", payload: token });
     //peticion para btener la informacion del usuario 
     const userUrl = base_url(['users']);
     const userResponse = await fetchHelper.get(userUrl, {}, 1000); 
     if(userResponse){
+
+      dispatch({ type: "SET_USER", payload: userResponse });
+
       localStorage.setItem('user', JSON.stringify(userResponse));
       console.log('User info:', userResponse);
     }

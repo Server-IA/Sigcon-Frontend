@@ -9,9 +9,7 @@ export const isActivePath = (menuPath, currentPath) => {
 
 export const isParentActive = (module, menu, pathname) => {
 
-  const menuFullPath = joinPaths(module.url, menu.path);
-
-  console.log(menuFullPath, pathname);  
+  const menuFullPath = joinPaths(module.url, menu.path); 
 
   // 1️⃣ El menú en sí
   if (isActivePath(menuFullPath, pathname)) return true;

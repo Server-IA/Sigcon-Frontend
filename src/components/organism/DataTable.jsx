@@ -9,11 +9,14 @@ import { useEffect, useRef } from "react";
 
 import { base_url } from '../../utils/functions';
 import { default_buttons } from '../../utils/dataTable';
+import { useSelector } from 'react-redux';
 
-const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title }) => {
+const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title, setData }) => {
     
+    const token = useSelector(state => state.user.token);
+
     useEffect(() => {
-        if (!tableRef.current) return;
+        if (!tableRef?.current || !dataTableRef) return;
         // Inicializar DataTable
         dataTableRef.current = $(tableRef.current).DataTable({
             ajax: {
@@ -21,12 +24,28 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
                 dataSrc: 'data',
                 type: method || 'GET',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 },
                 contentType: 'application/json',
                 data: function (d) {
                     return JSON.stringify(d);
                 },
+                error: function (xhr, error, thrown) {
+                    if(xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+
+                        window.Swal.fire({
+                            title: 'Error',
+                            text: 'Sesión expirada',
+                            icon: 'error',
+                            showConfirmButton: false,
+                            allowOutsideClick: false,
+                        });
+
+                        window.location.href = '/login';
+                    }
+                }
             },
             dom: 'r<"row"<"col-sm-12 col-md-12 col-lg-4 mt-3 mt-md-0 d-flex justify-content-center justify-content-lg-start justify-content-md-center align-items-center"l><"col-sm-12 col-md-12 col-lg-8 d-flex justify-content-center justify-content-lg-end justify-content-md-center align-items-center"<"dt-action-buttons text-end pt-0 pt-md-0"B>>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 75, 100],
@@ -38,6 +57,11 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
             ordering: false,
             processing: true,
             serverSide: true,
+            drawCallback: function(settings) {
+                if (setData) {
+                    setData(settings.json.data);
+                }
+            },
             language: esES,
             buttons: [
                 {
@@ -87,7 +111,7 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
 
         // Cleanup (MUY IMPORTANTE)
         return () => {
-            if (dataTableRef.current) {
+            if (dataTableRef?.current) {
                 dataTableRef.current.destroy();
             }
         };
