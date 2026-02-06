@@ -14,6 +14,12 @@ export const base_url = (array = [], get = {}) => {
         .filter(([_, value]) => value !== undefined && value !== null && value !== '') // Filtrar valores vacíos
         .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`) // Codificar valores
         .join('&');
+
+    const urlFinal = getData ? `${url}${path}?${getData}` : `${url}${path}`;
   
-    return getData ? `${url}${path}?${getData}` : `${url}${path}`;
+    return urlFinal;
+}
+
+export const toast = (message, type) => {
+    toast.success(message);
 }

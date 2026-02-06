@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import {useNavigate} from 'react-router-dom'; 
 import LoginForm from '../../components/organism/LoginForm'; 
 import '../../styles/auth-login.css'; 
 import {base_url} from '../../utils/functions'; 
 import { fetchHelper } from '../../utils/fetch';
+import { useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 const LoginPage = () => {
-  const navigate = useNavigate(); 
-
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'superadmin@gmail.com',
+    password: '123456',
     rememberMe: false
   });
   
@@ -39,8 +39,7 @@ const LoginPage = () => {
     const url = base_url(['auth', 'login'])
     
     try {
-    const response = await fetchHelper.post(url, formData, {}, 1000)
-    console.log('Login response:', response);
+    const response = await fetchHelper.post(url, formData, {}, 1000);
     
     //validar respuesta del login 
     if (!response) {
@@ -54,35 +53,29 @@ const LoginPage = () => {
     //Saaber si se recibio token 
     if(!token){setError('Error al validar las credenciales'); setIsLoading(false); return;}
     //guardartoken en localstorage 
-    localStorage.setItem('token', token); 
-    localStorage.getItem("token");
+    localStorage.setItem('token', token);
+    dispatch({ type: "SET_TOKEN", payload: token });
+    //peticion para btener la informacion del usuario 
+    const userUrl = base_url(['users']);
+    const userResponse = await fetchHelper.get(userUrl, {}, 1000); 
+    if(userResponse){
+
+      dispatch({ type: "SET_USER", payload: userResponse });
+
+      localStorage.setItem('user', JSON.stringify(userResponse));
+      console.log('User info:', userResponse);
+    }
     //Redirigir al DashBoard 
-    navigate('/dashboard');
+    window.location.href = '/dashboard';
     } catch (err) {
       console.error('Error en el login:', err);
-      //mensajes exactos de error
-       const ERROR_MAP = {
-        INVALID_CREDENTIALS: 'Error al validar las credenciales',
-        USER_BLOCKED: 'Usuario bloqueado por superar los 5 intentos',
-        DEFAULT: 'No se pudo completar la petición. Intente nuevamente o contacte con el administrador'
-      };
       //err desde el fetch.jsx
-       const backendError = err?.error || err?.msg;
-
-      if (backendError === 'INVALID_CREDENTIALS') {
-        setError(ERROR_MAP.INVALID_CREDENTIALS);
-      } else if (backendError === 'USER_BLOCKED') {
-        setError(ERROR_MAP.USER_BLOCKED);
-      } else {
-        setError(ERROR_MAP.DEFAULT);
-      }
-
+       const backendError = err?.msg || 'Error inesperado. Intente nuevamente.';
+        setError(backendError);
       setIsLoading(false);
     }
   };
     
-    // Simulación de llamada a API
-
   return (
     <LoginForm
       formData={formData}
