@@ -1,7 +1,4 @@
-import '../../styles/vendor/datatables-bs5/datatables.bootstrap5.css'
 import '../../styles/vendor/flatpickr/flatpickr.css';
-import '../../styles/vendor/datatables-bs5/datatables-bootstrap5.js';
-import 'https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js';
 
 import esES from '../../jsons/languaje/es-ES-DataTable.json';
 

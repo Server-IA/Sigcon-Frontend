@@ -1,13 +1,11 @@
 export const base_url = (array = [], get = {}) => {
-    var environment = import.meta.env.VITE_ENVIRONMENT;
-    var url = '';
-    if(environment === 'local'){
-        url = import.meta.env.VITE_API_URL_LOCAL;
-    }else if(environment === 'development'){
-        url = import.meta.env.VITE_API_URL_DEVELOPMENT;
-    }else if(environment === 'production'){
-        url = import.meta.env.VITE_API_URL_PRODUCTION;
-    }// Asegurar que haya una URL base
+
+    let url = '';
+    if(import.meta.env.MODE === "production"){
+        url = "http://localhost:8080/";
+    }else{
+        url = "http://localhost:8080/";
+    }
 
     var path = array.length > 0 ? array.join('/') : ''; // Construir el path
     var getData = Object.entries(get)
@@ -16,6 +14,9 @@ export const base_url = (array = [], get = {}) => {
         .join('&');
 
     const urlFinal = getData ? `${url}${path}?${getData}` : `${url}${path}`;
+
+    console.log(urlFinal);
+    console.log(['environment', import.meta.env]);
   
     return urlFinal;
 }
