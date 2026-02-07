@@ -1,6 +1,12 @@
 import { useEffect, useRef } from 'react';
-import "../../styles/vendor/select2/select2.js";
-import "../../styles/vendor/select2/select2.css";
+// import $ from 'jquery';
+
+// window.$ = window.jQuery = $;
+
+// import 'select2/dist/css/select2.css';
+// import 'select2/dist/js/select2.js';
+// import "../../styles/vendor/select2/select2.js";
+// import "../../styles/vendor/select2/select2.css";
 
 const InputSelectModal = ({ id, label, value, onChange, options, placeholder }) => {
 
