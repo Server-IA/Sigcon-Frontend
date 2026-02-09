@@ -10,9 +10,22 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2",
+    "datatables.net": "^2.3.7",
+    "datatables.net-bs5": "^2.3.7",
+    "datatables.net-buttons": "^3.2.6",
+    "datatables.net-buttons-bs5": "^3.2.6",
+    "datatables.net-dt": "^2.3.7",
+    "datatables.net-react": "^1.0.1",
+    "jquery": "^4.0.0",
+    "jszip": "^3.10.1",
+    "lodash": "^4.17.23",
+    "pdfmake": "^0.3.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2"
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^6.26.2",
+    "select2": "^4.1.0-rc.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

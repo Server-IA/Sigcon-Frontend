@@ -1,23 +1,31 @@
 import { Outlet } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 import MenuNav from "../organism/MenuNav";
+import NavHorizontal from "../organism/NavHorizontal";
 
-const MainTemplate = () =>{
+const MainTemplate = ({modules}) =>{
+
+    const user = useSelector(state => state.user);
+    console.log(user);
+
     return (
         <>
             <div className="layout-wrapper layout-content-navbar">
                 <div className="layout-container">
-                    <MenuNav />
+                    <MenuNav modules={modules} />
                     <div className="layout-page">
+                        <NavHorizontal />
                         <div className="content-wrapper">
                             <div className="container-xxl flex-grow-1 container-p-y">
-                                <div className="row g-6">
+                                <div className="row g-6 h-100">
                                     <Outlet />
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <div className="layout-overlay layout-menu-toggle"></div>
             </div>
         </>
     );
