@@ -201,6 +201,7 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 error={errors.parentId}
                                 placeholder="Menu principal"
                                 options={menusPrincipales}
+                                clearable={true}
                             />
                         </div>
                     </div>

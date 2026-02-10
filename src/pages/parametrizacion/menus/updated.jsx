@@ -201,6 +201,7 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 error={errors.parentId}
                                 placeholder="Menu principal"
                                 options={menusPrincipales}
+                                clearable={true}
                             />
                         </div>
                     </div>

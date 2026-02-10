@@ -1,7 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
 
 import ItemMenu from "../molecules/ItemMenu.jsx";
+import LogoBrand from "../molecules/LogoBrand.jsx";
 
 const MenuNav = ({modules}) =>{
     const menuRef = useRef(null);
@@ -15,10 +17,11 @@ const MenuNav = ({modules}) =>{
                 animate: true
             });
         }
+
         return () => {
             menuInstance.current?.destroy();
         };
-    }, []);
+    }, [modules]);
     
     return (
         <>
@@ -29,6 +32,7 @@ const MenuNav = ({modules}) =>{
                     <Link to="/" className="app-brand-link">
                         <span className="app-brand-logo demo">
                             <span style={{color: "var(--bs-primary)"}}>
+                                {/* <LogoBrand /> */}
                             </span>
                         </span>
                         <span className="app-brand-text demo menu-text fw-semibold ms-2">SIGCON</span>
@@ -53,7 +57,7 @@ const MenuNav = ({modules}) =>{
                 <ul className="menu-inner py-1">
 
                     {
-                        modules?.map((module) => {
+                        modules?.filter((module) => module.id != 1).map((module) => {
                             module.childrens = module.menus;
                             return <ItemMenu key={module.id} item={module} parentPath="" />
                         })
