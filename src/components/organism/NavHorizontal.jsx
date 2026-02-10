@@ -1,4 +1,5 @@
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import { useEffect } from "react";
 
 const NavHorizontal = () => {
@@ -140,9 +141,9 @@ const NavHorizontal = () => {
                                 <div className="dropdown-divider"></div>
                             </li>
                             <li>
-                                <a className="dropdown-item" href="pages-profile-user.html">
-                                    <i className="ri-user-3-line ri-22px me-3"></i><span className="align-middle">My Profile</span>
-                                </a>
+                                <Link className="dropdown-item" to="/dashboard/perfil">
+                                    <i className="ri-user-3-line ri-22px me-3"></i><span className="align-middle">Perfil / Mis datos</span>
+                                </Link>
                             </li>
                             <li>
                                 <a className="dropdown-item" href="pages-account-settings-account.html">

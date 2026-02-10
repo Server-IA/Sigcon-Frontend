@@ -1,4 +1,5 @@
 import Home from "../pages/home/index";
+import PerfilPage from "../pages/perfil/index";
 
 // Parametrizacion
 import IndexModules from "../pages/parametrizacion/modules/index";
@@ -12,6 +13,7 @@ import { fetchHelper } from "./fetch";
 
 export const COMPONENT_MAP = {
     HOME: Home,
+    PERFIL: PerfilPage,
     MODULOS: IndexModules,
     MENUS: IndexMenus
 };
@@ -34,6 +36,14 @@ export const getMenu = async () => {
                 position: 0,
                 childrens: [],
                 component: COMPONENT_MAP.HOME
+            },
+            {
+                id: 1,
+                label: "Perfil",
+                path: "perfil",
+                position: 1,
+                childrens: [],
+                component: COMPONENT_MAP.PERFIL
             }
         ]
     })
