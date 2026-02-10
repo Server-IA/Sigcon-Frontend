@@ -7,12 +7,6 @@ RUN npm install
 
 COPY . .
 
-ARG VITE_BASE_PATH=/sigcon/
-ARG VITE_APP_ENV=production
-
-ENV VITE_BASE_PATH=${VITE_BASE_PATH}
-ENV VITE_APP_ENV=${VITE_APP_ENV}
-
 RUN npm run build
 
 # Serve
