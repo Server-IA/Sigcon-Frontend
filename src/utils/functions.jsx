@@ -2,7 +2,7 @@ export const base_url = (array = [], get = {}) => {
 
     let url = '';
     if(import.meta.env.MODE === "production"){
-        url = "http://localhost:8080/";
+        url = "https://api.inmero.co/sigcon/";
     }else{
         url = "http://localhost:8080/";
     }
