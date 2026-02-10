@@ -14,9 +14,6 @@ export const base_url = (array = [], get = {}) => {
         .join('&');
 
     const urlFinal = getData ? `${url}${path}?${getData}` : `${url}${path}`;
-
-    console.log(urlFinal);
-    console.log(['environment', import.meta.env]);
   
     return urlFinal;
 }

@@ -1,13 +1,25 @@
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import Link from "../atoms/Link";
 
-const NavHorizontal = () => {
+const NavHorizontal = ({modules}) => {
 
     const user = useSelector(state => state.user).user;
+    const dispatch = useDispatch();
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        dispatch({ type: "SET_USER", payload: null });
+        dispatch({ type: "SET_TOKEN", payload: null });
+        console.log('Logout');
+        window.location.href = '/login';
+    }
 
     useEffect(() => {
-        console.log(user);
+        
     }, [user]);
 
     return <>
@@ -140,45 +152,29 @@ const NavHorizontal = () => {
                             <li>
                                 <div className="dropdown-divider"></div>
                             </li>
-                            <li>
-                                <Link className="dropdown-item" to="/dashboard/perfil">
-                                    <i className="ri-user-3-line ri-22px me-3"></i><span className="align-middle">Perfil / Mis datos</span>
-                                </Link>
-                            </li>
-                            <li>
-                                <a className="dropdown-item" href="pages-account-settings-account.html">
-                                    <i className="ri-settings-4-line ri-22px me-3"></i><span className="align-middle">Settings</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a className="dropdown-item" href="pages-account-settings-billing.html">
-                                    <span className="d-flex align-items-center align-middle">
-                                        <i className="flex-shrink-0 ri-file-text-line ri-22px me-3"></i>
-                                        <span className="flex-grow-1 align-middle">Billing</span>
-                                        <span className="flex-shrink-0 badge badge-center rounded-pill bg-danger">4</span>
-                                    </span>
-                                </a>
-                            </li>
+
+                            {
+                                modules?.filter((module) => module.id == 1).map((module) => {
+                                    return module.menus.map((menu) => {
+                                        return (
+                                            <li key={menu.id}>
+                                                <Link to={`${module.url}/${menu.path}`} className="dropdown-item">
+                                                    <i className={`${menu.icon && menu.icon != '' ? menu.icon : 'ri-settings-5-fill'} ri-22px me-3`}></i><span className="align-middle">{menu.label}</span>
+                                                </Link>
+                                            </li>
+                                        )
+                                    })
+                                })
+                            }
                             <li>
                                 <div className="dropdown-divider"></div>
                             </li>
                             <li>
-                                <a className="dropdown-item" href="pages-pricing.html">
-                                    <i className="ri-money-dollar-circle-line ri-22px me-3"></i>
-                                    <span className="align-middle">Pricing</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a className="dropdown-item" href="pages-faq.html">
-                                    <i className="ri-question-line ri-22px me-3"></i><span className="align-middle">FAQ</span>
-                                </a>
-                            </li>
-                            <li>
                                 <div className="d-grid px-4 pt-2 pb-1">
-                                    <a className="btn btn-sm btn-danger d-flex" href="auth-login-cover.html" target="_blank">
+                                    <button className="btn btn-sm btn-danger d-flex" onClick={handleLogout}>
                                         <small className="align-middle">Logout</small>
                                         <i className="ri-logout-box-r-line ms-2 ri-16px"></i>
-                                    </a>
+                                    </button>
                                 </div>
                             </li>
                         </ul>

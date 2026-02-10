@@ -24,7 +24,7 @@ const IndexModules = () => {
     const [moduleEdit, setModuleEdit] = useState(false);
     const [moduleDelete, setModuleDelete] = useState(false);
 
-    const url = ['api', 'modules'];
+    const url = ['api/modules'];
 
     const actions = [
         { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },

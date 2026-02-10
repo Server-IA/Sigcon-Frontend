@@ -6,16 +6,13 @@ import NavHorizontal from "../organism/NavHorizontal";
 
 const MainTemplate = ({modules}) =>{
 
-    const user = useSelector(state => state.user);
-    console.log(user);
-
     return (
         <>
             <div className="layout-wrapper layout-content-navbar">
                 <div className="layout-container">
                     <MenuNav modules={modules} />
                     <div className="layout-page">
-                        <NavHorizontal />
+                        <NavHorizontal modules={modules} />
                         <div className="content-wrapper">
                             <div className="container-xxl flex-grow-1 container-p-y">
                                 <div className="row g-6 h-100">
