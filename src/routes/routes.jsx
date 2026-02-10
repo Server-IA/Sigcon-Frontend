@@ -4,7 +4,8 @@ import MainTemplate from '../components/templates/MainTemplate';
 import AuthTemplate from '../components/templates/AuthTemplate';
 
 import { lazy } from 'react';
-const Login = lazy(() => import("../pages/Login/LoginPage"));
+const Login = lazy(() => import("../pages/auth/LoginPage"));
+const RecoveryPassword = lazy(() => import("../pages/auth/RecoveryPasswordPage"));
 const Page404 = lazy(() => import("../pages/errors/page_404"));
 
 import { useState, useEffect, Suspense } from 'react';
@@ -38,11 +39,6 @@ export const RenderRoutes = () => {
         }
     }, [dispatch]);
 
-    useEffect(() => {
-        console.log("modules");
-        console.log(modules);
-    }, [modules]);
-
     return (
         <>
             {/* Auth Routes */}
@@ -52,6 +48,15 @@ export const RenderRoutes = () => {
                     element={
                         <Suspense fallback={null}>
                             <Login />
+                        </Suspense>
+                    }
+                />
+
+                <Route
+                    path="/forgot-password"
+                    element={
+                        <Suspense fallback={null}>
+                            <RecoveryPassword />
                         </Suspense>
                     }
                 />
