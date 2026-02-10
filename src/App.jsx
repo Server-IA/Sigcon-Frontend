@@ -6,7 +6,7 @@ import { RenderRoutes } from './routes/routes.jsx';
 function App() {
 
   return (
-    <BrowserRouter basename="/sigcon">
+    <BrowserRouter basename="/sigcon/">
       <Routes>
         {RenderRoutes()}
       </Routes>
