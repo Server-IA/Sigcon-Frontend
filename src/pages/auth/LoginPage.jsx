@@ -66,7 +66,7 @@ const LoginPage = () => {
       console.log('User info:', userResponse);
     }
     //Redirigir al DashBoard 
-    window.location.href = '/dashboard';
+    window.location.href = '/sigcon/dashboard';
     } catch (err) {
       console.error('Error en el login:', err);
       //err desde el fetch.jsx

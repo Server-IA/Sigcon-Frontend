@@ -15,7 +15,7 @@ const NavHorizontal = ({modules}) => {
         dispatch({ type: "SET_USER", payload: null });
         dispatch({ type: "SET_TOKEN", payload: null });
         console.log('Logout');
-        window.location.href = '/login';
+        window.location.href = '/sigcon/login';
     }
 
     useEffect(() => {
