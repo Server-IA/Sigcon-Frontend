@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react';
 // import "../../styles/vendor/select2/select2.js";
 // import "../../styles/vendor/select2/select2.css";
 
-const InputSelectModal = ({ id, label, value, onChange, options, placeholder, clearable = false }) => {
+const InputSelectModal = ({ id, label, value, onChange, error, options, placeholder, clearable = false }) => {
 
     const selectRef = useRef(null);
     const onChangeRef = useRef(onChange);
@@ -39,6 +39,26 @@ const InputSelectModal = ({ id, label, value, onChange, options, placeholder, cl
         };
     }, []);
 
+    useEffect(() => {
+        const $select = $(selectRef.current);
+
+        // destruir si existe
+        if ($select.hasClass("select2-hidden-accessible")) {
+            $select.select2('destroy');
+        }
+
+        // reinicializar
+        $select.select2({
+            dropdownParent: $select.parent(),
+            placeholder: placeholder || 'Seleccione una opción',
+            width: '100%',
+            allowClear: clearable
+        });
+
+        // restaurar valor
+        $select.val(value).trigger('change.select2');
+    }, [error]);
+
     // Sincronizar value desde React
     useEffect(() => {
         $(selectRef.current).val(value).trigger('change.select2');
@@ -49,16 +69,17 @@ const InputSelectModal = ({ id, label, value, onChange, options, placeholder, cl
             <select
                 id={id}
                 ref={selectRef}
-                className="form-select"
+                className={`form-select ${error ? 'is-invalid' : ''}`}
             >
                 <option value="">{placeholder || 'Seleccione una opción'}</option>
                 {options.map(option => (
                     <option key={option.id} value={option.id}>
-                        {option.name}
+                        {option.label || option.name}
                     </option>
                 ))}
             </select>
             <label htmlFor={id}>{label}</label>
+            {error && <div className="invalid-feedback">{error}</div>}
         </div>
     );
 };

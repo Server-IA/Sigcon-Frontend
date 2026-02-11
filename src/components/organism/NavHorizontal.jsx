@@ -2,7 +2,7 @@ import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import {Link} from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 
 const NavHorizontal = ({modules}) => {
 
@@ -158,9 +158,9 @@ const NavHorizontal = ({modules}) => {
                                     return module.menus.map((menu) => {
                                         return (
                                             <li key={menu.id}>
-                                                <Link to={`${module.url}/${menu.path}`} className="dropdown-item">
+                                                <RouterLink to={`${module.url}/${menu.path}`} className="dropdown-item">
                                                     <i className={`${menu.icon && menu.icon != '' ? menu.icon : 'ri-settings-5-fill'} ri-22px me-3`}></i><span className="align-middle">{menu.label}</span>
-                                                </Link>
+                                                </RouterLink>
                                             </li>
                                         )
                                     })
