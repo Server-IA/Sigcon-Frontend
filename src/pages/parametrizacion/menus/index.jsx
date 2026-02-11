@@ -4,6 +4,9 @@ import DataTableReference from "../../../components/organism/DataTable";
 import CreateMenu from "./create";
 import UpdatedMenu from "./updated";
 
+import { base_url } from "../../../utils/functions";
+import { fetchHelper } from "../../../utils/fetch";
+
 const IndexMenus = () => {
 
     const [data, setData] = useState([]);
@@ -26,6 +29,7 @@ const IndexMenus = () => {
 
     const [menuCreate, setMenuCreate] = useState(false);
     const [menuUpdate, setMenuUpdate] = useState(false);
+    const [menuDelete, setMenuDelete] = useState(false);
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -66,6 +70,9 @@ const IndexMenus = () => {
         },
         { title: 'Padre', data: 'parent', render: (parent) => {
             return parent ? parent.label : '-';
+        }},
+        { title: 'Componente', data: 'component', render: (component) => {
+            return component ?? '-';
         }},
         {title: 'Acciones', data: 'id', render: (id) => {
             return `
@@ -140,6 +147,36 @@ const IndexMenus = () => {
 
                     // openModalUpdate(menuRef);
                     break;
+                case 'delete':
+                    window.Swal.fire({
+                        title: '¿Estás seguro?',
+                        text: '¿Estás seguro de querer eliminar este menú?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Eliminar',
+                        cancelButtonText: 'Cancelar',
+                    }).then(async (result) => { 
+                        if (result.isConfirmed) {
+                            const url = base_url(['api', 'menus', id]);
+                            try {
+                                await fetchHelper.delete(url, {}, {}, 500, false);
+                                dataTableRefMenu?.current?.ajax.reload();
+                                setMenuDelete(true);
+                            } catch (error) {
+                                console.error(error);
+                                window.Swal.fire({
+                                    title: 'Error',
+                                    text: error.message || error.msg || 'Error al eliminar el menú',
+                                    icon: 'error',
+                                    confirmButtonText: 'Cerrar',
+                                    showCancelButton: false,
+                                    showCloseButton: false,
+                                    allowOutsideClick: false,
+                                });
+                            }
+                        }
+                    });
+                    break;
                 default:
                     console.warn('Acción no válida', action);
                     break;
@@ -162,6 +199,21 @@ const IndexMenus = () => {
         <div className="card">
             <h5 className="card-header text-md-start text-center">Menus</h5>
 
+            <div className={`alert alert-success alert-dismissible ${!menuDelete ? 'd-none' : ''}`} role="alert">
+                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <span>Menú eliminado correctamente</span>
+            </div>
+
+            <div className={`alert alert-success alert-dismissible ${!menuUpdate ? 'd-none' : ''}`} role="alert">
+                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <span>Menú editado correctamente</span>
+            </div>
+
+            <div className={`alert alert-success alert-dismissible ${!menuCreate ? 'd-none' : ''}`} role="alert">
+                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <span>Menú creado correctamente</span>
+            </div>
+
             <div className="card-datatable text-nowrap">
                 <DataTableReference
                     url_api={url}
@@ -183,13 +235,13 @@ const IndexMenus = () => {
                 setMenuCreate={setMenuCreate}
             />
 
-            <UpdatedMenu
+            {/* <UpdatedMenu
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
                 menu={menu} setMenu={setMenu}
                 dataTableRef={dataTableRefMenu}
                 setMenuUpdate={setMenuUpdate}
-            />
+            /> */}
         </div>
     </>
 }
