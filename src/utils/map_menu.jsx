@@ -3,7 +3,7 @@ import Home from "../pages/home/index";
 // Parametrizacion
 import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
-
+import PermissionsIndex from "../pages/parametrizacion/permissions/index"
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -13,7 +13,8 @@ import { fetchHelper } from "./fetch";
 export const COMPONENT_MAP = {
     HOME: Home,
     MODULOS: IndexModules,
-    MENUS: IndexMenus
+    MENUS: IndexMenus,
+    PERMISSIONS: PermissionsIndex
 };
 export const getMenu = async () => {
     
