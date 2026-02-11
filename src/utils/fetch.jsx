@@ -89,7 +89,7 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 showCloseButton: false,
             });
 
-            window.location.href = '/login';
+            window.location.href = '/sigcon/login';
         
             return Promise.reject(error_parse);
         }
