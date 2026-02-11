@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import InputField from '../../components/molecules/InputFile';
-import PasswordInput from '../../components/molecules/PasswordInput';
-import Button from '../../components/atoms/Button';
-import Icon from '../../components/atoms/Icon';
-import NotificationBar from '../../components/molecules/NotificationBar';
-import { base_url } from '../../utils/functions';
-import { fetchHelper } from '../../utils/fetch';
-import '../../styles/profile.css';
+import InputField from '../../../components/molecules/InputFile';
+import PasswordInput from '../../../components/molecules/PasswordInput';
+import Button from '../../../components/atoms/Button';
+import Icon from '../../../components/atoms/Icon';
+import NotificationBar from '../../../components/molecules/NotificationBar';
+import { base_url } from '../../../utils/functions';
+import { fetchHelper } from '../../../utils/fetch';
+import '../../../styles/profile.css';
 
 /** Campo enviado al backend para la imagen de perfil en base64: "avatar" (string, solo la parte base64 sin prefijo data:image/...) */
 const AVATAR_FIELD_NAME = 'avatar';

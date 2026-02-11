@@ -1,10 +1,9 @@
 import Home from "../pages/home/index";
-import PerfilPage from "../pages/perfil/index";
+import PerfilPage from "../pages/parametrizacion/perfil/index";
 
 // Parametrizacion
 import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
-
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -36,14 +35,6 @@ export const getMenu = async () => {
                 position: 0,
                 childrens: [],
                 component: COMPONENT_MAP.HOME
-            },
-            {
-                id: 1,
-                label: "Perfil",
-                path: "perfil",
-                position: 1,
-                childrens: [],
-                component: COMPONENT_MAP.PERFIL
             }
         ]
     })
