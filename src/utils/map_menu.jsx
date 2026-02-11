@@ -4,6 +4,8 @@ import Home from "../pages/home/index";
 import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
 import PermissionsIndex from "../pages/parametrizacion/permissions/index"
+import IndexUsers from "../pages/parametrizacion/users/index";
+
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -14,7 +16,8 @@ export const COMPONENT_MAP = {
     HOME: Home,
     MODULOS: IndexModules,
     MENUS: IndexMenus,
-    PERMISSIONS: PermissionsIndex
+    PERMISSIONS: PermissionsIndex,
+    USERS: IndexUsers
 };
 export const getMenu = async () => {
     
