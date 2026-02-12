@@ -1,21 +1,28 @@
 import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { Link as RouterLink } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { base_redirect_path, base_url } from "../../utils/functions";
+import { fetchHelper } from "../../utils/fetch";
 
 const NavHorizontal = ({modules}) => {
 
     const user = useSelector(state => state.user).user;
     const dispatch = useDispatch();
+    const handleLogout = async () => {
 
-    const handleLogout = () => {
+        const url = base_url(['auth/logout']);
+
+        const response = await fetchHelper.post(url, {}, {}, 500);
+        // console.log('response', response);
+
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         dispatch({ type: "SET_USER", payload: null });
         dispatch({ type: "SET_TOKEN", payload: null });
         console.log('Logout');
-        window.location.href = '/sigcon/login';
+
+        window.location.href = base_redirect_path(true);
     }
 
     useEffect(() => {
@@ -158,9 +165,9 @@ const NavHorizontal = ({modules}) => {
                                     return module.menus.map((menu) => {
                                         return (
                                             <li key={menu.id}>
-                                                <RouterLink to={`${module.url}/${menu.path}`} className="dropdown-item">
+                                                <Link to={`${module.url}/${menu.path}`} className="dropdown-item">
                                                     <i className={`${menu.icon && menu.icon != '' ? menu.icon : 'ri-settings-5-fill'} ri-22px me-3`}></i><span className="align-middle">{menu.label}</span>
-                                                </RouterLink>
+                                                </Link>
                                             </li>
                                         )
                                     })

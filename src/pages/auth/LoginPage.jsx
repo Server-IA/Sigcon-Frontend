@@ -4,7 +4,8 @@ import '../../styles/auth-login.css';
 import {base_url} from '../../utils/functions'; 
 import { fetchHelper } from '../../utils/fetch';
 import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
+import { base_redirect_path } from '../../utils/functions';
+
 
 const LoginPage = () => {
   const dispatch = useDispatch();
@@ -66,7 +67,7 @@ const LoginPage = () => {
       console.log('User info:', userResponse);
     }
     //Redirigir al DashBoard 
-    window.location.href = '/sigcon/dashboard';
+    window.location.href = base_redirect_path(false);
     } catch (err) {
       console.error('Error en el login:', err);
       //err desde el fetch.jsx
