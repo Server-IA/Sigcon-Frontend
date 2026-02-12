@@ -4,6 +4,8 @@ import PerfilPage from "../pages/parametrizacion/perfil/index";
 // Parametrizacion
 import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
+import PermissionsIndex from "../pages/parametrizacion/permissions/index"
+import IndexUsers from "../pages/parametrizacion/users/index";
 
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
@@ -20,6 +22,8 @@ export const COMPONENT_MAP = {
     PERFIL: PerfilPage,
     MODULOS: IndexModules,
     MENUS: IndexMenus,
+    PERMISSIONS: PermissionsIndex,
+    USERS: IndexUsers,
     ROLES: IndexRoles,
     PARAMETROS: IndexParameters,
     MENUSPERMISSIONS: MenuPermissionIndex
