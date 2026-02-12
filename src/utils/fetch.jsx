@@ -1,3 +1,5 @@
+import { base_redirect_path } from './functions';
+
 export const request = async (url, data = {}, method = 'POST', time = 500, headers = {}, showErrorAlert) => {
 
     const token = localStorage.getItem('token');
@@ -15,8 +17,6 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
     if (data) {
         options.body = JSON.stringify(data);
     }
-
-    window.toastr.clear();
 
     if(time != 0){
         window.Swal.fire({
@@ -89,7 +89,7 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 showCloseButton: false,
             });
 
-            window.location.href = '/login';
+            window.location.href = base_redirect_path(true);
         
             return Promise.reject(error_parse);
         }

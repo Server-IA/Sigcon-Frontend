@@ -1,35 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-
 import DataTableReference from "../../../components/organism/DataTable";
-import CreateMenu from "./create";
-import UpdatedMenu from "./updated";
+import AlertPage from "../../../components/molecules/AlertPage"
 
-import { base_url } from "../../../utils/functions";
-import { fetchHelper } from "../../../utils/fetch";
+import CreateMenuPermission from "./create";
+import UpdateMenuPermission from "./updated";
 
-const IndexMenus = () => {
-
-    const [data, setData] = useState([]);
-    const tableRefMenu = useRef(null);
-    const dataTableRefMenu = useRef(null);
-
-    const [menu, setMenu] = useState({
-        id: '',
-        label: '',
-        icon: '',
-        path: '',
-        menuOrder: '',
-        parentId: null,
-        moduleId: null,
-        status: 'ACTIVE',
-        component: '',
-    });
-
-    const [clickEdit, setClickEdit] = useState(false);
-
-    const [menuCreate, setMenuCreate] = useState(false);
-    const [menuUpdate, setMenuUpdate] = useState(false);
-    const [menuDelete, setMenuDelete] = useState(false);
+const MenuPermissionIndex = () => {
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -37,11 +13,26 @@ const IndexMenus = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
-    const url = ['api', 'menus', 'datatable'];
+    const [data, setData] = useState([]);
+    const tableRefMenu = useRef(null);
+    const dataTableRefMenu = useRef(null);
+
+    const [menuPermission, setMenuPermission] = useState({
+        id: '',
+        menu_id: '',
+        role_id: '',
+    });
+
+    const [menuPermissionCreate, setMenuPermissionCreate] = useState(false);
+    const [menuPermissionUpdate, setMenuPermissionUpdate] = useState(false);
+    const [clickEdit, setClickEdit] = useState(false);
+    const [menuPermissionDelete, setMenuPermissionDelete] = useState(false);
+
+    const url = ['api', 'menu-permissions'];
 
     const buttons = [
         {
-            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Menu</span>',
+            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Permiso</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
             action: async function (e, dt, button, config) {
                 openModalCreate()
@@ -56,24 +47,8 @@ const IndexMenus = () => {
     ];
 
     const columns = [
-        { title: 'Label',  data: 'label' },
-        { title: 'URL', data: 'path' },
-        { title: 'Icono', data: 'icon', render: (icon) => {
-                return `<i class="${icon}"></i>`;
-            },
-        },
-        { title: 'Posición', data: 'menuOrder' },
-        { title: 'Estado', data: 'status' },
-        { title: 'Módulo', data: 'module', render: (module) => {
-                return module ? module.name : '-';
-            },
-        },
-        { title: 'Padre', data: 'parent', render: (parent) => {
-            return parent ? parent.label : '-';
-        }},
-        { title: 'Componente', data: 'component', render: (component) => {
-            return component ?? '-';
-        }},
+        { title: 'Menu',  data: 'menu' },
+        { title: 'Rol', data: 'role' },
         {title: 'Acciones', data: 'id', render: (id) => {
             return `
                 <div class="d-flex gap-1">
@@ -95,19 +70,19 @@ const IndexMenus = () => {
                 modalCreateRef.current
             );
         }
-        setMenu({
+        setMenuPermission({
             id: '',
-            label: '',
-            icon: '',
-            path: '',
-            menuOrder: '',
-            parentId: null,
-            moduleId: null,
-            status: 'ACTIVE',
-            component: '',
+            menu_id: '',
+            role_id: '',
         });
         modalCreateInstance.current.show();
     }
+
+    useEffect(() => {
+        if (!clickEdit) return;
+        openModalUpdate();
+        setClickEdit(false);
+    }, [clickEdit]);
 
     const openModalUpdate = () => {
         if (!modalUpdateInstance.current) {
@@ -135,29 +110,25 @@ const IndexMenus = () => {
                         return;
                     }
 
-                    setMenu({
+                    setMenuPermission({
                         ...menuRef,
-                        parentId: menuRef.parent ? String(menuRef.parent.id) : null,
-                        moduleId: menuRef.module ? String(menuRef.module.id) : null,
+                        menu_id: menuRef.menu_id ? String(menuRef.menu_id) : null,
+                        role_id: menuRef.role_id ? String(menuRef.role_id) : null,
                     });
 
                     setClickEdit(true);
-
-                    // console.log("Click boton de editar");
-
-                    // openModalUpdate(menuRef);
                     break;
                 case 'delete':
                     window.Swal.fire({
                         title: '¿Estás seguro?',
-                        text: '¿Estás seguro de querer eliminar este menú?',
+                        text: '¿Estás seguro de querer eliminar este permiso de menú?',
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonText: 'Eliminar',
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => { 
                         if (result.isConfirmed) {
-                            const url = base_url(['api', 'menus', id]);
+                            const url = base_url(['api', 'menu-permissions', id]);
                             try {
                                 await fetchHelper.delete(url, {}, {}, 500, false);
                                 dataTableRefMenu?.current?.ajax.reload();
@@ -189,30 +160,15 @@ const IndexMenus = () => {
         };
     }, [data]);
 
-    useEffect(() => {
-        if (!clickEdit) return;
-        openModalUpdate();
-        setClickEdit(false);
-    }, [clickEdit]);
-
     return <>
-        <div className="card">
+
+<div className="card">
             <h5 className="card-header text-md-start text-center">Menus</h5>
 
-            <div className={`alert alert-success alert-dismissible ${!menuDelete ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Menú eliminado correctamente</span>
-            </div>
 
-            <div className={`alert alert-success alert-dismissible ${!menuUpdate ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Menú editado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!menuCreate ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Menú creado correctamente</span>
-            </div>
+            <AlertPage type="success" message={`Permisos para el menu, creado exitosamente`} show={menuPermissionCreate} />
+            <AlertPage type="success" message={`Permisos para el menu, actualizado exitosamente`} show={menuPermissionUpdate} />
+            <AlertPage type="success" message={`Permisos para el menu, eliminado exitosamente`} show={menuPermissionDelete} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference
@@ -222,28 +178,29 @@ const IndexMenus = () => {
                     dataTableRef={dataTableRefMenu}
                     method='POST'
                     buttons={buttons}
-                    title='Menus'
+                    title='Permisos Menu'
                     setData={setData}
                 />
             </div>
 
-            <CreateMenu
+            <CreateMenuPermission
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
-                menu={menu} setMenu={setMenu}
+                menuPermission={menuPermission} setMenuPermission={setMenuPermission}
                 dataTableRef={dataTableRefMenu}
-                setMenuCreate={setMenuCreate}
+                setMenuCreate={setMenuPermissionCreate}
             />
 
-            <UpdatedMenu
+            <UpdateMenuPermission
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
-                menu={menu} setMenu={setMenu}
+                menuPermission={menuPermission} setMenuPermission={setMenuPermission}
                 dataTableRef={dataTableRefMenu}
-                setMenuUpdate={setMenuUpdate}
+                setMenuUpdate={setMenuPermissionUpdate}
             />
         </div>
+
     </>
 }
 
-export default IndexMenus;
+export default MenuPermissionIndex

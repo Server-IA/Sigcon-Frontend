@@ -1,10 +1,21 @@
 export const base_url = (array = [], get = {}) => {
 
     let url = '';
-    if(import.meta.env.MODE === "production"){
-        url = "http://localhost:8080/";
-    }else{
-        url = "http://localhost:8080/";
+    const env = import.meta.env.VITE_ENVIRONMENT || 'local';
+
+    switch(env){
+        case 'local':
+            url = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080/';
+            break;
+        case 'production':
+            url = import.meta.env.VITE_API_URL_PRODUCTION || 'https://api.inmero.co/sigcon/';
+            break;
+        case 'development':
+            url = import.meta.env.VITE_API_URL_DEVELOPMENT || 'https://test.inmero.co/sigcon/';
+            break;
+        default:
+            url = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080/';
+            break;
     }
 
     var path = array.length > 0 ? array.join('/') : ''; // Construir el path
@@ -14,13 +25,22 @@ export const base_url = (array = [], get = {}) => {
         .join('&');
 
     const urlFinal = getData ? `${url}${path}?${getData}` : `${url}${path}`;
-
-    console.log(urlFinal);
-    console.log(['environment', import.meta.env]);
   
     return urlFinal;
 }
 
-export const toast = (message, type) => {
-    toast.success(message);
+
+export const base_redirect_path = (is_login = false) => {
+    const joinPath = (...parts) =>
+        parts.join('/').replace(/\/+/g, '/')
+      
+    const base = import.meta.env.VITE_PATH || '/'
+      
+    const path = is_login
+        ? joinPath(base, '/login')
+        : joinPath(base, '/dashboard')
+
+    console.log(['path', path]);
+
+    return path
 }

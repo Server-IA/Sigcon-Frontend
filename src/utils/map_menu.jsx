@@ -1,4 +1,5 @@
 import Home from "../pages/home/index";
+import PerfilPage from "../pages/parametrizacion/perfil/index";
 
 // Parametrizacion
 import IndexModules from "../pages/parametrizacion/modules/index";
@@ -6,6 +7,7 @@ import IndexMenus from "../pages/parametrizacion/menus/index";
 
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
+import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -15,10 +17,12 @@ import { fetchHelper } from "./fetch";
 //aca tengo que agregar los nuevos modulos que cargue de parametrizacion
 export const COMPONENT_MAP = {
     HOME: Home,
+    PERFIL: PerfilPage,
     MODULOS: IndexModules,
     MENUS: IndexMenus,
     ROLES: IndexRoles,
     PARAMETROS: IndexParameters,
+    MENUSPERMISSIONS: MenuPermissionIndex
 };
 export const getMenu = async () => {
     const modules = [];
