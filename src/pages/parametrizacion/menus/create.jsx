@@ -14,6 +14,10 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
     const [menusPrincipales, setMenusPrincipales] = useState([]);
 
     useEffect(() => {
+        console.log("modules", modules);
+    }, [modules]);
+
+    useEffect(() => {
         const getModules = async () => {
             const url = base_url(['api', 'modules']);
             const body = {
@@ -201,6 +205,7 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 error={errors.parentId}
                                 placeholder="Menu principal"
                                 options={menusPrincipales}
+                                clearable={true}
                             />
                         </div>
                     </div>

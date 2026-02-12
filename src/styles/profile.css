@@ -1,0 +1,458 @@
+/*
+ * profile.css - Estilos de Perfil / Mis datos (mismo estilo que átomos de auth-login)
+ ******************************************************************************/
+
+/* ===== Reutilizar estilos de átomos (consistencia con login) ===== */
+.profile-page .input-field {
+  margin-bottom: 1.25rem;
+}
+
+.profile-page .label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.25px;
+}
+
+.profile-page .label-required {
+  color: #ef4444;
+  margin-left: 0.25rem;
+}
+
+.profile-page .input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: #1f2937;
+  background: #fff;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.profile-page .input::placeholder {
+  color: #9ca3af;
+}
+
+.profile-page .input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.profile-page .input-error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.profile-page .input-field-container {
+  position: relative;
+}
+
+.profile-page .input-field-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Icono DENTRO del campo (ojo contraseña) - espacio para no solaparse */
+.profile-page .input-field-wrapper:has(.input-field-icon) .input {
+  padding-right: 2.75rem;
+}
+
+.profile-page .input-field-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  pointer-events: auto;
+}
+
+.profile-page .password-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.profile-page .password-toggle:hover {
+  color: #1f2937;
+}
+
+.profile-page .input-error-indicator-external {
+  position: absolute;
+  right: -1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ef4444;
+  font-size: 1.25rem;
+}
+
+.profile-page .btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: auto;
+}
+
+.profile-page .btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.profile-page .btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+}
+
+.profile-page .btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.profile-page .btn-secondary:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.profile-page .btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.profile-page .btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+/* ===== Layout página Perfil ===== */
+.profile-page {
+  width: 100%;
+  max-width: 720px;
+}
+
+.profile-card {
+  background: #fff;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.profile-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.profile-body {
+  padding: 1.5rem;
+}
+
+.profile-section {
+  margin-bottom: 2rem;
+}
+
+.profile-section:last-of-type {
+  margin-bottom: 1.5rem;
+}
+
+.profile-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.profile-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.profile-photo-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+}
+
+.profile-photo-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-photo-avatar .profile-photo-placeholder {
+  color: #9ca3af;
+  font-size: 2.5rem;
+}
+
+.profile-photo-placeholder-hidden {
+  display: none !important;
+}
+
+.profile-file-input-hidden {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.profile-photo-actions {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-photo-actions .profile-photo-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.profile-photo-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.profile-photo-hint {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.profile-fields-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.profile-fields-row .input-field {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 1.25rem;
+}
+
+.profile-field-full {
+  margin-bottom: 1.25rem;
+}
+
+.profile-field-with-button {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.profile-field-with-button .input-field {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+
+.profile-field-with-button .btn {
+  flex-shrink: 0;
+}
+
+.profile-notification {
+  margin-bottom: 1.25rem;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+/* ===== Notification bar (mismo estilo que error-alert, con variantes) ===== */
+.notification-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid;
+  animation: profileSlideIn 0.3s ease-out;
+}
+
+@keyframes profileSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notification-bar--error {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.notification-bar--error .notification-bar-icon {
+  color: #dc2626;
+}
+
+.notification-bar--warning {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
+.notification-bar--warning .notification-bar-icon {
+  color: #d97706;
+}
+
+.notification-bar--success {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.notification-bar--success .notification-bar-icon {
+  color: #22c55e;
+}
+
+.notification-bar-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.notification-bar-icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.notification-bar-message {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.notification-bar-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.notification-bar-close:hover {
+  opacity: 1;
+}
+
+/* ===== Modal eliminar cuenta ===== */
+.profile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+}
+
+.profile-modal {
+  background: #fff;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.profile-modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #6b7280;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.profile-modal-close:hover {
+  color: #1f2937;
+}
+
+.profile-modal-body {
+  padding: 1.5rem;
+  font-size: 0.9375rem;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.profile-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.profile-field-error {
+  font-size: 0.8125rem;
+  color: #dc2626;
+  margin-top: 0.25rem;
+}

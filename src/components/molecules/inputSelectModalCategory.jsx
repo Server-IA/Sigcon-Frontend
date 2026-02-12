@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 // import $ from 'jquery';
 
@@ -8,87 +9,58 @@ import { useEffect, useRef } from 'react';
 // import "../../styles/vendor/select2/select2.js";
 // import "../../styles/vendor/select2/select2.css";
 
-const InputSelectModal = ({ id, label, value, onChange, error, options, placeholder, clearable = false }) => {
-
+const InputSelectModalCategory = ({ id, label, value, onChange, options, placeholder }) => {
     const selectRef = useRef(null);
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
 
     useEffect(() => {
-
         const $select = $(selectRef.current);
-
-        // destruir si existe
-        if ($select.hasClass("select2-hidden-accessible")) {
-            $select.select2('destroy');
-        }
-
-        // Inicializar Select2
-        $select.select2({
-            dropdownParent: $select.parent(), // clave si está en modal
-            placeholder: placeholder || 'Seleccione una opción',
-            width: '100%',
-            allowClear: clearable
-        });
-
-        const handleChange = function () {
-            const newValue = $(this).val();
-            onChangeRef.current?.(newValue);
-
-            console.log([value, newValue, options])
-        };
-
-        $select.on('change', handleChange);
-
-        return () => {
-            $select.off('change', handleChange);
-            $select.select2('destroy');
-        };
-    }, []);
-
-    useEffect(() => {
-        const $select = $(selectRef.current);
-
-        // destruir si existe
-        if ($select.hasClass("select2-hidden-accessible")) {
-            $select.select2('destroy');
-        }
-
-        // reinicializar
+        if (!$select.select2) return;
         $select.select2({
             dropdownParent: $select.parent(),
             placeholder: placeholder || 'Seleccione una opción',
-            width: '100%',
-            allowClear: clearable
+            width: '100%'
         });
-
-        // restaurar valor
-        $select.val(value).trigger('change.select2');
-    }, [error]);
+        const handleChange = function () {
+            const newValue = $(this).val();
+            onChangeRef.current?.(newValue);
+        };
+        $select.on('change', handleChange);
+        return () => {
+            $select.off('change', handleChange);
+            if ($select.hasClass('select2-hidden-accessible')) {
+                $select.select2('destroy');
+            }
+        };
+    }, [options]);
 
     // Sincronizar value desde React
     useEffect(() => {
         $(selectRef.current).val(value).trigger('change.select2');
     }, [value]);
 
+    // ← ESTO ES LO QUE FALTA
     return (
         <div className="form-floating form-floating-outline">
             <select
                 id={id}
                 ref={selectRef}
-                className={`form-select ${error ? 'is-invalid' : ''}`}
+                className="form-select"
             >
                 <option value="">{placeholder || 'Seleccione una opción'}</option>
                 {options.map(option => (
                     <option key={option.id} value={option.id}>
-                        {option.label || option.name}
+                        {option.name}
                     </option>
                 ))}
             </select>
             <label htmlFor={id}>{label}</label>
-            {error && <div className="invalid-feedback">{error}</div>}
         </div>
     );
 };
+export default InputSelectModalCategory;
 
-export default InputSelectModal;
+
+
+

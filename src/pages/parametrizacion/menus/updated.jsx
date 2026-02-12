@@ -201,6 +201,19 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 error={errors.parentId}
                                 placeholder="Menu principal"
                                 options={menusPrincipales}
+                                clearable={true}
+                            />
+                        </div>
+
+                        <div className="col mb-6 mt-2">
+                            <InputSelectModal
+                                id="status_updated"
+                                label="Estado del menu"
+                                value={menu.status}
+                                onChange={(value) => setMenu({ ...menu, status: value })}
+                                error={errors.status}
+                                placeholder="Estado del menu"
+                                options={[{ label: 'Activo', id: 'ACTIVE' }, { label: 'Inactivo', id: 'INACTIVE' }]}
                             />
                         </div>
                     </div>

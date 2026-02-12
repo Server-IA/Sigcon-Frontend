@@ -59,14 +59,6 @@ const isPathActive = (item, parentPath, currentPath) => {
     const rawPath = item.path ?? item.url ?? "";
     const fullPath = buildFullPath(parentPath, rawPath).replace(/^\//, "");
 
-    console.log({
-        menu: item.label || item.name,
-        parentPath,
-        rawPath,
-        fullPath,
-        currentPath
-    });
-
     if (fullPath === currentPath) return true;
 
     if (!item.childrens?.length) return false;
