@@ -18,6 +18,11 @@ const InputSelectModal = ({ id, label, value, onChange, error, options, placehol
 
         const $select = $(selectRef.current);
 
+        // destruir si existe
+        if ($select.hasClass("select2-hidden-accessible")) {
+            $select.select2('destroy');
+        }
+
         // Inicializar Select2
         $select.select2({
             dropdownParent: $select.parent(), // clave si está en modal
@@ -29,6 +34,8 @@ const InputSelectModal = ({ id, label, value, onChange, error, options, placehol
         const handleChange = function () {
             const newValue = $(this).val();
             onChangeRef.current?.(newValue);
+
+            console.log([value, newValue, options])
         };
 
         $select.on('change', handleChange);

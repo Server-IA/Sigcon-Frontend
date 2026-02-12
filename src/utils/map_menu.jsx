@@ -4,6 +4,7 @@ import PerfilPage from "../pages/parametrizacion/perfil/index";
 // Parametrizacion
 import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
+import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -14,7 +15,8 @@ export const COMPONENT_MAP = {
     HOME: Home,
     PERFIL: PerfilPage,
     MODULOS: IndexModules,
-    MENUS: IndexMenus
+    MENUS: IndexMenus,
+    MENUSPERMISSIONS: MenuPermissionIndex
 };
 export const getMenu = async () => {
     

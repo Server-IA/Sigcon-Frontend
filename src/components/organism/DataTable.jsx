@@ -8,6 +8,8 @@ import { base_url } from '../../utils/functions';
 import { default_buttons } from '../../utils/dataTable';
 import { useSelector } from 'react-redux';
 
+import { base_redirect_path } from '../../utils/functions';
+
 const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title, setData }) => {
     
     const token = useSelector(state => state.user.token);
@@ -41,6 +43,21 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
                         });
 
                         window.location.href = '/login';
+                    }else if(xhr.status === 403) {
+                        window.Swal.fire({
+                            title: 'Error',
+                            text: 'No tienes permisos para acceder a esta página',
+                            icon: 'error',
+                            showConfirmButton: false,
+                            allowOutsideClick: false,
+                            preLoader: {
+                                type: 'dots',
+                                color: '#000',
+                                size: '20px',
+                                className: 'preloader-custom',
+                            },
+                        })
+                        window.location.href = base_redirect_path();
                     }
                 }
             },
