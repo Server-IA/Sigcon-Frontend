@@ -1,12 +1,10 @@
 export const base_url = (array = [], get = {}) => {
 
     let url = '';
-    const env = import.meta.env.VITE_ENVIRONMENT || 'local';
-    console.log('env', env);
-    console.log('import.meta.env', import.meta.env);
+    const env = import.meta.env.MODE || 'local';
 
     switch(env){
-        case 'local':
+        case 'development':
             url = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080/';
             break;
         case 'production':
