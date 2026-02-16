@@ -46,6 +46,10 @@ const CreateMenuPermission = ({ modalRef, modalInstance, menuPermission, setMenu
         getRoles();
     }, []);
 
+    useEffect(() => {
+        console.log(menuPermission, 'menuPermission');
+    }, [menuPermission]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -115,6 +119,7 @@ const CreateMenuPermission = ({ modalRef, modalInstance, menuPermission, setMenu
                                 error={errors.menu_id}
                                 placeholder="Menu principal"
                                 options={menus}
+
                             />
                         </div>
 

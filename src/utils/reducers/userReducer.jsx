@@ -1,7 +1,7 @@
 // store/userReducer.js
 const initialState = {
     user: null
-  };
+};
   
 export default function userReducer(state = initialState, action) {
     switch (action.type) {

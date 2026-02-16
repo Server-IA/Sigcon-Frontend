@@ -61,7 +61,7 @@ const UpdateMenuPermission = ({ modalRef, modalInstance, menuPermission, setMenu
             });
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
-            setMenuCreate(true);
+            setMenuUpdate(true);
             setErrors({});
             setErrorMessage('');
 
