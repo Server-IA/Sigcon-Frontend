@@ -44,9 +44,9 @@ export const COMPONENT_MAP = [
 export const getMenu = async () => {
     const modules = [];
     const url = base_url(['api', 'modules', 'menu']);
-    const {data: response} = await fetchHelper.get(url, {}, 0);
+    const {data, error} = await fetchHelper.get(url, {}, 0);
 
-    console.log('Response:', response);
+    console.log('Response:', data, error);
 
     modules.push({
         id: 0,
@@ -67,12 +67,12 @@ export const getMenu = async () => {
         ]
     })
 
-    if (!response?.error) {
-        modules.push(...response.map(modules => ({
+    if (!error) {
+        modules.push(...data?.map(modules => ({
             ...modules,
-            menus: buildMenuTree(modules.menus.map(menu => ({
+            menus: buildMenuTree(modules?.menus?.map(menu => ({
                 ...menu,
-                component: COMPONENT_MAP.find(component => component.id === menu.component)?.component || PageMaintenance
+                component: COMPONENT_MAP.find(component => component.id === menu?.component)?.component || PageMaintenance
             })))
         })));
     }

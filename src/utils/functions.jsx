@@ -34,7 +34,7 @@ export const base_redirect_path = (is_login = false) => {
     const joinPath = (...parts) =>
         parts.join('/').replace(/\/+/g, '/')
       
-    const base = import.meta.env.VITE_PATH || '/'
+    const base = import.meta.env.MODE === 'production' ? '/sigcon/' : '/'
       
     const path = is_login
         ? joinPath(base, '/login')

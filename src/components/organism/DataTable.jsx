@@ -10,7 +10,10 @@ import { useSelector } from 'react-redux';
 import { base_redirect_path, base_url } from '../../utils/functions';
 import { fetchHelper } from '../../utils/fetch';
 
-const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title, setData, filtered = false, search, setSearch }) => {
+const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title, setData, filtered = false, search = {
+    value: '',
+    checked: true,
+}, setSearch = () => {}}) => {
     
     const token = useSelector(state => state.user.token);
 
