@@ -8,7 +8,7 @@ const Page404 = () => {
     const user = useSelector(state => state.user).user;
 
     const to = base_redirect_path(!user);
-    const text = !user ? 'Back to home' : 'Go to login'
+    const text = user ? 'Ir a inicio' : 'Ir a login'
 
     return <>
         <div className="misc-wrapper h-100">
