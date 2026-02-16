@@ -1,67 +1,66 @@
+
 import { useEffect, useRef } from 'react';
+// import $ from 'jquery';
 
-const InputSelectModal = ({ id, label, value, onChange, error, options, placeholder, clearable = false, multiple = false, required = false }) => {
+// window.$ = window.jQuery = $;
 
+// import 'select2/dist/css/select2.css';
+// import 'select2/dist/js/select2.js';
+// import "../../styles/vendor/select2/select2.js";
+// import "../../styles/vendor/select2/select2.css";
+
+const InputSelectModalCategory = ({ id, label, value, onChange, options, placeholder }) => {
     const selectRef = useRef(null);
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
 
     useEffect(() => {
-
         const $select = $(selectRef.current);
-
-        // destruir si existe
-        if ($select.hasClass("select2-hidden-accessible")) {
-            $select.select2('destroy');
-        }
-
-        // Inicializar Select2
+        if (!$select.select2) return;
         $select.select2({
-            dropdownParent: $select.parent(), // clave si está en modal
+            dropdownParent: $select.parent(),
             placeholder: placeholder || 'Seleccione una opción',
-            width: '100%',
-            allowClear: required ? false : clearable
+            width: '100%'
         });
-
         const handleChange = function () {
             const newValue = $(this).val();
             onChangeRef.current?.(newValue);
         };
-
         $select.on('change', handleChange);
-
-        $select.val(value).trigger('change.select2');
-
         return () => {
             $select.off('change', handleChange);
-            $select.select2('destroy');
+            if ($select.hasClass('select2-hidden-accessible')) {
+                $select.select2('destroy');
+            }
         };
-    }, [options, error]);
+    }, [options]);
 
     // Sincronizar value desde React
     useEffect(() => {
         $(selectRef.current).val(value).trigger('change.select2');
     }, [value]);
 
+    // ← ESTO ES LO QUE FALTA
     return (
         <div className="form-floating form-floating-outline">
             <select
                 id={id}
                 ref={selectRef}
-                className={`form-select ${error ? 'is-invalid' : ''}`}
-                multiple={multiple}
+                className="form-select"
             >
                 <option value="">{placeholder || 'Seleccione una opción'}</option>
                 {options.map(option => (
-                    <option key={String(option.id).replace(/\s+/g, '_')} value={option.id}>
-                        {option.label || option.name}
+                    <option key={option.id} value={option.id}>
+                        {option.name}
                     </option>
                 ))}
             </select>
-            <label htmlFor={id}>{label} {required ? <span className="text-danger">*</span> : null}</label>
-            {error && <div className="invalid-feedback">{error}</div>}
+            <label htmlFor={id}>{label}</label>
         </div>
     );
 };
+export default InputSelectModalCategory;
 
-export default InputSelectModal;
+
+
+

@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import DataTableReference from '../../../components/organism/DataTable';
+import ViewRole from '../../../components/organism/ViewRole';
 
 import { fetchHelper } from '../../../utils/fetch';
-import { base_url } from '../../../utils/functions';
+import { base_url, chunkArray } from '../../../utils/functions';
 
-import CreateModule from './create';
-import UpdatedModule from './updated';
+import CreateRole from './create';
+import UpdatedRole from './updated';
 
-const IndexModules = () => {
+const IndexRoles = () => {
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -18,12 +19,51 @@ const IndexModules = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
-    const [data, setData] = useState([]);
-    const [moduleCreate, setModuleCreate] = useState(false);
-    const [moduleEdit, setModuleEdit] = useState(false);
-    const [moduleDelete, setModuleDelete] = useState(false);
+    const modalViewRef = useRef(null);
+    const modalViewInstance = useRef(null);
 
-    const url = ['api/modules'];
+    const [data, setData] = useState([]);
+    const [roleCreate, setRoleCreate] = useState(false);
+    const [roleEdit, setRoleEdit] = useState(false);
+    const [roleDelete, setRoleDelete] = useState(false);
+
+    const [role, setRole] = useState({
+        id: '',
+        name: '',
+        status: '',
+        permissionIds: [],
+    });
+
+    const [modules, setModules] = useState([]);
+
+    useEffect(() => {
+        const urlPermissions = base_url(['roles/permissions']);
+        fetchHelper.post(urlPermissions, {length: -1}, {}, 0).then(response => {
+            const grouped = response.data.reduce((acc, permission) => {
+                const moduleId = permission.module.id;
+              
+                if (!acc[moduleId]) {
+                  acc[moduleId] = {
+                    module: permission.module,
+                    permissions: []
+                  };
+                }
+              
+                acc[moduleId].permissions.push(permission);
+              
+                return acc;
+            }, {});
+              
+            let result = Object.values(grouped);
+            setModules(result);
+        });
+    }, []);
+
+    useEffect(() => {
+        console.log("Modulos", modules);
+    }, [modules]);
+
+    const url = ['roles/getRoles'];
 
     const actions = [
         { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
@@ -31,22 +71,9 @@ const IndexModules = () => {
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
 
-    const [module, setModule] = useState({
-        id: '',
-        name: '',
-        description: '',
-        url: '',
-        icon: '',
-        position: '',
-        status: 'ACTIVE',
-    });
-
     const [columns, setColumns] = useState([
-        { title: 'Orden', data: 'position' },
+        { title: 'ID', data: 'id' },
         { title: 'Nombre', data: 'name' },
-        { title: 'URL', data: 'url' },
-        { title: 'Icono', data: 'icon', render: (icon) => `<i class="${icon}"></i>` },
-        { title: 'Descripción', data: 'description' },
         { title: 'Estado', data: 'status' },
         {
             title: 'Acciones', data: 'id', render: (id) => {
@@ -72,23 +99,20 @@ const IndexModules = () => {
             );
         }
         modalCreateInstance.current.show();
-        setModule({
+        setRole({
             id: '',
             name: '',
-            description: '',
-            url: '',
-            icon: '',
-            position: '',
-            status: 'ACTIVE',
+            status: '',
+            permissionIds: [],
         });
     };
 
     const buttons = [
         {
-            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Modulo</span>',
-            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
+            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Rol</span>',
+            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: async function (e, dt, button, config) {
-                openModalCreate()
+                openModalCreate();
             }
         }
     ];
@@ -101,28 +125,34 @@ const IndexModules = () => {
             const action = $(this).data('action');
             const id = Number($(this).data('id'));
 
+            const roleRef = data.find(m => m.id === id);
+
+            if (!roleRef) {
+                console.warn('Rol no encontrado', id);
+                return;
+            }
+
+            const roleData = {
+                id: roleRef.id,
+                name: roleRef.name ?? '',
+                status: roleRef.status ?? 'ACTIVE',
+                permissionIds: roleRef.permissionIds ?? [],
+            };
+
             switch (action) {
                 case 'view':
-                    console.log('view');
-                    break;
-                case 'edit':
+                    setRole(roleData);
 
-                    const moduleRef = data.find(m => m.id === id);
-
-                    if (!moduleRef) {
-                        console.warn('Módulo no encontrado', id);
-                        return;
+                    if (!modalViewInstance.current) {
+                        modalViewInstance.current = new window.bootstrap.Modal(
+                            modalViewRef.current
+                        );
                     }
+                    modalViewInstance.current.show();
+                    break;
 
-                    setModule({
-                        id: moduleRef.id,
-                        name: moduleRef.name == null ? '' : moduleRef.name,
-                        description: moduleRef.description == null ? '' : moduleRef.description,
-                        url: moduleRef.url == null ? '' : moduleRef.url,
-                        icon: moduleRef.icon == null ? '' : moduleRef.icon,
-                        position: moduleRef.position == null ? '' : moduleRef.position,
-                        status: moduleRef.status
-                    });
+                case 'edit':
+                    setRole(roleData);
 
                     if (!modalUpdateInstance.current) {
                         modalUpdateInstance.current = new window.bootstrap.Modal(
@@ -131,43 +161,38 @@ const IndexModules = () => {
                     }
                     modalUpdateInstance.current.show();
                     break;
-                case 'delete':
 
+                case 'delete':
                     window.Swal.fire({
                         title: '¿Estás seguro?',
-                        text: '¿Estás seguro de querer eliminar este módulo?',
+                        text: '¿Estás seguro de querer eliminar este rol?',
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonText: 'Eliminar',
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => {
                         if (result.isConfirmed) {
-                            const url = base_url(['api', 'modules', 'delete', id]);
+                            const url = base_url(['roles', 'deleteRole', id]);
                             try {
-                                const response = await fetchHelper.delete(url, {}, {}, 500, false);
-                                if (response.status === 200) {
-                                    dataTableRef?.current?.ajax.reload();
-                                    setModuleDelete(true);
-                                }
+                                await fetchHelper.post(url, {}, {}, 500, false);
                             } catch (error) {
                                 console.error(error);
                                 window.Swal.fire({
                                     title: 'Error',
-                                    text: 'Error al eliminar el módulo',
+                                    text: 'Error al eliminar el rol',
                                     icon: 'error',
                                 });
                             } finally {
                                 dataTableRef?.current?.ajax.reload();
-                                setModuleDelete(true);
+                                setRoleDelete(true);
                             }
                         }
                     });
                     break;
-            };
+            }
         };
 
         table.on('click', '.action-btn', handler);
-
         return () => {
             table.off('click', '.action-btn', handler);
         };
@@ -175,21 +200,23 @@ const IndexModules = () => {
 
     return <>
         <div className="card">
-            <h5 className="card-header text-md-start text-center">Modulos</h5>
-            <div className={`alert alert-success alert-dismissible ${!moduleCreate ? 'd-none' : ''}`} role="alert">
+            <h5 className="card-header text-md-start text-center">Roles</h5>
+
+            <div className={`alert alert-success alert-dismissible ${!roleCreate ? 'd-none' : ''}`} role="alert">
                 <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Modulo creado correctamente</span>
+                <span>Rol creado correctamente</span>
             </div>
 
-            <div className={`alert alert-success alert-dismissible ${!moduleEdit ? 'd-none' : ''}`} role="alert">
+            <div className={`alert alert-success alert-dismissible ${!roleEdit ? 'd-none' : ''}`} role="alert">
                 <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Modulo actualizado correctamente</span>
+                <span>Rol actualizado correctamente</span>
             </div>
 
-            <div className={`alert alert-success alert-dismissible ${!moduleDelete ? 'd-none' : ''}`} role="alert">
+            <div className={`alert alert-success alert-dismissible ${!roleDelete ? 'd-none' : ''}`} role="alert">
                 <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Modulo eliminado correctamente</span>
+                <span>Rol eliminado correctamente</span>
             </div>
+
             <div className="card-datatable text-nowrap">
                 <DataTableReference
                     url_api={url}
@@ -198,30 +225,37 @@ const IndexModules = () => {
                     dataTableRef={dataTableRef}
                     method='POST'
                     buttons={buttons}
-                    title='Modulos'
+                    title='Roles'
                     setData={setData}
                 />
             </div>
         </div>
 
-        <CreateModule
+        <CreateRole
             modalRef={modalCreateRef}
             modalInstance={modalCreateInstance}
-            module={module}
-            setModule={setModule}
+            role={role}
+            setRole={setRole}
             dataTableRef={dataTableRef}
-            setModuleCreate={setModuleCreate}
+            setRoleCreate={setRoleCreate}
+            modules={modules}
         />
 
-        <UpdatedModule
+        <UpdatedRole
             modalRef={modalUpdateRef}
             modalInstance={modalUpdateInstance}
-            module={module}
-            setModule={setModule}
+            role={role}
+            setRole={setRole}
             dataTableRef={dataTableRef}
-            setModuleEdit={setModuleEdit}
+            setRoleEdit={setRoleEdit}
+            modules={modules}
         />
-    </>;
-}
 
-export default IndexModules
+        {/* <ViewRole
+            modalRef={modalViewRef}
+            role={role}
+        /> */}
+    </>;
+};
+
+export default IndexRoles;

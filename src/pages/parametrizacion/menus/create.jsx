@@ -5,50 +5,21 @@ import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuCreate }) => {
+const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuCreate, modules, parents, components }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
-    const [modules, setModules] = useState([]);
-    const [menusPrincipales, setMenusPrincipales] = useState([]);
+    const [optionMenus, setOptionMenus] = useState([]);
 
     useEffect(() => {
-        console.log("modules", modules);
-    }, [modules]);
+        const optionMenus = parents.filter(parent => parent.moduleId == menu.moduleId);
 
-    useEffect(() => {
-        const getModules = async () => {
-            const url = base_url(['api', 'modules']);
-            const body = {
-                length: -1,
-            }
-            const {data} = await fetchHelper.post(url, body, {}, 0);
-            setModules(
-                data.map(module => ({
-                    id: module.id,
-                    name: module.name,
-                }))
-            );
-        }
-
-        const getMenusPrincipales = async () => {
-            const url = base_url(['api', 'menus', 'datatable']);
-            const body = {
-                length: -1,
-                parentId: -1,
-            }
-            const {data} = await fetchHelper.post(url, body, {}, 0);
-            setMenusPrincipales(
-                data.map(menu => ({
-                    id: menu.id,
-                    name: menu.label,
-                }))
-            );
-        }
-        getModules();
-        getMenusPrincipales();
-    }, []);
+        setOptionMenus(optionMenus.map(parent => ({
+            id: parent.id,
+            name: parent.name,
+        })));
+    }, [menu]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -75,7 +46,7 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
             setErrorMessage('');
 
         }catch (error) {
-            console.log(error.msg);
+            console.error(error.msg);
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
@@ -165,16 +136,15 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
 
                     <div className="row">
                         <div className="col mb-6 mt-2">
-                            <InputModal
-                                type="select"
+                            <InputSelectModal
                                 id="component"
                                 label="Componente del menu"
                                 value={menu.component}
-                                onChange={(e) => setMenu({ ...menu, component: e.target.value })}
+                                onChange={(value) => setMenu({ ...menu, component: value })}
                                 error={errors.component}
                                 placeholder="Componente del menu"
-                            >
-                            </InputModal>
+                                options={components}
+                            />
                         </div>
                         <div className="col mb-6 mt-2">
                             <InputSelectModal
@@ -196,15 +166,15 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                         <div className="col mb-6 mt-2">
                             <InputSelectModal
                                 id="parentId"
-                                label="Menu principal"
+                                label="Menú principal"
                                 value={menu.parentId}
                                 onChange={(value) => setMenu({
                                     ...menu,
                                     parentId: value
                                 })}
                                 error={errors.parentId}
-                                placeholder="Menu principal"
-                                options={menusPrincipales}
+                                placeholder="Menú principal"
+                                options={optionMenus}
                                 clearable={true}
                             />
                         </div>

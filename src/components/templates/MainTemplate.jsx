@@ -15,7 +15,7 @@ const MainTemplate = ({modules}) =>{
                         <NavHorizontal modules={modules} />
                         <div className="content-wrapper">
                             <div className="container-xxl flex-grow-1 container-p-y">
-                                <div className="row g-6 h-100">
+                                <div className="row g-6">
                                     <Outlet />
                                 </div>
                             </div>

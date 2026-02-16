@@ -2,13 +2,15 @@ import '../../styles/vendor/flatpickr/flatpickr.css';
 
 import esES from '../../jsons/languaje/es-ES-DataTable.json';
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { base_url } from '../../utils/functions';
 import { default_buttons } from '../../utils/dataTable';
 import { useSelector } from 'react-redux';
 
-const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title, setData }) => {
+import { base_redirect_path, base_url } from '../../utils/functions';
+import { fetchHelper } from '../../utils/fetch';
+
+const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title, setData, filtered = false, search, setSearch }) => {
     
     const token = useSelector(state => state.user.token);
 
@@ -16,32 +18,36 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
         if (!tableRef?.current || !dataTableRef) return;
         // Inicializar DataTable
         dataTableRef.current = $(tableRef.current).DataTable({
-            ajax: {
-                url: base_url(url_api),
-                dataSrc: 'data',
-                type: method || 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                contentType: 'application/json',
-                data: function (d) {
-                    return JSON.stringify(d);
-                },
-                error: function (xhr, error, thrown) {
-                    if(xhr.status === 401) {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('user');
+            ajax: async function(data, callback, settings) {
+                try {
 
-                        window.Swal.fire({
-                            title: 'Error',
-                            text: 'Sesión expirada',
-                            icon: 'error',
-                            showConfirmButton: false,
-                            allowOutsideClick: false,
-                        });
+                    const response = await fetchHelper.post(base_url(url_api), data, {}, 0);
+                    callback(response);
 
-                        window.location.href = '/login';
+                }catch(error){
+                    console.log("Error en DataTable: ", error);
+                    callback({
+                        data: [],
+                        recordsTotal: 0,
+                        recordsFiltered: 0
+                    });
+                    if(error.status === 403){
+                        if (dataTableRef.current) {
+                            dataTableRef.current.destroy();
+                        }
+                    
+                        $(tableRef.current).html(`
+                            <tbody>
+                                <tr>
+                                    <td colspan="${columns.length}" class="text-center text-danger py-5">
+                                        <i class="ri-lock-line fs-2 d-block mb-2"></i>
+                                        No tiene permisos para ver esta información
+                                    </td>
+                                </tr>
+                            </tbody>
+                        `);
                     }
+                    return;
                 }
             },
             dom: 'r<"row"<"col-sm-12 col-md-12 col-lg-4 mt-3 mt-md-0 d-flex justify-content-center justify-content-lg-start justify-content-md-center align-items-center"l><"col-sm-12 col-md-12 col-lg-8 d-flex justify-content-center justify-content-lg-end justify-content-md-center align-items-center"<"dt-action-buttons text-end pt-0 pt-md-0"B>>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
@@ -59,6 +65,12 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
                     setData(settings.json.data);
                 }
             },
+            initComplete: function(settings) {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });  
+            },
             language: esES,
             buttons: [
                 {
@@ -68,32 +80,32 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
                     autoClose: false,
                     buttons: [
                         // ==== SECCIÓN: CONFIGURACIÓN ====
-                        {
-                            text: '<span class="fw-bold text-primary">Configuración</span>',
-                            className: 'dropdown-header',
-                            action: function(){ return false; }
-                        },
-                        {
-                            extend: 'colvis',
-                            text: '<i class="ri-eye-line me-1"></i> Mostrar / Ocultar Columnas',
-                            className: 'dropdown-item'
-                        },
-                        {
-                            extend: 'colvisRestore',
-                            text: '<i class="ri-refresh-line me-1"></i> Restaurar Columnas',
-                            className: 'dropdown-item'
-                        },
+                        // {
+                        //     text: '<span class="fw-bold text-primary">Configuración</span>',
+                        //     className: 'dropdown-header',
+                        //     action: function(){ return false; }
+                        // },
+                        // {
+                        //     extend: 'colvis',
+                        //     text: '<i class="ri-eye-line me-1"></i> Mostrar / Ocultar Columnas',
+                        //     className: 'dropdown-item'
+                        // },
+                        // {
+                        //     extend: 'colvisRestore',
+                        //     text: '<i class="ri-refresh-line me-1"></i> Restaurar Columnas',
+                        //     className: 'dropdown-item'
+                        // },
             
-                        // Separator visual
-                        {
-                            text: '<hr class="dropdown-divider m-1">',
-                            className: 'dt-divider',
-                            action: function(){ return false; }
-                        },
+                        // // Separator visual
+                        // {
+                        //     text: '<hr class="dropdown-divider m-1">',
+                        //     className: 'dt-divider',
+                        //     action: function(){ return false; }
+                        // },
             
                         // ==== SECCIÓN: REPORTES ====
                         {
-                            text: '<span class="fw-bold text-primary">Reportes</span>',
+                            text: '<span class="fw-bold text-primary">Exportar Información</span>',
                             className: 'dropdown-header',
                             action: function(){ return false; }
                         },
@@ -113,9 +125,84 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
             }
         };
     }, [tableRef]);
+
+    useEffect(() => {
+        if (!dataTableRef?.current) return;
+        dataTableRef.current.table().search(search.value, search.checked, true);
+    }, [search]);
+
+    const handleFilter = () => {
+        if (!dataTableRef?.current) return;
+        dataTableRef.current.table().columns().search('');
+        dataTableRef.current.table().search(search.value, search.checked, true).draw();
+    }
+
     return (
-        <table ref={tableRef} className="datatables-ajax table table-bordered"></table>
-    )
-}
+        <>
+            {filtered && <div className="input-group">
+                <div className="input-group-text form-check mb-0">
+                    <input
+                    checked={search.checked}
+                    className="form-check-input m-auto"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    data-bs-original-title="Busqueda por coincidencia"
+                    type="checkbox"
+                    onChange={(e) => {
+                        setSearch({ ...search, checked: e.target.checked });
+                    }}
+                    disabled={!dataTableRef?.current}
+                    aria-label="Buscar" />
+                </div>
+                <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Filtrar"
+                    aria-label="Buscar"
+                    disabled={!dataTableRef?.current}
+                    value={search.value}
+                    onChange={(e) => {
+                        setSearch({ ...search, value: e.target.value });
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            handleFilter();
+                        }
+                    }}
+                />
+                <button
+                    className="btn btn-outline-danger"
+                    type="button"
+                    onClick={
+                        () => {
+                            setSearch({ ...search, value: '' });
+                            handleFilter();
+                        }   
+                    }
+                    disabled={!dataTableRef?.current}
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    data-bs-custom-class="tooltip-danger"
+                    data-bs-original-title="Limpiar filtro"
+                >
+                    <i className="ri-delete-back-line"></i>
+                </button>
+                <button
+                    className="btn btn-outline-primary"
+                    type="button"
+                    onClick={handleFilter}
+                    disabled={!dataTableRef?.current}
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    data-bs-custom-class="tooltip-primary"
+                    data-bs-original-title="Filtrar"
+                >
+                    <i className="ri-filter-3-fill"></i>
+                </button>
+            </div>}
+            <table ref={tableRef} className="datatables-ajax table table-bordered"></table>
+        </>
+    );
+};
 
 export default DataTableReference;
