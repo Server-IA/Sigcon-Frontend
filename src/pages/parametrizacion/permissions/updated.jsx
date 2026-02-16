@@ -1,107 +1,73 @@
 import { useState, useEffect } from 'react';
-import MultiSelectModal from "../../../components/molecules/MultiSelectModal";
-import { base_url } from '../../../utils/functions';
-import { fetchHelper } from '../../../utils/fetch';
 
-const UpdatedPermission = ({ modalRef, modalInstance, permission, setPermission, onSuccess }) => {
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import InputModal from "../../../components/molecules/InputModal";
+
+import { base_url, validarArrays } from '../../../utils/functions';
+import { fetchHelper } from '../../../utils/fetch';
+import TextareaModal from '../../../components/molecules/TextareaModal';
+
+const UpdatedPermission = ({ modalRef, modalInstance, permission, setPermission, dataTableRef, types, modules }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [roles, setRoles] = useState([]);
-    const [originalRoleIds, setOriginalRoleIds] = useState([]);
+    const [modulesOptions, setModulesOptions] = useState([]);
 
     useEffect(() => {
-        const getRoles = async () => {
-            try {
-                const url = base_url(['roles']);
-                const response = await fetchHelper.get(url, {}, 0);
-                
-                const rolesData = response?.content || [];
-                
-                setRoles(
-                    rolesData.map(role => ({
-                        id: role.id,
-                        name: role.name,
-                    }))
-                );
-            } catch (error) {
-                console.error('Error al cargar roles:', error);
-            }
-        }
-        getRoles();
     }, []);
 
     useEffect(() => {
-        if (permission.id) {
-            setOriginalRoleIds(permission.roleIds || []);
-        }
-    }, [permission.id]);
+        setModulesOptions(
+            modules.map(m => ({
+                id: m.id,
+                name: m.name,
+            }))
+        )
+    }, [modules]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
-            const currentRoleIds = permission.roleIds.map(id => parseInt(id));
-            const originalIds = originalRoleIds.map(id => parseInt(id));
-
-            // Roles a los que hay que AGREGAR este permiso
-            const rolesToAddPermission = currentRoleIds.filter(id => !originalIds.includes(id));
-            
-            // Roles de los que hay que QUITAR este permiso
-            const rolesToRemovePermission = originalIds.filter(id => !currentRoleIds.includes(id));
 
             let hasChanges = false;
 
-            // ✅ ASIGNAR permiso a roles nuevos
-            for (const roleId of rolesToAddPermission) {
-                const urlAssign = base_url(['roles', 'assign-permissions']);
-                await fetchHelper.post(urlAssign, {
-                    id: roleId,  // ✅ ID del ROL
-                    permissionIds: [parseInt(permission.id)]  // ✅ ID del PERMISO
-                }, {}, 0, true);
-                hasChanges = true;
+            const dataPermissionUpdate = {
+                name: permission.name,
+                code: permission.code,
+                type: permission.type,
+                description: permission.description,
+                moduleId: permission.moduleId,
             }
 
-            // ✅ REMOVER permiso de roles
-            for (const roleId of rolesToRemovePermission) {
-                const urlRemove = base_url(['roles', 'remove-permissions']);
-                await fetchHelper.post(urlRemove, {
-                    id: roleId,  // ✅ ID del ROL
-                    permissionIds: [parseInt(permission.id)]  // ✅ ID del PERMISO
-                }, {}, 0, true);
-                hasChanges = true;
-            }
+            const permissionUpdateUrl = base_url(['roles', 'updatePermission', permission.id]);
 
-            if (!hasChanges) {
-                window.Swal.fire({
-                    icon: 'info',
-                    title: 'Sin cambios',
-                    text: 'No se realizaron cambios',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-                modalInstance?.current?.hide();
-                return;
-            }
+            const response = await fetchHelper.put(permissionUpdateUrl, dataPermissionUpdate, {}, 0);
+
+            dataTableRef?.current?.ajax.reload();
+            modalInstance?.current?.hide();
+            window.Swal.fire({
+                icon: 'success',
+                title: 'Éxito',
+                text: response.message,
+                timer: 2000,
+                showConfirmButton: true,
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                }
+            });
 
             setPermission({
                 id: '',
                 name: '',
-                roleIds: [],
+                code: '',
+                description: '',
+                type: '',
+                moduleId: '',
             });
-            
-            onSuccess?.();
-            modalInstance?.current?.hide();
+
             setErrors({});
             setErrorMessage('');
-
-            window.Swal.fire({
-                icon: 'success',
-                title: 'Éxito',
-                text: 'Permiso actualizado correctamente',
-                timer: 2000,
-                showConfirmButton: false
-            });
 
         } catch (error) {
             console.log('Error:', error);
@@ -142,39 +108,93 @@ const UpdatedPermission = ({ modalRef, modalInstance, permission, setPermission,
 
                         <div className="row">
                             <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline">
-                                    <input
-                                        type="text"
-                                        id="name"
-                                        className="form-control"
-                                        value={permission.name}
-                                        disabled
-                                    />
-                                    <label htmlFor="name">Nombre del permiso</label>
-                                </div>
-                                <small className="text-muted">El nombre del permiso no puede ser editado</small>
+                                <InputModal
+                                    type="text"
+                                    id="name_updated"
+                                    label="Nombre del permiso"
+                                    value={permission.name}
+                                    onChange={(e) => setPermission({ ...permission, name: e.target.value })}
+                                    error={errors.name}
+                                    placeholder="Nombre del permiso"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col mt-2">
+                                <InputSelectModal
+                                    id="type_updated"
+                                    label="Tipo de permiso"
+                                    value={permission.type}
+                                    onChange={(value) => setPermission({ ...permission, type: value })}
+                                    options={types}
+                                    error={errors.type}
+                                    placeholder="Seleccione tipo"
+                                    required={true}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="row">
+                            
+                            <div className="col mb-6 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="code_updated"
+                                    label="Código del permiso"
+                                    value={permission.code}
+                                    readOnly={false}
+                                    onChange={(e) => setPermission({ ...permission, code: e.target.value.toUpperCase().trim().replace(/ /g, '_') })}
+                                    error={errors.code}
+                                    placeholder="Código del permiso"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col mt-2">
+                                <InputSelectModal
+                                    id="moduleId_updated"
+                                    label="Módulo"
+                                    value={permission.moduleId}
+                                    onChange={(value) => setPermission({ ...permission, moduleId: value })}
+                                    options={modulesOptions}
+                                    error={errors.moduleId}
+                                    placeholder="Seleccione módulo"
+                                    required={true}
+                                />
                             </div>
                         </div>
 
                         <div className="row">
                             <div className="col mb-6 mt-2">
-                                <MultiSelectModal
-                                    id="roleIds"
+                                <TextareaModal
+                                    id="description_updated"
+                                    label="Descripción del permiso"
+                                    value={permission.description}
+                                    onChange={(e) => setPermission({ ...permission, description: e.target.value })}
+                                    error={errors.description}
+                                    placeholder="Descripción del permiso"
+                                />
+                            </div>
+                        </div>
+
+                        {/* <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModal
+                                    id="roleIds_updated"
                                     label="Roles que tienen este permiso"
                                     value={permission.roleIds}
-                                    onChange={(value) => setPermission({
-                                        ...permission,
-                                        roleIds: value
-                                    })}
+                                    onChange={(value) => {
+                                        setRolesUpdated(value.map(id => parseInt(id)));
+                                        setRolesRemoved(permission.roleIds?.filter(id => !value.map(id => parseInt(id)).includes(id)));
+                                    }}
                                     error={errors.roleIds}
                                     placeholder="Seleccione roles"
                                     options={roles}
+                                    multiple={true}
                                 />
                                 <small className="text-muted">
                                     Selecciona los roles que deben tener este permiso
                                 </small>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
                     <div className="modal-footer">
                         <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">

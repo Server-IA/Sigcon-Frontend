@@ -1,23 +1,28 @@
 import { useState, useEffect } from 'react';
 import InputModal from "../../../components/molecules/InputModal";
-import MultiSelectModal from "../../../components/molecules/MultiSelectModal";
+
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import TextareaModal from "../../../components/molecules/TextareaModal";
+
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const CreatePermission = ({ modalRef, modalInstance, permission, setPermission, onSuccess }) => {
+const CreatedPermission = ({ modalRef, modalInstance, permission, setPermission, types, dataTableRef, modules }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
     const [roles, setRoles] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [modulesOptions, setModulesOptions] = useState([]);
+
     useEffect(() => {
         const getRoles = async () => {
             try {
-                const url = base_url(['roles']);
-                const response = await fetchHelper.get(url, {}, 0);
+                const url = base_url(['roles', 'getRoles']);
+                const response = await fetchHelper.post(url, {length: -1}, {}, 0);
                 
-                const rolesData = response?.content || [];
+                const rolesData = response?.data || [];
                 
                 setRoles(
                     rolesData.map(role => ({
@@ -32,64 +37,47 @@ const CreatePermission = ({ modalRef, modalInstance, permission, setPermission, 
         getRoles();
     }, []);
 
+    useEffect(() => {
+        setModulesOptions(
+            modules.map(m => ({
+                id: m.id,
+                name: m.name,
+            }))
+        )
+    }, [modules]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validación frontend
-        if (!permission.name || permission.name.trim() === '') {
-            setErrorMessage('El nombre del permiso es obligatorio');
-            return;
-        }
-
-        if (isSubmitting) return;
-        setIsSubmitting(true);
-
         try {
             const url = base_url(['roles', 'createPermission']);
-            
             const body = {
-                name: permission.name.toUpperCase().trim(),
+                ...permission,
                 roleIds: permission.roleIds && permission.roleIds.length > 0 
                     ? permission.roleIds.map(id => parseInt(id))
                     : null  // ✅ null en lugar de array vacío
             };
 
-            console.log('Enviando:', body);
-
             const response = await fetchHelper.post(url, body, {}, 1000);
-            
-            console.log('Respuesta:', response);
 
-            if (response.success) {
-                setPermission({
-                    id: '',
-                    name: '',
-                    roleIds: [],
-                });
-                
-                onSuccess?.();
-                modalInstance?.current?.hide();
-                setErrors({});
-                setErrorMessage('');
-
-                window.Swal.fire({
-                    icon: 'success',
-                    title: 'Éxito',
-                    text: response.message || 'Permiso creado correctamente',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            } else {
-                setErrorMessage(response.message || 'Error al crear el permiso');
-            }
+            setPermission({
+                id: '',
+                name: '',
+                code: '',
+                type: '',
+                description: '',
+                roleIds: [],
+            });
+            modalInstance?.current?.hide();
+            dataTableRef?.current?.ajax.reload();
+            setErrors({});
+            setErrorMessage('');
 
         } catch (error) {
             console.error('Error completo:', error);
             
             // Verificar si es error de permisos
-            if (error.status === 403) {
-                setErrorMessage('No tienes permisos para crear permisos. Contacta al administrador.');
-            } else if (error?.errors && error.errors.length > 0) {
+            if (error?.errors && error.errors.length > 0) {
                 const fieldErrors = {};
                 error.errors.forEach(err => {
                     fieldErrors[err.field] = err.message;
@@ -100,8 +88,6 @@ const CreatePermission = ({ modalRef, modalInstance, permission, setPermission, 
             } else {
                 setErrorMessage('Error al crear el permiso. Verifica los logs del servidor.');
             }
-        } finally {
-            setIsSubmitting(false);
         }
     }
 
@@ -128,28 +114,84 @@ const CreatePermission = ({ modalRef, modalInstance, permission, setPermission, 
                         </div>
 
                         <div className="row">
-                            <div className="col mb-6 mt-2">
+                            <div className="col mt-2">
                                 <InputModal
                                     type="text"
                                     id="name"
-                                    label="Nombre del permiso *"
+                                    label="Nombre del permiso"
                                     value={permission.name}
                                     onChange={(e) => {
                                         setPermission({ ...permission, name: e.target.value });
                                         setErrors({...errors, name: ''});
                                     }}
                                     error={errors.name}
-                                    placeholder="PERM_CREATE_USER"
+                                    placeholder="Creacion de usuario"
+                                    required={true}
                                 />
-                                <small className="text-muted">
+                                {/* <small className="text-muted">
                                     <i className="ri-information-line"></i> Formato recomendado: PERM_ACCION_OBJETO (ej: PERM_CREATE_USER, PERM_DELETE_ROLE)
-                                </small>
+                                </small> */}
+                            </div>
+
+                            <div className="col mt-2">
+                                <InputSelectModal
+                                    id="type"
+                                    label="Tipo de permiso"
+                                    value={permission.type}
+                                    onChange={(value) => setPermission({ ...permission, type: value })}
+                                    options={types}
+                                    error={errors.type}
+                                    placeholder="Seleccione tipo"
+                                    required={true}
+                                />
+                            </div>
+
+                        </div>
+
+                        <div className="row">
+                            <div className="col mt-2">
+                                
+                                <InputModal
+                                    type="text"
+                                    id="code"
+                                    label="Código del permiso"
+                                    value={permission.code}
+                                    onChange={(e) => setPermission({ ...permission, code: e.target.value.toUpperCase().trim().replace(/ /g, '_') })}
+                                    error={errors.code}
+                                    placeholder="CREATE_USER"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col mt-2">
+                                <InputSelectModal
+                                    id="moduleId"
+                                    label="Módulo"
+                                    value={permission.moduleId}
+                                    onChange={(value) => setPermission({ ...permission, moduleId: value })}
+                                    options={modulesOptions}
+                                    error={errors.moduleId}
+                                    placeholder="Seleccione módulo"
+                                    required={true}
+                                />
                             </div>
                         </div>
 
                         <div className="row">
-                            <div className="col mb-6 mt-2">
-                                <MultiSelectModal
+                            <div className="col mt-2">
+                                <TextareaModal
+                                    id="description"
+                                    label="Descripción del permiso"
+                                    value={permission.description}
+                                    onChange={(e) => setPermission({ ...permission, description: e.target.value })}
+                                    error={errors.description}
+                                    placeholder="Descripción del permiso"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="row">
+                            <div className="col mt-2">
+                                <InputSelectModal
                                     id="roleIds"
                                     label="Roles asociados (opcional)"
                                     value={permission.roleIds}
@@ -160,6 +202,8 @@ const CreatePermission = ({ modalRef, modalInstance, permission, setPermission, 
                                     error={errors.roleIds}
                                     placeholder="Seleccione roles"
                                     options={roles}
+                                    multiple={true}
+                                    required={false}
                                 />
                                 <small className="text-muted">
                                     Los roles seleccionados tendrán este permiso automáticamente
@@ -198,4 +242,4 @@ const CreatePermission = ({ modalRef, modalInstance, permission, setPermission, 
     )
 }
 
-export default CreatePermission;
+export default CreatedPermission;

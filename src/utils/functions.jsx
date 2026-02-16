@@ -44,3 +44,21 @@ export const base_redirect_path = (is_login = false) => {
 
     return path
 }
+
+export const validarArrays = (a, b) => {
+    if (a.length !== b.length) return false;
+  
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+  
+    return sortedA.every((value, index) => value === sortedB[index]);
+}
+  
+
+export const chunkArray = (array, size) => {
+    const result = [];
+    for (let i = 0; i < array.length; i += size) {
+        result.push(array.slice(i, i + size));
+    }
+    return result;
+};

@@ -13,14 +13,12 @@ const NavHorizontal = ({modules}) => {
 
         const url = base_url(['auth/logout']);
 
-        const response = await fetchHelper.post(url, {}, {}, 500);
-        // console.log('response', response);
+        await fetchHelper.post(url, {}, {}, 500);
 
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         dispatch({ type: "SET_USER", payload: null });
         dispatch({ type: "SET_TOKEN", payload: null });
-        console.log('Logout');
 
         window.location.href = base_redirect_path(true);
     }

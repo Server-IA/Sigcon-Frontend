@@ -2,8 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import DataTableReference from "../../../components/organism/DataTable";
 import AlertPage from "../../../components/molecules/AlertPage"
 
+import { base_url } from "../../../utils/functions";
+import { fetchHelper } from "../../../utils/fetch";
+
 import CreateMenuPermission from "./create";
 import UpdateMenuPermission from "./updated";
+import FilterMenuPermission from "./filter";
 
 const MenuPermissionIndex = () => {
 
@@ -12,6 +16,9 @@ const MenuPermissionIndex = () => {
 
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
+
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const tableRefMenu = useRef(null);
@@ -22,6 +29,45 @@ const MenuPermissionIndex = () => {
         menu_id: '',
         role_id: '',
     });
+
+    const [search, setSearch] = useState({
+        value: '',
+        checked: true,
+    });
+
+    const [menus, setMenus] = useState([]);
+    const [roles, setRoles] = useState([]);
+
+    useEffect(() => {
+        const fetchMenus = async () => {
+            const url = base_url(['api', 'menus', 'datatable']);
+            const body = {
+                length: -1,
+            }
+            const {data} = await fetchHelper.post(url, body, {}, 0);
+            setMenus(
+                data.map(menu => ({
+                    id: menu.id,
+                    name: menu.label,
+                }))
+            );
+        }
+        fetchMenus();
+        const fetchRoles = async () => {
+            const url = base_url(['roles/getRoles']);
+            const body = {
+                length: -1,
+            }
+            const {data} = await fetchHelper.post(url, body, {}, 0);
+            setRoles(
+                data.map(rol => ({
+                    id: rol.id,
+                    name: rol.name,
+                }))
+            );
+        }
+        fetchRoles();
+    }, []);
 
     const [menuPermissionCreate, setMenuPermissionCreate] = useState(false);
     const [menuPermissionUpdate, setMenuPermissionUpdate] = useState(false);
@@ -35,7 +81,19 @@ const MenuPermissionIndex = () => {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Permiso</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
             action: async function (e, dt, button, config) {
-                openModalCreate()
+                openModalCreate();
+            }
+        },
+        {
+            text: '<i class="ri-filter-3-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
+            action: async function (e, dt, button, config) {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(
+                        filterRef.current
+                    );
+                }
+                filterInstance.current.show();
             }
         }
     ];
@@ -47,12 +105,12 @@ const MenuPermissionIndex = () => {
     ];
 
     const columns = [
-        { title: 'Menu',  data: 'menu' },
-        { title: 'Rol', data: 'role' },
-        {title: 'Acciones', data: 'id', render: (id) => {
+        { title: 'Menu',  data: 'menu.label', name: 'menu_label' },
+        { title: 'Rol', data: 'role.name', name: 'role_name' },
+        { title: 'Acciones', width: '100px', searchable: false, data: 'id', render: (id) => {
             return `
                 <div class="d-flex gap-1">
-                    ${actions.map(a => `
+                    ${actions.filter(a => !(id == 1 && (a.key == 'delete' || a.key == 'edit'))).map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
                             data-action="${a.key}"
                             data-id="${id}">
@@ -65,16 +123,16 @@ const MenuPermissionIndex = () => {
     ];
 
     const openModalCreate = () => {
-        if (!modalCreateInstance.current) {
-            modalCreateInstance.current = new window.bootstrap.Modal(
-                modalCreateRef.current
-            );
-        }
         setMenuPermission({
             id: '',
             menu_id: '',
             role_id: '',
         });
+        if (!modalCreateInstance.current) {
+            modalCreateInstance.current = new window.bootstrap.Modal(
+                modalCreateRef.current
+            );
+        }
         modalCreateInstance.current.show();
     }
 
@@ -128,7 +186,7 @@ const MenuPermissionIndex = () => {
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => { 
                         if (result.isConfirmed) {
-                            const url = base_url(['api', 'menu-permissions', id]);
+                            const url = base_url(['api', 'menu-permissions', 'delete', id]);
                             try {
                                 await fetchHelper.delete(url, {}, {}, 500, false);
                                 dataTableRefMenu?.current?.ajax.reload();
@@ -143,6 +201,9 @@ const MenuPermissionIndex = () => {
                                     showCancelButton: false,
                                     showCloseButton: false,
                                     allowOutsideClick: false,
+                                    customClass: {
+                                        confirmButton: 'btn btn-primary',
+                                    },
                                 });
                             }
                         }
@@ -163,12 +224,12 @@ const MenuPermissionIndex = () => {
     return <>
 
 <div className="card">
-            <h5 className="card-header text-md-start text-center">Menus</h5>
+            <h5 className="card-header text-md-start text-center">Permisos para menús</h5>
 
 
-            <AlertPage type="success" message={`Permisos para el menu, creado exitosamente`} show={menuPermissionCreate} />
-            <AlertPage type="success" message={`Permisos para el menu, actualizado exitosamente`} show={menuPermissionUpdate} />
-            <AlertPage type="success" message={`Permisos para el menu, eliminado exitosamente`} show={menuPermissionDelete} />
+            <AlertPage type="success" message={`Permisos para el menú, creado exitosamente`} show={menuPermissionCreate} />
+            <AlertPage type="success" message={`Permisos para el menú, actualizado exitosamente`} show={menuPermissionUpdate} />
+            <AlertPage type="success" message={`Permisos para el menú, eliminado exitosamente`} show={menuPermissionDelete} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference
@@ -180,6 +241,9 @@ const MenuPermissionIndex = () => {
                     buttons={buttons}
                     title='Permisos Menu'
                     setData={setData}
+                    filtered={true}
+                    search={search}
+                    setSearch={setSearch}
                 />
             </div>
 
@@ -197,6 +261,14 @@ const MenuPermissionIndex = () => {
                 menuPermission={menuPermission} setMenuPermission={setMenuPermission}
                 dataTableRef={dataTableRefMenu}
                 setMenuUpdate={setMenuPermissionUpdate}
+            />
+
+            <FilterMenuPermission
+                dataTableRef={dataTableRefMenu}
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                menus={menus}
+                roles={roles}
             />
         </div>
 

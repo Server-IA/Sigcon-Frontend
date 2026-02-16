@@ -6,12 +6,61 @@ import UpdatedMenu from "./updated";
 
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
+import { useSelector } from "react-redux";
+import { COMPONENT_MAP } from '../../../utils/map_menu';
 
 const IndexMenus = () => {
 
     const [data, setData] = useState([]);
     const tableRefMenu = useRef(null);
     const dataTableRefMenu = useRef(null);
+
+    const user = useSelector(state => state.user).user;
+    const [modules, setModules] = useState([]);
+    const [parents, setParents] = useState([]);
+
+    const [components, setComponents] = useState(COMPONENT_MAP.map(component => ({
+        id: component.id,
+        name: component.name,
+    })));
+    
+    const loadData = async () => {
+        const urlModules = base_url(['api', 'modules']);
+        const {data: dataModules} = await fetchHelper.post(urlModules, {length: -1}, {}, 0);
+        setModules(dataModules.map(module => ({
+            id: module.id,
+            name: module.name,
+        })));
+        
+        const urlParents = base_url(['api', 'menus', 'datatable']);
+        const body = {
+            length: -1,
+        }
+        const {data: dataParents} = await fetchHelper.post(urlParents, body, {}, 0);
+        setParents(dataParents.map(parent => ({
+            id: parent.id,
+            name: parent.label,
+            moduleId: parent?.module?.id ?? null,
+            component: parent?.component ?? null,
+        })));
+    }
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    useEffect(() => {
+        const existingIds = parents.map(parent => parent?.component ?? null);
+
+        const filtered = COMPONENT_MAP
+            .map(component => ({
+                id: component.id,
+                name: component.name,
+            }))
+            .filter(component => !existingIds.includes(component.id));
+
+        setComponents(filtered);
+    }, [parents])
 
     const [menu, setMenu] = useState({
         id: '',
@@ -118,9 +167,32 @@ const IndexMenus = () => {
         modalUpdateInstance.current.show();
     }
 
+    
+
+    useEffect(() => {
+        const usedComponentIds = new Set(
+            parents
+                .filter(parent => parent.id !== menu.id) // excluir el propio menu si estás editando
+                .map(parent => parent.component)
+        );
+    
+        const filtered = COMPONENT_MAP
+            .map(component => ({
+                id: component.id,
+                name: component.name,
+            }))
+            .filter(component =>
+                !usedComponentIds.has(component.id) ||
+                component.id === menu.component // permitir el actual
+            );
+    
+        setComponents(filtered);
+    }, [menu]);
+
     useEffect(() => {
         const table = dataTableRefMenu?.current;
         if (!table) return;
+        loadData();
 
         const handler = function () {
             const action = $(this).data('action');
@@ -136,16 +208,18 @@ const IndexMenus = () => {
                     }
 
                     setMenu({
-                        ...menuRef,
+                        id: menuRef.id || '',
+                        label: menuRef.label || '',
+                        icon: menuRef.icon || '',
+                        path: menuRef.path || '',
+                        menuOrder: menuRef.menuOrder || '',
                         parentId: menuRef.parent ? String(menuRef.parent.id) : null,
                         moduleId: menuRef.module ? String(menuRef.module.id) : null,
+                        status: menuRef.status || '',
+                        component: menuRef.component || '',
                     });
 
                     setClickEdit(true);
-
-                    // console.log("Click boton de editar");
-
-                    // openModalUpdate(menuRef);
                     break;
                 case 'delete':
                     window.Swal.fire({
@@ -233,6 +307,9 @@ const IndexMenus = () => {
                 menu={menu} setMenu={setMenu}
                 dataTableRef={dataTableRefMenu}
                 setMenuCreate={setMenuCreate}
+                modules={modules}
+                parents={parents}
+                components={components}
             />
 
             <UpdatedMenu
@@ -241,6 +318,9 @@ const IndexMenus = () => {
                 menu={menu} setMenu={setMenu}
                 dataTableRef={dataTableRefMenu}
                 setMenuUpdate={setMenuUpdate}
+                modules={modules}
+                parents={parents}
+                components={components}
             />
         </div>
     </>

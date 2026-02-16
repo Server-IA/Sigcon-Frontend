@@ -17,26 +17,42 @@ import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
 
 //aca tengo que agregar los nuevos modulos que cargue de parametrizacion
-export const COMPONENT_MAP = {
-    HOME: Home,
-    PERFIL: PerfilPage,
-    MODULOS: IndexModules,
-    MENUS: IndexMenus,
-    PERMISSIONS: PermissionsIndex,
-    USERS: IndexUsers,
-    ROLES: IndexRoles,
-    PARAMETROS: IndexParameters,
-    MENUSPERMISSIONS: MenuPermissionIndex
-};
+// export const COMPONENT_MAP = {
+//     HOME: Home,
+//     PERFIL: PerfilPage,
+//     MODULOS: IndexModules,
+//     MENUS: IndexMenus,
+//     PERMISSIONS: PermissionsIndex,
+//     USERS: IndexUsers,
+//     ROLES: IndexRoles,
+//     PARAMETROS: IndexParameters,
+//     MENUSPERMISSIONS: MenuPermissionIndex
+// };
+
+export const COMPONENT_MAP = [
+    // { id: "HOME", name: "Dashboard", component: Home },
+    { id: "PERFIL", name: "Perfil", component: PerfilPage },
+    { id: "MODULOS", name: "Módulos", component: IndexModules },
+    { id: "MENUS", name: "Menus", component: IndexMenus },
+    { id: "PERMISSIONS", name: "Permisos", component: PermissionsIndex },
+    { id: "USERS", name: "Usuarios", component: IndexUsers },
+    { id: "ROLES", name: "Roles", component: IndexRoles },
+    { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
+    { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
+]
+
 export const getMenu = async () => {
     const modules = [];
     const url = base_url(['api', 'modules', 'menu']);
-    const response = await fetchHelper.get(url, {}, 0);
+    const {data: response} = await fetchHelper.get(url, {}, 0);
+
+    console.log('Response:', response);
 
     modules.push({
         id: 0,
         name: "Dashboard",
         url: "dashboard",
+        icon: "ri-home-smile-line",
         position: 0,
         menus: [
             {
@@ -44,8 +60,9 @@ export const getMenu = async () => {
                 label: "Home",
                 path: "",
                 position: 0,
+                icon: "ri-home-smile-line",
                 childrens: [],
-                component: COMPONENT_MAP.HOME
+                component: Home
             }
         ]
     })
@@ -55,7 +72,7 @@ export const getMenu = async () => {
             ...modules,
             menus: buildMenuTree(modules.menus.map(menu => ({
                 ...menu,
-                component: COMPONENT_MAP[menu.component] || PageMaintenance
+                component: COMPONENT_MAP.find(component => component.id === menu.component)?.component || PageMaintenance
             })))
         })));
     }

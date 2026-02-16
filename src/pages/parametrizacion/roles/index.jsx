@@ -3,7 +3,7 @@ import DataTableReference from '../../../components/organism/DataTable';
 import ViewRole from '../../../components/organism/ViewRole';
 
 import { fetchHelper } from '../../../utils/fetch';
-import { base_url } from '../../../utils/functions';
+import { base_url, chunkArray } from '../../../utils/functions';
 
 import CreateRole from './create';
 import UpdatedRole from './updated';
@@ -27,6 +27,42 @@ const IndexRoles = () => {
     const [roleEdit, setRoleEdit] = useState(false);
     const [roleDelete, setRoleDelete] = useState(false);
 
+    const [role, setRole] = useState({
+        id: '',
+        name: '',
+        status: '',
+        permissionIds: [],
+    });
+
+    const [modules, setModules] = useState([]);
+
+    useEffect(() => {
+        const urlPermissions = base_url(['roles/permissions']);
+        fetchHelper.post(urlPermissions, {length: -1}, {}, 0).then(response => {
+            const grouped = response.data.reduce((acc, permission) => {
+                const moduleId = permission.module.id;
+              
+                if (!acc[moduleId]) {
+                  acc[moduleId] = {
+                    module: permission.module,
+                    permissions: []
+                  };
+                }
+              
+                acc[moduleId].permissions.push(permission);
+              
+                return acc;
+            }, {});
+              
+            let result = Object.values(grouped);
+            setModules(result);
+        });
+    }, []);
+
+    useEffect(() => {
+        console.log("Modulos", modules);
+    }, [modules]);
+
     const url = ['roles/getRoles'];
 
     const actions = [
@@ -34,13 +70,6 @@ const IndexRoles = () => {
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
-
-    const [role, setRole] = useState({
-        id: '',
-        name: '',
-        status: '',
-        permissionIds: [],
-    });
 
     const [columns, setColumns] = useState([
         { title: 'ID', data: 'id' },
@@ -209,6 +238,7 @@ const IndexRoles = () => {
             setRole={setRole}
             dataTableRef={dataTableRef}
             setRoleCreate={setRoleCreate}
+            modules={modules}
         />
 
         <UpdatedRole
@@ -218,12 +248,13 @@ const IndexRoles = () => {
             setRole={setRole}
             dataTableRef={dataTableRef}
             setRoleEdit={setRoleEdit}
+            modules={modules}
         />
 
-        <ViewRole
+        {/* <ViewRole
             modalRef={modalViewRef}
             role={role}
-        />
+        /> */}
     </>;
 };
 

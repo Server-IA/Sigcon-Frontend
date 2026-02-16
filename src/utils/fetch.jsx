@@ -40,6 +40,13 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 error: 'Error general',
                 status: 401
             }));
+        }else if(response.status == 403){
+            throw new Error(JSON.stringify({
+                msg: 'No tienes permisos para acceder a este recurso',
+                title: 'Permiso denegado',
+                error: 'Error general',
+                status: 403
+            }));
         }
 
         if (!response.ok) {
@@ -50,7 +57,7 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 title: errorData.title || 'Error en la consulta',
                 error: errorData.error || 'Error general',
                 status: response.status,
-                errors: errorData.errors || []
+                errors: errorData.errors || errorData.details || []
             }));
         }
         
@@ -92,7 +99,21 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
             window.location.href = base_redirect_path(true);
         
             return Promise.reject(error_parse);
+        } else if(error_parse.status === 403){
+            if(showErrorAlert){
+                window.Swal.fire({
+                    icon: 'error',
+                    title: error_parse.title,
+                    text: error_parse.msg || error_parse.error,
+                    allowOutsideClick: false,
+                    customClass: {
+                        confirmButton: 'btn btn-primary waves-effect'
+                    }
+                });
+            }
+            return Promise.reject(error_parse);
         }
+
     
         // 🔴 Error de red (backend caído, conexión rechazada, CORS)
         if (error instanceof TypeError) {

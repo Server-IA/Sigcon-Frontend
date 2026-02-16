@@ -1,21 +1,36 @@
 import { useState, useRef, useEffect } from "react";
-import CreatePermission from "./create";
 import UpdatedPermission from "./updated";
-import { base_url } from '../../../utils/functions';
-import { fetchHelper } from '../../../utils/fetch';
-import esES from '../../../jsons/languaje/es-ES-DataTable.json';
+import CreatedPermission from "./create";
+
+import DataTableReference from "../../../components/organism/DataTable";
+import { fetchHelper } from "../../../utils/fetch";
+import { base_url } from "../../../utils/functions";
 
 const IndexPermissions = () => {
 
     const [data, setData] = useState([]);
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
+    const [clickEdit, setClickEdit] = useState(false);
+
+    const [types, setTypes] = useState([
+        { id: "READ", name: "Lectura" },
+        { id: "CREATE", name: "Creación" },
+        { id: "UPDATE", name: "Actualización" },
+        { id: "DELETE", name: "Eliminación" }
+    ]);
 
     const [permission, setPermission] = useState({
         id: '',
         name: '',
+        code: '',
+        type: '',
+        description: '',
         roleIds: [],
+        moduleId: '',
     });
+
+    const [modules, setModules] = useState([]);
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -23,142 +38,78 @@ const IndexPermissions = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
-    useEffect(() => {
-        loadPermissions();
-    }, []);
+    const [errors, setErrors] = useState({});
+    const [errorMessage, setErrorMessage] = useState('');
 
-    const loadPermissions = async () => {
-        try {
-            const url = base_url(['roles', 'permissions']);
-            const response = await fetchHelper.get(url, {}, 0);
-            
-            const permissions = response?.content || [];
-            setData(permissions);
-        } catch (error) {
-            console.error('Error al cargar permisos:', error);
-            window.Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudieron cargar los permisos'
-            });
-        }
-    };
-
-    useEffect(() => {
-        if (!tableRef.current) return;
-
-        if (dataTableRef.current) {
-            dataTableRef.current.destroy();
-        }
-
-        if (data.length === 0) return;
-
-        dataTableRef.current = $(tableRef.current).DataTable({
-            data: data,
-            columns: [
-                { 
-                    title: 'ID', 
-                    data: 'id',
-                    width: '80px'
-                },
-                { 
-                    title: 'Nombre del Permiso', 
-                    data: 'name',
-                    render: (name) => {
-                        return `<span class="fw-semibold">${name}</span>`;
-                    }
-                },
-                {
-                    title: 'Acciones', 
-                    data: 'id',
-                    orderable: false,
-                    searchable: false,
-                    width: '100px',
-                    render: (id) => {
-                        return `
-                            <div class="d-flex gap-1 justify-content-center">
-                                <button class="btn btn-sm btn-label-primary action-btn"
-                                    data-action="edit"
-                                    data-id="${id}"
-                                    title="Editar">
-                                    <i class="ri-edit-line"></i>
-                                </button>
-                            </div>
-                        `;
-                    }
-                },
-            ],
-            dom: 'r<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 text-end"<"dt-action-buttons"B>>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-            buttons: [
-                {
-                    text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Permiso</span>',
-                    className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
-                    action: () => openModalCreate()
-                }
-            ],
-            language: esES,
-            responsive: true,
-            scrollX: true,
-            destroy: true,
-        });
-
-        $(tableRef.current).on('click', '.action-btn', function() {
-            const action = $(this).data('action');
-            const id = Number($(this).data('id'));
-
-            if (action === 'edit') {
-                const permissionRef = data.find(p => p.id === id);
-                if (permissionRef) {
-                    // Cargar los roles del permiso desde el backend
-                    loadPermissionRoles(permissionRef.id, permissionRef.name);
-                }
+    const columns = [
+        { 
+            title: 'ID', 
+            data: 'id',
+            width: '80px'
+        },
+        { 
+            title: 'Nombre del Permiso', 
+            data: 'name',
+            render: (name) => {
+                return `<span class="fw-semibold">${name}</span>`;
             }
-        });
-
-        return () => {
-            if (dataTableRef.current) {
-                dataTableRef.current.destroy();
+        },
+        {
+            title: 'Módulo',
+            data: 'module.name'
+        },
+        {
+            title: 'Código del Permiso',
+            data: 'code',
+        },
+        {
+            title: 'Descripción del Permiso',
+            data: 'description'
+        },
+        {
+            title: 'Tipo de Permiso',
+            data: 'type',
+            render: (type) => types.find(t => t.id === type)?.name
+        },
+        {
+            title: 'Acciones', 
+            data: 'id',
+            orderable: false,
+            searchable: false,
+            width: '100px',
+            render: (id) => {
+                return `
+                    <div class="d-flex gap-1 justify-content-center">
+                        <button class="btn btn-sm btn-label-primary action-btn"
+                            data-action="edit"
+                            data-id="${id}"
+                            title="Editar">
+                            <i class="ri-edit-line"></i>
+                        </button>
+                    </div>
+                `;
             }
-        };
-    }, [data]);
+        },
+    ];
 
-    const loadPermissionRoles = async (permissionId, permissionName) => {
-        try {
-            // Cargar todos los roles y verificar cuáles tienen este permiso
-            const url = base_url(['roles']);
-            const response = await fetchHelper.get(url, {}, 0);
-            const allRoles = response?.content || [];
-
-            // Filtrar roles que tienen este permiso
-            const rolesWithPermission = allRoles
-                .filter(role => 
-                    role.permissions?.some(p => p.id === permissionId)
-                )
-                .map(r => String(r.id));
-
-            setPermission({
-                id: permissionId,
-                name: permissionName,
-                roleIds: rolesWithPermission,
-            });
-
-            openModalUpdate();
-        } catch (error) {
-            console.error('Error al cargar roles del permiso:', error);
-            window.Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudieron cargar los roles del permiso'
-            });
+    const buttons = [
+        {
+            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Menu</span>',
+            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
+            action: async function (e, dt, button, config) {
+                openModalCreate()
+            }
         }
-    };
+    ];
 
     const openModalCreate = () => {
         if (!modalCreateInstance.current) {
             modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
-        setPermission({ id: '', name: '', roleIds: [] });
+        setPermission({ id: '', name: '', code: '', type: '', description: '', roleIds: [] });
         modalCreateInstance.current.show();
+        setErrorMessage('');
+        setErrors({});
     };
 
     const openModalUpdate = () => {
@@ -166,7 +117,67 @@ const IndexPermissions = () => {
             modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
         }
         modalUpdateInstance.current.show();
+        setErrorMessage('');
+        setErrors({});
     };
+
+    useEffect(() => {
+        if (!clickEdit) return;
+        openModalUpdate();
+        setClickEdit(false);
+    }, [clickEdit]);
+
+    useEffect(() => {
+        const table = dataTableRef?.current;
+        if (!table) return;
+
+        const handler = function () {
+            const action = $(this).data('action');
+            const id = Number($(this).data('id'));
+
+            switch (action) {
+                case 'edit':
+                    const permissionRef = data.find(p => p.id === id);
+
+                    if (!permissionRef) {
+                        console.warn('Permiso no encontrado', id);
+                        return;
+                    }
+
+                    setPermission({
+                        id: permissionRef.id || '',
+                        name: permissionRef.name || '',
+                        description: permissionRef.description || '',
+                        roleIds: permissionRef.roleIds || [],
+                        type: permissionRef.type || '',
+                        code: permissionRef.code || '',
+                        moduleId: permissionRef?.module?.id || '',
+                    });
+
+                    setClickEdit(true);
+                    break;
+                case 'delete':
+                    break;
+                default:
+                    console.warn('Acción no válida', action);
+                    break;
+            }
+        }
+        table.on('click', '.action-btn', handler);
+
+        return () => {
+            table.off('click', '.action-btn', handler);
+        };
+    }, [data]);
+
+    useEffect(() => {
+        const fetchModules = async () => {
+            const url = base_url(['api', 'modules']);
+            const response = await fetchHelper.post(url, {length: -1}, {}, 0);
+            setModules(response.data);
+        }
+        fetchModules();
+    }, []);
 
     return (
         <div className="card">
@@ -175,15 +186,30 @@ const IndexPermissions = () => {
                 Gestión de Permisos
             </h5>
             <div className="card-datatable text-nowrap">
-                <table ref={tableRef} className="datatables-ajax table table-bordered"></table>
+
+                <DataTableReference
+                    url_api={['roles', 'permissions']}
+                    columns={columns}
+                    tableRef={tableRef}
+                    dataTableRef={dataTableRef}
+                    method='POST'
+                    buttons={buttons}
+                    title='Permisos'
+                    setData={setData}
+                />
+
+                {/* <table ref={tableRef} className="datatables-ajax table table-bordered"></table> */}
             </div>
 
-            <CreatePermission
+            <CreatedPermission
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 permission={permission}
                 setPermission={setPermission}
-                onSuccess={loadPermissions}
+                types={types}
+                modules={modules}
+                dataTableRef={dataTableRef}
+                // onSuccess={loadPermissions}
             />
 
             <UpdatedPermission
@@ -191,7 +217,10 @@ const IndexPermissions = () => {
                 modalInstance={modalUpdateInstance}
                 permission={permission}
                 setPermission={setPermission}
-                onSuccess={loadPermissions}
+                types={types}
+                modules={modules}
+                dataTableRef={dataTableRef}
+                // onSuccess={loadPermissions}
             />
         </div>
     );
