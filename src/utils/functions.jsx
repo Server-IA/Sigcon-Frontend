@@ -2,6 +2,8 @@ export const base_url = (array = [], get = {}) => {
 
     let url = '';
     const env = import.meta.env.VITE_ENVIRONMENT || 'local';
+    console.log('env', env);
+    console.log('import.meta.env', import.meta.env);
 
     switch(env){
         case 'local':
