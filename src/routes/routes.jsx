@@ -7,6 +7,7 @@ import { lazy } from 'react';
 const Login = lazy(() => import("../pages/auth/LoginPage"));
 const RecoveryPassword = lazy(() => import("../pages/auth/RecoveryPasswordPage"));
 const Page404 = lazy(() => import("../pages/errors/page_404"));
+const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
 
 import { useState, useEffect, Suspense } from 'react';
 import { getMenu } from '../utils/map_menu';
@@ -17,27 +18,32 @@ export const RenderRoutes = () => {
     
     const dispatch = useDispatch();
     const [modules, setModules] = useState([]);
+    const [routesReady, setRoutesReady] = useState(false);
 
     useEffect(() => {
-        const user = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
-
-        if (user) {
-            const userData = JSON.parse(user);
-
-            dispatch({
-                type: "SET_USER",
-                payload: userData
-            });
-
-            dispatch({
-                type: "SET_TOKEN",
-                payload: token
-            });
-
-            getMenu().then(setModules);
-        }
+        const init = async () => {
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+    
+            if (user) {
+                const userData = JSON.parse(user);
+    
+                dispatch({ type: "SET_USER", payload: userData });
+                dispatch({ type: "SET_TOKEN", payload: token });
+    
+                const menuModules = await getMenu();
+                setModules(menuModules);
+            }
+    
+            setRoutesReady(true);
+        };
+    
+        init();
     }, [dispatch]);
+
+    if (!routesReady) {
+        return null;
+    }
 
     return (
         <>
@@ -60,14 +66,25 @@ export const RenderRoutes = () => {
                         </Suspense>
                     }
                 />
+                <Route
+                    path="/reset-password/:token"
+                    element={
+                        <Suspense fallback={null}>
+                            <ResetPassword />
+                        </Suspense>
+                    }
+                />
             </Route>
 
-
-            <Route element={<MainTemplate modules={modules} />}>
-                {modules.flatMap(module =>
-                    module.menus.flatMap(menu => renderMenuRoutesFlat(menu, module.url))
-                )}
-            </Route>
+            {
+                modules.length > 0 && (
+                    <Route element={<MainTemplate modules={modules} />}>
+                        {modules.flatMap(module =>
+                            module.menus.flatMap(menu => renderMenuRoutesFlat(menu, module.url))
+                        )}
+                    </Route>
+                )
+            }
 
             <Route path="*" element={
                 <Suspense fallback={null}>

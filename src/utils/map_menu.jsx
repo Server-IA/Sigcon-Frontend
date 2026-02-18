@@ -46,8 +46,6 @@ export const getMenu = async () => {
     const url = base_url(['api', 'modules', 'menu']);
     const {data, error} = await fetchHelper.get(url, {}, 0);
 
-    console.log('Response:', data, error);
-
     modules.push({
         id: 0,
         name: "Dashboard",

@@ -7,7 +7,23 @@
 
 'use strict';
 
-// JS global variables
+/**
+ * Colores disponibles:
+ * - config.colors: primary, secondary, success, info, warning, danger, dark, black, white,
+ *   cardColor, bodyBg, bodyColor, headingColor, textMuted, borderColor
+ * - config.colors_label: variantes con transparencia (ej. primary -> #666cff29)
+ * - config.colors_dark: variantes para modo oscuro
+ *
+ * Uso en JavaScript/React:
+ *   window.config.colors.primary
+ *   window.config.colors_label.success
+ *
+ * Uso en CSS/SCSS (inyectados automáticamente en :root):
+ *   color: var(--config-primary);
+ *   background: var(--config-success);
+ *   border-color: var(--config-primary-label);
+ *   (modo oscuro) var(--config-dark-bodyBg);
+ */
 window.config = {
   colors: {
     primary: '#666cff',
@@ -88,6 +104,7 @@ TemplateCustomizer.LANGUAGES.fr = { ... };
  */
 
 if (typeof TemplateCustomizer !== 'undefined') {
+
   window.templateCustomizer = new TemplateCustomizer({
     cssPath: assetsPath + 'vendor/css' + (rtlSupport ? '/rtl' : '') + '/',
     themesPath: assetsPath + 'vendor/css' + (rtlSupport ? '/rtl' : '') + '/',
@@ -104,4 +121,50 @@ if (typeof TemplateCustomizer !== 'undefined') {
     // defaultShowDropdownOnHover: false,
     controls: ['rtl', 'style', 'headerType', 'contentLayout', 'layoutCollapsed', 'layoutNavbarOptions', 'themes']
   });
+}
+
+/**
+ * Inyectar colores de config como variables CSS en :root
+ * Uso en CSS: var(--config-primary), var(--config-success), etc.
+ * Uso en JS/React: window.config.colors.primary
+ */
+(function injectConfigColors() {
+  if (typeof window.config === 'undefined' || !window.config.colors) return;
+  var root = document.documentElement;
+  var colors = window.config.colors;
+  var colorsLabel = window.config.colors_label || {};
+  var colorsDark = window.config.colors_dark || {};
+  Object.keys(colors).forEach(function (key) {
+    root.style.setProperty('--config-' + key, colors[key]);
+  });
+  Object.keys(colorsLabel).forEach(function (key) {
+    root.style.setProperty('--config-' + key + '-label', colorsLabel[key]);
+  });
+  Object.keys(colorsDark).forEach(function (key) {
+    root.style.setProperty('--config-dark-' + key, colorsDark[key]);
+  });
+})();
+
+
+function lightenColor(hex, percent = 75) {
+  // Quitar #
+  hex = hex.replace("#", "");
+
+  // Convertir a RGB
+  let r = parseInt(hex.substring(0, 2), 16);
+  let g = parseInt(hex.substring(2, 4), 16);
+  let b = parseInt(hex.substring(4, 6), 16);
+
+  // Mezclar con blanco
+  r = Math.round(r + (255 - r) * (percent / 100));
+  g = Math.round(g + (255 - g) * (percent / 100));
+  b = Math.round(b + (255 - b) * (percent / 100));
+
+  // Convertir de nuevo a HEX
+  return (
+    "#" +
+    r.toString(16).padStart(2, "0") +
+    g.toString(16).padStart(2, "0") +
+    b.toString(16).padStart(2, "0")
+  );
 }

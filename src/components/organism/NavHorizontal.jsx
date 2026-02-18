@@ -135,7 +135,7 @@ const NavHorizontal = ({modules}) => {
                     <li className="nav-item navbar-dropdown dropdown-user dropdown">
                         <a className="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
                         <div className="avatar avatar-online">
-                            <img src="../../assets/img/avatars/1.png" alt="avatar" className="rounded-circle" />
+                            <img src={user.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
                         </div>
                         </a>
                         <ul className="dropdown-menu dropdown-menu-end">
@@ -144,7 +144,7 @@ const NavHorizontal = ({modules}) => {
                                 <div className="d-flex">
                                     <div className="flex-shrink-0 me-2">
                                         <div className="avatar avatar-online">
-                                            <img src="../../assets/img/avatars/1.png" alt="avatar" className="rounded-circle" />
+                                            <img src={user.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
                                         </div>
                                     </div>
                                     <div className="flex-grow-1">
