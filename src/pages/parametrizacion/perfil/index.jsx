@@ -39,10 +39,10 @@ const PerfilPage = () => {
       username: user.username ?? '',
       email: user.email ?? '',
     }));
-    if (user?.avatar) {
-      const av = user.avatar;
-      setAvatarBase64(av.startsWith('data:') ? av : `data:image/jpeg;base64,${av}`);
-    }
+    // if (user?.avatar) {
+    //   const av = user.avatar;
+    //   setAvatarBase64(av.startsWith('data:') ? av : `data:image/jpeg;base64,${av}`);
+    // }
   }, [user]);
 
   useEffect(() => {
@@ -76,7 +76,7 @@ const PerfilPage = () => {
     const newErrors = {};
     if (!form.name?.trim()) newErrors.name = 'El nombre es obligatorio.';
     if (!form.lastname?.trim()) newErrors.lastname = 'El apellido es obligatorio.';
-    if (!form.username?.trim()) newErrors.username = 'El nombre de usuario es obligatorio.';
+    // if (!form.username?.trim()) newErrors.username = 'El nombre de usuario es obligatorio.';
     if (!form.email?.trim()) newErrors.email = 'El correo electrónico es obligatorio.';
     if (form.password) {
       if (form.password.length < 6) newErrors.password = 'La contraseña no cumple con los requisitos mínimos de seguridad.';
@@ -106,8 +106,9 @@ const PerfilPage = () => {
         const base64Only = avatarBase64.includes('base64,') ? avatarBase64.split('base64,')[1] : avatarBase64;
         payload[AVATAR_FIELD_NAME] = base64Only;
       }
-      await fetchHelper.put(url, payload, {}, 500, false);
-      dispatch({ type: 'SET_USER', payload: { ...user, ...payload, last_name: payload.lastname, avatar: payload[AVATAR_FIELD_NAME] ? avatarBase64 : user?.avatar } });
+      const { data } =await fetchHelper.put(url, payload, {}, 500, false);
+
+      dispatch({ type: 'SET_USER', payload: data });
       setNotification({ type: 'success', message: 'Los cambios se guardaron correctamente.' });
       setForm((prev) => ({ ...prev, password: '', confirmPassword: '' }));
       setErrors({});
@@ -161,8 +162,8 @@ const PerfilPage = () => {
                 <img src={avatarBase64} alt="avatar" />
               ) : (
                 <>
-                  <img src="/assets/img/avatars/1.png" alt="avatar" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling?.classList.remove('profile-photo-placeholder-hidden'); }} />
-                  <span className="profile-photo-placeholder profile-photo-placeholder-hidden" aria-hidden="true"><Icon name="ri-user-3-line" /></span>
+                  <img src={user.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar"  />
+                  {/* <span className="profile-photo-placeholder profile-photo-placeholder-hidden" aria-hidden="true"><Icon name="ri-user-3-line" /></span> */}
                 </>
               )}
             </div>
@@ -170,7 +171,7 @@ const PerfilPage = () => {
               <div className="profile-photo-title">Foto de perfil</div>
               <div className="profile-photo-buttons">
                 <Button type="button" variant="primary" onClick={handleChangeImageClick}>Cambiar Imagen</Button>
-                <Button type="button" variant="secondary" onClick={handleRemoveImage}>Quitar Imagen</Button>
+                {/* <Button type="button" variant="secondary" onClick={handleRemoveImage}>Quitar Imagen</Button> */}
               </div>
               <div className="profile-photo-hint">Formatos válidos: PNG, JPG, JPEG</div>
             </div>
@@ -183,10 +184,10 @@ const PerfilPage = () => {
               <InputField id="name" name="name" label="Nombre" type="text" placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} hasError={!!errors.name} />
               <InputField id="lastname" name="lastname" label="Apellido" type="text" placeholder="Apellido" value={form.lastname} onChange={(e) => setForm({ ...form, lastname: e.target.value })} hasError={!!errors.lastname} />
             </div>
-            <div className="profile-field-full">
+            {/* <div className="profile-field-full">
               <InputField id="username" name="username" label="Username" type="text" placeholder="Nombre de usuario" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} hasError={!!errors.username} />
               {errors.username && <div className="profile-field-error">{errors.username}</div>}
-            </div>
+            </div> */}
           </section>
 
           {/* Seguridad de la cuenta */}
@@ -199,10 +200,8 @@ const PerfilPage = () => {
             {errors.email && <div className="profile-field-error">{errors.email}</div>}
 
             <div className="profile-field-with-button">
-              <div className="profile-field-full" style={{ flex: 1, minWidth: '200px' }}>
-                <PasswordInput id="password" name="password" label="Nueva contraseña (dejar en blanco para no cambiar)" placeholder="Nueva contraseña" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} hasError={!!errors.password} />
+                <PasswordInput id="password" name="password" label="Nueva contraseña" placeholder="(Dejar en blanco para no cambiar)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} hasError={!!errors.password} />
                 {errors.password && <div className="profile-field-error">{errors.password}</div>}
-              </div>
               <Button type="button" variant="secondary" onClick={() => document.getElementById('password')?.focus()}>Cambiar Contraseña</Button>
             </div>
 
