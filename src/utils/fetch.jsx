@@ -1,10 +1,12 @@
 import { base_redirect_path } from './functions';
 
-export const request = async (url, data = {}, method = 'POST', time = 500, headers = {}, showErrorAlert) => {
+export const request = async (url, data = {}, method = 'POST', time = 500, headers = {}, showErrorAlert, useToken) => {
 
-    const token = localStorage.getItem('token');
-    if(token){
-        headers.Authorization = `Bearer ${token}`;
+    if(useToken){
+        const token = localStorage.getItem('token');
+        if(token){
+            headers.Authorization = `Bearer ${token}`;
+        }
     }
 
     const options = {
@@ -150,8 +152,8 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
 }
 
 export const fetchHelper = {
-    get: (url, headers = {}, time = 1, showErrorAlert = false) => request(url, null, 'GET', time, headers, showErrorAlert),
-    post: (url, data, headers = {}, time = 1, showErrorAlert = false) => request(url, data, 'POST', time, headers, showErrorAlert),
-    put: (url, data, headers = {}, time = 1, showErrorAlert = false) => request(url, data, 'PUT', time, headers, showErrorAlert),
-    delete: (url, data, headers = {}, time = 1, showErrorAlert = false) => request(url, null, 'DELETE', time, headers, showErrorAlert),
+    get: (url, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, null, 'GET', time, headers, showErrorAlert, useToken),
+    post: (url, data, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, data, 'POST', time, headers, showErrorAlert, useToken),
+    put: (url, data, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, data, 'PUT', time, headers, showErrorAlert, useToken),
+    delete: (url, data, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, null, 'DELETE', time, headers, showErrorAlert, useToken),
 };

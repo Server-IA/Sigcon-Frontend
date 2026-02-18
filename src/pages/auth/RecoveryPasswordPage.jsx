@@ -3,6 +3,8 @@ import RecoveryPasswordForm from '../../components/organism/RecoveryPasswordForm
 import NotificationAlert from '../../components/molecules/NotificationAlert';
 import '../../styles/auth-login.css';
 import '../../styles/recovery-password.css';
+import { base_url} from "../../utils/functions";
+import { fetchHelper } from "../../utils/fetch";
 
 const RecoveryPasswordPage = () => {
   const [formData, setFormData] = useState({
@@ -37,24 +39,26 @@ const RecoveryPasswordPage = () => {
 
     setIsLoading(true);
     setHasError(false);
+    
+    try{
+      const url = base_url(['auth', 'forgot-password']);
+      const { message } = await fetchHelper.post(url, formData, {}, 500, false, false);
+      console.log(message);
+      setNotification({ 
+        message: message, 
+        type: 'success' 
+      });
 
-    setTimeout(() => {
-      const errorTypes = [
-        { message: 'No se encontró el correo electrónico', type: 'error' },
-        { message: 'El usuario se encuentra bloqueado, por favor espere a que termine el tiempo de espera para volver a intentarlo', type: 'error' },
-        { message: 'No se pudo completar la petición. Intente nuevamente o contacte al administrador.', type: 'error' },
-        { message: 'Se ha enviado la nueva contraseña a su correo', type: 'success' }
-      ];
-      
-      const randomResult = errorTypes[Math.floor(Math.random() * errorTypes.length)];
-      setNotification(randomResult);
-      
-      if (randomResult.type === 'error' && randomResult.message === 'No se encontró el correo electrónico') {
-        setHasError(true);
-      }
-      
+    }catch(error){
+      console.error(error);
+      setNotification({ 
+        message: error.message || error.msg || 'Error al enviar el correo de restablecimiento de contraseña', 
+        type: 'error' 
+      });
+    }finally{
       setIsLoading(false);
-    }, 1500);
+    }
+
   };
 
   const handleCloseNotification = () => {

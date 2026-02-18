@@ -78,24 +78,25 @@ const MenuPermissionIndex = () => {
 
     const buttons = [
         {
-            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Permiso</span>',
-            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
-            action: async function (e, dt, button, config) {
-                openModalCreate();
-            }
-        },
-        {
             text: '<i class="ri-filter-3-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
-            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
             action: async function (e, dt, button, config) {
                 if (!filterInstance.current) {
                     filterInstance.current = new window.bootstrap.Modal(
                         filterRef.current
                     );
                 }
+                // setSearch({ value: '', checked: true });
                 filterInstance.current.show();
             }
-        }
+        },
+        {
+            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Permiso</span>',
+            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
+            action: async function (e, dt, button, config) {
+                openModalCreate();
+            }
+        },
     ];
 
     const actions = [
@@ -190,7 +191,7 @@ const MenuPermissionIndex = () => {
                             try {
                                 await fetchHelper.delete(url, {}, {}, 500, false);
                                 dataTableRefMenu?.current?.ajax.reload();
-                                setMenuDelete(true);
+                                menuPermissionDelete(true);
                             } catch (error) {
                                 console.error(error);
                                 window.Swal.fire({
@@ -223,7 +224,7 @@ const MenuPermissionIndex = () => {
 
     return <>
 
-<div className="card">
+        <div className="card">
             <h5 className="card-header text-md-start text-center">Permisos para menús</h5>
 
 
@@ -241,11 +242,19 @@ const MenuPermissionIndex = () => {
                     buttons={buttons}
                     title='Permisos Menu'
                     setData={setData}
-                    filtered={true}
                     search={search}
                     setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
+
+            <FilterMenuPermission
+                dataTableRef={dataTableRefMenu}
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                menus={menus}
+                roles={roles}
+            />
 
             <CreateMenuPermission
                 modalRef={modalCreateRef}
@@ -261,14 +270,6 @@ const MenuPermissionIndex = () => {
                 menuPermission={menuPermission} setMenuPermission={setMenuPermission}
                 dataTableRef={dataTableRefMenu}
                 setMenuUpdate={setMenuPermissionUpdate}
-            />
-
-            <FilterMenuPermission
-                dataTableRef={dataTableRefMenu}
-                filterRef={filterRef}
-                filterInstance={filterInstance}
-                menus={menus}
-                roles={roles}
             />
         </div>
 
