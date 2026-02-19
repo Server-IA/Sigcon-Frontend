@@ -6,11 +6,15 @@ import { base_url } from '../../../utils/functions';
 
 import CreateParameter from './create';
 import UpdatedParameter from './updated';
+import FilterParameter from './filter';
 
 const IndexParameters = () => {
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
+
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -22,6 +26,11 @@ const IndexParameters = () => {
     const [parameterCreate, setParameterCreate] = useState(false);
     const [parameterEdit, setParameterEdit] = useState(false);
     const [parameterDelete, setParameterDelete] = useState(false);
+
+    const [search, setSearch] = useState({
+        value: '',
+        checked: true,
+    });
 
     const url = ['api', 'parameters'];
 
@@ -42,9 +51,9 @@ const IndexParameters = () => {
 
     const [columns, setColumns] = useState([
         { title: 'Id', data: 'id' },
-        { title: 'Nombre', data: 'name' },
-        { title: 'Estado', data: 'status' },
-        { title: 'Categoría', data: 'category' },
+        { title: 'Nombre', data: 'name', name: 'name' },
+        { title: 'Estado', data: 'status', name: 'status' },
+        { title: 'Categoría', data: 'category', name: 'category', render: (category, _, row) => category === 'COLOR' ? 'Color' : 'FUENTE' },
         {
             title: 'Acciones', data: 'id', render: (id) => {
                 return `
@@ -79,6 +88,18 @@ const IndexParameters = () => {
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
+            action: async function (e, dt, button, config) {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(
+                        filterRef.current
+                    );
+                }
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Parametro</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
@@ -193,8 +214,17 @@ const IndexParameters = () => {
                     buttons={buttons}
                     title='Parametros'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
+
+            <FilterParameter
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+            />
         </div>
 
         <CreateParameter

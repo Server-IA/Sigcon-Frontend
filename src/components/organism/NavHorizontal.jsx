@@ -11,16 +11,37 @@ const NavHorizontal = ({modules}) => {
     const dispatch = useDispatch();
     const handleLogout = async () => {
 
-        const url = base_url(['auth/logout']);
+        window.Swal.fire({
+            title: 'Cerrar sesión',
+            text: '¿Estás seguro de querer cerrar sesión?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: user?.parameters?.color_primary || '#3085d6',
+            cancelButtonColor: user?.parameters?.color_danger || '#d33',
+            confirmButtonText: 'Cerrar sesión',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'btn btn-primary waves-effect',
+                cancelButton: 'btn btn-secondary waves-effect',
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                
 
-        await fetchHelper.post(url, {}, {}, 500);
+                const url = base_url(['auth/logout']);
 
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        dispatch({ type: "SET_USER", payload: null });
-        dispatch({ type: "SET_TOKEN", payload: null });
-
-        window.location.href = base_redirect_path(true);
+                await fetchHelper.post(url, {}, {}, 500);
+                dispatch({ type: "LOGOUT" });
+                window.location.href = base_redirect_path(true);
+                window.Swal.fire({
+                    title: 'Cerrando sesión',
+                    text: 'Cerrando sesión...',
+                    icon: 'success',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                });
+            }
+        });
     }
 
     useEffect(() => {
@@ -135,7 +156,7 @@ const NavHorizontal = ({modules}) => {
                     <li className="nav-item navbar-dropdown dropdown-user dropdown">
                         <a className="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
                         <div className="avatar avatar-online">
-                            <img src={user.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                            <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
                         </div>
                         </a>
                         <ul className="dropdown-menu dropdown-menu-end">
@@ -144,12 +165,12 @@ const NavHorizontal = ({modules}) => {
                                 <div className="d-flex">
                                     <div className="flex-shrink-0 me-2">
                                         <div className="avatar avatar-online">
-                                            <img src={user.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                            <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
                                         </div>
                                     </div>
                                     <div className="flex-grow-1">
-                                        <span className="fw-medium d-block small">{user.name ?? ''} {user.last_name ?? ''}</span>
-                                        <small className="text-muted">{user.email ?? ''}</small>
+                                        <span className="fw-medium d-block small">{user?.name ?? ''} {user?.last_name ?? ''}</span>
+                                        <small className="text-muted">{user?.email ?? ''}</small>
                                     </div>
                                 </div>
                                 </a>
@@ -159,8 +180,8 @@ const NavHorizontal = ({modules}) => {
                             </li>
 
                             {
-                                modules?.filter((module) => module.id == 1).map((module) => {
-                                    return module.menus.map((menu) => {
+                                modules?.filter((module) => module?.id == 1).map((module) => {
+                                    return module?.menus?.map((menu) => {
                                         return (
                                             <li key={menu.id}>
                                                 <Link to={`${module.url}/${menu.path}`} className="dropdown-item">

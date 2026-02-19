@@ -46,16 +46,17 @@ const UpdatedPermission = ({ modalRef, modalInstance, permission, setPermission,
 
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
-            window.Swal.fire({
-                icon: 'success',
-                title: 'Éxito',
-                text: response.message,
-                timer: 2000,
-                showConfirmButton: true,
-                customClass: {
-                    confirmButton: 'btn btn-primary'
-                }
-            });
+            setTimeout(() => {
+                window.Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: response.message,
+                    showConfirmButton: true,
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    }
+                });
+            }, 500);
 
             setPermission({
                 id: '',

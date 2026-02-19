@@ -7,11 +7,15 @@ import { base_url, chunkArray } from '../../../utils/functions';
 
 import CreateRole from './create';
 import UpdatedRole from './updated';
+import FilterRole from './filter';
 
 const IndexRoles = () => {
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
+
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -27,6 +31,11 @@ const IndexRoles = () => {
     const [roleEdit, setRoleEdit] = useState(false);
     const [roleDelete, setRoleDelete] = useState(false);
 
+    const [search, setSearch] = useState({
+        value: '',
+        checked: true,
+    });
+
     const [role, setRole] = useState({
         id: '',
         name: '',
@@ -38,22 +47,22 @@ const IndexRoles = () => {
 
     useEffect(() => {
         const urlPermissions = base_url(['roles/permissions']);
-        fetchHelper.post(urlPermissions, {length: -1}, {}, 0).then(response => {
+        fetchHelper.post(urlPermissions, { length: -1 }, {}, 0).then(response => {
             const grouped = response.data.reduce((acc, permission) => {
                 const moduleId = permission.module.id;
-              
+
                 if (!acc[moduleId]) {
-                  acc[moduleId] = {
-                    module: permission.module,
-                    permissions: []
-                  };
+                    acc[moduleId] = {
+                        module: permission.module,
+                        permissions: []
+                    };
                 }
-              
+
                 acc[moduleId].permissions.push(permission);
-              
+
                 return acc;
             }, {});
-              
+
             let result = Object.values(grouped);
             setModules(result);
         });
@@ -72,11 +81,11 @@ const IndexRoles = () => {
     ];
 
     const [columns, setColumns] = useState([
-        { title: 'ID', data: 'id' },
-        { title: 'Nombre', data: 'name' },
-        { title: 'Estado', data: 'status' },
+        { title: 'ID', data: 'id', searchable: false },
+        { title: 'Nombre', data: 'name', name: 'name' },
+        { title: 'Estado', data: 'status', name: 'status' },
         {
-            title: 'Acciones', data: 'id', render: (id) => {
+            title: 'Acciones', data: 'id', searchable: false, render: (id) => {
                 return `
                 <div class="d-flex gap-1">
                     ${actions.map(a => `
@@ -108,6 +117,18 @@ const IndexRoles = () => {
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
+            action: async function (e, dt, button, config) {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(
+                        filterRef.current
+                    );
+                }
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Rol</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -227,8 +248,17 @@ const IndexRoles = () => {
                     buttons={buttons}
                     title='Roles'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
+
+            <FilterRole
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+            />
         </div>
 
         <CreateRole

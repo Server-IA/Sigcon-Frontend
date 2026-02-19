@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import DataTableReference from "../../../components/organism/DataTable";
 import CreateUser from "./create";
 import UpdatedUser from "./updated";
+import FilterUser from "./filter";
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
@@ -18,11 +19,13 @@ const IndexUsers = () => {
         email: '',
         password: '',
         status: 'ACTIVE',
-        roles: []
+        roles: ''
     });
 
-    const [clickEdit, setClickEdit] = useState(false);
+    const [search, setSearch] = useState({value: '', checked: true});
 
+    const [roles, setRoles] = useState([]);
+    const [clickEdit, setClickEdit] = useState(false);
     const [userCreate, setUserCreate] = useState(false);
     const [userUpdate, setUserUpdate] = useState(false);
 
@@ -32,14 +35,27 @@ const IndexUsers = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
+
     const url = ['users', 'getUsers'];
 
     const buttons = [
         {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-outline-primary waves-effect mx-2 my-2',
+            action: function () {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                }
+                filterInstance.current.show();
+            }
+        },
+        {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Usuario</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
-            action: async function (e, dt, button, config) {
-                openModalCreate()
+            action: function () {
+                openModalCreate();
             }
         }
     ];
@@ -56,6 +72,7 @@ const IndexUsers = () => {
         { 
             title: 'Roles', 
             data: 'roles',
+            name: 'roles',
             render: (roles) => {
                 if (!roles || roles.length === 0) {
                     return '<span class="badge bg-label-secondary">Sin roles</span>';
@@ -68,6 +85,7 @@ const IndexUsers = () => {
         { 
             title: 'Estado', 
             data: 'status',
+            name: 'status',
             render: (status) => {
                 const badges = {
                     'ACTIVE': '<span class="badge bg-label-success">Activo</span>',
@@ -79,48 +97,34 @@ const IndexUsers = () => {
         {
             title: 'Acciones', 
             data: 'id', 
-            render: (id) => {
-                return `
-                    <div class="d-flex gap-1">
-                        ${actions.map(a => `
-                            <button class="btn btn-sm ${a.class} action-btn"
-                                data-action="${a.key}"
-                                data-id="${id}">
-                                <i class="${a.icon}"></i>
-                            </button>
-                        `).join('')}
-                    </div>
-                `
-            }
+            render: (id) => `
+                <div class="d-flex gap-1">
+                    ${actions.map(a => `
+                        <button class="btn btn-sm ${a.class} action-btn"
+                            data-action="${a.key}"
+                            data-id="${id}">
+                            <i class="${a.icon}"></i>
+                        </button>
+                    `).join('')}
+                </div>
+            `
         },
     ];
 
     const openModalCreate = () => {
         if (!modalCreateInstance.current) {
-            modalCreateInstance.current = new window.bootstrap.Modal(
-                modalCreateRef.current
-            );
+            modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
-        setUser({
-            id: '',
-            name: '',
-            lastname: '',
-            email: '',
-            password: '',
-            status: 'ACTIVE',
-            roles: []
-        });
+        setUser({ id: '', name: '', lastname: '', email: '', password: '', status: 'ACTIVE', roles: '' });
         modalCreateInstance.current.show();
-    }
+    };
 
     const openModalUpdate = () => {
         if (!modalUpdateInstance.current) {
-            modalUpdateInstance.current = new window.bootstrap.Modal(
-                modalUpdateRef.current
-            );
+            modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
         }
         modalUpdateInstance.current.show();
-    }
+    };
 
     const handleDelete = async (id, userName) => {
         const result = await window.Swal.fire({
@@ -138,28 +142,46 @@ const IndexUsers = () => {
 
         if (result.isConfirmed) {
             try {
-                const url = base_url(['users', 'deleteUser', id]);
-                await fetchHelper.post(url, {}, {}, 1000);
-                
-                dataTableRefUser?.current?.ajax.reload();
-                
+                const deleteUrl = base_url(['users', 'deleteUser', id]);
+                await fetchHelper.post(deleteUrl, {}, {}, 1000);
                 window.Swal.fire({
                     icon: 'success',
                     title: 'Eliminado',
                     text: 'Usuario eliminado correctamente',
                     timer: 2000,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    customClass: {
+                        confirmButton: 'btn btn-primary waves-effect'
+                    }
                 });
             } catch (error) {
                 console.error('Error al eliminar usuario:', error);
-                window.Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.msg || 'No se pudo eliminar el usuario'
-                });
+                setTimeout(() => {
+                    window.Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.msg || 'No se pudo eliminar el usuario'
+                    });
+                }, 100);
+            } finally {
+                dataTableRefUser?.current?.ajax.reload();
             }
         }
     };
+
+    useEffect(() => {
+        const getRoles = async () => {
+            try {
+                const url = base_url(['roles', 'getRoles']);
+                const {data} = await fetchHelper.post(url, {length: -1}, {}, 0);
+                setRoles(data);
+            } catch (error) {
+                console.error('Error al cargar roles:', error);
+            }
+        };
+        getRoles();
+    }, []);
 
     useEffect(() => {
         const table = dataTableRefUser?.current;
@@ -172,22 +194,19 @@ const IndexUsers = () => {
             switch (action) {
                 case 'edit':
                     const userRef = data.find(u => u.id === id);
-
                     if (!userRef) {
                         console.warn('Usuario no encontrado', id);
                         return;
                     }
-
                     setUser({
                         id: userRef.id,
                         name: userRef.name,
                         lastname: userRef.lastname,
                         email: userRef.email,
-                        password: '', // No se carga la contraseña por seguridad
+                        password: '',
                         status: userRef.status,
-                        roles: userRef.roles || []
+                        roles: userRef.roles.join(', ') || []
                     });
-
                     setClickEdit(true);
                     break;
 
@@ -202,13 +221,10 @@ const IndexUsers = () => {
                     console.warn('Acción no válida', action);
                     break;
             }
-        }
+        };
 
         table.on('click', '.action-btn', handler);
-
-        return () => {
-            table.off('click', '.action-btn', handler);
-        };
+        return () => table.off('click', '.action-btn', handler);
     }, [data]);
 
     useEffect(() => {
@@ -217,7 +233,7 @@ const IndexUsers = () => {
         setClickEdit(false);
     }, [clickEdit]);
 
-    return <>
+    return (
         <div className="card">
             <h5 className="card-header text-md-start text-center">
                 <i className="ri-user-line me-2"></i>
@@ -234,8 +250,18 @@ const IndexUsers = () => {
                     buttons={buttons}
                     title='Usuarios'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
+
+            <FilterUser
+                dataTableRef={dataTableRefUser}
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                roles={roles}
+            />
 
             <CreateUser
                 modalRef={modalCreateRef}
@@ -244,6 +270,7 @@ const IndexUsers = () => {
                 setUser={setUser}
                 dataTableRef={dataTableRefUser}
                 setUserCreate={setUserCreate}
+                roles={roles}
             />
 
             <UpdatedUser
@@ -253,9 +280,10 @@ const IndexUsers = () => {
                 setUser={setUser}
                 dataTableRef={dataTableRefUser}
                 setUserUpdate={setUserUpdate}
+                roles={roles}
             />
         </div>
-    </>
-}
+    );
+};
 
 export default IndexUsers;
