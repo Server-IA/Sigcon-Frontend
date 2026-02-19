@@ -100,7 +100,7 @@ const UpdatedParameter = ({ modalRef, modalInstance, parameter, setParameter, da
                                 onChange={(value) => setParameter({ ...parameter, category: value })}
                                 error={errors.category}
                                 placeholder="Categoria del parámetro"
-                                options={[{ name: 'COLOR', id: 'COLOR' }, { name: 'TEXTO', id: 'TEXTO' }]}
+                                options={[{ name: 'COLOR', id: 'COLOR' }, { name: 'TEXTO', id: 'FONT' }]}
                             />
                         </div>
                     </div>
