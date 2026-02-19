@@ -24,9 +24,11 @@
  *   border-color: var(--config-primary-label);
  *   (modo oscuro) var(--config-dark-bodyBg);
  */
+
+const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
 window.config = {
   colors: {
-    primary: '#666cff',
+    primary: user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff',
     secondary: '#6d788d',
     success: '#72e128',
     info: '#26c6f9',
@@ -43,7 +45,7 @@ window.config = {
     borderColor: '#e5e5e8'
   },
   colors_label: {
-    primary: '#666cff29',
+    primary: `${user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff'}29`,
     secondary: '#6d788d29',
     success: '#72e12829',
     info: '#26c6f929',

@@ -21,6 +21,8 @@ const IndexPermissions = () => {
         { id: "DELETE", name: "Eliminación" }
     ]);
 
+    const [search, setSearch] = useState({value: '', checked: true});
+
     const [permission, setPermission] = useState({
         id: '',
         name: '',
@@ -49,7 +51,8 @@ const IndexPermissions = () => {
         { 
             title: 'ID', 
             data: 'id',
-            width: '80px'
+            width: '80px',
+            searchable: false,
         },
         { 
             title: 'Nombre del Permiso', 
@@ -203,6 +206,9 @@ const IndexPermissions = () => {
                     buttons={buttons}
                     title='Permisos'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
 

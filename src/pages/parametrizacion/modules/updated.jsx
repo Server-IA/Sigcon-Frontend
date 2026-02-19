@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
 const UpdatedModule = ({ modalRef, modalInstance, module, setModule, dataTableRef, setModuleEdit }) => {
 
@@ -127,6 +128,20 @@ const UpdatedModule = ({ modalRef, modalInstance, module, setModule, dataTableRe
                                     <label htmlFor="icon">Icono del modulo</label>
                                     {errors.icon && <div className="invalid-feedback">{errors.icon}</div>}
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModal
+                                    id="status_updated"
+                                    label="Estado del modulo"
+                                    value={module.status}
+                                    onChange={(value) => setModule({ ...module, status: value })}
+                                    error={errors.status_updated}
+                                    placeholder="Seleccione el estado del modulo"
+                                    options={[{ label: 'Activo', id: 'ACTIVE' }, { label: 'Inactivo', id: 'INACTIVE' }]}
+                                />
                             </div>
                         </div>
 

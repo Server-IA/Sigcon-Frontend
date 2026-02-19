@@ -4,37 +4,15 @@ import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setUserUpdate }) => {
+const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setUserUpdate, roles }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [roles, setRoles] = useState([]);
 
     const statusOptions = [
         { id: 'ACTIVE', name: 'Activo' },
         { id: 'INACTIVE', name: 'Inactivo' }
     ];
-
-    useEffect(() => {
-        const getRoles = async () => {
-            try {
-                const url = base_url(['roles']);
-                const response = await fetchHelper.get(url, {}, 0);
-                
-                const rolesData = response?.content || [];
-                
-                setRoles(
-                    rolesData.map(role => ({
-                        id: role.id,
-                        name: role.name,
-                    }))
-                );
-            } catch (error) {
-                console.error('Error al cargar roles:', error);
-            }
-        }
-        getRoles();
-    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -46,7 +24,8 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
                 name: user.name,
                 lastname: user.lastname,
                 email: user.email,
-                status: user.status
+                status: user.status,
+                roles: [user.roles]
             };
 
             // Solo incluir password si se está cambiando
@@ -63,7 +42,7 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
                 email: '',
                 password: '',
                 status: 'ACTIVE',
-                roles: []
+                roles: ''
             });
             
             dataTableRef?.current?.ajax.reload();
@@ -173,6 +152,23 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
                                     placeholder="Dejar vacío para no cambiar"
                                 />
                                 <small className="text-muted">Dejar en blanco si no desea cambiar la contraseña</small>
+                            </div>
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModal
+                                    id="roles_updated"
+                                    label="Rol del usuario"
+                                    value={user.roles}
+                                    onChange={(value) => setUser({
+                                        ...user,
+                                        roles: value
+                                    })}
+                                    error={errors.roles_updated}
+                                    placeholder="Seleccione un rol"
+                                    options={roles.map(role => ({
+                                        label: role.name,
+                                        id: role.name
+                                    }))}
+                                />
                             </div>
                         </div>
                     </div>

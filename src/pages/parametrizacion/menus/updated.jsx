@@ -140,7 +140,7 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 id="component_updated"
                                 label="Componente del menu"
                                 value={menu.component}
-                                onChange={(e) => setMenu({ ...menu, component: e.target.value })}
+                                onChange={(value) => setMenu({ ...menu, component: value })}
                                 error={errors.component}
                                 placeholder="Componente del menu"
                                 options={components}
