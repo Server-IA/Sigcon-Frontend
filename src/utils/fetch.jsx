@@ -114,8 +114,10 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 });
             }
             return Promise.reject(error_parse);
+        }else if(error_parse.status === 400 && error_parse.msg === 'Usuario no encontrado'){
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
         }
-
     
         // 🔴 Error de red (backend caído, conexión rechazada, CORS)
         if (error instanceof TypeError) {
