@@ -15,7 +15,7 @@ body {
 
 .text-body[href]:hover,
 .text-heading[href]:hover {
-  color: #5c61e6 !important;
+  color: var(--config-primary-hover) !important;
 }
 
 .bg-primary {
@@ -23,7 +23,7 @@ body {
 }
 
 a.bg-primary:hover, a.bg-primary:focus {
-  background-color: #6167f2 !important;
+  background-color: var(--config-primary-hover) !important;
 }
 
 .bg-label-primary {
@@ -96,19 +96,19 @@ a.bg-primary:hover, a.bg-primary:focus {
 .list-group-item-primary {
   border-color: #757bff;
   background-color: var(--config-primary-label);
-  color: #5c61e6 !important;
+  color: var(--config-primary-hover) !important;
 }
 
 a.list-group-item-primary,
 button.list-group-item-primary {
-  color: #5c61e6;
+  color: var(--config-primary-hover);
 }
 a.list-group-item-primary:hover, a.list-group-item-primary:focus,
 button.list-group-item-primary:hover,
 button.list-group-item-primary:focus {
   border-color: #757bff;
   background-color: #d9d9f0;
-  color: #5c61e6;
+  color: var(--config-primary-hover);
 }
 a.list-group-item-primary.active,
 button.list-group-item-primary.active {
@@ -273,18 +273,18 @@ button.list-group-item-primary.active {
 }
 .btn-primary:hover {
   color: #fff !important;
-  background-color: #5c61e6 !important;
-  border-color: #5c61e6 !important;
+  background-color: var(--config-primary-hover) !important;
+  border-color: var(--config-primary-hover) !important;
 }
 .btn-check:focus + .btn-primary, .btn-primary:focus, .btn-primary.focus {
   color: #fff;
-  background-color: #5c61e6;
-  border-color: #5c61e6;
+  background-color: var(--config-primary-hover);
+  border-color: var(--config-primary-hover);
 }
 .btn-check:checked + .btn-primary, .btn-check:active + .btn-primary, .btn-primary:active, .btn-primary.active, .btn-primary.show.dropdown-toggle, .show > .btn-primary.dropdown-toggle {
   color: #fff !important;
-  background-color: #5c61e6 !important;
-  border-color: #5c61e6 !important;
+  background-color: var(--config-primary-hover) !important;
+  border-color: var(--config-primary-hover) !important;
 }
 .btn-primary.disabled, .btn-primary:disabled {
   color: #fff !important;
@@ -294,13 +294,13 @@ button.list-group-item-primary.active {
 
 .btn-group .btn-primary,
 .input-group .btn-primary {
-  border-right: 1px solid #5c61e6;
-  border-left: 1px solid #5c61e6;
+  border-right: 1px solid var(--config-primary-hover);
+  border-left: 1px solid var(--config-primary-hover);
 }
 
 .btn-group-vertical .btn-primary {
-  border-top-color: #5c61e6;
-  border-bottom-color: #5c61e6;
+  border-top-color: var(--config-primary-hover);
+  border-bottom-color: var(--config-primary-hover);
 }
 
 .btn-label-primary {
@@ -312,19 +312,19 @@ button.list-group-item-primary.active {
   background: radial-gradient(rgba(102, 108, 255, 0.2) 0, rgba(102, 108, 255, 0.3) 40%, rgba(102, 108, 255, 0.4) 50%, rgba(102, 108, 255, 0.5) 60%, rgba(255, 255, 255, 0) 70%);
 }
 .btn-label-primary:hover {
-  border-color: #dadcff !important;
-  background: #dadcff !important;
+  border-color: var(--config-primary-focus) !important;
+  background: var(--config-primary-focus) !important;
   color: var(--config-primary) !important;
 }
 .btn-label-primary:focus, .btn-label-primary.focus {
   color: var(--config-primary);
-  background: #dadcff;
-  border-color: #dadcff;
+  background: var(--config-primary-focus);
+  border-color: var(--config-primary-focus);
 }
 .btn-label-primary:active, .btn-label-primary.active, .btn-label-primary.show.dropdown-toggle, .show > .btn-label-primary.dropdown-toggle {
   color: var(--config-primary) !important;
-  background-color: #dadcff !important;
-  border-color: #dadcff !important;
+  background-color: var(--config-primary-focus) !important;
+  border-color: var(--config-primary-focus) !important;
 }
 .btn-label-primary.disabled, .btn-label-primary:disabled {
   color: var(--config-primary) !important;
@@ -441,7 +441,7 @@ button.list-group-item-primary.active {
 }
 
 .nav .nav-link:hover, .nav .nav-link:focus {
-  color: #5c61e6;
+  color: var(--config-primary-hover);
 }
 
 .nav-pills .nav-link.active, .nav-pills .nav-link.active:hover, .nav-pills .nav-link.active:focus {
