@@ -132,8 +132,8 @@ const IndexMenus = () => {
                 return `<i class="${icon}"></i>`;
             },
         },
-        { title: 'Posición', data: 'menuOrder'},
-        { title: 'Estado', data: 'status'},
+        { title: 'Posición', data: 'menuOrder', name: 'menuOrder'},
+        { title: 'Estado', data: 'status', name: 'status'},
         { title: 'Módulo', data: 'module.name', name: 'module', render: (module) => {
                 return module ?? '-';
             },

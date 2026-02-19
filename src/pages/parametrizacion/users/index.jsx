@@ -19,8 +19,10 @@ const IndexUsers = () => {
         email: '',
         password: '',
         status: 'ACTIVE',
-        roles: []
+        roles: ''
     });
+
+    const [search, setSearch] = useState({value: '', checked: true});
 
     const [roles, setRoles] = useState([]);
     const [clickEdit, setClickEdit] = useState(false);
@@ -113,7 +115,7 @@ const IndexUsers = () => {
         if (!modalCreateInstance.current) {
             modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
-        setUser({ id: '', name: '', lastname: '', email: '', password: '', status: 'ACTIVE', roles: [] });
+        setUser({ id: '', name: '', lastname: '', email: '', password: '', status: 'ACTIVE', roles: '' });
         modalCreateInstance.current.show();
     };
 
@@ -142,21 +144,28 @@ const IndexUsers = () => {
             try {
                 const deleteUrl = base_url(['users', 'deleteUser', id]);
                 await fetchHelper.post(deleteUrl, {}, {}, 1000);
-                dataTableRefUser?.current?.ajax.reload();
                 window.Swal.fire({
                     icon: 'success',
                     title: 'Eliminado',
                     text: 'Usuario eliminado correctamente',
                     timer: 2000,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    customClass: {
+                        confirmButton: 'btn btn-primary waves-effect'
+                    }
                 });
             } catch (error) {
                 console.error('Error al eliminar usuario:', error);
-                window.Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.msg || 'No se pudo eliminar el usuario'
-                });
+                setTimeout(() => {
+                    window.Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.msg || 'No se pudo eliminar el usuario'
+                    });
+                }, 100);
+            } finally {
+                dataTableRefUser?.current?.ajax.reload();
             }
         }
     };
@@ -164,9 +173,9 @@ const IndexUsers = () => {
     useEffect(() => {
         const getRoles = async () => {
             try {
-                const url = base_url(['roles']);
-                const response = await fetchHelper.get(url, {}, 0);
-                setRoles((response?.content || []).map(r => ({ id: r.id, name: r.name })));
+                const url = base_url(['roles', 'getRoles']);
+                const {data} = await fetchHelper.post(url, {length: -1}, {}, 0);
+                setRoles(data);
             } catch (error) {
                 console.error('Error al cargar roles:', error);
             }
@@ -196,7 +205,7 @@ const IndexUsers = () => {
                         email: userRef.email,
                         password: '',
                         status: userRef.status,
-                        roles: userRef.roles || []
+                        roles: userRef.roles.join(', ') || []
                     });
                     setClickEdit(true);
                     break;
@@ -241,6 +250,9 @@ const IndexUsers = () => {
                     buttons={buttons}
                     title='Usuarios'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
 
@@ -258,6 +270,7 @@ const IndexUsers = () => {
                 setUser={setUser}
                 dataTableRef={dataTableRefUser}
                 setUserCreate={setUserCreate}
+                roles={roles}
             />
 
             <UpdatedUser
@@ -267,6 +280,7 @@ const IndexUsers = () => {
                 setUser={setUser}
                 dataTableRef={dataTableRefUser}
                 setUserUpdate={setUserUpdate}
+                roles={roles}
             />
         </div>
     );
