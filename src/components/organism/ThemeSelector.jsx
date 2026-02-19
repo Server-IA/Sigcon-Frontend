@@ -3,9 +3,11 @@ import ColorSwatch from '../atoms/ColorSwatch';
 import Button from '../atoms/Button';
 import Icon from '../atoms/Icon';
 import { fetchHelper } from '../../utils/fetch';
-import { base_url } from '../../utils/functions';
+import { base_url, lightenColor } from '../../utils/functions';
+import { useDispatch } from 'react-redux';
 
 const ThemeSelector = () => {
+    const dispatch = useDispatch();
     const [activeTab, setActiveTab] = useState('Colores');
     const [globalParams, setGlobalParams] = useState([]);
     const [userPreferences, setUserPreferences] = useState({});
@@ -71,6 +73,12 @@ const ThemeSelector = () => {
             // Based on config.js, it might be --config-name
             const varName = `--config-${param.name.toLowerCase().replace(/\s+/g, '-')}`;
             document.documentElement.style.setProperty(varName, newValue);
+            const varNameLabel = `--config-${param.name.toLowerCase().replace(/\s+/g, '-')}-label`;
+            document.documentElement.style.setProperty(varNameLabel, `${newValue}29`);
+            const varNameHover = `--config-${param.name.toLowerCase().replace(/\s+/g, '-')}-hover`;
+            document.documentElement.style.setProperty(varNameHover, `${lightenColor(newValue, 20)}`);
+            const varNameFocus = `--config-${param.name.toLowerCase().replace(/\s+/g, '-')}-focus`;
+            document.documentElement.style.setProperty(varNameFocus, `${lightenColor(newValue, 70)}`);
         }
     };
 
@@ -91,14 +99,17 @@ const ThemeSelector = () => {
                 if (pref.id) {
                     // Update existing - URL uses parameterId as per user guide
                     const urlUpdate = base_url(['api', 'parameters', 'user', paramId]);
-                    await fetchHelper.put(urlUpdate, { colorValue: pref.value }, {}, 1000);
+                    const {data: user} = await fetchHelper.put(urlUpdate, { colorValue: pref.value }, {}, 1000);
+                    dispatch({ type: "SET_USER", payload: user });
                 } else {
                     // Create new
                     const urlCreate = base_url(['api', 'parameters', 'user', 'create']);
-                    await fetchHelper.post(urlCreate, {
+                    const { data:user } = await fetchHelper.post(urlCreate, {
                         parameterId: parseInt(paramId),
                         colorValue: pref.value
                     }, {}, 1000);
+                    
+                    dispatch({ type: "SET_USER", payload: user });
                 }
             }
 
