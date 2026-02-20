@@ -5,17 +5,33 @@ import { useEffect, useState } from 'react';
 
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import AlertPage from '../../../components/molecules/AlertPage';
 
 
 
 // ============================================
 // Componente principal
 // ============================================
-const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setRoleCreate, modules }) => {
+const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setMessageRole, modules }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    
+    const [allModulesPermissions, setAllModulesPermissions] = useState([]);
+
+    useEffect(() => {
+        setAllModulesPermissions(modules.map(m => {
+            return { ...m, checked: false }
+        }));
+    }, [modules]);
+
+    useEffect(() => {
+        const permissions = allModulesPermissions.filter(m => m.checked).map(m => m.permissions.map(p => p.id));
+        setRole({
+            ...role,
+            permissionIds: permissions.flat(),
+        });
+    }, [allModulesPermissions]);
+
     const handleCreateRole = async () => {
         console.log("Role to create", role);
         try {
@@ -31,7 +47,11 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setR
 
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
-            setRoleCreate(true);
+            setMessageRole({
+                message: 'Rol creado exitosamente',
+                type: 'success',
+                show: true,
+            });
             setErrors({});
             setErrorMessage('');
         } catch (error) {
@@ -46,10 +66,6 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setR
             }
         }
     };
-
-    useEffect(() => {
-        console.log("Modulos", modules);
-    }, [modules]);
 
     useEffect(() => {
         setErrors({});
@@ -70,10 +86,7 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setR
                         </div>
 
                         {/* Error */}
-                        <div className={`alert alert-danger alert-dismissible ${errorMessage === '' ? 'd-none' : ''}`} role="alert">
-                            <button type="button" className="btn-close" onClick={() => setErrorMessage('')} aria-label="Close"></button>
-                            <span>{errorMessage}</span>
-                        </div>
+                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} />
 
                         <div className="row">
                             <div className="col mb-6 mt-2">
@@ -93,13 +106,29 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setR
                             <h5 className="mb-2">Role Permissions</h5>
                             <div className="col-md mb-5">
                                 <div className="accordion mt-4 accordion-header-primary" id="accordionStyle1">
-                                    {modules.map((module) => {
+                                    {allModulesPermissions.map((module) => {
 
                                         const permissionsModule = chunkArray(module.permissions, 2);
 
                                         return (
                                             <div className="accordion-item" key={`${module.module.id}-accordion`}>
+                                                
                                                 <h2 className="accordion-header">
+                                                    <div className="form-check form-switch mb-2">
+                                                        <input
+                                                            className="form-check-input"
+                                                            type="checkbox"
+                                                            value={module.module.id}
+                                                            checked={module.checked}
+                                                            id={`${module.module.id}-permission`}
+                                                            onChange={(e) => setAllModulesPermissions([
+                                                                ...allModulesPermissions.map(m => m.module.id === module.module.id ? { ...m, checked: !module.checked } : m),
+                                                            ])} 
+                                                        />
+                                                        <label className="form-check-label" htmlFor={`${module.module.id}-permission`}>
+                                                            Check All
+                                                        </label>
+                                                    </div>
                                                     <button
                                                     type="button"
                                                     className="accordion-button collapsed"
@@ -107,6 +136,17 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setR
                                                     data-bs-target={`#${module.module.id}-accordion`}
                                                     aria-expanded="false">
                                                         {module.module.name}
+                                                        {/* <input
+                                                            type="checkbox"
+                                                            checked={module.permissions.every(p => role.permissionIds.includes(p.id))}
+                                                            onChange={(e) => setRole({
+                                                                ...role,
+                                                                permissionIds: module.permissions.map(p => p.id)
+                                                            })}
+                                                        />
+                                                        <label className="form-check-label" htmlFor={`${module.module.id}-permissions-all`}>
+                                                            Check all
+                                                        </label> */}
                                                     </button>
                                                 </h2>
 

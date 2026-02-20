@@ -26,6 +26,7 @@
  */
 
 const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+console.log(user, 'user')
 window.config = {
   colors: {
     primary: user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff',

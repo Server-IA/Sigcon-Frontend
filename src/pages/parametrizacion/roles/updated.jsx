@@ -5,13 +5,14 @@ import { useEffect, useState } from 'react';
 
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import AlertPage from '../../../components/molecules/AlertPage';
 
 
 
 // ============================================
 // Componente principal
 // ============================================
-const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setRoleEdit, modules }) => {
+const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setMessageRole, modules }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
@@ -30,6 +31,7 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
         });        
         setErrors({});
         setErrorMessage('');
+        console.log("Role updated", roleUpdated);
 
     }, [role]);
 
@@ -54,7 +56,11 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
 
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
-            setRoleEdit(true);
+            setMessageRole({
+                message: 'Rol actualizado exitosamente',
+                type: 'success',
+                show: true,
+            });
             setErrors({});
             setErrorMessage('');
         } catch (error) {
@@ -81,17 +87,14 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
                     <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 
                     {/* Body */}
-                    <div className="modal-body p-0">
+                    <div className="modal-body">
                         <div className="text-center mb-6">
                             <h4 className="role-title mb-2 pb-0">Crear Rol</h4>
                             <p>Asigna permisos al rol</p>
                         </div>
 
                         {/* Error */}
-                        <div className={`alert alert-danger alert-dismissible ${errorMessage === '' ? 'd-none' : ''}`} role="alert">
-                            <button type="button" className="btn-close" onClick={() => setErrorMessage('')} aria-label="Close"></button>
-                            <span>{errorMessage}</span>
-                        </div>
+                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} />
 
                         <div className="row">
                             <div className="col mb-6 mt-2">
@@ -110,7 +113,7 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
                                     id="status_update"
                                     label="Estado del rol"
                                     value={roleUpdated.status}
-                                    onChange={(e) => setRoleUpdated({ ...roleUpdated, status: e.target.value })}
+                                    onChange={(value) => setRoleUpdated({ ...roleUpdated, status: value })}
                                     error={errors.status}
                                     placeholder="Estado del rol"
                                     allowClear={false}
