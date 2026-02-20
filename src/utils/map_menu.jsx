@@ -43,6 +43,7 @@ export const COMPONENT_MAP = [
 
 export const getMenu = async () => {
     const modules = [];
+    const componentsFinal = [];
     const url = base_url(['api', 'modules', 'menu']);
     const {data, error} = await fetchHelper.get(url, {}, 0);
 
@@ -60,7 +61,8 @@ export const getMenu = async () => {
                 position: 0,
                 icon: "ri-home-smile-line",
                 childrens: [],
-                component: Home
+                component: Home,
+                componentName: "Home"
             }
         ]
     })
@@ -70,12 +72,27 @@ export const getMenu = async () => {
             ...modules,
             menus: buildMenuTree(modules?.menus?.map(menu => ({
                 ...menu,
-                component: COMPONENT_MAP.find(component => component.id === menu?.component)?.component || PageMaintenance
+                componentName: menu?.component,
+                component: COMPONENT_MAP.find(component => component.id === menu?.component)?.component || PageMaintenance,
             })))
         })));
     }
 
-    return modules;
+    // 🔹 Clonar sin la propiedad "component"
+    const removeComponentRecursively = (menus) =>
+        menus?.map(({ component, childrens, ...rest }) => ({
+            ...rest,
+            childrens: removeComponentRecursively(childrens)
+        }));
+
+    const modulesWithoutComponents = modules.map(module => ({
+        ...module,
+        menus: removeComponentRecursively(module.menus)
+    }));
+
+    componentsFinal.push(...modulesWithoutComponents);
+
+    return {modules, componentsFinal};
 }
 
 const buildMenuTree = (menus) => {

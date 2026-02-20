@@ -31,8 +31,9 @@ export const RenderRoutes = () => {
                 dispatch({ type: "SET_USER", payload: userData });
                 dispatch({ type: "SET_TOKEN", payload: token });
     
-                const menuModules = await getMenu();
+                const {modules: menuModules, componentsFinal} = await getMenu();
                 setModules(menuModules);
+                dispatch({ type: "SET_MODULES", payload: componentsFinal });
             }
     
             setRoutesReady(true);
