@@ -114,6 +114,28 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
                                             <div className="accordion-item" key={`${module.module.id}-accordion`}>
                                                 
                                                 <h2 className="accordion-header">
+
+                                                    <label class="switch switch-primary">
+                                                        <input 
+                                                        
+                                                        className="form-check-input"
+                                                        type="checkbox"
+                                                        value={module.module.id}
+                                                        checked={module.checked}
+                                                        id={`${module.module.id}-permission`}
+                                                        onChange={(e) => setAllModulesPermissions([
+                                                            ...allModulesPermissions.map(m => m.module.id === module.module.id ? { ...m, checked: !module.checked } : m),
+                                                        ])}/>
+                                                        <span class="switch-toggle-slider">
+                                                            <span class="switch-on">
+                                                                <i class="ri-check-line"></i>
+                                                            </span>
+                                                            <span class="switch-off">
+                                                                <i class="ri-close-line"></i>
+                                                            </span>
+                                                        </span>
+                                                        <span class="switch-label">Primary</span>
+                                                    </label>
                                                     <div className="form-check form-switch mb-2">
                                                         <input
                                                             className="form-check-input"

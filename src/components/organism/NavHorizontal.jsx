@@ -5,9 +5,21 @@ import { Link } from "react-router-dom";
 import { base_redirect_path, base_url } from "../../utils/functions";
 import { fetchHelper } from "../../utils/fetch";
 
+// import { ComponentsFinal } from "../../utils/map_menu";
+
 const NavHorizontal = ({modules}) => {
 
+    // const rutaPerfil = ComponentsFinal.find(component => component.id === "PERFIL")?.path;
+
+    // console.log(ComponentsFinal);
+
     const user = useSelector(state => state.user).user;
+    const modulos = useSelector(state => state.modules).modules;
+
+    const urlPerfil = `${
+        modulos.find(modulo => modulo.id === 1)?.url
+    }/${modulos.find(modulo => modulo.id === 1)?.menus.find(menu => menu.componentName === "PERFIL")?.path}`;
+
     const dispatch = useDispatch();
     const handleLogout = async () => {
 
@@ -45,7 +57,8 @@ const NavHorizontal = ({modules}) => {
     }
 
     useEffect(() => {
-        
+        console.log(modules);
+        console.log(modulos);
     }, [user]);
 
     return <>
@@ -155,25 +168,25 @@ const NavHorizontal = ({modules}) => {
                     
                     <li className="nav-item navbar-dropdown dropdown-user dropdown">
                         <a className="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
-                        <div className="avatar avatar-online">
-                            <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
-                        </div>
+                            <div className="avatar avatar-online">
+                                <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                            </div>
                         </a>
                         <ul className="dropdown-menu dropdown-menu-end">
                             <li>
-                                <a className="dropdown-item" href="pages-account-settings-account.html">
-                                <div className="d-flex">
-                                    <div className="flex-shrink-0 me-2">
-                                        <div className="avatar avatar-online">
-                                            <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                <Link to={urlPerfil} className="dropdown-item">
+                                    <div className="d-flex">
+                                        <div className="flex-shrink-0 me-2">
+                                            <div className="avatar avatar-online">
+                                                <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                            </div>
+                                        </div>
+                                        <div className="flex-grow-1">
+                                            <span className="fw-medium d-block small">{user?.name ?? ''} {user?.last_name ?? ''}</span>
+                                            <small className="text-muted">{user?.email ?? ''}</small>
                                         </div>
                                     </div>
-                                    <div className="flex-grow-1">
-                                        <span className="fw-medium d-block small">{user?.name ?? ''} {user?.last_name ?? ''}</span>
-                                        <small className="text-muted">{user?.email ?? ''}</small>
-                                    </div>
-                                </div>
-                                </a>
+                                </Link>
                             </li>
                             <li>
                                 <div className="dropdown-divider"></div>
