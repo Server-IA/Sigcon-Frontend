@@ -8,6 +8,7 @@ import { base_url, chunkArray } from '../../../utils/functions';
 import CreateRole from './create';
 import UpdatedRole from './updated';
 import FilterRole from './filter';
+import AlertPage from '../../../components/molecules/AlertPage';
 
 const IndexRoles = () => {
 
@@ -27,9 +28,11 @@ const IndexRoles = () => {
     const modalViewInstance = useRef(null);
 
     const [data, setData] = useState([]);
-    const [roleCreate, setRoleCreate] = useState(false);
-    const [roleEdit, setRoleEdit] = useState(false);
-    const [roleDelete, setRoleDelete] = useState(false);
+    const [messageRole, setMessageRole] = useState({
+        message: '',
+        type: '',
+        show: false,
+    });
 
     const [search, setSearch] = useState({
         value: '',
@@ -114,6 +117,11 @@ const IndexRoles = () => {
             status: '',
             permissionIds: [],
         });
+        setMessageRole({
+            message: '',
+            type: '',
+            show: false,
+        });
     };
 
     const buttons = [
@@ -163,6 +171,11 @@ const IndexRoles = () => {
             switch (action) {
                 case 'view':
                     setRole(roleData);
+                    setMessageRole({
+                        message: '',
+                        type: '',
+                        show: false,
+                    });
 
                     if (!modalViewInstance.current) {
                         modalViewInstance.current = new window.bootstrap.Modal(
@@ -174,6 +187,11 @@ const IndexRoles = () => {
 
                 case 'edit':
                     setRole(roleData);
+                    setMessageRole({
+                        message: '',
+                        type: '',
+                        show: false,
+                    });
 
                     if (!modalUpdateInstance.current) {
                         modalUpdateInstance.current = new window.bootstrap.Modal(
@@ -196,16 +214,20 @@ const IndexRoles = () => {
                             const url = base_url(['roles', 'deleteRole', id]);
                             try {
                                 await fetchHelper.post(url, {}, {}, 500, false);
+                                setMessageRole({
+                                    message: 'Rol eliminado exitosamente',
+                                    type: 'success',
+                                    show: true,
+                                });
                             } catch (error) {
                                 console.error(error);
-                                window.Swal.fire({
-                                    title: 'Error',
-                                    text: 'Error al eliminar el rol',
-                                    icon: 'error',
+                                setMessageRole({
+                                    message: error.msg,
+                                    type: 'danger',
+                                    show: true,
                                 });
                             } finally {
                                 dataTableRef?.current?.ajax.reload();
-                                setRoleDelete(true);
                             }
                         }
                     });
@@ -223,20 +245,7 @@ const IndexRoles = () => {
         <div className="card">
             <h5 className="card-header text-md-start text-center">Roles</h5>
 
-            <div className={`alert alert-success alert-dismissible ${!roleCreate ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Rol creado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!roleEdit ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Rol actualizado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!roleDelete ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Rol eliminado correctamente</span>
-            </div>
+            <AlertPage message={messageRole.message} type={messageRole.type} show={messageRole.show} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference
@@ -267,7 +276,7 @@ const IndexRoles = () => {
             role={role}
             setRole={setRole}
             dataTableRef={dataTableRef}
-            setRoleCreate={setRoleCreate}
+            setMessageRole={setMessageRole}
             modules={modules}
         />
 
@@ -277,7 +286,7 @@ const IndexRoles = () => {
             role={role}
             setRole={setRole}
             dataTableRef={dataTableRef}
-            setRoleEdit={setRoleEdit}
+            setMessageRole={setMessageRole}
             modules={modules}
         />
 
