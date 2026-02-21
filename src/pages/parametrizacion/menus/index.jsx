@@ -9,12 +9,15 @@ import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 import { useSelector } from "react-redux";
 import { COMPONENT_MAP } from '../../../utils/map_menu';
+import FilterMenu from "./filter";
 
 const IndexMenus = () => {
 
     const [data, setData] = useState([]);
     const tableRefMenu = useRef(null);
     const dataTableRefMenu = useRef(null);
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const user = useSelector(state => state.user).user;
     const [modules, setModules] = useState([]);
@@ -24,6 +27,11 @@ const IndexMenus = () => {
         id: component.id,
         name: component.name,
     })));
+
+    const [search, setSearch] = useState({
+        value: '',
+        checked: true,
+    });
     
     const loadData = async () => {
         const urlModules = base_url(['api', 'modules']);
@@ -91,13 +99,28 @@ const IndexMenus = () => {
 
     const buttons = [
         {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
+            action: async function (e, dt, button, config) {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(
+                        filterRef.current
+                    );
+                }
+                // setSearch({ value: '', checked: true });
+                filterInstance.current.show();
+            }
+        },
+        
+        user.permissions.find(p => p.code === "CREATE_MENUS") ?
+        {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Menu</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
             action: async function (e, dt, button, config) {
                 openModalCreate()
             }
-        }
-    ];
+        } : null
+    ].filter(button => button !== null);
 
     const actions = [
         { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
@@ -106,22 +129,22 @@ const IndexMenus = () => {
     ];
 
     const columns = [
-        { title: 'Label',  data: 'label' },
-        { title: 'URL', data: 'path' },
+        { title: 'Label',  data: 'label', name: 'label' },
+        { title: 'URL', data: 'path', name: 'path' },
         { title: 'Icono', data: 'icon', render: (icon) => {
                 return `<i class="${icon}"></i>`;
             },
         },
-        { title: 'Posición', data: 'menuOrder' },
-        { title: 'Estado', data: 'status' },
-        { title: 'Módulo', data: 'module', render: (module) => {
-                return module ? module.name : '-';
+        { title: 'Posición', data: 'menuOrder', name: 'menuOrder'},
+        { title: 'Estado', data: 'status', name: 'status'},
+        { title: 'Módulo', data: 'module.name', name: 'module', render: (module) => {
+                return module ?? '-';
             },
         },
-        { title: 'Padre', data: 'parent', render: (parent) => {
-            return parent ? parent.label : '-';
+        { title: 'Padre', data: 'parent.label', name: 'parent', render: (parent) => {
+            return parent ?? '-';
         }},
-        { title: 'Componente', data: 'component', render: (component) => {
+        { title: 'Componente', data: 'component', name: 'component', render: (component) => {
             return component ?? '-';
         }},
         {title: 'Acciones', data: 'id', render: (id) => {
@@ -136,7 +159,7 @@ const IndexMenus = () => {
                     `).join('')}
                 </div>
             `
-        }},
+        }, searchable: false},
     ];
 
     const openModalCreate = () => {
@@ -168,7 +191,14 @@ const IndexMenus = () => {
         modalUpdateInstance.current.show();
     }
 
-    
+    const openFilter = () => {
+        if (!filterInstance.current) {
+            filterInstance.current = new window.bootstrap.Modal(
+                filterRef.current
+            );
+        }
+        filterInstance.current.show();
+    }
 
     useEffect(() => {
         const usedComponentIds = new Set(
@@ -299,8 +329,23 @@ const IndexMenus = () => {
                     buttons={buttons}
                     title='Menus'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
+
+            <FilterMenu
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRefMenu}
+                modules={modules}
+                parents={parents}
+                components={COMPONENT_MAP.map(component => ({
+                    id: component.id,
+                    name: component.name,
+                }))}
+            />
 
             <CreateMenu
                 modalRef={modalCreateRef}

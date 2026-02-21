@@ -91,7 +91,10 @@ const CreateParameter = ({ modalRef, modalInstance, parameter, setParameter, dat
                                 />
                             </div>
 
-                            <div className="col-md-6">
+                        </div>
+                        <div className="row">
+
+                            <div className="col mb-6 mt-2">
                                 <InputSelectModal
                                     id="status_select"
                                     label="Estado"
@@ -102,8 +105,7 @@ const CreateParameter = ({ modalRef, modalInstance, parameter, setParameter, dat
                                     options={[{ name: 'Activo', id: 'ACTIVE' }, { name: 'Inactivo', id: 'INACTIVE' }]}
                                 />
                             </div>
-
-                            <div className="col-md-6">
+                            <div className="col mb-6 mt-2">
                                 <InputSelectModalCategory
                                     id="category_select"
                                     label="Categoria del parámetro"
@@ -111,7 +113,7 @@ const CreateParameter = ({ modalRef, modalInstance, parameter, setParameter, dat
                                     onChange={(value) => setParameter({ ...parameter, category: value })}
                                     error={errors.category}
                                     placeholder="Categoria del parámetro"
-                                    options={[{ id: 'COLOR', name: 'COLOR' }, { id: 'TEXTO', name: 'TEXTO' }]}
+                                    options={[{ id: 'COLOR', name: 'COLOR' }, { id: 'FONT', name: 'FUENTE' }]}
                                 />
                             </div>
                         </div>

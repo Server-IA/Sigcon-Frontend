@@ -150,7 +150,22 @@
 /* ===== Layout página Perfil ===== */
 .profile-page {
   width: 100%;
-  max-width: 720px;
+  max-width: 1200px;
+  /* Incrementado para el diseño de dos columnas */
+  margin: 0 auto;
+}
+
+.profile-page-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 991px) {
+  .profile-page-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .profile-card {
@@ -317,6 +332,7 @@
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -455,4 +471,184 @@
   font-size: 0.8125rem;
   color: #dc2626;
   margin-top: 0.25rem;
+}
+
+/* ===== Theme Selector Organism ===== */
+.theme-selector-container {
+  background: #fff;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.theme-selector-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.theme-selector-tabs {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.theme-tab {
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.theme-tab:hover {
+  color: #1f2937;
+}
+
+.theme-tab.active {
+  color: #667eea;
+}
+
+.theme-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.5rem;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #667eea;
+}
+
+.theme-settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.theme-setting-item {
+  background: #f9f9f9;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.theme-setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.theme-setting-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.theme-setting-value {
+  font-size: 0.8125rem;
+  color: #111827;
+  font-family: monospace;
+}
+
+.theme-setting-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.color-swatch-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.25rem;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.color-swatch:hover {
+  transform: scale(1.05);
+}
+
+.theme-selector-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination-page {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  background: #f3f4f6;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+}
+
+.pagination-page.active {
+  background: #e5e7eb;
+}
+
+.go-to-page {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.go-to-page input {
+  width: 40px;
+  padding: 0.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  text-align: center;
+}
+
+.theme-selector-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.theme-selector-actions .btn {
+  flex: 1;
+}
+
+.btn-gray {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.btn-gray:hover {
+  background: #d1d5db;
 }

@@ -29,7 +29,7 @@ const MenuNav = ({modules}) =>{
 
             <aside ref={menuRef}  id="layout-menu" className="layout-menu menu-vertical menu bg-menu-theme">
                 <div className="app-brand demo">
-                    <Link to="/" className="app-brand-link">
+                    <Link to="/dashboard" className="app-brand-link">
                         <span className="app-brand-logo demo">
                             <span style={{color: "var(--bs-primary)"}}>
                                 {/* <LogoBrand /> */}

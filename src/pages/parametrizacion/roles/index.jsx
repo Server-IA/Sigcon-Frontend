@@ -7,11 +7,16 @@ import { base_url, chunkArray } from '../../../utils/functions';
 
 import CreateRole from './create';
 import UpdatedRole from './updated';
+import FilterRole from './filter';
+import AlertPage from '../../../components/molecules/AlertPage';
 
 const IndexRoles = () => {
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
+
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -23,9 +28,16 @@ const IndexRoles = () => {
     const modalViewInstance = useRef(null);
 
     const [data, setData] = useState([]);
-    const [roleCreate, setRoleCreate] = useState(false);
-    const [roleEdit, setRoleEdit] = useState(false);
-    const [roleDelete, setRoleDelete] = useState(false);
+    const [messageRole, setMessageRole] = useState({
+        message: '',
+        type: '',
+        show: false,
+    });
+
+    const [search, setSearch] = useState({
+        value: '',
+        checked: true,
+    });
 
     const [role, setRole] = useState({
         id: '',
@@ -38,22 +50,22 @@ const IndexRoles = () => {
 
     useEffect(() => {
         const urlPermissions = base_url(['roles/permissions']);
-        fetchHelper.post(urlPermissions, {length: -1}, {}, 0).then(response => {
+        fetchHelper.post(urlPermissions, { length: -1 }, {}, 0).then(response => {
             const grouped = response.data.reduce((acc, permission) => {
                 const moduleId = permission.module.id;
-              
+
                 if (!acc[moduleId]) {
-                  acc[moduleId] = {
-                    module: permission.module,
-                    permissions: []
-                  };
+                    acc[moduleId] = {
+                        module: permission.module,
+                        permissions: []
+                    };
                 }
-              
+
                 acc[moduleId].permissions.push(permission);
-              
+
                 return acc;
             }, {});
-              
+
             let result = Object.values(grouped);
             setModules(result);
         });
@@ -72,11 +84,11 @@ const IndexRoles = () => {
     ];
 
     const [columns, setColumns] = useState([
-        { title: 'ID', data: 'id' },
-        { title: 'Nombre', data: 'name' },
-        { title: 'Estado', data: 'status' },
+        { title: 'ID', data: 'id', searchable: false },
+        { title: 'Nombre', data: 'name', name: 'name' },
+        { title: 'Estado', data: 'status', name: 'status' },
         {
-            title: 'Acciones', data: 'id', render: (id) => {
+            title: 'Acciones', data: 'id', searchable: false, render: (id) => {
                 return `
                 <div class="d-flex gap-1">
                     ${actions.map(a => `
@@ -105,9 +117,26 @@ const IndexRoles = () => {
             status: '',
             permissionIds: [],
         });
+        setMessageRole({
+            message: '',
+            type: '',
+            show: false,
+        });
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
+            action: async function (e, dt, button, config) {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(
+                        filterRef.current
+                    );
+                }
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Rol</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -142,6 +171,11 @@ const IndexRoles = () => {
             switch (action) {
                 case 'view':
                     setRole(roleData);
+                    setMessageRole({
+                        message: '',
+                        type: '',
+                        show: false,
+                    });
 
                     if (!modalViewInstance.current) {
                         modalViewInstance.current = new window.bootstrap.Modal(
@@ -153,6 +187,11 @@ const IndexRoles = () => {
 
                 case 'edit':
                     setRole(roleData);
+                    setMessageRole({
+                        message: '',
+                        type: '',
+                        show: false,
+                    });
 
                     if (!modalUpdateInstance.current) {
                         modalUpdateInstance.current = new window.bootstrap.Modal(
@@ -175,16 +214,20 @@ const IndexRoles = () => {
                             const url = base_url(['roles', 'deleteRole', id]);
                             try {
                                 await fetchHelper.post(url, {}, {}, 500, false);
+                                setMessageRole({
+                                    message: 'Rol eliminado exitosamente',
+                                    type: 'success',
+                                    show: true,
+                                });
                             } catch (error) {
                                 console.error(error);
-                                window.Swal.fire({
-                                    title: 'Error',
-                                    text: 'Error al eliminar el rol',
-                                    icon: 'error',
+                                setMessageRole({
+                                    message: error.msg,
+                                    type: 'danger',
+                                    show: true,
                                 });
                             } finally {
                                 dataTableRef?.current?.ajax.reload();
-                                setRoleDelete(true);
                             }
                         }
                     });
@@ -202,20 +245,7 @@ const IndexRoles = () => {
         <div className="card">
             <h5 className="card-header text-md-start text-center">Roles</h5>
 
-            <div className={`alert alert-success alert-dismissible ${!roleCreate ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Rol creado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!roleEdit ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Rol actualizado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!roleDelete ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Rol eliminado correctamente</span>
-            </div>
+            <AlertPage message={messageRole.message} type={messageRole.type} show={messageRole.show} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference
@@ -227,8 +257,17 @@ const IndexRoles = () => {
                     buttons={buttons}
                     title='Roles'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
+
+            <FilterRole
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+            />
         </div>
 
         <CreateRole
@@ -237,7 +276,7 @@ const IndexRoles = () => {
             role={role}
             setRole={setRole}
             dataTableRef={dataTableRef}
-            setRoleCreate={setRoleCreate}
+            setMessageRole={setMessageRole}
             modules={modules}
         />
 
@@ -247,7 +286,7 @@ const IndexRoles = () => {
             role={role}
             setRole={setRole}
             dataTableRef={dataTableRef}
-            setRoleEdit={setRoleEdit}
+            setMessageRole={setMessageRole}
             modules={modules}
         />
 

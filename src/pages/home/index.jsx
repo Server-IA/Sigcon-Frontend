@@ -8,7 +8,7 @@ const Home = () => {
     return (
         <div>
             <h1>Home</h1>
-            <p>Welcome to the home page <b>{user.name ?? ''} {user.last_name ?? ''}</b></p>
+            <p>Welcome to the home page <b>{user?.name ?? ''} {user?.last_name ?? ''}</b></p>
         </div>
     )
 }

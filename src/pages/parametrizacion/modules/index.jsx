@@ -6,6 +6,7 @@ import { base_url } from '../../../utils/functions';
 
 import CreateModule from './create';
 import UpdatedModule from './updated';
+import FilterModule from './filter';
 
 const IndexModules = () => {
 
@@ -17,6 +18,14 @@ const IndexModules = () => {
 
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
+
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
+
+    const [search, setSearch] = useState({
+        value: '',
+        checked: true,
+    });
 
     const [data, setData] = useState([]);
     const [moduleCreate, setModuleCreate] = useState(false);
@@ -43,11 +52,11 @@ const IndexModules = () => {
 
     const [columns, setColumns] = useState([
         { title: 'Orden', data: 'position' },
-        { title: 'Nombre', data: 'name' },
-        { title: 'URL', data: 'url' },
+        { title: 'Nombre', data: 'name', name: 'name'},
+        { title: 'URL', data: 'url', name: 'url' },
         { title: 'Icono', data: 'icon', render: (icon) => `<i class="${icon}"></i>` },
         { title: 'Descripción', data: 'description' },
-        { title: 'Estado', data: 'status' },
+        { title: 'Estado', data: 'status', name: 'status' },
         {
             title: 'Acciones', data: 'id', render: (id) => {
                 return `
@@ -61,7 +70,8 @@ const IndexModules = () => {
                     `).join('')}
                 </div>
             `
-            }
+            },
+            searchable: false,
         },
     ]);
 
@@ -84,6 +94,16 @@ const IndexModules = () => {
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-3-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
+            action: async function (e, dt, button, config) {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                }
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Modulo</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
@@ -200,9 +220,18 @@ const IndexModules = () => {
                     buttons={buttons}
                     title='Modulos'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
         </div>
+
+        <FilterModule
+            filterRef={filterRef}
+            filterInstance={filterInstance}
+            dataTableRef={dataTableRef}
+        />
 
         <CreateModule
             modalRef={modalCreateRef}

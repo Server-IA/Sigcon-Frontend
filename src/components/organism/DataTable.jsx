@@ -123,6 +123,20 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
 
         // Cleanup (MUY IMPORTANTE)
         return () => {
+            if (window.bootstrap && window.bootstrap.Tooltip) {
+                // Buscar y destruir todos los tooltips asociados a la tabla
+                const table = dataTableRef.current?.table?.().node?.() || dataTableRef.current?.context?.[0]?.nTable;
+                if (table) {
+                    // Buscar todos los elementos con tooltip dentro de la tabla
+                    const tooltipElements = table.querySelectorAll('[data-bs-toggle="tooltip"]');
+                    tooltipElements.forEach(el => {
+                        const tooltipInstance = window.bootstrap.Tooltip.getInstance(el);
+                        if (tooltipInstance) {
+                            tooltipInstance.dispose();
+                        }
+                    });
+                }
+            }
             if (dataTableRef?.current) {
                 dataTableRef.current.destroy();
             }

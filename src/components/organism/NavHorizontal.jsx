@@ -5,26 +5,60 @@ import { Link } from "react-router-dom";
 import { base_redirect_path, base_url } from "../../utils/functions";
 import { fetchHelper } from "../../utils/fetch";
 
+// import { ComponentsFinal } from "../../utils/map_menu";
+
 const NavHorizontal = ({modules}) => {
 
+    // const rutaPerfil = ComponentsFinal.find(component => component.id === "PERFIL")?.path;
+
+    // console.log(ComponentsFinal);
+
     const user = useSelector(state => state.user).user;
+    const modulos = useSelector(state => state.modules).modules;
+
+    const urlPerfil = `${
+        modulos.find(modulo => modulo.id === 1)?.url
+    }/${modulos.find(modulo => modulo.id === 1)?.menus.find(menu => menu.componentName === "PERFIL")?.path}`;
+
     const dispatch = useDispatch();
     const handleLogout = async () => {
 
-        const url = base_url(['auth/logout']);
+        window.Swal.fire({
+            title: 'Cerrar sesión',
+            text: '¿Estás seguro de querer cerrar sesión?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: user?.parameters?.color_primary || '#3085d6',
+            cancelButtonColor: user?.parameters?.color_danger || '#d33',
+            confirmButtonText: 'Cerrar sesión',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'btn btn-primary waves-effect',
+                cancelButton: 'btn btn-secondary waves-effect',
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                
 
-        await fetchHelper.post(url, {}, {}, 500);
+                const url = base_url(['auth/logout']);
 
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        dispatch({ type: "SET_USER", payload: null });
-        dispatch({ type: "SET_TOKEN", payload: null });
-
-        window.location.href = base_redirect_path(true);
+                await fetchHelper.post(url, {}, {}, 500);
+                dispatch({ type: "LOGOUT" });
+                window.location.href = base_redirect_path(true);
+                window.Swal.fire({
+                    title: 'Cerrando sesión',
+                    text: 'Cerrando sesión...',
+                    icon: 'success',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                });
+            }
+        });
     }
 
     useEffect(() => {
-        
+        console.log(modules);
+        console.log(modulos);
     }, [user]);
 
     return <>
@@ -134,33 +168,33 @@ const NavHorizontal = ({modules}) => {
                     
                     <li className="nav-item navbar-dropdown dropdown-user dropdown">
                         <a className="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
-                        <div className="avatar avatar-online">
-                            <img src="../../assets/img/avatars/1.png" alt="avatar" className="rounded-circle" />
-                        </div>
+                            <div className="avatar avatar-online">
+                                <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                            </div>
                         </a>
                         <ul className="dropdown-menu dropdown-menu-end">
                             <li>
-                                <a className="dropdown-item" href="pages-account-settings-account.html">
-                                <div className="d-flex">
-                                    <div className="flex-shrink-0 me-2">
-                                        <div className="avatar avatar-online">
-                                            <img src="../../assets/img/avatars/1.png" alt="avatar" className="rounded-circle" />
+                                <Link to={urlPerfil} className="dropdown-item">
+                                    <div className="d-flex">
+                                        <div className="flex-shrink-0 me-2">
+                                            <div className="avatar avatar-online">
+                                                <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                            </div>
+                                        </div>
+                                        <div className="flex-grow-1">
+                                            <span className="fw-medium d-block small">{user?.name ?? ''} {user?.last_name ?? ''}</span>
+                                            <small className="text-muted">{user?.email ?? ''}</small>
                                         </div>
                                     </div>
-                                    <div className="flex-grow-1">
-                                        <span className="fw-medium d-block small">{user.name ?? ''} {user.last_name ?? ''}</span>
-                                        <small className="text-muted">{user.email ?? ''}</small>
-                                    </div>
-                                </div>
-                                </a>
+                                </Link>
                             </li>
                             <li>
                                 <div className="dropdown-divider"></div>
                             </li>
 
                             {
-                                modules?.filter((module) => module.id == 1).map((module) => {
-                                    return module.menus.map((menu) => {
+                                modules?.filter((module) => module?.id == 1).map((module) => {
+                                    return module?.menus?.map((menu) => {
                                         return (
                                             <li key={menu.id}>
                                                 <Link to={`${module.url}/${menu.path}`} className="dropdown-item">

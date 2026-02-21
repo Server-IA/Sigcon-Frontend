@@ -4,48 +4,28 @@ import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setUserCreate }) => {
+const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setUserCreate, roles }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [roles, setRoles] = useState([]);
-
-    useEffect(() => {
-        const getRoles = async () => {
-            try {
-                const url = base_url(['roles']);
-                const response = await fetchHelper.get(url, {}, 0);
-                
-                const rolesData = response?.content || [];
-                
-                setRoles(
-                    rolesData.map(role => ({
-                        id: role.id,
-                        name: role.name,
-                    }))
-                );
-            } catch (error) {
-                console.error('Error al cargar roles:', error);
-            }
-        }
-        getRoles();
-    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
-            const url = base_url(['auth', 'register']);
+            const url = base_url(['users', 'store']);
+
+            console.log(user);
             
             const body = {
                 name: user.name,
                 lastname: user.lastname,
                 email: user.email,
                 password: user.password,
-                roleId: user.roleId ? parseInt(user.roleId) : null
+                roles: [user.roles]
             };
 
-            await fetchHelper.post(url, body, {}, 1000);
+            const {data} = await fetchHelper.post(url, body, {}, 1000);
             
             setUser({
                 id: '',
@@ -77,6 +57,10 @@ const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setU
             }
         }
     }
+
+    useEffect(() => {
+        console.log(user);
+    }, [user]);
 
     return (
         <div className="modal fade" ref={modalRef} id="modalCreateUser" tabIndex={-1} aria-hidden="true">
@@ -154,14 +138,17 @@ const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setU
                                 <InputSelectModal
                                     id="roleId"
                                     label="Rol del usuario"
-                                    value={user.roleId}
+                                    value={user.roles}
                                     onChange={(value) => setUser({
                                         ...user,
-                                        roleId: value
+                                        roles: value
                                     })}
                                     error={errors.roleId}
                                     placeholder="Seleccione un rol"
-                                    options={roles}
+                                    options={roles.map(role => ({
+                                        label: role.name,
+                                        id: role.name
+                                    }))}
                                 />
                             </div>
                         </div>
