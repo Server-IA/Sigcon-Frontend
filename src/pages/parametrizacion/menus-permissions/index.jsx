@@ -108,10 +108,10 @@ const MenuPermissionIndex = () => {
     const columns = [
         { title: 'Menu',  data: 'menu.label', name: 'menu_label' },
         { title: 'Rol', data: 'role.name', name: 'role_name' },
-        { title: 'Acciones', width: '100px', searchable: false, data: 'id', render: (id) => {
+        { title: 'Acciones', width: '100px', data: 'id', render: (id) => {
             return `
                 <div class="d-flex gap-1">
-                    ${actions.filter(a => !(id == 1 && (a.key == 'delete' || a.key == 'edit'))).map(a => `
+                    ${actions.filter(a => !(id == 8 && (a.key == 'delete' || a.key == 'edit'))).map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
                             data-action="${a.key}"
                             data-id="${id}">
