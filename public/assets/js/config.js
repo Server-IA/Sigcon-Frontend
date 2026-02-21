@@ -24,9 +24,12 @@
  *   border-color: var(--config-primary-label);
  *   (modo oscuro) var(--config-dark-bodyBg);
  */
+
+const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+console.log(user, 'user')
 window.config = {
   colors: {
-    primary: '#666cff',
+    primary: user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff',
     secondary: '#6d788d',
     success: '#72e128',
     info: '#26c6f9',
@@ -43,13 +46,31 @@ window.config = {
     borderColor: '#e5e5e8'
   },
   colors_label: {
-    primary: '#666cff29',
+    primary: `${user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff'}29`,
     secondary: '#6d788d29',
     success: '#72e12829',
     info: '#26c6f929',
     warning: '#fdb52829',
     danger: '#ff4d4929',
     dark: '#4b4b4b29'
+  },
+  colors_hover: {
+    primary: `${lightenColor(user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff', 20)}`,
+    secondary: '#6d788d',
+    success: '#72e128',
+    info: '#26c6f9',
+    warning: '#fdb528',
+    danger: '#ff4d49',
+    dark: '#4b4b4b'
+  },
+  colors_focus: {
+    primary: `${lightenColor(user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff', 70)}`,
+    secondary: '#6d788d',
+    success: '#72e128',
+    info: '#26c6f9',
+    warning: '#fdb528',
+    danger: '#ff4d49',
+    dark: '#4b4b4b'
   },
   colors_dark: {
     cardColor: '#30334e',
@@ -132,13 +153,21 @@ if (typeof TemplateCustomizer !== 'undefined') {
   if (typeof window.config === 'undefined' || !window.config.colors) return;
   var root = document.documentElement;
   var colors = window.config.colors;
+  var colorsHover = window.config.colors_hover || {};
   var colorsLabel = window.config.colors_label || {};
   var colorsDark = window.config.colors_dark || {};
+  var colorsFocus = window.config.colors_focus || {};
+  Object.keys(colorsFocus).forEach(function (key) {
+    root.style.setProperty('--config-' + key + '-focus', colorsFocus[key]);
+  });
   Object.keys(colors).forEach(function (key) {
     root.style.setProperty('--config-' + key, colors[key]);
   });
   Object.keys(colorsLabel).forEach(function (key) {
     root.style.setProperty('--config-' + key + '-label', colorsLabel[key]);
+  });
+  Object.keys(colorsHover).forEach(function (key) {
+    root.style.setProperty('--config-' + key + '-hover', colorsHover[key]);
   });
   Object.keys(colorsDark).forEach(function (key) {
     root.style.setProperty('--config-dark-' + key, colorsDark[key]);

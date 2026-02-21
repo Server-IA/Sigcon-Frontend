@@ -110,14 +110,16 @@ const IndexMenus = () => {
                 filterInstance.current.show();
             }
         },
+        
+        user.permissions.find(p => p.code === "CREATE_MENUS") ?
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Menu</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
             action: async function (e, dt, button, config) {
                 openModalCreate()
             }
-        }
-    ];
+        } : null
+    ].filter(button => button !== null);
 
     const actions = [
         { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
@@ -132,8 +134,8 @@ const IndexMenus = () => {
                 return `<i class="${icon}"></i>`;
             },
         },
-        { title: 'Posición', data: 'menuOrder'},
-        { title: 'Estado', data: 'status'},
+        { title: 'Posición', data: 'menuOrder', name: 'menuOrder'},
+        { title: 'Estado', data: 'status', name: 'status'},
         { title: 'Módulo', data: 'module.name', name: 'module', render: (module) => {
                 return module ?? '-';
             },

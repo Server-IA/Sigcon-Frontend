@@ -12654,14 +12654,14 @@ form .form-floating:has(.select2.is-invalid) label {
     padding: 2rem;
   }
 }
-.modal-simple .btn-close {
+.modal-content>.btn-close {
   position: absolute;
   top: 1.4rem;
 }
-[dir=rtl] .modal-simple .btn-close {
+[dir=rtl] .modal-content>.btn-close {
   left: 1.4rem;
 }
-html:not([dir=rtl]) .modal-simple .btn-close {
+html:not([dir=rtl]) .modal-content>.btn-close {
   right: 1.4rem;
 }
 

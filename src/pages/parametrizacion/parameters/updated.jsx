@@ -79,31 +79,32 @@ const UpdatedParameter = ({ modalRef, modalInstance, parameter, setParameter, da
                                 />
                             </div>
                         </div>
-                        <div className="col-md-6">
-                            <InputSelectModal
-                                id="status_select_updated"
-                                label="Estado"
-                                value={parameter.status}
-                                onChange={(value) => setParameter({ ...parameter, status: value })}
-                                error={errors.status}
-                                placeholder="Estado del parámetro"
-                                options={[{ name: 'Activo', id: 'ACTIVE' }, { name: 'Inactivo', id: 'INACTIVE' }]}
-                            />
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModal
+                                    id="status_select_updated"
+                                    label="Estado"
+                                    value={parameter.status}
+                                    onChange={(value) => setParameter({ ...parameter, status: value })}
+                                    error={errors.status}
+                                    placeholder="Estado del parámetro"
+                                    options={[{ name: 'Activo', id: 'ACTIVE' }, { name: 'Inactivo', id: 'INACTIVE' }]}
+                                />
+                            </div>
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModalCategory
+                                    id="category_select_updated"
+                                    label="Categoria del parámetro"
+                                    value={parameter.category}
+                                    onChange={(value) => setParameter({ ...parameter, category: value })}
+                                    error={errors.category}
+                                    placeholder="Categoria del parámetro"
+                                    options={[{ name: 'COLOR', id: 'COLOR' }, { name: 'TEXTO', id: 'FONT' }]}
+                                />
+                            </div>
                         </div>
                     </div>
-                    <div className="row">
-                        <div className="col-md-6 ">
-                            <InputSelectModalCategory
-                                id="category_select_updated"
-                                label="Categoria del parámetro"
-                                value={parameter.category}
-                                onChange={(value) => setParameter({ ...parameter, category: value })}
-                                error={errors.category}
-                                placeholder="Categoria del parámetro"
-                                options={[{ name: 'COLOR', id: 'COLOR' }, { name: 'TEXTO', id: 'FONT' }]}
-                            />
-                        </div>
-                    </div>
+                    
                     <div className="modal-footer">
                         <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
                             Cerrar

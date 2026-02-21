@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import UpdatedPermission from "./updated";
 import CreatedPermission from "./create";
+import FilterPermission from "./filter";
 
 import DataTableReference from "../../../components/organism/DataTable";
 import { fetchHelper } from "../../../utils/fetch";
@@ -13,12 +14,14 @@ const IndexPermissions = () => {
     const dataTableRef = useRef(null);
     const [clickEdit, setClickEdit] = useState(false);
 
-    const [types, setTypes] = useState([
+    const [types] = useState([
         { id: "READ", name: "Lectura" },
         { id: "CREATE", name: "Creación" },
         { id: "UPDATE", name: "Actualización" },
         { id: "DELETE", name: "Eliminación" }
     ]);
+
+    const [search, setSearch] = useState({value: '', checked: true});
 
     const [permission, setPermission] = useState({
         id: '',
@@ -38,6 +41,9 @@ const IndexPermissions = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
+
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
@@ -45,18 +51,18 @@ const IndexPermissions = () => {
         { 
             title: 'ID', 
             data: 'id',
-            width: '80px'
+            width: '80px',
+            searchable: false,
         },
         { 
             title: 'Nombre del Permiso', 
             data: 'name',
-            render: (name) => {
-                return `<span class="fw-semibold">${name}</span>`;
-            }
+            render: (name) => `<span class="fw-semibold">${name}</span>`
         },
         {
             title: 'Módulo',
-            data: 'module.name'
+            data: 'module.name',
+            name: 'module.name',
         },
         {
             title: 'Código del Permiso',
@@ -69,6 +75,7 @@ const IndexPermissions = () => {
         {
             title: 'Tipo de Permiso',
             data: 'type',
+            name: 'type',
             render: (type) => types.find(t => t.id === type)?.name
         },
         {
@@ -77,27 +84,35 @@ const IndexPermissions = () => {
             orderable: false,
             searchable: false,
             width: '100px',
-            render: (id) => {
-                return `
-                    <div class="d-flex gap-1 justify-content-center">
-                        <button class="btn btn-sm btn-label-primary action-btn"
-                            data-action="edit"
-                            data-id="${id}"
-                            title="Editar">
-                            <i class="ri-edit-line"></i>
-                        </button>
-                    </div>
-                `;
-            }
+            render: (id) => `
+                <div class="d-flex gap-1 justify-content-center">
+                    <button class="btn btn-sm btn-label-primary action-btn"
+                        data-action="edit"
+                        data-id="${id}"
+                        title="Editar">
+                        <i class="ri-edit-line"></i>
+                    </button>
+                </div>
+            `
         },
     ];
 
     const buttons = [
         {
-            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Menu</span>',
-            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
-            action: async function (e, dt, button, config) {
-                openModalCreate()
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-outline-primary waves-effect mx-2 my-2',
+            action: function () {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                }
+                filterInstance.current.show();
+            }
+        },
+        {
+            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Permiso</span>',
+            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
+            action: function () {
+                openModalCreate();
             }
         }
     ];
@@ -106,7 +121,7 @@ const IndexPermissions = () => {
         if (!modalCreateInstance.current) {
             modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
-        setPermission({ id: '', name: '', code: '', type: '', description: '', roleIds: [] });
+        setPermission({ id: '', name: '', code: '', type: '', description: '', roleIds: [], moduleId: '' });
         modalCreateInstance.current.show();
         setErrorMessage('');
         setErrors({});
@@ -138,12 +153,10 @@ const IndexPermissions = () => {
             switch (action) {
                 case 'edit':
                     const permissionRef = data.find(p => p.id === id);
-
                     if (!permissionRef) {
                         console.warn('Permiso no encontrado', id);
                         return;
                     }
-
                     setPermission({
                         id: permissionRef.id || '',
                         name: permissionRef.name || '',
@@ -153,7 +166,6 @@ const IndexPermissions = () => {
                         code: permissionRef.code || '',
                         moduleId: permissionRef?.module?.id || '',
                     });
-
                     setClickEdit(true);
                     break;
                 case 'delete':
@@ -162,20 +174,18 @@ const IndexPermissions = () => {
                     console.warn('Acción no válida', action);
                     break;
             }
-        }
-        table.on('click', '.action-btn', handler);
-
-        return () => {
-            table.off('click', '.action-btn', handler);
         };
+
+        table.on('click', '.action-btn', handler);
+        return () => table.off('click', '.action-btn', handler);
     }, [data]);
 
     useEffect(() => {
         const fetchModules = async () => {
             const url = base_url(['api', 'modules']);
-            const response = await fetchHelper.post(url, {length: -1}, {}, 0);
+            const response = await fetchHelper.post(url, { length: -1 }, {}, 0);
             setModules(response.data);
-        }
+        };
         fetchModules();
     }, []);
 
@@ -185,8 +195,8 @@ const IndexPermissions = () => {
                 <i className="ri-shield-keyhole-line me-2"></i>
                 Gestión de Permisos
             </h5>
-            <div className="card-datatable text-nowrap">
 
+            <div className="card-datatable text-nowrap">
                 <DataTableReference
                     url_api={['roles', 'permissions']}
                     columns={columns}
@@ -196,10 +206,19 @@ const IndexPermissions = () => {
                     buttons={buttons}
                     title='Permisos'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
-
-                {/* <table ref={tableRef} className="datatables-ajax table table-bordered"></table> */}
             </div>
+
+            <FilterPermission
+                dataTableRef={dataTableRef}
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                modules={modules}
+                types={types}
+            />
 
             <CreatedPermission
                 modalRef={modalCreateRef}
@@ -209,7 +228,6 @@ const IndexPermissions = () => {
                 types={types}
                 modules={modules}
                 dataTableRef={dataTableRef}
-                // onSuccess={loadPermissions}
             />
 
             <UpdatedPermission
@@ -220,7 +238,6 @@ const IndexPermissions = () => {
                 types={types}
                 modules={modules}
                 dataTableRef={dataTableRef}
-                // onSuccess={loadPermissions}
             />
         </div>
     );

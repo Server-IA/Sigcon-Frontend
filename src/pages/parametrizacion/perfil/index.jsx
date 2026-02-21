@@ -8,6 +8,7 @@ import NotificationBar from '../../../components/molecules/NotificationBar';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import '../../../styles/profile.css';
+import ThemeSelector from '../../../components/organism/ThemeSelector';
 
 /** Campo enviado al backend para la imagen de perfil en base64: "avatar" (string, solo la parte base64 sin prefijo data:image/...) */
 const AVATAR_FIELD_NAME = 'avatar';
@@ -106,7 +107,7 @@ const PerfilPage = () => {
         const base64Only = avatarBase64.includes('base64,') ? avatarBase64.split('base64,')[1] : avatarBase64;
         payload[AVATAR_FIELD_NAME] = base64Only;
       }
-      const { data } =await fetchHelper.put(url, payload, {}, 500, false);
+      const { data } = await fetchHelper.put(url, payload, {}, 500, false);
 
       dispatch({ type: 'SET_USER', payload: data });
       setNotification({ type: 'success', message: 'Los cambios se guardaron correctamente.' });
@@ -142,84 +143,94 @@ const PerfilPage = () => {
     }
   };
 
+
+
   return (
     <div className="profile-page">
-      <div className="profile-card">
-        <h2 className="profile-header">Perfil / Mis datos</h2>
-        <div className="profile-body">
-          {/* Foto de perfil */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/jpg"
-            onChange={handleFileChange}
-            className="profile-file-input-hidden"
-            aria-hidden="true"
-          />
-          <div className="profile-photo-row">
-            <div className="profile-photo-avatar">
-              {avatarBase64 ? (
-                <img src={avatarBase64} alt="avatar" />
-              ) : (
-                <>
-                  <img src={user.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar"  />
-                  {/* <span className="profile-photo-placeholder profile-photo-placeholder-hidden" aria-hidden="true"><Icon name="ri-user-3-line" /></span> */}
-                </>
-              )}
-            </div>
-            <div className="profile-photo-actions">
-              <div className="profile-photo-title">Foto de perfil</div>
-              <div className="profile-photo-buttons">
-                <Button type="button" variant="primary" onClick={handleChangeImageClick}>Cambiar Imagen</Button>
-                {/* <Button type="button" variant="secondary" onClick={handleRemoveImage}>Quitar Imagen</Button> */}
+      <div className="profile-page-grid">
+        <div className="profile-column-left">
+          <div className="profile-card">
+            <h2 className="profile-header">Perfil / Mis datos</h2>
+            <div className="profile-body">
+              {/* Foto de perfil */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg"
+                onChange={handleFileChange}
+                className="profile-file-input-hidden"
+                aria-hidden="true"
+              />
+              <div className="profile-photo-row">
+                <div className="profile-photo-avatar">
+                  {avatarBase64 ? (
+                    <img src={avatarBase64} alt="avatar" />
+                  ) : (
+                    <>
+                      <img src={user.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" />
+                      {/* <span className="profile-photo-placeholder profile-photo-placeholder-hidden" aria-hidden="true"><Icon name="ri-user-3-line" /></span> */}
+                    </>
+                  )}
+                </div>
+                <div className="profile-photo-actions">
+                  <div className="profile-photo-title">Foto de perfil</div>
+                  <div className="profile-photo-buttons">
+                    <Button type="button" variant="primary" onClick={handleChangeImageClick}>Cambiar Imagen</Button>
+                    {/* <Button type="button" variant="secondary" onClick={handleRemoveImage}>Quitar Imagen</Button> */}
+                  </div>
+                  <div className="profile-photo-hint">Formatos válidos: PNG, JPG, JPEG</div>
+                </div>
               </div>
-              <div className="profile-photo-hint">Formatos válidos: PNG, JPG, JPEG</div>
+
+              {/* Datos personales */}
+              <section className="profile-section">
+                <span className="profile-section-title">Datos Personales</span>
+                <div className="profile-fields-row">
+                  <InputField id="name" name="name" label="Nombre" type="text" placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} hasError={!!errors.name} />
+                  <InputField id="lastname" name="lastname" label="Apellido" type="text" placeholder="Apellido" value={form.lastname} onChange={(e) => setForm({ ...form, lastname: e.target.value })} hasError={!!errors.lastname} />
+                </div>
+                {/* <div className="profile-field-full">
+                  <InputField id="username" name="username" label="Username" type="text" placeholder="Nombre de usuario" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} hasError={!!errors.username} />
+                  {errors.username && <div className="profile-field-error">{errors.username}</div>}
+                </div> */}
+              </section>
+
+              {/* Seguridad de la cuenta */}
+              <section className="profile-section">
+                <span className="profile-section-title">Seguridad de la Cuenta</span>
+                <div className="profile-field-with-button">
+                  <InputField id="email" name="email" label="Correo electrónico" type="email" placeholder="Correo electrónico" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} hasError={!!errors.email} />
+                  <Button type="button" variant="secondary" onClick={() => document.getElementById('email')?.focus()}>Cambiar Correo</Button>
+                </div>
+                {errors.email && <div className="profile-field-error">{errors.email}</div>}
+
+                <div className="profile-field-with-button">
+                  <PasswordInput id="password" name="password" label="Nueva contraseña" placeholder="(Dejar en blanco para no cambiar)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} hasError={!!errors.password} />
+                  {errors.password && <div className="profile-field-error">{errors.password}</div>}
+                  <Button type="button" variant="secondary" onClick={() => document.getElementById('password')?.focus()}>Cambiar Contraseña</Button>
+                </div>
+
+                <div className="profile-field-full">
+                  <PasswordInput id="confirmPassword" name="confirmPassword" label="Confirmación de contraseña" placeholder="Repita la contraseña" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} hasError={!!errors.confirmPassword} />
+                  {errors.confirmPassword && <div className="profile-field-error">{errors.confirmPassword}</div>}
+                </div>
+              </section>
+
+              {/* Notificación */}
+              <div className="profile-notification">
+                <NotificationBar type={notification.type} message={notification.message} onClose={clearNotification} />
+              </div>
+
+              <div className="profile-actions">
+                <Button type="button" variant="primary" onClick={handleSave}>Guardar Cambios</Button>
+                <Button type="button" variant="danger" onClick={() => setDeleteModalVisible(true)}>Eliminar cuenta</Button>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Datos personales */}
-          <section className="profile-section">
-            <span className="profile-section-title">Datos Personales</span>
-            <div className="profile-fields-row">
-              <InputField id="name" name="name" label="Nombre" type="text" placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} hasError={!!errors.name} />
-              <InputField id="lastname" name="lastname" label="Apellido" type="text" placeholder="Apellido" value={form.lastname} onChange={(e) => setForm({ ...form, lastname: e.target.value })} hasError={!!errors.lastname} />
-            </div>
-            {/* <div className="profile-field-full">
-              <InputField id="username" name="username" label="Username" type="text" placeholder="Nombre de usuario" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} hasError={!!errors.username} />
-              {errors.username && <div className="profile-field-error">{errors.username}</div>}
-            </div> */}
-          </section>
-
-          {/* Seguridad de la cuenta */}
-          <section className="profile-section">
-            <span className="profile-section-title">Seguridad de la Cuenta</span>
-            <div className="profile-field-with-button">
-              <InputField id="email" name="email" label="Correo electrónico" type="email" placeholder="Correo electrónico" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} hasError={!!errors.email} />
-              <Button type="button" variant="secondary" onClick={() => document.getElementById('email')?.focus()}>Cambiar Correo</Button>
-            </div>
-            {errors.email && <div className="profile-field-error">{errors.email}</div>}
-
-            <div className="profile-field-with-button">
-                <PasswordInput id="password" name="password" label="Nueva contraseña" placeholder="(Dejar en blanco para no cambiar)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} hasError={!!errors.password} />
-                {errors.password && <div className="profile-field-error">{errors.password}</div>}
-              <Button type="button" variant="secondary" onClick={() => document.getElementById('password')?.focus()}>Cambiar Contraseña</Button>
-            </div>
-
-            <div className="profile-field-full">
-              <PasswordInput id="confirmPassword" name="confirmPassword" label="Confirmación de contraseña" placeholder="Repita la contraseña" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} hasError={!!errors.confirmPassword} />
-              {errors.confirmPassword && <div className="profile-field-error">{errors.confirmPassword}</div>}
-            </div>
-          </section>
-
-          {/* Notificación */}
-          <div className="profile-notification">
-            <NotificationBar type={notification.type} message={notification.message} onClose={clearNotification} />
-          </div>
-
-          <div className="profile-actions">
-            <Button type="button" variant="primary" onClick={handleSave}>Guardar Cambios</Button>
-            <Button type="button" variant="danger" onClick={() => setDeleteModalVisible(true)}>Eliminar cuenta</Button>
-          </div>
+        <div className="profile-column-right">
+          <ThemeSelector />
         </div>
       </div>
 

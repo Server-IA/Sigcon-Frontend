@@ -10,7 +10,7 @@ import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 
-const IndexPUC = () => {
+const PUCindex = () => {
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -301,4 +301,4 @@ const IndexPUC = () => {
     );
 };
 
-export default IndexPUC;
+export default PUCindex;
