@@ -13,6 +13,9 @@ import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
+// List Accounts
+import IndexPUC from "../pages/list_accounts/puc/index";
+
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
 
@@ -39,6 +42,9 @@ export const COMPONENT_MAP = [
     { id: "ROLES", name: "Roles", component: IndexRoles },
     { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
     { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
+
+    // List Accounts
+    { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
 ]
 
 export const getMenu = async () => {
