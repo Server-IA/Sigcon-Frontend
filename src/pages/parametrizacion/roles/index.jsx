@@ -222,7 +222,7 @@ const IndexRoles = () => {
                             } catch (error) {
                                 console.error(error);
                                 setMessageRole({
-                                    message: error.msg,
+                                    message: error.msg || 'Error al eliminar el rol. Verifique su conexión e intente nuevamente.',
                                     type: 'danger',
                                     show: true,
                                 });

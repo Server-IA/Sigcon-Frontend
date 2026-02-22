@@ -7,6 +7,7 @@ import { base_url } from '../../../utils/functions';
 import CreateModule from './create';
 import UpdatedModule from './updated';
 import FilterModule from './filter';
+import AlertPage from '../../../components/molecules/AlertPage';
 
 const IndexModules = () => {
 
@@ -31,11 +32,11 @@ const IndexModules = () => {
     const [moduleCreate, setModuleCreate] = useState(false);
     const [moduleEdit, setModuleEdit] = useState(false);
     const [moduleDelete, setModuleDelete] = useState(false);
+    const [moduleError, setModuleError] = useState(false);
 
     const url = ['api/modules'];
 
     const actions = [
-        { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
@@ -52,7 +53,7 @@ const IndexModules = () => {
 
     const [columns, setColumns] = useState([
         { title: 'Orden', data: 'position' },
-        { title: 'Nombre', data: 'name', name: 'name'},
+        { title: 'Nombre', data: 'name', name: 'name' },
         { title: 'URL', data: 'url', name: 'url' },
         { title: 'Icono', data: 'icon', render: (icon) => `<i class="${icon}"></i>` },
         { title: 'Descripción', data: 'description' },
@@ -122,9 +123,6 @@ const IndexModules = () => {
             const id = Number($(this).data('id'));
 
             switch (action) {
-                case 'view':
-                    console.log('view');
-                    break;
                 case 'edit':
 
                     const moduleRef = data.find(m => m.id === id);
@@ -165,20 +163,14 @@ const IndexModules = () => {
                             const url = base_url(['api', 'modules', 'delete', id]);
                             try {
                                 const response = await fetchHelper.delete(url, {}, {}, 500, false);
-                                if (response.status === 200) {
-                                    dataTableRef?.current?.ajax.reload();
-                                    setModuleDelete(true);
-                                }
-                            } catch (error) {
-                                console.error(error);
-                                window.Swal.fire({
-                                    title: 'Error',
-                                    text: 'Error al eliminar el módulo',
-                                    icon: 'error',
-                                });
-                            } finally {
                                 dataTableRef?.current?.ajax.reload();
                                 setModuleDelete(true);
+                                setModuleError(false);
+                            } catch (error) {
+                                console.error(error);
+                                setModuleError(true);
+                                setModuleDelete(false);
+                                dataTableRef?.current?.ajax.reload();
                             }
                         }
                     });
@@ -196,20 +188,10 @@ const IndexModules = () => {
     return <>
         <div className="card">
             <h5 className="card-header text-md-start text-center">Modulos</h5>
-            <div className={`alert alert-success alert-dismissible ${!moduleCreate ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Modulo creado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!moduleEdit ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Modulo actualizado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!moduleDelete ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Modulo eliminado correctamente</span>
-            </div>
+            <AlertPage type="success" message="Modulo creado correctamente" show={moduleCreate} />
+            <AlertPage type="success" message="Modulo actualizado correctamente" show={moduleEdit} />
+            <AlertPage type="success" message="Modulo eliminado correctamente" show={moduleDelete} />
+            <AlertPage type="danger" message="Error al eliminar el módulo. Verifique su conexión e intente nuevamente." show={moduleError} />
             <div className="card-datatable text-nowrap">
                 <DataTableReference
                     url_api={url}
