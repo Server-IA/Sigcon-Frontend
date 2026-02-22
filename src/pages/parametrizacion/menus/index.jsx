@@ -8,6 +8,7 @@ import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 import { useSelector } from "react-redux";
 import { COMPONENT_MAP } from '../../../utils/map_menu';
+import AlertPage from '../../../components/molecules/AlertPage';
 import FilterMenu from "./filter";
 
 const IndexMenus = () => {
@@ -31,20 +32,20 @@ const IndexMenus = () => {
         value: '',
         checked: true,
     });
-    
+
     const loadData = async () => {
         const urlModules = base_url(['api', 'modules']);
-        const {data: dataModules} = await fetchHelper.post(urlModules, {length: -1}, {}, 0);
+        const { data: dataModules } = await fetchHelper.post(urlModules, { length: -1 }, {}, 0);
         setModules(dataModules.map(module => ({
             id: module.id,
             name: module.name,
         })));
-        
+
         const urlParents = base_url(['api', 'menus', 'datatable']);
         const body = {
             length: -1,
         }
-        const {data: dataParents} = await fetchHelper.post(urlParents, body, {}, 0);
+        const { data: dataParents } = await fetchHelper.post(urlParents, body, {}, 0);
         setParents(dataParents.map(parent => ({
             id: parent.id,
             name: parent.label,
@@ -87,6 +88,7 @@ const IndexMenus = () => {
     const [menuCreate, setMenuCreate] = useState(false);
     const [menuUpdate, setMenuUpdate] = useState(false);
     const [menuDelete, setMenuDelete] = useState(false);
+    const [menuError, setMenuError] = useState(false);
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -110,44 +112,50 @@ const IndexMenus = () => {
                 filterInstance.current.show();
             }
         },
-        
+
         user.permissions.find(p => p.code === "CREATE_MENUS") ?
-        {
-            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Menu</span>',
-            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
-            action: async function (e, dt, button, config) {
-                openModalCreate()
-            }
-        } : null
+            {
+                text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Menu</span>',
+                className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
+                action: async function (e, dt, button, config) {
+                    openModalCreate()
+                }
+            } : null
     ].filter(button => button !== null);
 
     const actions = [
-        { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
 
     const columns = [
-        { title: 'Label',  data: 'label', name: 'label' },
+        { title: 'Label', data: 'label', name: 'label' },
         { title: 'URL', data: 'path', name: 'path' },
-        { title: 'Icono', data: 'icon', render: (icon) => {
+        {
+            title: 'Icono', data: 'icon', render: (icon) => {
                 return `<i class="${icon}"></i>`;
             },
         },
-        { title: 'Posición', data: 'menuOrder', name: 'menuOrder'},
-        { title: 'Estado', data: 'status', name: 'status'},
-        { title: 'Módulo', data: 'module.name', name: 'module', render: (module) => {
+        { title: 'Posición', data: 'menuOrder', name: 'menuOrder' },
+        { title: 'Estado', data: 'status', name: 'status' },
+        {
+            title: 'Módulo', data: 'module.name', name: 'module', render: (module) => {
                 return module ?? '-';
             },
         },
-        { title: 'Padre', data: 'parent.label', name: 'parent', render: (parent) => {
-            return parent ?? '-';
-        }},
-        { title: 'Componente', data: 'component', name: 'component', render: (component) => {
-            return component ?? '-';
-        }},
-        {title: 'Acciones', data: 'id', render: (id) => {
-            return `
+        {
+            title: 'Padre', data: 'parent.label', name: 'parent', render: (parent) => {
+                return parent ?? '-';
+            }
+        },
+        {
+            title: 'Componente', data: 'component', name: 'component', render: (component) => {
+                return component ?? '-';
+            }
+        },
+        {
+            title: 'Acciones', data: 'id', render: (id) => {
+                return `
                 <div class="d-flex gap-1">
                     ${actions.map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
@@ -158,7 +166,8 @@ const IndexMenus = () => {
                     `).join('')}
                 </div>
             `
-        }, searchable: false},
+            }, searchable: false
+        },
     ];
 
     const openModalCreate = () => {
@@ -205,7 +214,7 @@ const IndexMenus = () => {
                 .filter(parent => parent.id !== menu.id) // excluir el propio menu si estás editando
                 .map(parent => parent.component)
         );
-    
+
         const filtered = COMPONENT_MAP
             .map(component => ({
                 id: component.id,
@@ -215,7 +224,7 @@ const IndexMenus = () => {
                 !usedComponentIds.has(component.id) ||
                 component.id === menu.component // permitir el actual
             );
-    
+
         setComponents(filtered);
     }, [menu]);
 
@@ -259,24 +268,19 @@ const IndexMenus = () => {
                         showCancelButton: true,
                         confirmButtonText: 'Eliminar',
                         cancelButtonText: 'Cancelar',
-                    }).then(async (result) => { 
+                    }).then(async (result) => {
                         if (result.isConfirmed) {
                             const url = base_url(['api', 'menus', id]);
                             try {
                                 await fetchHelper.delete(url, {}, {}, 500, false);
                                 dataTableRefMenu?.current?.ajax.reload();
                                 setMenuDelete(true);
+                                setMenuError(false);
                             } catch (error) {
                                 console.error(error);
-                                window.Swal.fire({
-                                    title: 'Error',
-                                    text: error.message || error.msg || 'Error al eliminar el menú',
-                                    icon: 'error',
-                                    confirmButtonText: 'Cerrar',
-                                    showCancelButton: false,
-                                    showCloseButton: false,
-                                    allowOutsideClick: false,
-                                });
+                                setMenuError(true);
+                                setMenuDelete(false);
+                                dataTableRefMenu?.current?.ajax.reload();
                             }
                         }
                     });
@@ -303,20 +307,10 @@ const IndexMenus = () => {
         <div className="card">
             <h5 className="card-header text-md-start text-center">Menus</h5>
 
-            <div className={`alert alert-success alert-dismissible ${!menuDelete ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Menú eliminado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!menuUpdate ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Menú editado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!menuCreate ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Menú creado correctamente</span>
-            </div>
+            <AlertPage type="success" message="Menú eliminado correctamente" show={menuDelete} />
+            <AlertPage type="success" message="Menú editado correctamente" show={menuUpdate} />
+            <AlertPage type="success" message="Menú creado correctamente" show={menuCreate} />
+            <AlertPage type="danger" message="Error al eliminar el menú. Verifique su conexión e intente nuevamente." show={menuError} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference

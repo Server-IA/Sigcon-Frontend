@@ -44,7 +44,7 @@ const MenuPermissionIndex = () => {
             const body = {
                 length: -1,
             }
-            const {data} = await fetchHelper.post(url, body, {}, 0);
+            const { data } = await fetchHelper.post(url, body, {}, 0);
             setMenus(
                 data.map(menu => ({
                     id: menu.id,
@@ -58,7 +58,7 @@ const MenuPermissionIndex = () => {
             const body = {
                 length: -1,
             }
-            const {data} = await fetchHelper.post(url, body, {}, 0);
+            const { data } = await fetchHelper.post(url, body, {}, 0);
             setRoles(
                 data.map(rol => ({
                     id: rol.id,
@@ -73,6 +73,7 @@ const MenuPermissionIndex = () => {
     const [menuPermissionUpdate, setMenuPermissionUpdate] = useState(false);
     const [clickEdit, setClickEdit] = useState(false);
     const [menuPermissionDelete, setMenuPermissionDelete] = useState(false);
+    const [menuPermissionError, setMenuPermissionError] = useState(false);
 
     const url = ['api', 'menu-permissions'];
 
@@ -100,16 +101,16 @@ const MenuPermissionIndex = () => {
     ];
 
     const actions = [
-        { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
 
     const columns = [
-        { title: 'Menu',  data: 'menu.label', name: 'menu_label' },
+        { title: 'Menu', data: 'menu.label', name: 'menu_label' },
         { title: 'Rol', data: 'role.name', name: 'role_name' },
-        { title: 'Acciones', width: '100px', data: 'id', render: (id) => {
-            return `
+        {
+            title: 'Acciones', width: '100px', data: 'id', render: (id) => {
+                return `
                 <div class="d-flex gap-1">
                     ${actions.filter(a => !(id == 8 && (a.key == 'delete' || a.key == 'edit'))).map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
@@ -120,7 +121,8 @@ const MenuPermissionIndex = () => {
                     `).join('')}
                 </div>
             `
-        }},
+            }
+        },
     ];
 
     const openModalCreate = () => {
@@ -185,27 +187,19 @@ const MenuPermissionIndex = () => {
                         showCancelButton: true,
                         confirmButtonText: 'Eliminar',
                         cancelButtonText: 'Cancelar',
-                    }).then(async (result) => { 
+                    }).then(async (result) => {
                         if (result.isConfirmed) {
                             const url = base_url(['api', 'menu-permissions', 'delete', id]);
                             try {
                                 await fetchHelper.delete(url, {}, {}, 500, false);
                                 dataTableRefMenu?.current?.ajax.reload();
-                                menuPermissionDelete(true);
+                                setMenuPermissionDelete(true);
+                                setMenuPermissionError(false);
                             } catch (error) {
                                 console.error(error);
-                                window.Swal.fire({
-                                    title: 'Error',
-                                    text: error.message || error.msg || 'Error al eliminar el menú',
-                                    icon: 'error',
-                                    confirmButtonText: 'Cerrar',
-                                    showCancelButton: false,
-                                    showCloseButton: false,
-                                    allowOutsideClick: false,
-                                    customClass: {
-                                        confirmButton: 'btn btn-primary',
-                                    },
-                                });
+                                setMenuPermissionError(true);
+                                setMenuPermissionDelete(false);
+                                dataTableRefMenu?.current?.ajax.reload();
                             }
                         }
                     });
@@ -231,6 +225,7 @@ const MenuPermissionIndex = () => {
             <AlertPage type="success" message={`Permisos para el menú, creado exitosamente`} show={menuPermissionCreate} />
             <AlertPage type="success" message={`Permisos para el menú, actualizado exitosamente`} show={menuPermissionUpdate} />
             <AlertPage type="success" message={`Permisos para el menú, eliminado exitosamente`} show={menuPermissionDelete} />
+            <AlertPage type="danger" message="Error al eliminar el permiso de menú. Verifique su conexión e intente nuevamente." show={menuPermissionError} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference
