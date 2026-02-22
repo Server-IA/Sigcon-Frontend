@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState, useRef } from 'react';
 
-const AlertPage = ({ type, message, show, duration = 5000 }) => {
+const AlertPage = ({ type, message, show, duration = 5000, onChange }) => {
     const [visible, setVisible] = useState(false);
     const [animState, setAnimState] = useState('hidden'); // 'hidden' | 'entering' | 'visible' | 'exiting'
     const timeoutRef = useRef(null);
@@ -31,6 +31,7 @@ const AlertPage = ({ type, message, show, duration = 5000 }) => {
                 fadeTimeoutRef.current = setTimeout(() => {
                     setVisible(false);
                     setAnimState('hidden');
+                    onChange();
                 }, 500);
             }, duration);
         } else {
@@ -81,6 +82,7 @@ const AlertPage = ({ type, message, show, duration = 5000 }) => {
                     setTimeout(() => {
                         setVisible(false);
                         setAnimState('hidden');
+                        onChange();
                     }, 400);
                 }}
             ></button>
@@ -94,6 +96,7 @@ AlertPage.propTypes = {
     message: PropTypes.string.isRequired,
     show: PropTypes.bool.isRequired,
     duration: PropTypes.number,
+    onChange: PropTypes.func.isRequired,
 }
 
 export default AlertPage;
