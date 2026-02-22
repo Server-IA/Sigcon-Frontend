@@ -9,7 +9,7 @@ ARG VITE_API_URL_DEVELOPMENT
 ARG VITE_API_URL_PRODUCTION
 
 # 👇 Convertirlas en variables del sistema
-ENV VITE_ENVIRONMENT=development
+ENV VITE_ENVIRONMENT=production
 ENV VITE_API_URL_LOCAL=http://localhost:8080/
 ENV VITE_API_URL_DEVELOPMENT=https://api.inmero.co/dev/sigcon/
 ENV VITE_API_URL_PRODUCTION=https://api.inmero.co/sigcon/

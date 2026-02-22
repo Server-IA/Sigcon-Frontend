@@ -1,25 +1,18 @@
 export const base_url = (array = [], get = {}) => {
 
     let url = '';
-    const env = import.meta.env.MODE || 'local';
-    console.log(['env', import.meta.env]);  
-    if(env === 'production'){
-        url = import.meta.env.VITE_API_URL_PRODUCTION || `https://api.inmero.co/sigcon/`;
-    }else{
-        switch(import.meta.env.VITE_ENVIRONMENT){
-            case 'local':
-                url = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080/';
-                break;
-            case 'production':
-                url = import.meta.env.VITE_API_URL_PRODUCTION || 'https://api.inmero.co/sigcon/';
-                break;
-            case 'development':
-                url = import.meta.env.VITE_API_URL_DEVELOPMENT || 'https://test.inmero.co/sigcon/';
-                break;
-            default:
-                url = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080/';
-                break;
-        }
+    
+    switch(import.meta.env.VITE_ENVIRONMENT){
+        case 'local':
+            url = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080/';
+            break;
+        case 'development':
+            url = import.meta.env.VITE_API_URL_DEVELOPMENT || 'https://api.inmero.co/dev/sigcon/';
+            break;
+        case 'production':
+        default:
+            url = import.meta.env.VITE_API_URL_PRODUCTION || 'https://api.inmero.co/sigcon/';
+            break;
     }
 
 
