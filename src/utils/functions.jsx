@@ -2,8 +2,9 @@ export const base_url = (array = [], get = {}) => {
 
     let url = '';
     const env = import.meta.env.MODE || 'local';
+    console.log(['env', import.meta.env]);  
     if(env === 'production'){
-        url = import.meta.env.VITE_API_URL_PRODUCTION || 'https://api.inmero.co/sigcon/';
+        url = import.meta.env.VITE_API_URL_PRODUCTION || `https://api.inmero.co/sigcon/`;
     }else{
         switch(import.meta.env.VITE_ENVIRONMENT){
             case 'local':
