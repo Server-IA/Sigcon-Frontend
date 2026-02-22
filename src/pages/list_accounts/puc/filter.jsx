@@ -4,29 +4,29 @@ import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const ACCOUNT_CLASSES = [
-    { id: 'ASSET',              name: 'Activo' },
-    { id: 'LIABILITY',          name: 'Pasivo' },
-    { id: 'EQUITY',             name: 'Patrimonio' },
-    { id: 'INCOME',             name: 'Ingresos' },
-    { id: 'EXPENSE',            name: 'Gastos' },
-    { id: 'COST_OF_SALES',      name: 'Costos de venta' },
+    { id: 'ASSET', name: 'Activo' },
+    { id: 'LIABILITY', name: 'Pasivo' },
+    { id: 'EQUITY', name: 'Patrimonio' },
+    { id: 'INCOME', name: 'Ingresos' },
+    { id: 'EXPENSE', name: 'Gastos' },
+    { id: 'COST_OF_SALES', name: 'Costos de venta' },
     { id: 'COST_OF_PRODUCTION', name: 'Costos de producción o de operación' },
-    { id: 'ORDER_DEBIT',        name: 'Cuentas de orden deudoras' },
-    { id: 'ORDER_CREDIT',       name: 'Cuentas de orden acreedoras' },
+    { id: 'ORDER_DEBIT', name: 'Cuentas de orden deudoras' },
+    { id: 'ORDER_CREDIT', name: 'Cuentas de orden acreedoras' },
 ];
 
 const HIERARCHY_LEVELS = [
-    { id: 'GROUP',    name: 'Grupo' },
+    { id: 'GROUP', name: 'Grupo' },
     { id: 'SUBGROUP', name: 'Subgrupo' },
 ];
 
 const ACCOUNT_NATURES = [
-    { id: 'DEBIT',  name: 'Deudora' },
+    { id: 'DEBIT', name: 'Deudora' },
     { id: 'CREDIT', name: 'Acreedora' },
 ];
 
 const ACCOUNT_STATUSES = [
-    { id: 'ACTIVE',   name: 'Activa' },
+    { id: 'ACTIVE', name: 'Activa' },
     { id: 'INACTIVE', name: 'Inactiva' },
 ];
 
@@ -36,7 +36,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
     const getTable = () => dataTableRef?.current?.table();
 
     const [filters, setFilters] = useState([
-        { regex: true, value: '', column: 'officialCode:name' },
+        { regex: true, value: '', column: 'code:name' },
         { regex: true, value: '', column: 'name:name' },
         { regex: true, value: '', column: 'accountClass:name' },
         { regex: true, value: '', column: 'hierarchyLevel:name' },
@@ -44,7 +44,6 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
         { regex: true, value: '', column: 'status:name' },
     ]);
 
-    // Aplica los filtros en tiempo real al estado de DataTables
     useEffect(() => {
         const table = getTable();
         if (!table) return;
@@ -53,17 +52,14 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
         });
     }, [filters]);
 
-    // Helper: obtener valor de un filtro por columna
     const getFilter = (column) => filters.find(f => f.column === column);
 
-    // Helper: actualizar campo de un filtro
     const updateFilter = (column, key, value) => {
         setFilters(prev => prev.map(f =>
             f.column === column ? { ...f, [key]: value } : f
         ));
     };
 
-    // Helper: valor para InputSelectModal múltiple
     const selectValue = (column) => {
         const val = getFilter(column)?.value;
         return val === '' ? [] : val.split(',');
@@ -71,52 +67,39 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
 
     return (
         <>
-            <div
-                className="modal fade"
-                ref={filterRef}
-                id="modalFilterPUC"
-                tabIndex={-1}
-                aria-hidden="true"
-            >
+            <div className="modal fade" ref={filterRef} id="modalFilterPUC" tabIndex={-1} aria-hidden="true">
                 <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
                     <div className="modal-content">
                         <div className="modal-header">
-                            <h4 className="modal-title" id="modalFilterPUCTitle">
-                                Filtrar Catálogo PUC
-                            </h4>
-                            <button
-                                type="button"
-                                className="btn-close"
-                                data-bs-dismiss="modal"
-                                aria-label="Close"
-                            />
+                            <h4 className="modal-title" id="modalFilterPUCTitle">Filtrar Catálogo PUC</h4>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
                         </div>
 
                         <div className="modal-body">
 
-                            {/* Fila 1: Código + Nombre */}
+                            {/* Código + Nombre */}
                             <div className="row">
                                 <div className="col-md-6 mb-4 mt-2">
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={getFilter('officialCode:name')?.regex || false}
+                                                checked={getFilter('code:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 type="checkbox"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Búsqueda por coincidencia"
-                                                onChange={(e) => updateFilter('officialCode:name', 'regex', e.target.checked)}
+                                                onChange={(e) => updateFilter('code:name', 'regex', e.target.checked)}
                                                 disabled={!dataTableRef?.current}
                                                 aria-label="Buscar"
                                             />
                                         </div>
                                         <InputModal
                                             type="text"
-                                            id="puc_filter_officialCode"
-                                            label="Código oficial"
-                                            value={getFilter('officialCode:name')?.value || ''}
-                                            onChange={(e) => updateFilter('officialCode:name', 'value', e.target.value)}
+                                            id="puc_filter_code"
+                                            label="Código"
+                                            value={getFilter('code:name')?.value || ''}
+                                            onChange={(e) => updateFilter('code:name', 'value', e.target.value)}
                                             placeholder="Buscar por código"
                                             error=""
                                         />
@@ -151,7 +134,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
                                 </div>
                             </div>
 
-                            {/* Fila 2: Clase */}
+                            {/* Clase */}
                             <div className="row">
                                 <div className="col-md-12 mb-4 mt-2">
                                     <div className="input-group">
@@ -180,7 +163,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
                                 </div>
                             </div>
 
-                            {/* Fila 3: Nivel jerárquico + Naturaleza */}
+                            {/* Nivel jerárquico + Naturaleza */}
                             <div className="row">
                                 <div className="col-md-6 mb-4 mt-2">
                                     <div className="input-group">
@@ -235,7 +218,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
                                 </div>
                             </div>
 
-                            {/* Fila 4: Estado */}
+                            {/* Estado */}
                             <div className="row">
                                 <div className="col-md-6 mb-4 mt-2">
                                     <div className="input-group">

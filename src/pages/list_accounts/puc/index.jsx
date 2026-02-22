@@ -10,7 +10,7 @@ import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 
-const PUCindex = () => {
+const IndexPUC = () => {
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -38,15 +38,17 @@ const PUCindex = () => {
 
     const [account, setAccount] = useState({
         id: '',
-        officialCode: '',
+        idPuc: null,
+        code: '',
         name: '',
+        description: '',
         accountClass: '',
         hierarchyLevel: '',
         nature: '',
         status: 'ACTIVE',
     });
 
-    const url = ['list_accounts', 'puc', 'getAccounts'];
+    const url = ['chartOfAccounts', 'datatable'];
 
     const actions = [
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
@@ -55,48 +57,45 @@ const PUCindex = () => {
 
     const columns = [
         { title: 'ID', data: 'id', searchable: false },
-        { title: 'Código Oficial', data: 'officialCode', name: 'officialCode' },
+        { title: 'Código', data: 'code', name: 'code' },
         { title: 'Nombre', data: 'name', name: 'name' },
-        { title: 'Clase', data: 'accountClass', name: 'accountClass' },
-        { title: 'Nivel Jerárquico', data: 'hierarchyLevel', name: 'hierarchyLevel' },
-        { title: 'Naturaleza', data: 'nature', name: 'nature' },
+        { title: 'Descripción', data: 'description', name: 'description', render: (desc) => desc ?? '-' },
+        { title: 'Clase', data: 'accountClass', name: 'accountClass', render: (val) => val ?? '-' },
+        { title: 'Nivel Jerárquico', data: 'hierarchyLevel', name: 'hierarchyLevel', render: (val) => val ?? '-' },
+        { title: 'Naturaleza', data: 'nature', name: 'nature', render: (val) => val ?? '-' },
         {
             title: 'Estado', data: 'status', name: 'status',
-            render: (status) => {
-                return status === 'ACTIVE'
-                    ? `<span class="badge bg-label-success">Activa</span>`
-                    : `<span class="badge bg-label-danger">Inactiva</span>`;
-            }
+            render: (status) => status === 'ACTIVE'
+                ? `<span class="badge bg-label-success">Activa</span>`
+                : `<span class="badge bg-label-danger">Inactiva</span>`
         },
         {
             title: 'Acciones', data: 'id', searchable: false,
-            render: (id) => {
-                return `
-                    <div class="d-flex gap-1">
-                        ${actions.map(a => `
-                            <button class="btn btn-sm ${a.class} action-btn"
-                                data-action="${a.key}"
-                                data-id="${id}"
-                                title="${a.title}">
-                                <i class="${a.icon}"></i>
-                            </button>
-                        `).join('')}
-                    </div>
-                `;
-            }
+            render: (id) => `
+                <div class="d-flex gap-1">
+                    ${actions.map(a => `
+                        <button class="btn btn-sm ${a.class} action-btn"
+                            data-action="${a.key}"
+                            data-id="${id}"
+                            title="${a.title}">
+                            <i class="${a.icon}"></i>
+                        </button>
+                    `).join('')}
+                </div>
+            `
         },
     ];
 
     const openModalCreate = () => {
         if (!modalCreateInstance.current) {
-            modalCreateInstance.current = new window.bootstrap.Modal(
-                modalCreateRef.current
-            );
+            modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
         setAccount({
             id: '',
-            officialCode: '',
+            idPuc: null,
+            code: '',
             name: '',
+            description: '',
             accountClass: '',
             hierarchyLevel: '',
             nature: '',
@@ -107,9 +106,7 @@ const PUCindex = () => {
 
     const openModalUpdate = () => {
         if (!modalUpdateInstance.current) {
-            modalUpdateInstance.current = new window.bootstrap.Modal(
-                modalUpdateRef.current
-            );
+            modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
         }
         modalUpdateInstance.current.show();
     };
@@ -120,9 +117,7 @@ const PUCindex = () => {
             className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2',
             action: function () {
                 if (!filterInstance.current) {
-                    filterInstance.current = new window.bootstrap.Modal(
-                        filterRef.current
-                    );
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
                 }
                 filterInstance.current.show();
             }
@@ -130,20 +125,16 @@ const PUCindex = () => {
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Cuenta PUC</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
-            action: function () {
-                openModalCreate();
-            }
+            action: function () { openModalCreate(); }
         },
     ];
 
-    // Abrir modal de edición cuando clickEdit cambia
     useEffect(() => {
         if (!clickEdit) return;
         openModalUpdate();
         setClickEdit(false);
     }, [clickEdit]);
 
-    // Delegación de eventos sobre la tabla
     useEffect(() => {
         const table = dataTableRef?.current;
         if (!table) return;
@@ -162,8 +153,10 @@ const PUCindex = () => {
                 case 'edit':
                     setAccount({
                         id: accountRef.id ?? '',
-                        officialCode: accountRef.officialCode ?? '',
+                        idPuc: accountRef.idPuc ?? null,
+                        code: accountRef.code ?? '',
                         name: accountRef.name ?? '',
+                        description: accountRef.description ?? '',
                         accountClass: accountRef.accountClass ?? '',
                         hierarchyLevel: accountRef.hierarchyLevel ?? '',
                         nature: accountRef.nature ?? '',
@@ -205,7 +198,7 @@ const PUCindex = () => {
                             if (!motivo.isConfirmed) return;
 
                             try {
-                                const deleteUrl = base_url(['list_accounts', 'puc', 'deleteAccount', id]);
+                                const deleteUrl = base_url(['chartOfAccounts', id]);
                                 await fetchHelper.delete(deleteUrl, { deletionReason: motivo.value }, {}, 500, false);
                                 dataTableRef?.current?.ajax.reload();
                                 setPucDelete(true);
@@ -231,9 +224,7 @@ const PUCindex = () => {
         };
 
         table.on('click', '.action-btn', handler);
-        return () => {
-            table.off('click', '.action-btn', handler);
-        };
+        return () => { table.off('click', '.action-btn', handler); };
     }, [data]);
 
     return (
@@ -241,21 +232,9 @@ const PUCindex = () => {
             <div className="card">
                 <h5 className="card-header text-md-start text-center">Catálogo Único de Cuentas (PUC)</h5>
 
-                <AlertPage
-                    type="success"
-                    message="La cuenta ha sido creada exitosamente en el catálogo PUC."
-                    show={pucCreate}
-                />
-                <AlertPage
-                    type="success"
-                    message="La cuenta fue actualizada exitosamente."
-                    show={pucEdit}
-                />
-                <AlertPage
-                    type="success"
-                    message="La cuenta ha sido eliminada exitosamente."
-                    show={pucDelete}
-                />
+                <AlertPage type="success" message="La cuenta ha sido creada exitosamente en el catálogo PUC." show={pucCreate} />
+                <AlertPage type="success" message="La cuenta fue actualizada exitosamente." show={pucEdit} />
+                <AlertPage type="success" message="La cuenta ha sido eliminada exitosamente." show={pucDelete} />
 
                 <div className="card-datatable text-nowrap">
                     <DataTableReference
@@ -301,4 +280,4 @@ const PUCindex = () => {
     );
 };
 
-export default PUCindex;
+export default IndexPUC;

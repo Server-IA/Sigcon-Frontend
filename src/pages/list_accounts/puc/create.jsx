@@ -2,45 +2,46 @@ import { useState, useEffect, useRef } from 'react';
 
 import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
+import TextareaModal from '../../../components/molecules/TextareaModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const ACCOUNT_CLASSES = [
-    { id: 'ASSET',            label: 'Activo' },
-    { id: 'LIABILITY',        label: 'Pasivo' },
-    { id: 'EQUITY',           label: 'Patrimonio' },
-    { id: 'INCOME',           label: 'Ingresos' },
-    { id: 'EXPENSE',          label: 'Gastos' },
-    { id: 'COST_OF_SALES',    label: 'Costos de venta' },
+    { id: 'ASSET', label: 'Activo' },
+    { id: 'LIABILITY', label: 'Pasivo' },
+    { id: 'EQUITY', label: 'Patrimonio' },
+    { id: 'INCOME', label: 'Ingresos' },
+    { id: 'EXPENSE', label: 'Gastos' },
+    { id: 'COST_OF_SALES', label: 'Costos de venta' },
     { id: 'COST_OF_PRODUCTION', label: 'Costos de producción o de operación' },
-    { id: 'ORDER_DEBIT',      label: 'Cuentas de orden deudoras' },
-    { id: 'ORDER_CREDIT',     label: 'Cuentas de orden acreedoras' },
+    { id: 'ORDER_DEBIT', label: 'Cuentas de orden deudoras' },
+    { id: 'ORDER_CREDIT', label: 'Cuentas de orden acreedoras' },
 ];
 
 const HIERARCHY_LEVELS = [
-    { id: 'GROUP',    label: 'Grupo' },
+    { id: 'GROUP', label: 'Grupo' },
     { id: 'SUBGROUP', label: 'Subgrupo' },
 ];
 
 const ACCOUNT_NATURES = [
-    { id: 'DEBIT',  label: 'Deudora' },
+    { id: 'DEBIT', label: 'Deudora' },
     { id: 'CREDIT', label: 'Acreedora' },
 ];
 
 // ─── Componente principal ───────────────────────────────────────────────────────
 const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setPucCreate }) => {
 
-    const [errors, setErrors]               = useState({});
-    const [errorMessage, setErrorMessage]   = useState('');
+    const [errors, setErrors] = useState({});
+    const [errorMessage, setErrorMessage] = useState('');
 
     // ── Cargue masivo ──
-    const dropzoneRef   = useRef(null);
-    const dzInstance    = useRef(null);
-    const [uploadError, setUploadError]     = useState('');
+    const dropzoneRef = useRef(null);
+    const dzInstance = useRef(null);
+    const [uploadError, setUploadError] = useState('');
     const [uploadSuccess, setUploadSuccess] = useState('');
-    const [uploading, setUploading]         = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     // Limpiar errores cuando cambia el account (modal se reabre)
     useEffect(() => {
@@ -50,12 +51,11 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
         setUploadSuccess('');
     }, [account]);
 
-    // ── Inicializar Dropzone cuando el modal está visible ──
+    // ── Inicializar Dropzone ──
     useEffect(() => {
         if (!dropzoneRef.current) return;
         if (typeof window.Dropzone === 'undefined') return;
 
-        // Evitar doble inicialización
         if (dzInstance.current) {
             dzInstance.current.destroy();
             dzInstance.current = null;
@@ -64,10 +64,10 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
         window.Dropzone.autoDiscover = false;
 
         dzInstance.current = new window.Dropzone(dropzoneRef.current, {
-            url: base_url(['list_accounts', 'puc', 'bulkUpload']),
+            url: base_url(['chartOfAccounts', 'bulk']),
             acceptedFiles: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             maxFiles: 1,
-            maxFilesize: 10, // MB
+            maxFilesize: 10,
             autoProcessQueue: false,
             addRemoveLinks: true,
             dictDefaultMessage: 'Arrastra un archivo .xlsx aquí o haz clic para seleccionarlo',
@@ -78,11 +78,11 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                 Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
             },
             init: function () {
-                this.on('addedfile', (file) => {
+                this.on('addedfile', () => {
                     setUploadError('');
                     setUploadSuccess('');
                 });
-                this.on('success', (file, response) => {
+                this.on('success', (file) => {
                     setUploadSuccess('El archivo fue cargado exitosamente. Las cuentas han sido importadas.');
                     setUploading(false);
                     dataTableRef?.current?.ajax.reload();
@@ -107,13 +107,15 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
     // ── Enviar formulario manual ──
     const handleCreate = async () => {
         try {
-            const url = base_url(['list_accounts', 'puc', 'createAccount']);
+            const url = base_url(['chartOfAccounts']);
             await fetchHelper.post(url, account, {}, 1000);
 
             setAccount({
                 id: '',
-                officialCode: '',
+                idPuc: null,
+                code: '',
                 name: '',
+                description: '',
                 accountClass: '',
                 hierarchyLevel: '',
                 nature: '',
@@ -160,12 +162,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                 <div className="modal-content">
                     <div className="modal-header">
                         <h4 className="modal-title">Crear Cuenta PUC</h4>
-                        <button
-                            type="button"
-                            className="btn-close"
-                            data-bs-dismiss="modal"
-                            aria-label="Close"
-                        />
+                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
                     </div>
 
                     <div className="modal-body">
@@ -203,31 +200,24 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                             {/* ══════════════════════════════════
                                 TAB 1 — Formulario manual
                             ══════════════════════════════════ */}
-                            <div
-                                className="tab-pane fade show active"
-                                id="tab-form"
-                                role="tabpanel"
-                            >
-                                {/* Alert de error general */}
+                            <div className="tab-pane fade show active" id="tab-form" role="tabpanel">
+
+                                {/* Alert error general */}
                                 <div className={`alert alert-danger alert-dismissible ${errorMessage === '' ? 'd-none' : ''}`} role="alert">
-                                    <button
-                                        type="button"
-                                        className="btn-close"
-                                        onClick={() => setErrorMessage('')}
-                                        aria-label="Close"
-                                    />
+                                    <button type="button" className="btn-close" onClick={() => setErrorMessage('')} aria-label="Close" />
                                     <span>{errorMessage}</span>
                                 </div>
 
+                                {/* Código + Nombre */}
                                 <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
                                         <InputModal
                                             type="text"
-                                            id="puc_officialCode"
-                                            label="Código oficial de la cuenta"
-                                            value={account.officialCode}
-                                            onChange={(e) => setAccount({ ...account, officialCode: e.target.value })}
-                                            error={errors.officialCode}
+                                            id="puc_code"
+                                            label="Código de la cuenta"
+                                            value={account.code}
+                                            onChange={(e) => setAccount({ ...account, code: e.target.value })}
+                                            error={errors.code}
                                             placeholder="Ej. 1105"
                                             required={true}
                                         />
@@ -246,6 +236,19 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                                     </div>
                                 </div>
 
+                                {/* Descripción */}
+                                <div className="row">
+                                    <TextareaModal
+                                        id="puc_description"
+                                        label="Descripción"
+                                        value={account.description}
+                                        onChange={(e) => setAccount({ ...account, description: e.target.value })}
+                                        error={errors.description}
+                                        placeholder="Descripción de la cuenta"
+                                    />
+                                </div>
+
+                                {/* Clase */}
                                 <div className="row">
                                     <div className="col-md-12 mb-4 mt-2">
                                         <InputSelectModal
@@ -261,6 +264,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                                     </div>
                                 </div>
 
+                                {/* Nivel jerárquico + Naturaleza */}
                                 <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
                                         <InputSelectModal
@@ -292,37 +296,24 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                             {/* ══════════════════════════════════
                                 TAB 2 — Cargue masivo Excel
                             ══════════════════════════════════ */}
-                            <div
-                                className="tab-pane fade"
-                                id="tab-bulk"
-                                role="tabpanel"
-                            >
+                            <div className="tab-pane fade" id="tab-bulk" role="tabpanel">
+
                                 {/* Alert error cargue */}
                                 <div className={`alert alert-danger alert-dismissible ${uploadError === '' ? 'd-none' : ''}`} role="alert">
-                                    <button
-                                        type="button"
-                                        className="btn-close"
-                                        onClick={() => setUploadError('')}
-                                        aria-label="Close"
-                                    />
+                                    <button type="button" className="btn-close" onClick={() => setUploadError('')} aria-label="Close" />
                                     <span>{uploadError}</span>
                                 </div>
 
                                 {/* Alert éxito cargue */}
                                 <div className={`alert alert-success alert-dismissible ${uploadSuccess === '' ? 'd-none' : ''}`} role="alert">
-                                    <button
-                                        type="button"
-                                        className="btn-close"
-                                        onClick={() => setUploadSuccess('')}
-                                        aria-label="Close"
-                                    />
+                                    <button type="button" className="btn-close" onClick={() => setUploadSuccess('')} aria-label="Close" />
                                     <span>{uploadSuccess}</span>
                                 </div>
 
                                 <p className="text-muted mb-3">
                                     <i className="ri-information-line me-1"></i>
                                     Cargue un archivo <strong>.xlsx</strong> con las cuentas PUC a importar.
-                                    El archivo debe contener las columnas: <em>Código Oficial, Nombre, Clase, Nivel Jerárquico, Naturaleza</em>.
+                                    El archivo debe contener las columnas: <em>Código, Nombre, Descripción, Clase, Nivel Jerárquico, Naturaleza</em>.
                                 </p>
 
                                 {/* Dropzone */}
@@ -358,19 +349,10 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                     </div>{/* /modal-body */}
 
                     <div className="modal-footer">
-                        {/* El botón Guardar solo aplica al tab de formulario manual */}
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={handleCreate}
-                        >
+                        <button type="button" className="btn btn-primary" onClick={handleCreate}>
                             Guardar
                         </button>
-                        <button
-                            type="button"
-                            className="btn btn-outline-secondary ms-auto"
-                            data-bs-dismiss="modal"
-                        >
+                        <button type="button" className="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">
                             Cerrar
                         </button>
                     </div>
