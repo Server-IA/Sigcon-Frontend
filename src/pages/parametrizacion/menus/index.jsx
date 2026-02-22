@@ -307,10 +307,10 @@ const IndexMenus = () => {
         <div className="card">
             <h5 className="card-header text-md-start text-center">Menus</h5>
 
-            <AlertPage type="success" message="Menú eliminado correctamente" show={menuDelete} />
-            <AlertPage type="success" message="Menú editado correctamente" show={menuUpdate} />
-            <AlertPage type="success" message="Menú creado correctamente" show={menuCreate} />
-            <AlertPage type="danger" message="Error al eliminar el menú. Verifique su conexión e intente nuevamente." show={menuError} />
+            <AlertPage type="success" message="Menú eliminado correctamente" show={menuDelete} onChange={() => setMenuDelete(false)} />
+            <AlertPage type="success" message="Menú editado correctamente" show={menuUpdate} onChange={() => setMenuUpdate(false)} />
+            <AlertPage type="success" message="Menú creado correctamente" show={menuCreate} onChange={() => setMenuCreate(false)} />
+            <AlertPage type="danger" message="Error al eliminar el menú. Verifique su conexión e intente nuevamente." show={menuError} onChange={() => setMenuError(false)} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference

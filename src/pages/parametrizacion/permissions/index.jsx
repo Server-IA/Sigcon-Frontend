@@ -6,6 +6,7 @@ import FilterPermission from "./filter";
 import DataTableReference from "../../../components/organism/DataTable";
 import { fetchHelper } from "../../../utils/fetch";
 import { base_url } from "../../../utils/functions";
+import AlertPage from "../../../components/molecules/AlertPage";
 
 const IndexPermissions = () => {
 
@@ -13,6 +14,10 @@ const IndexPermissions = () => {
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
     const [clickEdit, setClickEdit] = useState(false);
+    const [permissionCreate, setPermissionCreate] = useState(false);
+    const [permissionUpdate, setPermissionUpdate] = useState(false);
+    const [permissionDelete, setPermissionDelete] = useState(false);
+    const [permissionError, setPermissionError] = useState(false);
 
     const [types] = useState([
         { id: "READ", name: "Lectura" },
@@ -196,6 +201,11 @@ const IndexPermissions = () => {
                 Gestión de Permisos
             </h5>
 
+            <AlertPage type="success" message="Permiso creado correctamente" show={permissionCreate} onChange={() => setPermissionCreate(false)} />
+            <AlertPage type="success" message="Permiso actualizado correctamente" show={permissionUpdate} onChange={() => setPermissionUpdate(false)} />
+            <AlertPage type="success" message="Permiso eliminado correctamente" show={permissionDelete} onChange={() => setPermissionDelete(false)} />
+            <AlertPage type="danger" message="Error al eliminar el permiso. Verifique su conexión e intente nuevamente." show={permissionError} onChange={() => setPermissionError(false)} />
+
             <div className="card-datatable text-nowrap">
                 <DataTableReference
                     url_api={['roles', 'permissions']}
@@ -228,6 +238,7 @@ const IndexPermissions = () => {
                 types={types}
                 modules={modules}
                 dataTableRef={dataTableRef}
+                setPermissionCreate={setPermissionCreate}
             />
 
             <UpdatedPermission
@@ -238,6 +249,7 @@ const IndexPermissions = () => {
                 types={types}
                 modules={modules}
                 dataTableRef={dataTableRef}
+                setPermissionUpdate={setPermissionUpdate}
             />
         </div>
     );

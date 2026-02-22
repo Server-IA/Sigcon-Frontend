@@ -188,10 +188,10 @@ const IndexModules = () => {
     return <>
         <div className="card">
             <h5 className="card-header text-md-start text-center">Modulos</h5>
-            <AlertPage type="success" message="Modulo creado correctamente" show={moduleCreate} />
-            <AlertPage type="success" message="Modulo actualizado correctamente" show={moduleEdit} />
-            <AlertPage type="success" message="Modulo eliminado correctamente" show={moduleDelete} />
-            <AlertPage type="danger" message="Error al eliminar el módulo. Verifique su conexión e intente nuevamente." show={moduleError} />
+            <AlertPage type="success" message="Modulo creado correctamente" show={moduleCreate} onChange={() => setModuleCreate(false)} />
+            <AlertPage type="success" message="Modulo actualizado correctamente" show={moduleEdit} onChange={() => setModuleEdit(false)} />
+            <AlertPage type="success" message="Modulo eliminado correctamente" show={moduleDelete} onChange={() => setModuleDelete(false)} />
+            <AlertPage type="danger" message="Error al eliminar el módulo. Verifique su conexión e intente nuevamente." show={moduleError} onChange={() => setModuleError(false)} />
             <div className="card-datatable text-nowrap">
                 <DataTableReference
                     url_api={url}
