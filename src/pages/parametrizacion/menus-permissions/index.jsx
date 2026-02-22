@@ -222,10 +222,10 @@ const MenuPermissionIndex = () => {
             <h5 className="card-header text-md-start text-center">Permisos para menús</h5>
 
 
-            <AlertPage type="success" message={`Permisos para el menú, creado exitosamente`} show={menuPermissionCreate} />
-            <AlertPage type="success" message={`Permisos para el menú, actualizado exitosamente`} show={menuPermissionUpdate} />
-            <AlertPage type="success" message={`Permisos para el menú, eliminado exitosamente`} show={menuPermissionDelete} />
-            <AlertPage type="danger" message="Error al eliminar el permiso de menú. Verifique su conexión e intente nuevamente." show={menuPermissionError} />
+            <AlertPage type="success" message={`Permisos para el menú, creado exitosamente`} show={menuPermissionCreate} onChange={() => setMenuPermissionCreate(false)} />
+            <AlertPage type="success" message={`Permisos para el menú, actualizado exitosamente`} show={menuPermissionUpdate} onChange={() => setMenuPermissionUpdate(false)} />
+            <AlertPage type="success" message={`Permisos para el menú, eliminado exitosamente`} show={menuPermissionDelete} onChange={() => setMenuPermissionDelete(false)} />
+            <AlertPage type="danger" message="Error al eliminar el permiso de menú. Verifique su conexión e intente nuevamente." show={menuPermissionError} onChange={() => setMenuPermissionError(false)} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference
