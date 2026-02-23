@@ -5,6 +5,7 @@ import UpdatedUser from "./updated";
 import FilterUser from "./filter";
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import AlertPage from '../../../components/molecules/AlertPage';
 
 const IndexUsers = () => {
 
@@ -28,6 +29,7 @@ const IndexUsers = () => {
     const [clickEdit, setClickEdit] = useState(false);
     const [userCreate, setUserCreate] = useState(false);
     const [userUpdate, setUserUpdate] = useState(false);
+    const [userDelete, setUserDelete] = useState(false);
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -144,17 +146,18 @@ const IndexUsers = () => {
             try {
                 const deleteUrl = base_url(['users', 'deleteUser', id]);
                 await fetchHelper.post(deleteUrl, {}, {}, 1000);
-                window.Swal.fire({
-                    icon: 'success',
-                    title: 'Eliminado',
-                    text: 'Usuario eliminado correctamente',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                    customClass: {
-                        confirmButton: 'btn btn-primary waves-effect'
-                    }
-                });
+                // window.Swal.fire({
+                //     icon: 'success',
+                //     title: 'Eliminado',
+                //     text: 'Usuario eliminado correctamente',
+                //     timer: 2000,
+                //     showConfirmButton: false,
+                //     allowOutsideClick: false,
+                //     customClass: {
+                //         confirmButton: 'btn btn-primary waves-effect'
+                //     }
+                // });
+                setUserDelete(true);
             } catch (error) {
                 console.error('Error al eliminar usuario:', error);
                 setTimeout(() => {
@@ -239,6 +242,10 @@ const IndexUsers = () => {
                 <i className="ri-user-line me-2"></i>
                 Gestión de Usuarios
             </h5>
+
+            <AlertPage message='Usuario creado exitosamente' type='success' show={userCreate} onChange={() => setUserCreate(false)} />
+            <AlertPage message='Usuario editado exitosamente' type='success' show={userUpdate} onChange={() => setUserUpdate(false)} />
+            <AlertPage message='Usuario eliminado exitosamente' type='success' show={userDelete} onChange={() => setUserDelete(false)} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference

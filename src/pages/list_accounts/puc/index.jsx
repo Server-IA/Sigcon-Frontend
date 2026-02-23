@@ -10,6 +10,38 @@ import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 
+// TODO: reemplazar con llamada real cuando el endpoint esté disponible
+const dataFalse = [
+    {
+        id: 1, idPuc: null, code: 'CC001',
+        name: 'Centro de Costos Administrativo',
+        description: 'Gastos generales de oficina y administración',
+        accountClass: null, hierarchyLevel: null, nature: null,
+        status: 'ACTIVE', companyId: 1, hasTransactions: false,
+    },
+    {
+        id: 2, idPuc: null, code: 'CC002',
+        name: 'Centro de Costos Comercial',
+        description: 'Gastos del área de ventas y mercadeo',
+        accountClass: null, hierarchyLevel: null, nature: null,
+        status: 'ACTIVE', companyId: 1, hasTransactions: false,
+    },
+    {
+        id: 3, idPuc: null, code: 'CC003',
+        name: 'Centro de Costos Producción',
+        description: 'Gastos directos del proceso productivo',
+        accountClass: null, hierarchyLevel: null, nature: null,
+        status: 'ACTIVE', companyId: 1, hasTransactions: true,
+    },
+    {
+        id: 4, idPuc: null, code: 'CC004',
+        name: 'Centro de Costos Tecnología',
+        description: 'Gastos del área de sistemas e infraestructura',
+        accountClass: null, hierarchyLevel: null, nature: null,
+        status: 'INACTIVE', companyId: 1, hasTransactions: false,
+    },
+];
+
 const IndexPUC = () => {
 
     const tableRef = useRef(null);
@@ -24,12 +56,8 @@ const IndexPUC = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
-    const [data, setData] = useState([]);
     const [clickEdit, setClickEdit] = useState(false);
-
-    const [pucCreate, setPucCreate] = useState(false);
-    const [pucEdit, setPucEdit] = useState(false);
-    const [pucDelete, setPucDelete] = useState(false);
+    const [message, setMessage] = useState({ message: '', type: '', show: false });
 
     const [search, setSearch] = useState({
         value: '',
@@ -41,7 +69,6 @@ const IndexPUC = () => {
         idPuc: null,
         code: '',
         name: '',
-        description: '',
         accountClass: '',
         hierarchyLevel: '',
         nature: '',
@@ -59,9 +86,7 @@ const IndexPUC = () => {
         { title: 'ID', data: 'id', searchable: false },
         { title: 'Código', data: 'code', name: 'code' },
         { title: 'Nombre', data: 'name', name: 'name' },
-        { title: 'Descripción', data: 'description', name: 'description', render: (desc) => desc ?? '-' },
         { title: 'Clase', data: 'accountClass', name: 'accountClass', render: (val) => val ?? '-' },
-        { title: 'Nivel Jerárquico', data: 'hierarchyLevel', name: 'hierarchyLevel', render: (val) => val ?? '-' },
         { title: 'Naturaleza', data: 'nature', name: 'nature', render: (val) => val ?? '-' },
         {
             title: 'Estado', data: 'status', name: 'status',
@@ -95,7 +120,6 @@ const IndexPUC = () => {
             idPuc: null,
             code: '',
             name: '',
-            description: '',
             accountClass: '',
             hierarchyLevel: '',
             nature: '',
@@ -142,7 +166,7 @@ const IndexPUC = () => {
         const handler = function () {
             const action = $(this).data('action');
             const id = Number($(this).data('id'));
-            const accountRef = data.find(m => m.id === id);
+            const accountRef = dataFalse.find(m => m.id === id);
 
             if (!accountRef) {
                 console.warn('Cuenta PUC no encontrada', id);
@@ -167,7 +191,6 @@ const IndexPUC = () => {
                     break;
 
                 case 'delete':
-                    // Paso 1: confirmación
                     window.Swal.fire({
                         title: '¿Está seguro?',
                         text: `¿Está seguro de eliminar la cuenta "${accountRef.name}"?`,
@@ -178,7 +201,6 @@ const IndexPUC = () => {
                     }).then((result) => {
                         if (!result.isConfirmed) return;
 
-                        // Paso 2: motivo de eliminación
                         window.Swal.fire({
                             title: 'Motivo de eliminación',
                             text: 'Ingrese el motivo por el cual elimina esta cuenta PUC:',
@@ -198,10 +220,16 @@ const IndexPUC = () => {
                             if (!motivo.isConfirmed) return;
 
                             try {
-                                const deleteUrl = base_url(['chartOfAccounts', id]);
-                                await fetchHelper.delete(deleteUrl, { deletionReason: motivo.value }, {}, 500, false);
-                                dataTableRef?.current?.ajax.reload();
-                                setPucDelete(true);
+                                // TODO: descomentar cuando el endpoint esté disponible
+                                // const deleteUrl = base_url(['chartOfAccounts', id]);
+                                // await fetchHelper.delete(deleteUrl, { deletionReason: motivo.value }, {}, 500, false);
+                                // dataTableRef?.current?.ajax.reload();
+
+                                setMessage({
+                                    message: 'Cuenta PUC eliminada exitosamente',
+                                    type: 'success',
+                                    show: true,
+                                });
                             } catch (error) {
                                 console.error(error);
                                 window.Swal.fire({
@@ -225,16 +253,14 @@ const IndexPUC = () => {
 
         table.on('click', '.action-btn', handler);
         return () => { table.off('click', '.action-btn', handler); };
-    }, [data]);
+    }, []);
 
     return (
         <>
             <div className="card">
                 <h5 className="card-header text-md-start text-center">Catálogo Único de Cuentas (PUC)</h5>
 
-                <AlertPage type="success" message="La cuenta ha sido creada exitosamente en el catálogo PUC." show={pucCreate} />
-                <AlertPage type="success" message="La cuenta fue actualizada exitosamente." show={pucEdit} />
-                <AlertPage type="success" message="La cuenta ha sido eliminada exitosamente." show={pucDelete} />
+                <AlertPage type={message.type} message={message.message} show={message.show} />
 
                 <div className="card-datatable text-nowrap">
                     <DataTableReference
@@ -245,10 +271,10 @@ const IndexPUC = () => {
                         method='POST'
                         buttons={buttons}
                         title='Catálogo PUC'
-                        setData={setData}
                         search={search}
                         setSearch={setSearch}
                         filtered={true}
+                        data={dataFalse}
                     />
                 </div>
 
@@ -265,7 +291,7 @@ const IndexPUC = () => {
                 account={account}
                 setAccount={setAccount}
                 dataTableRef={dataTableRef}
-                setPucCreate={setPucCreate}
+                setMessage={setMessage}
             />
 
             <UpdatedPUC
@@ -274,7 +300,7 @@ const IndexPUC = () => {
                 account={account}
                 setAccount={setAccount}
                 dataTableRef={dataTableRef}
-                setPucEdit={setPucEdit}
+                setMessage={setMessage}
             />
         </>
     );

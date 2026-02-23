@@ -13,46 +13,14 @@ import { fetchHelper } from '../../utils/fetch';
 const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title, setData, filtered = false, search = {
     value: '',
     checked: true,
-}, setSearch = () => {}}) => {
+}, setSearch = () => {}, data = []}) => {
     
     const token = useSelector(state => state.user.token);
 
     useEffect(() => {
         if (!tableRef?.current || !dataTableRef) return;
-        // Inicializar DataTable
-        dataTableRef.current = $(tableRef.current).DataTable({
-            ajax: async function(data, callback, settings) {
-                try {
 
-                    const response = await fetchHelper.post(base_url(url_api), data, {}, 0);
-                    callback(response);
-
-                }catch(error){
-                    console.log("Error en DataTable: ", error);
-                    callback({
-                        data: [],
-                        recordsTotal: 0,
-                        recordsFiltered: 0
-                    });
-                    if(error.status === 403){
-                        if (dataTableRef.current) {
-                            dataTableRef.current.destroy();
-                        }
-                    
-                        $(tableRef.current).html(`
-                            <tbody>
-                                <tr>
-                                    <td colspan="${columns.length}" class="text-center text-danger py-5">
-                                        <i class="ri-lock-line fs-2 d-block mb-2"></i>
-                                        No tiene permisos para ver esta información
-                                    </td>
-                                </tr>
-                            </tbody>
-                        `);
-                    }
-                    return;
-                }
-            },
+        const config = {
             dom: 'r<"row"<"col-sm-12 col-md-12 col-lg-4 mt-3 mt-md-0 d-flex justify-content-center justify-content-lg-start justify-content-md-center align-items-center"l><"col-sm-12 col-md-12 col-lg-8 d-flex justify-content-center justify-content-lg-end justify-content-md-center align-items-center"<"dt-action-buttons text-end pt-0 pt-md-0"B>>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
             lengthMenu: [10, 25, 50, 75, 100],
             columns: columns,
@@ -62,7 +30,7 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
             scrollY: false,
             ordering: false,
             processing: true,
-            serverSide: true,
+            serverSide: data.length === 0,
             drawCallback: function(settings) {
                 if (setData) {
                     setData(settings.json.data);
@@ -119,7 +87,45 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
             
                 ...buttons
             ]
-        });
+        }
+        if(data.length > 0){
+            config.data = data;
+        }else{
+            config.ajax = async function(data, callback, settings) {
+                try {
+
+                    const response = await fetchHelper.post(base_url(url_api), data, {}, 0);
+                    callback(response);
+
+                }catch(error){
+                    console.log("Error en DataTable: ", error);
+                    callback({
+                        data: [],
+                        recordsTotal: 0,
+                        recordsFiltered: 0
+                    });
+                    if(error.status === 403){
+                        if (dataTableRef.current) {
+                            dataTableRef.current.destroy();
+                        }
+                    
+                        $(tableRef.current).html(`
+                            <tbody>
+                                <tr>
+                                    <td colspan="${columns.length}" class="text-center text-danger py-5">
+                                        <i class="ri-lock-line fs-2 d-block mb-2"></i>
+                                        No tiene permisos para ver esta información
+                                    </td>
+                                </tr>
+                            </tbody>
+                        `);
+                    }
+                    return;
+                }
+            }
+        }
+        // Inicializar DataTable
+        dataTableRef.current = $(tableRef.current).DataTable(config);
 
         // Cleanup (MUY IMPORTANTE)
         return () => {

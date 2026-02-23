@@ -7,7 +7,7 @@ import { base_url, validarArrays } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import TextareaModal from '../../../components/molecules/TextareaModal';
 
-const UpdatedPermission = ({ modalRef, modalInstance, permission, setPermission, dataTableRef, types, modules }) => {
+const UpdatedPermission = ({ modalRef, modalInstance, permission, setPermission, dataTableRef, types, modules, setPermissionUpdate }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
@@ -44,19 +44,20 @@ const UpdatedPermission = ({ modalRef, modalInstance, permission, setPermission,
 
             const response = await fetchHelper.put(permissionUpdateUrl, dataPermissionUpdate, {}, 0);
 
+            setPermissionUpdate(true);
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
-            setTimeout(() => {
-                window.Swal.fire({
-                    icon: 'success',
-                    title: 'Éxito',
-                    text: response.message,
-                    showConfirmButton: true,
-                    customClass: {
-                        confirmButton: 'btn btn-primary'
-                    }
-                });
-            }, 500);
+            // setTimeout(() => {
+            //     window.Swal.fire({
+            //         icon: 'success',
+            //         title: 'Éxito',
+            //         text: response.message,
+            //         showConfirmButton: true,
+            //         customClass: {
+            //             confirmButton: 'btn btn-primary'
+            //         }
+            //     });
+            // }, 500);
 
             setPermission({
                 id: '',
@@ -72,6 +73,7 @@ const UpdatedPermission = ({ modalRef, modalInstance, permission, setPermission,
 
         } catch (error) {
             console.log('Error:', error);
+            setPermissionUpdate(false);
             
             const errores = error?.errors;
             if (errores && errores.length > 0) {

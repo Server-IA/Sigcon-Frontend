@@ -1,12 +1,9 @@
-import { useState, useEffect } from 'react';
-
-import InputModal from '../../../components/molecules/InputModal';
-import InputSelectModal from '../../../components/molecules/inputSelectModal';
-
+import '../../../styles/vendor/animate-css/animate.css';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { useEffect, useState } from 'react';
+import AlertPage from '../../../components/molecules/AlertPage';
 
-// ─── Constantes ────────────────────────────────────────────────────────────────
 const ACCOUNT_CLASSES = [
     { id: 'ASSET',              label: 'Activo' },
     { id: 'LIABILITY',          label: 'Pasivo' },
@@ -34,14 +31,14 @@ const ACCOUNT_STATUSES = [
     { id: 'INACTIVE', label: 'Inactiva' },
 ];
 
-// ─── Componente principal ───────────────────────────────────────────────────────
-const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setPucEdit }) => {
+const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage }) => {
 
     const [errors, setErrors]             = useState({});
     const [errorMessage, setErrorMessage] = useState('');
+    const [loading, setLoading]           = useState(false);
     const [accountUpdated, setAccountUpdated] = useState({
         id: '',
-        officialCode: '',
+        code: '',
         name: '',
         accountClass: '',
         hierarchyLevel: '',
@@ -50,31 +47,62 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
         hasTransactions: false,
     });
 
-    // Sincronizar datos cuando el modal se abre con una cuenta nueva
     useEffect(() => {
         setAccountUpdated({
-            id:             account.id             ?? '',
-            officialCode:   account.officialCode   ?? '',
-            name:           account.name           ?? '',
-            accountClass:   account.accountClass   ?? '',
-            hierarchyLevel: account.hierarchyLevel ?? '',
-            nature:         account.nature         ?? '',
-            status:         account.status         ?? 'ACTIVE',
+            id:              account.id             ?? '',
+            code:            account.code           ?? '',
+            name:            account.name           ?? '',
+            accountClass:    account.accountClass   ?? '',
+            hierarchyLevel:  account.hierarchyLevel ?? '',
+            nature:          account.nature         ?? '',
+            status:          account.status         ?? 'ACTIVE',
             hasTransactions: account.hasTransactions ?? false,
         });
         setErrors({});
         setErrorMessage('');
     }, [account]);
 
-    // ── Enviar actualización ──
-    const handleUpdate = async () => {
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!accountUpdated.code || accountUpdated.code.trim() === '') {
+            setErrorMessage('El código de la cuenta es obligatorio');
+            return;
+        }
+        if (!accountUpdated.name || accountUpdated.name.trim() === '') {
+            setErrorMessage('El nombre de la cuenta es obligatorio');
+            return;
+        }
+        if (!accountUpdated.accountClass) {
+            setErrorMessage('Por favor seleccione la clase de la cuenta');
+            return;
+        }
+        if (!accountUpdated.hierarchyLevel) {
+            setErrorMessage('Por favor seleccione el nivel jerárquico');
+            return;
+        }
+        if (!accountUpdated.nature) {
+            setErrorMessage('Por favor seleccione la naturaleza de la cuenta');
+            return;
+        }
+
+        const url = base_url(['api', 'puc-catalog', accountUpdated.id]);
         try {
-            const url = base_url(['list_accounts', 'puc', 'updateAccount', accountUpdated.id]);
-            await fetchHelper.put(url, accountUpdated, {}, 1000);
+            setLoading(true);
+            // TODO: descomentar cuando el endpoint esté disponible
+            // await fetchHelper.put(url, accountUpdated, {}, 1000);
+            // dataTableRef?.current?.ajax.reload();
+
+            // Temporal: actualizar fila en la tabla mientras no hay endpoint
+            dataTableRef?.current?.rows().every(function () {
+                if (this.data().id === accountUpdated.id) {
+                    this.data({ ...this.data(), ...accountUpdated }).draw(false);
+                }
+            });
 
             setAccount({
                 id: '',
-                officialCode: '',
+                code: '',
                 name: '',
                 accountClass: '',
                 hierarchyLevel: '',
@@ -83,13 +111,18 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                 hasTransactions: false,
             });
 
-            dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
-            setPucEdit(true);
+
+            setMessage({
+                message: 'Cuenta PUC actualizada exitosamente',
+                type: 'success',
+                show: true,
+            });
+
             setErrors({});
             setErrorMessage('');
         } catch (error) {
-            console.error('Error al actualizar cuenta PUC:', error);
+            console.log(error);
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
@@ -98,11 +131,13 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
             } else if (error?.msg) {
                 setErrorMessage(error.msg);
             }
+        } finally {
+            setLoading(false);
         }
     };
 
-    return (
-        <div className="modal fade" ref={modalRef} tabIndex={-1} aria-hidden="true">
+    return <>
+        <div className="modal fade" ref={modalRef} id="modalUpdatePUC" tabIndex={-1} aria-hidden="true">
             <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
                 <div className="modal-content">
                     <div className="modal-header">
@@ -111,174 +146,181 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                             type="button"
                             className="btn-close"
                             data-bs-dismiss="modal"
-                            aria-label="Close"
-                        />
+                            aria-label="Close">
+                        </button>
                     </div>
 
                     <div className="modal-body">
+                        <AlertPage
+                            message={errorMessage}
+                            type="danger"
+                            show={errorMessage !== ''}
+                        />
+                        <form onSubmit={handleSubmit}>
 
-                        {/* Alert de error general */}
-                        <div className={`alert alert-danger alert-dismissible ${errorMessage === '' ? 'd-none' : ''}`} role="alert">
-                            <button
-                                type="button"
-                                className="btn-close"
-                                onClick={() => setErrorMessage('')}
-                                aria-label="Close"
-                            />
-                            <span>{errorMessage}</span>
-                        </div>
-
-                        {/* Fila 1: ID (solo lectura) + Código Oficial */}
-                        <div className="row">
-                            <div className="col-md-4 mb-4 mt-2">
-                                {/*
-                                    El ID es solo lectura y bloqueado.
-                                    El cursor cambia a "not-allowed" al pasar sobre él,
-                                    indicando visualmente que no es editable.
-                                */}
-                                <div style={{ cursor: 'not-allowed' }}>
-                                    <InputModal
+                            {/* ID (solo lectura) */}
+                            <div className="row mb-3">
+                                <div className="col-12">
+                                    <label htmlFor="puc_id_update" className="form-label">
+                                        Identificador
+                                    </label>
+                                    <input
                                         type="text"
                                         id="puc_id_update"
-                                        label="Identificador único PUC"
+                                        className="form-control"
                                         value={accountUpdated.id}
-                                        onChange={() => {}}
-                                        error=""
-                                        placeholder=""
-                                        disabled={true}
-                                        readOnly={true}
+                                        disabled
+                                        readOnly
                                     />
                                 </div>
                             </div>
 
-                            <div className="col-md-8 mb-4 mt-2">
-                                {/*
-                                    El Código Oficial se bloquea si la cuenta ya tiene
-                                    transacciones asociadas (hasTransactions === true).
-                                    En ese caso el campo se deshabilita y el cursor
-                                    muestra restricción de acceso.
-                                */}
-                                <div style={{ cursor: accountUpdated.hasTransactions ? 'not-allowed' : 'auto' }}>
-                                    <InputModal
+                            {/* Código */}
+                            <div className="row mb-3">
+                                <div className="col-12">
+                                    <label htmlFor="puc_code_update" className="form-label">
+                                        Código <span className="text-danger">*</span>
+                                    </label>
+                                    <input
                                         type="text"
-                                        id="puc_officialCode_update"
-                                        label="Código oficial de la cuenta"
-                                        value={accountUpdated.officialCode}
-                                        onChange={(e) => setAccountUpdated({ ...accountUpdated, officialCode: e.target.value })}
-                                        error={errors.officialCode}
+                                        id="puc_code_update"
+                                        className={`form-control ${errors.code ? 'is-invalid' : ''}`}
                                         placeholder="Ej. 1105"
-                                        required={true}
+                                        value={accountUpdated.code}
+                                        onChange={(e) => setAccountUpdated({ ...accountUpdated, code: e.target.value })}
                                         disabled={accountUpdated.hasTransactions}
                                         readOnly={accountUpdated.hasTransactions}
                                     />
+                                    {accountUpdated.hasTransactions && (
+                                        <small className="text-warning">
+                                            <i className="ri-error-warning-line me-1"></i>
+                                            No se puede modificar el código: la cuenta está asociada a transacciones registradas.
+                                        </small>
+                                    )}
+                                    {errors.code && <div className="invalid-feedback d-block">{errors.code}</div>}
                                 </div>
-                                {accountUpdated.hasTransactions && (
-                                    <small className="text-warning">
-                                        <i className="ri-error-warning-line me-1"></i>
-                                        No se puede modificar el código: la cuenta PUC está asociada a transacciones registradas en el sistema.
-                                    </small>
-                                )}
                             </div>
-                        </div>
 
-                        {/* Fila 2: Nombre */}
-                        <div className="row">
-                            <div className="col-md-12 mb-4 mt-2">
-                                <InputModal
-                                    type="text"
-                                    id="puc_name_update"
-                                    label="Nombre de la cuenta"
-                                    value={accountUpdated.name}
-                                    onChange={(e) => setAccountUpdated({ ...accountUpdated, name: e.target.value })}
-                                    error={errors.name}
-                                    placeholder="Ej. Caja"
-                                    required={true}
-                                />
+                            {/* Nombre */}
+                            <div className="row mb-3">
+                                <div className="col-12">
+                                    <label htmlFor="puc_name_update" className="form-label">
+                                        Nombre <span className="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="puc_name_update"
+                                        className={`form-control ${errors.name ? 'is-invalid' : ''}`}
+                                        placeholder="Ej. Caja"
+                                        value={accountUpdated.name}
+                                        onChange={(e) => setAccountUpdated({ ...accountUpdated, name: e.target.value })}
+                                    />
+                                    {errors.name && <div className="invalid-feedback d-block">{errors.name}</div>}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Fila 3: Clase */}
-                        <div className="row">
-                            <div className="col-md-12 mb-4 mt-2">
-                                <InputSelectModal
-                                    id="puc_accountClass_update"
-                                    label="Clase de la cuenta"
-                                    value={accountUpdated.accountClass}
-                                    onChange={(value) => setAccountUpdated({ ...accountUpdated, accountClass: value })}
-                                    error={errors.accountClass}
-                                    placeholder="Seleccione la clase"
-                                    options={ACCOUNT_CLASSES}
-                                    required={true}
-                                />
+                            {/* Clase */}
+                            <div className="row mb-3">
+                                <div className="col-12">
+                                    <label htmlFor="puc_accountClass_update" className="form-label">
+                                        Clase de la cuenta <span className="text-danger">*</span>
+                                    </label>
+                                    <select
+                                        id="puc_accountClass_update"
+                                        className={`form-control ${errors.accountClass ? 'is-invalid' : ''}`}
+                                        value={accountUpdated.accountClass}
+                                        onChange={(e) => setAccountUpdated({ ...accountUpdated, accountClass: e.target.value })}
+                                    >
+                                        <option value="">-- Seleccionar clase --</option>
+                                        {ACCOUNT_CLASSES.map(c => (
+                                            <option key={c.id} value={c.id}>{c.label}</option>
+                                        ))}
+                                    </select>
+                                    {errors.accountClass && <div className="invalid-feedback d-block">{errors.accountClass}</div>}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Fila 4: Nivel jerárquico + Naturaleza */}
-                        <div className="row">
-                            <div className="col-md-6 mb-4 mt-2">
-                                <InputSelectModal
-                                    id="puc_hierarchyLevel_update"
-                                    label="Nivel jerárquico"
-                                    value={accountUpdated.hierarchyLevel}
-                                    onChange={(value) => setAccountUpdated({ ...accountUpdated, hierarchyLevel: value })}
-                                    error={errors.hierarchyLevel}
-                                    placeholder="Seleccione el nivel"
-                                    options={HIERARCHY_LEVELS}
-                                    required={true}
-                                />
+                            {/* Nivel jerárquico + Naturaleza */}
+                            <div className="row mb-3">
+                                <div className="col-md-6">
+                                    <label htmlFor="puc_hierarchyLevel_update" className="form-label">
+                                        Nivel jerárquico <span className="text-danger">*</span>
+                                    </label>
+                                    <select
+                                        id="puc_hierarchyLevel_update"
+                                        className={`form-control ${errors.hierarchyLevel ? 'is-invalid' : ''}`}
+                                        value={accountUpdated.hierarchyLevel}
+                                        onChange={(e) => setAccountUpdated({ ...accountUpdated, hierarchyLevel: e.target.value })}
+                                    >
+                                        <option value="">-- Seleccionar nivel --</option>
+                                        {HIERARCHY_LEVELS.map(h => (
+                                            <option key={h.id} value={h.id}>{h.label}</option>
+                                        ))}
+                                    </select>
+                                    {errors.hierarchyLevel && <div className="invalid-feedback d-block">{errors.hierarchyLevel}</div>}
+                                </div>
+                                <div className="col-md-6">
+                                    <label htmlFor="puc_nature_update" className="form-label">
+                                        Naturaleza <span className="text-danger">*</span>
+                                    </label>
+                                    <select
+                                        id="puc_nature_update"
+                                        className={`form-control ${errors.nature ? 'is-invalid' : ''}`}
+                                        value={accountUpdated.nature}
+                                        onChange={(e) => setAccountUpdated({ ...accountUpdated, nature: e.target.value })}
+                                    >
+                                        <option value="">-- Seleccionar naturaleza --</option>
+                                        {ACCOUNT_NATURES.map(n => (
+                                            <option key={n.id} value={n.id}>{n.label}</option>
+                                        ))}
+                                    </select>
+                                    {errors.nature && <div className="invalid-feedback d-block">{errors.nature}</div>}
+                                </div>
                             </div>
-                            <div className="col-md-6 mb-4 mt-2">
-                                <InputSelectModal
-                                    id="puc_nature_update"
-                                    label="Naturaleza de la cuenta"
-                                    value={accountUpdated.nature}
-                                    onChange={(value) => setAccountUpdated({ ...accountUpdated, nature: value })}
-                                    error={errors.nature}
-                                    placeholder="Seleccione la naturaleza"
-                                    options={ACCOUNT_NATURES}
-                                    required={true}
-                                />
-                            </div>
-                        </div>
 
-                        {/* Fila 5: Estado (editable solo en edición) */}
-                        <div className="row">
-                            <div className="col-md-6 mb-4 mt-2">
-                                <InputSelectModal
-                                    id="puc_status_update"
-                                    label="Estado de la cuenta"
-                                    value={accountUpdated.status}
-                                    onChange={(value) => setAccountUpdated({ ...accountUpdated, status: value })}
-                                    error={errors.status}
-                                    placeholder="Seleccione el estado"
-                                    options={ACCOUNT_STATUSES}
-                                    required={true}
-                                />
+                            {/* Estado */}
+                            <div className="row mb-3">
+                                <div className="col-md-6">
+                                    <label htmlFor="puc_status_update" className="form-label">
+                                        Estado <span className="text-danger">*</span>
+                                    </label>
+                                    <select
+                                        id="puc_status_update"
+                                        className={`form-control ${errors.status ? 'is-invalid' : ''}`}
+                                        value={accountUpdated.status}
+                                        onChange={(e) => setAccountUpdated({ ...accountUpdated, status: e.target.value })}
+                                    >
+                                        <option value="">-- Seleccionar estado --</option>
+                                        {ACCOUNT_STATUSES.map(s => (
+                                            <option key={s.id} value={s.id}>{s.label}</option>
+                                        ))}
+                                    </select>
+                                    {errors.status && <div className="invalid-feedback d-block">{errors.status}</div>}
+                                </div>
                             </div>
-                        </div>
 
-                    </div>{/* /modal-body */}
+                        </form>
+                    </div>
 
                     <div className="modal-footer">
                         <button
                             type="button"
-                            className="btn btn-primary"
-                            onClick={handleUpdate}
-                        >
-                            Guardar cambios
+                            className="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                            Cancelar
                         </button>
                         <button
                             type="button"
-                            className="btn btn-outline-secondary ms-auto"
-                            data-bs-dismiss="modal"
-                        >
-                            Cerrar
+                            className="btn btn-primary"
+                            onClick={handleSubmit}
+                            disabled={loading}>
+                            {loading ? 'Guardando...' : 'Guardar cambios'}
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-    );
+    </>;
 };
 
 export default UpdatedPUC;
