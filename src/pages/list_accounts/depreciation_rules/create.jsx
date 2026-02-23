@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 
-import InputModal from '../../../components/molecules/InputModal';
-import InputSelectModal from '../../../components/molecules/inputSelectModal';
-import TextareaModal from '../../../components/molecules/TextareaModal';
+import InputModal from "../../../components/molecules/InputModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import TextareaModal from "../../../components/molecules/TextareaModal";
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';

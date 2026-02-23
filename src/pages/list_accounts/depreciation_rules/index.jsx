@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 
-import DataTableReference from '../../../components/organism/DataTable';
+import DataTableReference from "../../../components/organism/DataTable";
+import CreateDepreciationRule from "./create";
+import UpdatedDepreciationRule from "./updated";
+
+import { base_url } from "../../../utils/functions";
+import { fetchHelper } from "../../../utils/fetch";
 import AlertPage from '../../../components/molecules/AlertPage';
-
-import { fetchHelper } from '../../../utils/fetch';
-import { base_url } from '../../../utils/functions';
-
-import CreateDepreciationRule from './create';
-import UpdatedDepreciationRule from './updated';
-import FilterDepreciationRule from './filter';
+import FilterDepreciationRule from "./filter";
 
 const IndexDepreciationRules = () => {
 
