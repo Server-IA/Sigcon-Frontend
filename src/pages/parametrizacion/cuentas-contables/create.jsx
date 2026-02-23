@@ -3,7 +3,7 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import { useEffect, useState } from 'react';
 import AlertPage from '../../../components/molecules/AlertPage';
-
+//a
 const CreateCuentaContable = ({ 
     modalRef, 
     modalInstance, 
