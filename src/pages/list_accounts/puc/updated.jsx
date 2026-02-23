@@ -5,34 +5,7 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import { useEffect, useState } from 'react';
 
-const ACCOUNT_CLASSES = [
-    { id: 'ASSET',              label: 'Activo' },
-    { id: 'LIABILITY',          label: 'Pasivo' },
-    { id: 'EQUITY',             label: 'Patrimonio' },
-    { id: 'INCOME',             label: 'Ingresos' },
-    { id: 'EXPENSE',            label: 'Gastos' },
-    { id: 'COST_OF_SALES',      label: 'Costos de venta' },
-    { id: 'COST_OF_PRODUCTION', label: 'Costos de producción o de operación' },
-    { id: 'ORDER_DEBIT',        label: 'Cuentas de orden deudoras' },
-    { id: 'ORDER_CREDIT',       label: 'Cuentas de orden acreedoras' },
-];
-
-const HIERARCHY_LEVELS = [
-    { id: 'GROUP',    label: 'Grupo' },
-    { id: 'SUBGROUP', label: 'Subgrupo' },
-];
-
-const ACCOUNT_NATURES = [
-    { id: 'DEBIT',  label: 'Deudora' },
-    { id: 'CREDIT', label: 'Acreedora' },
-];
-
-const ACCOUNT_STATUSES = [
-    { id: 'ACTIVE',   label: 'Activa' },
-    { id: 'INACTIVE', label: 'Inactiva' },
-];
-
-const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage }) => {
+const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage, accountClasses, hierarchyLevels, accountNatures, accountStatuses }) => {
 
     const [errors, setErrors]             = useState({});
     const [errorMessage, setErrorMessage] = useState('');
@@ -220,7 +193,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                                     onChange={(value) => setAccountUpdated({ ...accountUpdated, accountClass: value })}
                                     error={errors.accountClass}
                                     placeholder="Seleccionar clase"
-                                    options={ACCOUNT_CLASSES}
+                                    options={accountClasses}
                                     required
                                 />
                             </div>
@@ -235,7 +208,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                                     onChange={(value) => setAccountUpdated({ ...accountUpdated, hierarchyLevel: value })}
                                     error={errors.hierarchyLevel}
                                     placeholder="Seleccionar nivel"
-                                    options={HIERARCHY_LEVELS}
+                                    options={hierarchyLevels}
                                     required
                                 />
                             </div>
@@ -247,7 +220,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                                     onChange={(value) => setAccountUpdated({ ...accountUpdated, nature: value })}
                                     error={errors.nature}
                                     placeholder="Seleccionar naturaleza"
-                                    options={ACCOUNT_NATURES}
+                                    options={accountNatures}
                                     required
                                 />
                             </div>
@@ -262,7 +235,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                                     onChange={(value) => setAccountUpdated({ ...accountUpdated, status: value })}
                                     error={errors.status}
                                     placeholder="Seleccionar estado"
-                                    options={ACCOUNT_STATUSES}
+                                    options={accountStatuses}
                                     required
                                 />
                             </div>

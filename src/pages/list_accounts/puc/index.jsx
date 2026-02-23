@@ -10,6 +10,33 @@ import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 
+const ACCOUNT_CLASSES = [
+    { id: 'ASSET',              name: 'Activo' },
+    { id: 'LIABILITY',          name: 'Pasivo' },
+    { id: 'EQUITY',             name: 'Patrimonio' },
+    { id: 'INCOME',             name: 'Ingresos' },
+    { id: 'EXPENSE',            name: 'Gastos' },
+    { id: 'COST_OF_SALES',      name: 'Costos de venta' },
+    { id: 'COST_OF_PRODUCTION', name: 'Costos de producción o de operación' },
+    { id: 'ORDER_DEBIT',        name: 'Cuentas de orden deudoras' },
+    { id: 'ORDER_CREDIT',       name: 'Cuentas de orden acreedoras' },
+];
+
+const HIERARCHY_LEVELS = [
+    { id: 'GROUP',    name: 'Grupo' },
+    { id: 'SUBGROUP', name: 'Subgrupo' },
+];
+
+const ACCOUNT_NATURES = [
+    { id: 'DEBIT',  name: 'Deudora' },
+    { id: 'CREDIT', name: 'Acreedora' },
+];
+
+const ACCOUNT_STATUSES = [
+    { id: 'ACTIVE',   name: 'Activa' },
+    { id: 'INACTIVE', name: 'Inactiva' },
+];
+
 // TODO: reemplazar con llamada real cuando el endpoint esté disponible
 const dataFalse = [
     {
@@ -282,6 +309,10 @@ const IndexPUC = () => {
                     filterRef={filterRef}
                     filterInstance={filterInstance}
                     dataTableRef={dataTableRef}
+                    accountClasses={ACCOUNT_CLASSES}
+                    hierarchyLevels={HIERARCHY_LEVELS}
+                    accountNatures={ACCOUNT_NATURES}
+                    accountStatuses={ACCOUNT_STATUSES}
                 />
             </div>
 
@@ -292,6 +323,9 @@ const IndexPUC = () => {
                 setAccount={setAccount}
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
+                accountClasses={ACCOUNT_CLASSES}
+                hierarchyLevels={HIERARCHY_LEVELS}
+                accountNatures={ACCOUNT_NATURES}
             />
 
             <UpdatedPUC
@@ -301,6 +335,10 @@ const IndexPUC = () => {
                 setAccount={setAccount}
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
+                accountClasses={ACCOUNT_CLASSES}
+                hierarchyLevels={HIERARCHY_LEVELS}
+                accountNatures={ACCOUNT_NATURES}
+                accountStatuses={ACCOUNT_STATUSES}
             />
         </>
     );

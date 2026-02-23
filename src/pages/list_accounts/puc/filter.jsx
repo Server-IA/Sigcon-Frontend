@@ -2,36 +2,7 @@ import { useEffect, useState } from 'react';
 import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
-// ─── Constantes ────────────────────────────────────────────────────────────────
-const ACCOUNT_CLASSES = [
-    { id: 'ASSET', name: 'Activo' },
-    { id: 'LIABILITY', name: 'Pasivo' },
-    { id: 'EQUITY', name: 'Patrimonio' },
-    { id: 'INCOME', name: 'Ingresos' },
-    { id: 'EXPENSE', name: 'Gastos' },
-    { id: 'COST_OF_SALES', name: 'Costos de venta' },
-    { id: 'COST_OF_PRODUCTION', name: 'Costos de producción o de operación' },
-    { id: 'ORDER_DEBIT', name: 'Cuentas de orden deudoras' },
-    { id: 'ORDER_CREDIT', name: 'Cuentas de orden acreedoras' },
-];
-
-const HIERARCHY_LEVELS = [
-    { id: 'GROUP', name: 'Grupo' },
-    { id: 'SUBGROUP', name: 'Subgrupo' },
-];
-
-const ACCOUNT_NATURES = [
-    { id: 'DEBIT', name: 'Deudora' },
-    { id: 'CREDIT', name: 'Acreedora' },
-];
-
-const ACCOUNT_STATUSES = [
-    { id: 'ACTIVE', name: 'Activa' },
-    { id: 'INACTIVE', name: 'Inactiva' },
-];
-
-// ─── Componente ─────────────────────────────────────────────────────────────────
-const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
+const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, hierarchyLevels, accountNatures, accountStatuses }) => {
 
     const getTable = () => dataTableRef?.current?.table();
 
@@ -154,7 +125,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
                                         <InputSelectModal
                                             id="puc_filter_accountClass"
                                             label="Clase de la cuenta"
-                                            options={ACCOUNT_CLASSES}
+                                            options={accountClasses}
                                             value={selectValue('accountClass:name')}
                                             onChange={(value) => updateFilter('accountClass:name', 'value', value.join(','))}
                                             multiple={true}
@@ -183,7 +154,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
                                         <InputSelectModal
                                             id="puc_filter_hierarchyLevel"
                                             label="Nivel jerárquico"
-                                            options={HIERARCHY_LEVELS}
+                                            options={hierarchyLevels}
                                             value={selectValue('hierarchyLevel:name')}
                                             onChange={(value) => updateFilter('hierarchyLevel:name', 'value', value.join(','))}
                                             multiple={true}
@@ -209,7 +180,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
                                         <InputSelectModal
                                             id="puc_filter_nature"
                                             label="Naturaleza"
-                                            options={ACCOUNT_NATURES}
+                                            options={accountNatures}
                                             value={selectValue('nature:name')}
                                             onChange={(value) => updateFilter('nature:name', 'value', value.join(','))}
                                             multiple={true}
@@ -238,7 +209,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef }) => {
                                         <InputSelectModal
                                             id="puc_filter_status"
                                             label="Estado de la cuenta"
-                                            options={ACCOUNT_STATUSES}
+                                            options={accountStatuses}
                                             value={selectValue('status:name')}
                                             onChange={(value) => updateFilter('status:name', 'value', value.join(','))}
                                             multiple={true}
