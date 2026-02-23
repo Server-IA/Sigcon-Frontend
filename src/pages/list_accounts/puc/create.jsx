@@ -1,8 +1,9 @@
-import '../../../styles/vendor/animate-css/animate.css';
+import InputModal from '../../../components/molecules/InputModal';
+import InputSelectModal from '../../../components/molecules/inputSelectModal';
+import AlertPage from '../../../components/molecules/AlertPage';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import { useEffect, useState } from 'react';
-import AlertPage from '../../../components/molecules/AlertPage';
 
 const ACCOUNT_CLASSES = [
     { id: 'ASSET', label: 'Activo' },
@@ -127,104 +128,79 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                             type="danger"
                             show={errorMessage !== ''}
                         />
-                        <form onSubmit={handleSubmit}>
 
-                            {/* Código */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="puc_code" className="form-label">
-                                        Código <span className="text-danger">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="puc_code"
-                                        className={`form-control ${errors.code ? 'is-invalid' : ''}`}
-                                        placeholder="Ej. 1105"
-                                        value={account.code}
-                                        onChange={(e) => setAccount({ ...account, code: e.target.value })}
-                                    />
-                                    {errors.code && <div className="invalid-feedback d-block">{errors.code}</div>}
-                                </div>
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="puc_code"
+                                    label="Código"
+                                    placeholder="Ej. 1105"
+                                    value={account.code}
+                                    onChange={(e) => setAccount({ ...account, code: e.target.value })}
+                                    error={errors.code}
+                                    required
+                                />
                             </div>
+                        </div>
 
-                            {/* Nombre */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="puc_name" className="form-label">
-                                        Nombre <span className="text-danger">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="puc_name"
-                                        className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-                                        placeholder="Ej. Caja"
-                                        value={account.name}
-                                        onChange={(e) => setAccount({ ...account, name: e.target.value })}
-                                    />
-                                    {errors.name && <div className="invalid-feedback d-block">{errors.name}</div>}
-                                </div>
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="puc_name"
+                                    label="Nombre"
+                                    placeholder="Ej. Caja"
+                                    value={account.name}
+                                    onChange={(e) => setAccount({ ...account, name: e.target.value })}
+                                    error={errors.name}
+                                    required
+                                />
                             </div>
+                        </div>
 
-                            {/* Clase */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="puc_accountClass" className="form-label">
-                                        Clase de la cuenta <span className="text-danger">*</span>
-                                    </label>
-                                    <select
-                                        id="puc_accountClass"
-                                        className={`form-control ${errors.accountClass ? 'is-invalid' : ''}`}
-                                        value={account.accountClass}
-                                        onChange={(e) => setAccount({ ...account, accountClass: e.target.value })}
-                                    >
-                                        <option value="">-- Seleccionar clase --</option>
-                                        {ACCOUNT_CLASSES.map(c => (
-                                            <option key={c.id} value={c.id}>{c.label}</option>
-                                        ))}
-                                    </select>
-                                    {errors.accountClass && <div className="invalid-feedback d-block">{errors.accountClass}</div>}
-                                </div>
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModal
+                                    id="puc_accountClass"
+                                    label="Clase de la cuenta"
+                                    value={account.accountClass}
+                                    onChange={(value) => setAccount({ ...account, accountClass: value })}
+                                    error={errors.accountClass}
+                                    placeholder="Seleccionar clase"
+                                    options={ACCOUNT_CLASSES}
+                                    required
+                                />
                             </div>
+                        </div>
 
-                            {/* Nivel jerárquico + Naturaleza */}
-                            <div className="row mb-3">
-                                <div className="col-md-6">
-                                    <label htmlFor="puc_hierarchyLevel" className="form-label">
-                                        Nivel jerárquico <span className="text-danger">*</span>
-                                    </label>
-                                    <select
-                                        id="puc_hierarchyLevel"
-                                        className={`form-control ${errors.hierarchyLevel ? 'is-invalid' : ''}`}
-                                        value={account.hierarchyLevel}
-                                        onChange={(e) => setAccount({ ...account, hierarchyLevel: e.target.value })}
-                                    >
-                                        <option value="">-- Seleccionar nivel --</option>
-                                        {HIERARCHY_LEVELS.map(h => (
-                                            <option key={h.id} value={h.id}>{h.label}</option>
-                                        ))}
-                                    </select>
-                                    {errors.hierarchyLevel && <div className="invalid-feedback d-block">{errors.hierarchyLevel}</div>}
-                                </div>
-                                <div className="col-md-6">
-                                    <label htmlFor="puc_nature" className="form-label">
-                                        Naturaleza <span className="text-danger">*</span>
-                                    </label>
-                                    <select
-                                        id="puc_nature"
-                                        className={`form-control ${errors.nature ? 'is-invalid' : ''}`}
-                                        value={account.nature}
-                                        onChange={(e) => setAccount({ ...account, nature: e.target.value })}
-                                    >
-                                        <option value="">Seleccionar naturaleza</option>
-                                        {ACCOUNT_NATURES.map(n => (
-                                            <option key={n.id} value={n.id}>{n.label}</option>
-                                        ))}
-                                    </select>
-                                    {errors.nature && <div className="invalid-feedback d-block">{errors.nature}</div>}
-                                </div>
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModal
+                                    id="puc_hierarchyLevel"
+                                    label="Nivel jerárquico"
+                                    value={account.hierarchyLevel}
+                                    onChange={(value) => setAccount({ ...account, hierarchyLevel: value })}
+                                    error={errors.hierarchyLevel}
+                                    placeholder="Seleccionar nivel"
+                                    options={HIERARCHY_LEVELS}
+                                    required
+                                />
                             </div>
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModal
+                                    id="puc_nature"
+                                    label="Naturaleza"
+                                    value={account.nature}
+                                    onChange={(value) => setAccount({ ...account, nature: value })}
+                                    error={errors.nature}
+                                    placeholder="Seleccionar naturaleza"
+                                    options={ACCOUNT_NATURES}
+                                    required
+                                />
+                            </div>
+                        </div>
 
-                        </form>
                     </div>
 
                     <div className="modal-footer">
