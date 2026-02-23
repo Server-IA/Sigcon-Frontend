@@ -1,155 +1,283 @@
-import { useState, useEffect, useRef } from 'react';
-import InputModal from "../../../components/molecules/InputModal";
-import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import { useState, useEffect } from 'react';
+
+import InputModal from '../../../components/molecules/InputModal';
+import InputSelectModal from '../../../components/molecules/inputSelectModal';
+import TextareaModal from '../../../components/molecules/TextareaModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const CreateDepreciationRules = ({ modalRef, modalInstance, menuPermission, setMenuPermission, dataTableRef, setMenuCreate }) => {
+// ─── Constantes ────────────────────────────────────────────────────────────────
+const DEPRECIATION_TYPES = [
+    { id: 'LINEAR', label: 'Lineal' },
+    { id: 'DECLINING_BALANCE', label: 'Decreciente' },
+    { id: 'ACCELERATED', label: 'Acelerada' },
+    { id: 'PRODUCTION_UNITS', label: 'Unidades de producción' },
+    { id: 'MINIMUM_USEFUL_LIFE', label: 'Vida útil mínima' },
+];
+
+// ─── Componente principal ───────────────────────────────────────────────────────
+const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTableRef, setRuleCreate }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
+    const [accounts, setAccounts] = useState([]);
 
-    const [menus, setMenus] = useState([]);
-    const [roles, setRoles] = useState([]);
-
+    // Limpiar errores cuando cambia la regla (modal se reabre)
     useEffect(() => {
-        const getMenus = async () => {
-            const url = base_url(['api', 'menus', 'datatable']);
-            const body = {
-                length: -1,
-            }
-            const {data} = await fetchHelper.post(url, body, {}, 0);
-            setMenus(
-                data.map(module => ({
-                    id: module.id,
-                    name: module.label,
-                }))
-            );
-        }
+        setErrors({});
+        setErrorMessage('');
+    }, [rule]);
 
-        const getRoles = async () => {
-            const url = base_url(['roles/getRoles']);
-            const body = {
-                length: -1,
-                parentId: -1,
+    // Cargar cuentas contables activas
+    useEffect(() => {
+        const loadAccounts = async () => {
+            try {
+                const url = base_url(['chartOfAccounts', 'active']);
+                const { data } = await fetchHelper.get(url, {}, 0);
+                if (data) {
+                    setAccounts(data.map(a => ({ id: a.id, label: `${a.code} - ${a.name}` })));
+                }
+            } catch (err) {
+                console.error('Error al cargar cuentas contables:', err);
             }
-            const {data} = await fetchHelper.post(url, body, {}, 0);
-            setRoles(
-                data.map(rol => ({
-                    id: rol.id,
-                    name: rol.name,
-                }))
-            );
-        }
-        getMenus();
-        getRoles();
+        };
+        loadAccounts();
     }, []);
 
-    useEffect(() => {
-        console.log(menuPermission, 'menuPermission');
-    }, [menuPermission]);
+    // ── Enviar formulario ──
+    const handleCreate = async () => {
+        try {
+            const url = base_url(['depreciationRules']);
+            await fetchHelper.post(url, rule, {}, 1000);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        try{
-
-            const url = base_url(['api', 'menu-permissions', 'store']);
-            await fetchHelper.post(url, menuPermission, {}, 1000);
-            setMenuPermission({
+            setRule({
                 id: '',
-                menu_id: '',
-                role_id: '',
+                name: '',
+                depreciationType: '',
+                accountId: '',
+                accountName: '',
+                depreciationRate: '',
+                usefulLife: '',
+                residualValue: '',
+                effectiveDate: '',
+                calculationBase: '',
+                parameters: '',
+                exceptions: '',
+                applicableStandard: '',
+                status: 'ACTIVE',
             });
+
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
-            setMenuCreate(true);
+            setRuleCreate(true);
             setErrors({});
             setErrorMessage('');
-
-        }catch (error) {
-            console.log(error.msg);
+        } catch (error) {
+            console.error('Error al crear regla de depreciación:', error);
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
-                errores.forEach(err => {
-                    fieldErrors[err.field] = err.message;
-                });
+                errores.forEach(err => { fieldErrors[err.field] = err.message; });
                 setErrors(fieldErrors);
-            }else if (error?.msg) {
+            } else if (error?.msg) {
                 setErrorMessage(error.msg);
             }
         }
-    }
+    };
 
     return (
-        <div className="modal fade" ref={modalRef} id="modalCenter" tabIndex={-1} aria-hidden="true">
-            <div className="modal-dialog modal-dialog-centered" role="document">
-            <div className="modal-content">
-                <div className="modal-header">
-                    <h4 className="modal-title" id="modalCenterTitle">Editar Menu</h4>
-                    <button
-                        type="button"
-                        className="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-                </div>
-                <div className="modal-body">
-                    <p className="text-muted m-0">
-                        <a href="https://remixicon.com/" target="_blank" rel="noopener noreferrer">
-                            <i className="ri-information-line"></i> Iconos de Remix Icon <small>(Abrir en nueva pestaña)</small>
-                        </a>
-                    </p>
-                    <div className={`alert alert-danger alert-dismissible ${errorMessage == '' ? 'd-none' : ''}`} role="alert">
-                        <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        <span>{errorMessage}</span>
+        <div className="modal fade" ref={modalRef} tabIndex={-1} aria-hidden="true">
+            <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
+                <div className="modal-content">
+                    <div className="modal-header">
+                        <h4 className="modal-title">Crear Regla de Depreciación</h4>
+                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
                     </div>
 
-                    <div className="row">
-                        <div className="col mb-6 mt-2">
-                            <InputSelectModal
-                                id="menu_id"
-                                label="Menu principal"
-                                value={menuPermission.menu_id}
-                                onChange={(value) => setMenuPermission({
-                                    ...menuPermission,
-                                    menu_id: value
-                                })}
-                                error={errors.menu_id}
-                                placeholder="Menu principal"
-                                options={menus}
+                    <div className="modal-body">
 
-                            />
+                        {/* Alert error general */}
+                        <div className={`alert alert-danger alert-dismissible ${errorMessage === '' ? 'd-none' : ''}`} role="alert">
+                            <button type="button" className="btn-close" onClick={() => setErrorMessage('')} aria-label="Close" />
+                            <span>{errorMessage}</span>
                         </div>
 
-                        <div className="col mb-6 mt-2">
-                            <InputSelectModal
-                                id="role_id"
-                                label="Rol"
-                                value={menuPermission.role_id}
-                                onChange={(value) => setMenuPermission({
-                                    ...menuPermission,
-                                    role_id: value
-                                })}
-                                error={errors.role_id}
-                                placeholder="Roles"
-                                options={roles}
-                            />
+                        {/* Nombre */}
+                        <div className="row">
+                            <div className="col-md-12 mb-4 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="dr_name_create"
+                                    label="Nombre de la regla"
+                                    value={rule.name}
+                                    onChange={(e) => setRule({ ...rule, name: e.target.value })}
+                                    error={errors.name}
+                                    placeholder="Ej. Depreciación equipos de cómputo"
+                                    required={true}
+                                />
+                            </div>
                         </div>
+
+                        {/* Tipo de depreciación + Cuenta contable */}
+                        <div className="row">
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputSelectModal
+                                    id="dr_depreciationType_create"
+                                    label="Tipo de depreciación"
+                                    value={rule.depreciationType}
+                                    onChange={(value) => setRule({ ...rule, depreciationType: value })}
+                                    error={errors.depreciationType}
+                                    placeholder="Seleccione el tipo"
+                                    options={DEPRECIATION_TYPES}
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputSelectModal
+                                    id="dr_accountId_create"
+                                    label="Cuenta contable asociada"
+                                    value={rule.accountId}
+                                    onChange={(value) => setRule({ ...rule, accountId: value })}
+                                    error={errors.accountId}
+                                    placeholder="Seleccione la cuenta"
+                                    options={accounts}
+                                    required={true}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Tasa + Vida útil */}
+                        <div className="row">
+                            <div className="col-md-4 mb-4 mt-2">
+                                <InputModal
+                                    type="number"
+                                    id="dr_depreciationRate_create"
+                                    label="Tasa de depreciación (%)"
+                                    value={rule.depreciationRate}
+                                    onChange={(e) => setRule({ ...rule, depreciationRate: e.target.value })}
+                                    error={errors.depreciationRate}
+                                    placeholder="Ej. 20.00"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col-md-4 mb-4 mt-2">
+                                <InputModal
+                                    type="number"
+                                    id="dr_usefulLife_create"
+                                    label="Vida útil (años)"
+                                    value={rule.usefulLife}
+                                    onChange={(e) => setRule({ ...rule, usefulLife: e.target.value })}
+                                    error={errors.usefulLife}
+                                    placeholder="Ej. 5"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col-md-4 mb-4 mt-2">
+                                <InputModal
+                                    type="number"
+                                    id="dr_residualValue_create"
+                                    label="Valor residual"
+                                    value={rule.residualValue}
+                                    onChange={(e) => setRule({ ...rule, residualValue: e.target.value })}
+                                    error={errors.residualValue}
+                                    placeholder="Ej. 0.00"
+                                    required={true}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Fecha de vigencia */}
+                        <div className="row">
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputModal
+                                    type="date"
+                                    id="dr_effectiveDate_create"
+                                    label="Fecha de vigencia"
+                                    value={rule.effectiveDate}
+                                    onChange={(e) => setRule({ ...rule, effectiveDate: e.target.value })}
+                                    error={errors.effectiveDate}
+                                    placeholder="DD/MM/AAAA"
+                                    required={true}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Descripción estructurada */}
+                        <div className="row">
+                            <div className="col-md-12 mb-2 mt-2">
+                                <div className="d-flex align-items-center gap-2 mb-3">
+                                    <i className="ri-file-list-3-line text-primary fs-5"></i>
+                                    <span className="fw-semibold">Descripción estructurada</span>
+                                    <span className="text-danger">*</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="row">
+                            <div className="col-md-6 mb-3">
+                                <TextareaModal
+                                    id="dr_calculationBase_create"
+                                    label="Base de cálculo"
+                                    value={rule.calculationBase}
+                                    onChange={(e) => setRule({ ...rule, calculationBase: e.target.value })}
+                                    error={errors.calculationBase}
+                                    placeholder="Describa la base sobre la cual se calcula la depreciación"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col-md-6 mb-3">
+                                <TextareaModal
+                                    id="dr_parameters_create"
+                                    label="Parámetros"
+                                    value={rule.parameters}
+                                    onChange={(e) => setRule({ ...rule, parameters: e.target.value })}
+                                    error={errors.parameters}
+                                    placeholder="Describa los parámetros aplicables"
+                                    required={true}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="row">
+                            <div className="col-md-6 mb-3">
+                                <TextareaModal
+                                    id="dr_exceptions_create"
+                                    label="Excepciones"
+                                    value={rule.exceptions}
+                                    onChange={(e) => setRule({ ...rule, exceptions: e.target.value })}
+                                    error={errors.exceptions}
+                                    placeholder="Describa las excepciones aplicables"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col-md-6 mb-3">
+                                <TextareaModal
+                                    id="dr_applicableStandard_create"
+                                    label="Norma aplicable"
+                                    value={rule.applicableStandard}
+                                    onChange={(e) => setRule({ ...rule, applicableStandard: e.target.value })}
+                                    error={errors.applicableStandard}
+                                    placeholder="Ej. NIIF 16, Decreto 3019 de 1989"
+                                    required={true}
+                                />
+                            </div>
+                        </div>
+
+                    </div>{/* /modal-body */}
+
+                    <div className="modal-footer">
+                        <button type="button" className="btn btn-primary" onClick={handleCreate}>
+                            Guardar
+                        </button>
+                        <button type="button" className="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">
+                            Cerrar
+                        </button>
                     </div>
-                
                 </div>
-                <div className="modal-footer">
-                    <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        Cerrar
-                    </button>
-                    <button type="button" className="btn btn-primary" onClick={handleSubmit}>Guardar</button>
-                </div>
-            </div>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default CreateDepreciationRules;
+export default CreateDepreciationRule;

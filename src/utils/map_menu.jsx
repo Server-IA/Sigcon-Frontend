@@ -11,6 +11,9 @@ import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
 import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
 
+// List Accounts
+import IndexDepreciationRules from "../pages/list_accounts/depreciation_rules/index";
+
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 import { base_url } from "./functions";
@@ -39,13 +42,16 @@ export const COMPONENT_MAP = [
     { id: "ROLES", name: "Roles", component: IndexRoles },
     { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
     { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
+
+    // List Accounts
+    { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
 ]
 
 export const getMenu = async () => {
     const modules = [];
     const componentsFinal = [];
     const url = base_url(['api', 'modules', 'menu']);
-    const {data, error} = await fetchHelper.get(url, {}, 0);
+    const { data, error } = await fetchHelper.get(url, {}, 0);
 
     modules.push({
         id: 0,
@@ -92,7 +98,7 @@ export const getMenu = async () => {
 
     componentsFinal.push(...modulesWithoutComponents);
 
-    return {modules, componentsFinal};
+    return { modules, componentsFinal };
 }
 
 const buildMenuTree = (menus) => {

@@ -1,15 +1,22 @@
-import { useState, useRef, useEffect } from "react";
-import DataTableReference from "../../../components/organism/DataTable";
-import AlertPage from "../../../components/molecules/AlertPage"
+import { useState, useEffect, useRef } from 'react';
 
-import { base_url } from "../../../utils/functions";
-import { fetchHelper } from "../../../utils/fetch";
+import DataTableReference from '../../../components/organism/DataTable';
+import AlertPage from '../../../components/molecules/AlertPage';
 
-import CreateMenuPermission from "./create";
-import UpdateMenuPermission from "./updated";
-import FilterMenuPermission from "./filter";
+import { fetchHelper } from '../../../utils/fetch';
+import { base_url } from '../../../utils/functions';
+
+import CreateDepreciationRule from './create';
+import UpdatedDepreciationRule from './updated';
+import FilterDepreciationRule from './filter';
 
 const IndexDepreciationRules = () => {
+
+    const tableRef = useRef(null);
+    const dataTableRef = useRef(null);
+
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -17,88 +24,46 @@ const IndexDepreciationRules = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
-    const filterRef = useRef(null);
-    const filterInstance = useRef(null);
-
     const [data, setData] = useState([]);
-    const tableRefMenu = useRef(null);
-    const dataTableRefMenu = useRef(null);
+    const [clickEdit, setClickEdit] = useState(false);
 
-    const [menuPermission, setMenuPermission] = useState({
-        id: '',
-        menu_id: '',
-        role_id: '',
-    });
+    const [ruleCreate, setRuleCreate] = useState(false);
+    const [ruleEdit, setRuleEdit] = useState(false);
+    const [ruleDelete, setRuleDelete] = useState(false);
 
     const [search, setSearch] = useState({
         value: '',
         checked: true,
     });
 
-    const [menus, setMenus] = useState([]);
-    const [roles, setRoles] = useState([]);
+    const emptyRule = {
+        id: '',
+        name: '',
+        depreciationType: '',
+        accountId: '',
+        accountName: '',
+        depreciationRate: '',
+        usefulLife: '',
+        residualValue: '',
+        effectiveDate: '',
+        calculationBase: '',
+        parameters: '',
+        exceptions: '',
+        applicableStandard: '',
+        status: 'ACTIVE',
+    };
 
-    useEffect(() => {
-        const fetchMenus = async () => {
-            const url = base_url(['api', 'menus', 'datatable']);
-            const body = {
-                length: -1,
-            }
-            const { data } = await fetchHelper.post(url, body, {}, 0);
-            setMenus(
-                data.map(menu => ({
-                    id: menu.id,
-                    name: menu.label,
-                }))
-            );
-        }
-        fetchMenus();
-        const fetchRoles = async () => {
-            const url = base_url(['roles/getRoles']);
-            const body = {
-                length: -1,
-            }
-            const { data } = await fetchHelper.post(url, body, {}, 0);
-            setRoles(
-                data.map(rol => ({
-                    id: rol.id,
-                    name: rol.name,
-                }))
-            );
-        }
-        fetchRoles();
-    }, []);
+    const [rule, setRule] = useState(emptyRule);
 
-    const [menuPermissionCreate, setMenuPermissionCreate] = useState(false);
-    const [menuPermissionUpdate, setMenuPermissionUpdate] = useState(false);
-    const [clickEdit, setClickEdit] = useState(false);
-    const [menuPermissionDelete, setMenuPermissionDelete] = useState(false);
-    const [menuPermissionError, setMenuPermissionError] = useState(false);
+    const url = ['depreciationRules', 'datatable'];
 
-    const url = ['api', 'menu-permissions'];
-
-    const buttons = [
-        {
-            text: '<i class="ri-filter-3-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
-            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
-            action: async function (e, dt, button, config) {
-                if (!filterInstance.current) {
-                    filterInstance.current = new window.bootstrap.Modal(
-                        filterRef.current
-                    );
-                }
-                // setSearch({ value: '', checked: true });
-                filterInstance.current.show();
-            }
-        },
-        {
-            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Permiso</span>',
-            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
-            action: async function (e, dt, button, config) {
-                openModalCreate();
-            }
-        },
-    ];
+    const DEPRECIATION_TYPE_LABELS = {
+        LINEAR: 'Lineal',
+        DECLINING_BALANCE: 'Decreciente',
+        ACCELERATED: 'Acelerada',
+        PRODUCTION_UNITS: 'Unidades de producción',
+        MINIMUM_USEFUL_LIFE: 'Vida útil mínima',
+    };
 
     const actions = [
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
@@ -106,38 +71,78 @@ const IndexDepreciationRules = () => {
     ];
 
     const columns = [
-        { title: 'Menu', data: 'menu.label', name: 'menu_label' },
-        { title: 'Rol', data: 'role.name', name: 'role_name' },
+        { title: 'ID', data: 'id', searchable: false },
+        { title: 'Nombre', data: 'name', name: 'name' },
         {
-            title: 'Acciones', width: '100px', data: 'id', render: (id) => {
-                return `
+            title: 'Tipo de depreciación', data: 'depreciationType', name: 'depreciationType',
+            render: (val) => DEPRECIATION_TYPE_LABELS[val] ?? val ?? '-'
+        },
+        { title: 'Cuenta contable', data: 'accountName', name: 'accountName', render: (val) => val ?? '-' },
+        {
+            title: 'Tasa (%)', data: 'depreciationRate', name: 'depreciationRate',
+            render: (val) => val != null ? `${Number(val).toFixed(2)}%` : '-'
+        },
+        { title: 'Vida útil (años)', data: 'usefulLife', name: 'usefulLife', render: (val) => val ?? '-' },
+        {
+            title: 'Valor residual', data: 'residualValue', name: 'residualValue',
+            render: (val) => val != null ? Number(val).toFixed(2) : '-'
+        },
+        { title: 'Fecha de vigencia', data: 'effectiveDate', name: 'effectiveDate', render: (val) => val ?? '-' },
+        {
+            title: 'Estado', data: 'status', name: 'status',
+            render: (status) => status === 'ACTIVE'
+                ? `<span class="badge bg-label-success">Activa</span>`
+                : `<span class="badge bg-label-danger">Inactiva</span>`
+        },
+        {
+            title: 'Acciones', data: 'id', searchable: false,
+            render: (id) => `
                 <div class="d-flex gap-1">
-                    ${actions.filter(a => !(id == 8 && (a.key == 'delete' || a.key == 'edit'))).map(a => `
+                    ${actions.map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
                             data-action="${a.key}"
-                            data-id="${id}">
-                            <i class="fas ${a.icon}"></i>
+                            data-id="${id}"
+                            title="${a.title}">
+                            <i class="${a.icon}"></i>
                         </button>
                     `).join('')}
                 </div>
             `
-            }
         },
     ];
 
     const openModalCreate = () => {
-        setMenuPermission({
-            id: '',
-            menu_id: '',
-            role_id: '',
-        });
         if (!modalCreateInstance.current) {
-            modalCreateInstance.current = new window.bootstrap.Modal(
-                modalCreateRef.current
-            );
+            modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
+        setRule(emptyRule);
         modalCreateInstance.current.show();
-    }
+    };
+
+    const openModalUpdate = () => {
+        if (!modalUpdateInstance.current) {
+            modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
+        }
+        modalUpdateInstance.current.show();
+    };
+
+    const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2',
+            action: function () {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                }
+                filterInstance.current.show();
+            }
+        },
+        {
+            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Regla de Depreciación</span>',
+            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
+            action: function () { openModalCreate(); }
+        },
+    ];
 
     useEffect(() => {
         if (!clickEdit) return;
@@ -145,130 +150,153 @@ const IndexDepreciationRules = () => {
         setClickEdit(false);
     }, [clickEdit]);
 
-    const openModalUpdate = () => {
-        if (!modalUpdateInstance.current) {
-            modalUpdateInstance.current = new window.bootstrap.Modal(
-                modalUpdateRef.current
-            );
-        }
-        modalUpdateInstance.current.show();
-    }
-
     useEffect(() => {
-        const table = dataTableRefMenu?.current;
+        const table = dataTableRef?.current;
         if (!table) return;
 
         const handler = function () {
             const action = $(this).data('action');
             const id = Number($(this).data('id'));
+            const ruleRef = data.find(m => m.id === id);
+
+            if (!ruleRef) {
+                console.warn('Regla de depreciación no encontrada', id);
+                return;
+            }
 
             switch (action) {
                 case 'edit':
-                    const menuRef = data.find(m => m.id === id);
-
-                    if (!menuRef) {
-                        console.warn('Menú no encontrado', id);
-                        return;
-                    }
-
-                    setMenuPermission({
-                        ...menuRef,
-                        menu_id: menuRef.menu_id ? String(menuRef.menu_id) : null,
-                        role_id: menuRef.role_id ? String(menuRef.role_id) : null,
+                    setRule({
+                        id: ruleRef.id ?? '',
+                        name: ruleRef.name ?? '',
+                        depreciationType: ruleRef.depreciationType ?? '',
+                        accountId: ruleRef.accountId ?? '',
+                        accountName: ruleRef.accountName ?? '',
+                        depreciationRate: ruleRef.depreciationRate ?? '',
+                        usefulLife: ruleRef.usefulLife ?? '',
+                        residualValue: ruleRef.residualValue ?? '',
+                        effectiveDate: ruleRef.effectiveDate ?? '',
+                        calculationBase: ruleRef.calculationBase ?? '',
+                        parameters: ruleRef.parameters ?? '',
+                        exceptions: ruleRef.exceptions ?? '',
+                        applicableStandard: ruleRef.applicableStandard ?? '',
+                        status: ruleRef.status ?? 'ACTIVE',
                     });
-
                     setClickEdit(true);
                     break;
+
                 case 'delete':
+                    // Paso 1: confirmación
                     window.Swal.fire({
-                        title: '¿Estás seguro?',
-                        text: '¿Estás seguro de querer eliminar este permiso de menú?',
+                        title: '¿Está seguro?',
+                        text: `¿Está seguro de eliminar la regla "${ruleRef.name}"?`,
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: 'Eliminar',
+                        confirmButtonText: 'Sí, continuar',
                         cancelButtonText: 'Cancelar',
-                    }).then(async (result) => {
-                        if (result.isConfirmed) {
-                            const url = base_url(['api', 'menu-permissions', 'delete', id]);
+                    }).then((result) => {
+                        if (!result.isConfirmed) return;
+
+                        // Paso 2: motivo de eliminación
+                        window.Swal.fire({
+                            title: 'Motivo de eliminación',
+                            text: 'Ingrese el motivo por el cual elimina esta regla de depreciación:',
+                            input: 'textarea',
+                            inputPlaceholder: 'Escriba el motivo aquí...',
+                            inputAttributes: { 'aria-label': 'Motivo de eliminación' },
+                            showCancelButton: true,
+                            confirmButtonText: 'Eliminar',
+                            cancelButtonText: 'Cancelar',
+                            preConfirm: (motivo) => {
+                                if (!motivo || motivo.trim() === '') {
+                                    window.Swal.showValidationMessage('No ingresó el motivo de eliminación');
+                                }
+                                return motivo;
+                            }
+                        }).then(async (motivo) => {
+                            if (!motivo.isConfirmed) return;
+
                             try {
-                                await fetchHelper.delete(url, {}, {}, 500, false);
-                                dataTableRefMenu?.current?.ajax.reload();
-                                setMenuPermissionDelete(true);
-                                setMenuPermissionError(false);
+                                const deleteUrl = base_url(['depreciationRules', id]);
+                                await fetchHelper.delete(deleteUrl, { deletionReason: motivo.value }, {}, 500, false);
+                                dataTableRef?.current?.ajax.reload();
+                                setRuleDelete(true);
                             } catch (error) {
                                 console.error(error);
-                                setMenuPermissionError(true);
-                                setMenuPermissionDelete(false);
-                                dataTableRefMenu?.current?.ajax.reload();
+                                window.Swal.fire({
+                                    title: 'Error',
+                                    text: error?.msg || 'Error al eliminar la regla de depreciación',
+                                    icon: 'error',
+                                    confirmButtonText: 'Cerrar',
+                                    showCancelButton: false,
+                                    allowOutsideClick: false,
+                                });
                             }
-                        }
+                        });
                     });
                     break;
+
                 default:
                     console.warn('Acción no válida', action);
                     break;
             }
-        }
-        table.on('click', '.action-btn', handler);
-
-        return () => {
-            table.off('click', '.action-btn', handler);
         };
+
+        table.on('click', '.action-btn', handler);
+        return () => { table.off('click', '.action-btn', handler); };
     }, [data]);
 
-    return <>
+    return (
+        <>
+            <div className="card">
+                <h5 className="card-header text-md-start text-center">Reglas de Depreciación</h5>
 
-        <div className="card">
-            <h5 className="card-header text-md-start text-center">Permisos para menús</h5>
+                <AlertPage type="success" message="La regla de depreciación ha sido creada exitosamente." show={ruleCreate} />
+                <AlertPage type="success" message="La regla de depreciación fue actualizada exitosamente." show={ruleEdit} />
+                <AlertPage type="success" message="La regla de depreciación ha sido eliminada exitosamente." show={ruleDelete} />
 
+                <div className="card-datatable text-nowrap">
+                    <DataTableReference
+                        url_api={url}
+                        columns={columns}
+                        tableRef={tableRef}
+                        dataTableRef={dataTableRef}
+                        method='POST'
+                        buttons={buttons}
+                        title='Reglas de Depreciación'
+                        setData={setData}
+                        search={search}
+                        setSearch={setSearch}
+                        filtered={true}
+                    />
+                </div>
 
-            <AlertPage type="success" message={`Permisos para el menú, creado exitosamente`} show={menuPermissionCreate} onChange={() => setMenuPermissionCreate(false)} />
-            <AlertPage type="success" message={`Permisos para el menú, actualizado exitosamente`} show={menuPermissionUpdate} onChange={() => setMenuPermissionUpdate(false)} />
-            <AlertPage type="success" message={`Permisos para el menú, eliminado exitosamente`} show={menuPermissionDelete} onChange={() => setMenuPermissionDelete(false)} />
-            <AlertPage type="danger" message="Error al eliminar el permiso de menú. Verifique su conexión e intente nuevamente." show={menuPermissionError} onChange={() => setMenuPermissionError(false)} />
-
-            <div className="card-datatable text-nowrap">
-                <DataTableReference
-                    url_api={url}
-                    columns={columns}
-                    tableRef={tableRefMenu}
-                    dataTableRef={dataTableRefMenu}
-                    method='POST'
-                    buttons={buttons}
-                    title='Permisos Menu'
-                    setData={setData}
-                    search={search}
-                    setSearch={setSearch}
-                    filtered={true}
+                <FilterDepreciationRule
+                    filterRef={filterRef}
+                    filterInstance={filterInstance}
+                    dataTableRef={dataTableRef}
                 />
             </div>
 
-            <FilterMenuPermission
-                dataTableRef={dataTableRefMenu}
-                filterRef={filterRef}
-                filterInstance={filterInstance}
-                menus={menus}
-                roles={roles}
-            />
-
-            <CreateMenuPermission
+            <CreateDepreciationRule
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
-                menuPermission={menuPermission} setMenuPermission={setMenuPermission}
-                dataTableRef={dataTableRefMenu}
-                setMenuCreate={setMenuPermissionCreate}
+                rule={rule}
+                setRule={setRule}
+                dataTableRef={dataTableRef}
+                setRuleCreate={setRuleCreate}
             />
 
-            <UpdateMenuPermission
+            <UpdatedDepreciationRule
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
-                menuPermission={menuPermission} setMenuPermission={setMenuPermission}
-                dataTableRef={dataTableRefMenu}
-                setMenuUpdate={setMenuPermissionUpdate}
+                rule={rule}
+                setRule={setRule}
+                dataTableRef={dataTableRef}
+                setRuleEdit={setRuleEdit}
             />
-        </div>
+        </>
+    );
+};
 
-    </>
-}
-
-export default IndexDepreciationRules
+export default IndexDepreciationRules;
