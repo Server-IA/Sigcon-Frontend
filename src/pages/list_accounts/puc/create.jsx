@@ -5,32 +5,32 @@ import { useEffect, useState } from 'react';
 import AlertPage from '../../../components/molecules/AlertPage';
 
 const ACCOUNT_CLASSES = [
-    { id: 'ASSET',              label: 'Activo' },
-    { id: 'LIABILITY',          label: 'Pasivo' },
-    { id: 'EQUITY',             label: 'Patrimonio' },
-    { id: 'INCOME',             label: 'Ingresos' },
-    { id: 'EXPENSE',            label: 'Gastos' },
-    { id: 'COST_OF_SALES',      label: 'Costos de venta' },
+    { id: 'ASSET', label: 'Activo' },
+    { id: 'LIABILITY', label: 'Pasivo' },
+    { id: 'EQUITY', label: 'Patrimonio' },
+    { id: 'INCOME', label: 'Ingresos' },
+    { id: 'EXPENSE', label: 'Gastos' },
+    { id: 'COST_OF_SALES', label: 'Costos de venta' },
     { id: 'COST_OF_PRODUCTION', label: 'Costos de producción o de operación' },
-    { id: 'ORDER_DEBIT',        label: 'Cuentas de orden deudoras' },
-    { id: 'ORDER_CREDIT',       label: 'Cuentas de orden acreedoras' },
+    { id: 'ORDER_DEBIT', label: 'Cuentas de orden deudoras' },
+    { id: 'ORDER_CREDIT', label: 'Cuentas de orden acreedoras' },
 ];
 
 const HIERARCHY_LEVELS = [
-    { id: 'GROUP',    label: 'Grupo' },
+    { id: 'GROUP', label: 'Grupo' },
     { id: 'SUBGROUP', label: 'Subgrupo' },
 ];
 
 const ACCOUNT_NATURES = [
-    { id: 'DEBIT',  label: 'Deudora' },
+    { id: 'DEBIT', label: 'Deudora' },
     { id: 'CREDIT', label: 'Acreedora' },
 ];
 
 const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage }) => {
 
-    const [errors, setErrors]             = useState({});
+    const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [loading, setLoading]           = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         setErrors({});
@@ -215,7 +215,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                                         value={account.nature}
                                         onChange={(e) => setAccount({ ...account, nature: e.target.value })}
                                     >
-                                        <option value="">-- Seleccionar naturaleza --</option>
+                                        <option value="">Seleccionar naturaleza</option>
                                         {ACCOUNT_NATURES.map(n => (
                                             <option key={n.id} value={n.id}>{n.label}</option>
                                         ))}
