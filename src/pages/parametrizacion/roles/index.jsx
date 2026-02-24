@@ -222,7 +222,7 @@ const IndexRoles = () => {
                             } catch (error) {
                                 console.error(error);
                                 setMessageRole({
-                                    message: error.msg,
+                                    message: error.msg || 'Error al eliminar el rol. Verifique su conexión e intente nuevamente.',
                                     type: 'danger',
                                     show: true,
                                 });
@@ -245,7 +245,11 @@ const IndexRoles = () => {
         <div className="card">
             <h5 className="card-header text-md-start text-center">Roles</h5>
 
-            <AlertPage message={messageRole.message} type={messageRole.type} show={messageRole.show} />
+            <AlertPage message={messageRole.message} type={messageRole.type} show={messageRole.show} onChange={() => setMessageRole({
+                message: '',
+                type: '',
+                show: false,
+            })} />
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference

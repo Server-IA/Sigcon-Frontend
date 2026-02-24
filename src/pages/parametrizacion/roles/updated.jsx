@@ -16,11 +16,26 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
+    const [allModulesPermissions, setAllModulesPermissions] = useState([]);
     const [roleUpdated, setRoleUpdated] = useState({
         name: role.name,
         status: role.status,
         permissionIds: []
     });
+
+    useEffect(() => {
+        setAllModulesPermissions(modules.map(m => {
+            return { ...m, checked: false }
+        }));
+    }, [modules]);
+
+    useEffect(() => {
+        const permissions = allModulesPermissions.filter(m => m.checked).map(m => m.permissions.map(p => p.id));
+        setRole({
+            ...role,
+            permissionIds: permissions.flat(),
+        });
+    }, [allModulesPermissions]);
 
     useEffect(() => {
         setRoleUpdated({
@@ -89,7 +104,7 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
                     {/* Body */}
                     <div className="modal-body">
                         <div className="text-center mb-6">
-                            <h4 className="role-title mb-2 pb-0">Crear Rol</h4>
+                            <h4 className="role-title mb-2 pb-0">Editar Rol</h4>
                             <p>Asigna permisos al rol</p>
                         </div>
 
@@ -145,8 +160,33 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
 
                                                 <div id={`${module.module.id}-accordion-update`} className="accordion-collapse collapse" data-bs-parent="#accordionStyle1">
                                                     <div className="accordion-body">
+                                                        <label class="switch switch-primary">
+                                                            <input
+                                                                type="checkbox" 
+                                                                className="switch-input"
+                                                                value={module.module.id}
+                                                                checked={module.checked}
+                                                                id={`${module.module.id}-permission`}
+                                                                onChange={(e) => setAllModulesPermissions([
+                                                                    ...allModulesPermissions.map(m => m.module.id === module.module.id ? { ...m, checked: !module.checked } : m),
+                                                                ])}
+                                                            />
+                                                            <span class="switch-toggle-slider">
+                                                                <span class="switch-on">
+                                                                    <i class="ri-check-line"></i>
+                                                                </span>
+                                                                <span class="switch-off">
+                                                                    <i class="ri-close-line"></i>
+                                                                </span>
+                                                            </span>
+                                                            <span class="switch-label">Seleccionar todos</span>
+                                                        </label>
+
+                                                        <hr />
                                                         {permissionsModule.map((permission, index) => (
                                                             <div className="row" key={`${module.module.id}-permissions-row-update-${index}`}>
+
+
                                                                 {permission.map((p) => (
                                                                     <div className="col-6" key={`${p.id}-permission-update`}>
                                                                         <div className="form-check form-switch mb-2">

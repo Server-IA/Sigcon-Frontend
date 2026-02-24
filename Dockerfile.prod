@@ -7,8 +7,8 @@ ARG VITE_ENVIRONMENT
 ARG VITE_API_URL
 
 # 👇 Convertirlas en variables del sistema
-ENV VITE_ENVIRONMENT=development
-ENV VITE_API_URL=https://api.inmero.co/sigcon/dev
+ENV VITE_ENVIRONMENT=production
+ENV VITE_API_URL=https://api.inmero.co/sigcon/
 
 COPY package*.json ./
 RUN npm install

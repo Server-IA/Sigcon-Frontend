@@ -7,7 +7,7 @@ import TextareaModal from "../../../components/molecules/TextareaModal";
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const CreatedPermission = ({ modalRef, modalInstance, permission, setPermission, types, dataTableRef, modules }) => {
+const CreatedPermission = ({ modalRef, modalInstance, permission, setPermission, types, dataTableRef, modules, setPermissionCreate }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
@@ -72,7 +72,7 @@ const CreatedPermission = ({ modalRef, modalInstance, permission, setPermission,
             dataTableRef?.current?.ajax.reload();
             setErrors({});
             setErrorMessage('');
-
+            setPermissionCreate(true);
         } catch (error) {
             console.error('Error completo:', error);
             
@@ -88,6 +88,7 @@ const CreatedPermission = ({ modalRef, modalInstance, permission, setPermission,
             } else {
                 setErrorMessage('Error al crear el permiso. Verifica los logs del servidor.');
             }
+            setPermissionCreate(false);
         }
     }
 

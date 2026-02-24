@@ -7,6 +7,7 @@ import { base_url } from '../../../utils/functions';
 import CreateParameter from './create';
 import UpdatedParameter from './updated';
 import FilterParameter from './filter';
+import AlertPage from '../../../components/molecules/AlertPage';
 
 const IndexParameters = () => {
 
@@ -26,6 +27,7 @@ const IndexParameters = () => {
     const [parameterCreate, setParameterCreate] = useState(false);
     const [parameterEdit, setParameterEdit] = useState(false);
     const [parameterDelete, setParameterDelete] = useState(false);
+    const [parameterError, setParameterError] = useState(false);
 
     const [search, setSearch] = useState({
         value: '',
@@ -35,7 +37,6 @@ const IndexParameters = () => {
     const url = ['api', 'parameters'];
 
     const actions = [
-        { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
@@ -118,9 +119,6 @@ const IndexParameters = () => {
             const id = Number($(this).data('id'));
 
             switch (action) {
-                case 'view':
-                    console.log('view');
-                    break;
                 case 'edit':
 
                     const parameterRef = data.find(m => m.id === id);
@@ -159,20 +157,14 @@ const IndexParameters = () => {
                             const url = base_url(['api', 'parameters', 'delete', id]);
                             try {
                                 const response = await fetchHelper.delete(url, {}, {}, 500, false);
-                                if (response.status === 200) {
-                                    dataTableRef?.current?.ajax.reload();
-                                    setParameterDelete(true);
-                                }
-                            } catch (error) {
-                                console.error(error);
-                                window.Swal.fire({
-                                    title: 'Error',
-                                    text: 'Error al eliminar el parametro',
-                                    icon: 'error',
-                                });
-                            } finally {
                                 dataTableRef?.current?.ajax.reload();
                                 setParameterDelete(true);
+                                setParameterError(false);
+                            } catch (error) {
+                                console.error(error);
+                                setParameterError(true);
+                                setParameterDelete(false);
+                                dataTableRef?.current?.ajax.reload();
                             }
                         }
                     });
@@ -190,20 +182,10 @@ const IndexParameters = () => {
     return <>
         <div className="card">
             <h5 className="card-header text-md-start text-center">Parametros</h5>
-            <div className={`alert alert-success alert-dismissible ${!parameterCreate ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Parametro creado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!parameterEdit ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Parametro actualizado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!parameterDelete ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Parametro eliminado correctamente</span>
-            </div>
+            <AlertPage type="success" message="Parametro creado correctamente" show={parameterCreate} />
+            <AlertPage type="success" message="Parametro actualizado correctamente" show={parameterEdit} />
+            <AlertPage type="success" message="Parametro eliminado correctamente" show={parameterDelete} />
+            <AlertPage type="danger" message="Error al eliminar el parámetro. Verifique su conexión e intente nuevamente." show={parameterError} />
             <div className="card-datatable text-nowrap">
                 <DataTableReference
                     url_api={url}
