@@ -170,9 +170,9 @@ const NavHorizontal = ({modules}) => {
                             <div className="avatar avatar-online">
                                 <img
                                     onError={(e) => {
-                                        e.target.src = '/assets/img/avatars/3.png';
+                                        e.target.src = '%BASE_URL%assets/img/avatars/3.png';
                                     }}
-                                    src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                    src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '%BASE_URL%assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
                             </div>
                         </a>
                         <ul className="dropdown-menu dropdown-menu-end">
