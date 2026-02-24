@@ -3,7 +3,8 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import { useEffect, useState } from 'react';
 import AlertPage from '../../../components/molecules/AlertPage';
-//a
+import InputModal from '../../../components/molecules/InputModal';
+import InputSelectModal from '../../../components/molecules/inputSelectModal';
 const CreateCuentaContable = ({ 
     modalRef, 
     modalInstance, 
@@ -151,155 +152,135 @@ const CreateCuentaContable = ({
 
                         <form onSubmit={handleSubmit}>
                             {/* Selección de PUC */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="pucId" className="form-label">
-                                        Cuenta PUC <span className="text-danger">*</span>
-                                    </label>
-                                    <select
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputSelectModal
                                         id="pucId"
-                                        className={`form-control ${errors.pucId ? 'is-invalid' : ''}`}
+                                        label="Cuenta PUC"
                                         value={cuentaContable.pucId}
-                                        onChange={(e) => {
-                                            const selectedPuc = pucs.find(p => p.id === parseInt(e.target.value));
+                                        onChange={(value) => {
+                                            const selectedPuc = pucs.find(p => p.id === parseInt(value));
                                             setCuentaContable({
                                                 ...cuentaContable,
-                                                pucId: parseInt(e.target.value),
+                                                pucId: parseInt(value) || '',
                                                 pucCode: selectedPuc?.code || ''
                                             });
                                         }}
-                                    >
-                                        <option value="">-- Seleccionar cuenta PUC --</option>
-                                        {pucs.map(puc => (
-                                            <option key={puc.id} value={puc.id}>
-                                                {puc.code} - {puc.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.pucId && <div className="invalid-feedback d-block">{errors.pucId}</div>}
+                                        error={errors.pucId}
+                                        placeholder="Seleccionar cuenta PUC"
+                                        options={pucs.map(puc => ({
+                                            id: puc.id,
+                                            label: `${puc.code} - ${puc.name}`
+                                        }))}
+                                        required={true}
+                                    />
                                 </div>
                             </div>
 
                             {/* Nombre Personalizado */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="customName" className="form-label">
-                                        Nombre Personalizado <span className="text-danger">*</span>
-                                    </label>
-                                    <input
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputModal
                                         type="text"
                                         id="customName"
-                                        className={`form-control ${errors.customName ? 'is-invalid' : ''}`}
-                                        placeholder="Ej: Caja general"
+                                        label="Nombre Personalizado"
                                         value={cuentaContable.customName}
                                         onChange={(e) => setCuentaContable({ 
                                             ...cuentaContable, 
                                             customName: e.target.value 
                                         })}
-                                        maxLength={50}
+                                        error={errors.customName}
+                                        placeholder="Ej: Caja general"
+                                        required={true}
                                     />
-                                    {errors.customName && <div className="invalid-feedback d-block">{errors.customName}</div>}
                                 </div>
                             </div>
 
                             {/* Moneda Base */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="baseCurrency" className="form-label">
-                                        Moneda Base <span className="text-danger">*</span>
-                                    </label>
-                                    <select
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputSelectModal
                                         id="baseCurrency"
-                                        className={`form-control ${errors.baseCurrency ? 'is-invalid' : ''}`}
+                                        label="Moneda Base"
                                         value={cuentaContable.baseCurrency}
-                                        onChange={(e) => setCuentaContable({ 
+                                        onChange={(value) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            baseCurrency: e.target.value 
+                                            baseCurrency: value 
                                         })}
-                                    >
-                                        <option value="">-- Seleccionar moneda --</option>
-                                        {currencies.map(currency => (
-                                            <option key={currency.id} value={currency.code}>
-                                                {currency.name} ({currency.code})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.baseCurrency && <div className="invalid-feedback d-block">{errors.baseCurrency}</div>}
+                                        error={errors.baseCurrency}
+                                        placeholder="Seleccionar moneda"
+                                        options={currencies.map(currency => ({
+                                            id: currency.code,
+                                            label: `${currency.name} (${currency.code})`
+                                        }))}
+                                        required={true}
+                                    />
                                 </div>
                             </div>
 
                             {/* Centro de Costos (Opcional) */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="costCenterId" className="form-label">
-                                        Centro de Costos (Opcional)
-                                    </label>
-                                    <select
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputSelectModal
                                         id="costCenterId"
-                                        className={`form-control ${errors.costCenterId ? 'is-invalid' : ''}`}
+                                        label="Centro de Costos"
                                         value={cuentaContable.costCenterId}
-                                        onChange={(e) => setCuentaContable({ 
+                                        onChange={(value) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            costCenterId: e.target.value 
+                                            costCenterId: value 
                                         })}
-                                    >
-                                        <option value="">-- Seleccionar centro de costos --</option>
-                                        {costCenters.map(center => (
-                                            <option key={center.id} value={center.id}>
-                                                {center.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.costCenterId && <div className="invalid-feedback d-block">{errors.costCenterId}</div>}
+                                        error={errors.costCenterId}
+                                        placeholder="Seleccionar centro de costos"
+                                        options={costCenters.map(center => ({
+                                            id: center.id,
+                                            name: center.name
+                                        }))}
+                                        clearable={true}
+                                    />
                                 </div>
                             </div>
 
                             {/* Regla de Depreciación (Opcional) */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="depreciationRuleId" className="form-label">
-                                        Regla de Depreciación (Opcional)
-                                    </label>
-                                    <select
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputSelectModal
                                         id="depreciationRuleId"
-                                        className={`form-control ${errors.depreciationRuleId ? 'is-invalid' : ''}`}
+                                        label="Regla de Depreciación"
                                         value={cuentaContable.depreciationRuleId}
-                                        onChange={(e) => setCuentaContable({ 
+                                        onChange={(value) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            depreciationRuleId: e.target.value 
+                                            depreciationRuleId: value 
                                         })}
-                                    >
-                                        <option value="">-- Seleccionar regla de depreciación --</option>
-                                        {depreciationRules.map(rule => (
-                                            <option key={rule.id} value={rule.id}>
-                                                {rule.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.depreciationRuleId && <div className="invalid-feedback d-block">{errors.depreciationRuleId}</div>}
+                                        error={errors.depreciationRuleId}
+                                        placeholder="Seleccionar regla de depreciación"
+                                        options={depreciationRules.map(rule => ({
+                                            id: rule.id,
+                                            name: rule.name
+                                        }))}
+                                        clearable={true}
+                                    />
                                 </div>
                             </div>
 
                             {/* Naturaleza */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="nature" className="form-label">
-                                        Naturaleza de la Cuenta <span className="text-danger">*</span>
-                                    </label>
-                                    <select
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputSelectModal
                                         id="nature"
-                                        className={`form-control ${errors.nature ? 'is-invalid' : ''}`}
+                                        label="Naturaleza de la Cuenta"
                                         value={cuentaContable.nature}
-                                        onChange={(e) => setCuentaContable({ 
+                                        onChange={(value) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            nature: e.target.value 
+                                            nature: value 
                                         })}
-                                    >
-                                        <option value="">-- Seleccionar naturaleza --</option>
-                                        <option value="DEUDORA">Deudora</option>
-                                        <option value="ACREEDORA">Acreedora</option>
-                                    </select>
-                                    {errors.nature && <div className="invalid-feedback d-block">{errors.nature}</div>}
+                                        error={errors.nature}
+                                        placeholder="Seleccionar naturaleza"
+                                        options={[
+                                            { id: 'DEUDORA', label: 'Deudora' },
+                                            { id: 'ACREEDORA', label: 'Acreedora' }
+                                        ]}
+                                        required={true}
+                                    />
                                 </div>
                             </div>
                         </form>

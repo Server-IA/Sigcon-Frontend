@@ -3,6 +3,8 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import { useEffect, useState } from 'react';
 import AlertPage from '../../../components/molecules/AlertPage';
+import InputModal from '../../../components/molecules/InputModal';
+import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 const UpdatedCuentaContable = ({ 
     modalRef, 
@@ -193,214 +195,186 @@ const UpdatedCuentaContable = ({
 
                         <form onSubmit={handleSubmit}>
                             {/* ID (Solo lectura) */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="id" className="form-label">
-                                        ID de Cuenta
-                                    </label>
-                                    <input
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputModal
                                         type="text"
                                         id="id"
-                                        className="form-control"
+                                        label="ID de Cuenta"
                                         value={cuentaUpdated.id}
-                                        disabled
-                                        style={{ backgroundColor: '#f0f0f0' }}
+                                        onChange={() => {}}
+                                        error=""
+                                        placeholder=""
+                                        disabled={true}
                                     />
                                 </div>
                             </div>
 
                             {/* Código PUC (Solo lectura si hay transacciones) */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="pucId" className="form-label">
-                                        Cuenta PUC <span className="text-danger">*</span>
-                                    </label>
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
                                         readOnlyFields.pucId,
-                                        <select
+                                        <InputSelectModal
                                             id="pucId"
-                                            className={`form-control ${errors.pucId ? 'is-invalid' : ''}`}
+                                            label="Cuenta PUC"
                                             value={cuentaUpdated.pucId}
-                                            onChange={(e) => {
-                                                const selectedPuc = pucs.find(p => p.id === parseInt(e.target.value));
+                                            onChange={(value) => {
+                                                const selectedPuc = pucs.find(p => p.id === parseInt(value));
                                                 setCuentaUpdated({
                                                     ...cuentaUpdated,
-                                                    pucId: parseInt(e.target.value),
+                                                    pucId: parseInt(value) || '',
                                                     pucCode: selectedPuc?.code || ''
                                                 });
                                             }}
-                                            disabled={readOnlyFields.pucId}
-                                            style={readOnlyFields.pucId ? { backgroundColor: '#f0f0f0' } : {}}
-                                        >
-                                            <option value="">-- Seleccionar cuenta PUC --</option>
-                                            {pucs.map(puc => (
-                                                <option key={puc.id} value={puc.id}>
-                                                    {puc.code} - {puc.name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            error={errors.pucId}
+                                            placeholder="Seleccionar cuenta PUC"
+                                            options={pucs.map(puc => ({
+                                                id: puc.id,
+                                                label: `${puc.code} - ${puc.name}`
+                                            }))}
+                                            required={true}
+                                        />
                                     )}
-                                    {errors.pucId && <div className="invalid-feedback d-block">{errors.pucId}</div>}
                                 </div>
                             </div>
 
                             {/* Nombre Personalizado (Solo lectura si hay transacciones) */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="customName" className="form-label">
-                                        Nombre Personalizado <span className="text-danger">*</span>
-                                    </label>
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
                                         readOnlyFields.customName,
-                                        <input
+                                        <InputModal
                                             type="text"
                                             id="customName"
-                                            className={`form-control ${errors.customName ? 'is-invalid' : ''}`}
-                                            placeholder="Ej: Caja general"
+                                            label="Nombre Personalizado"
                                             value={cuentaUpdated.customName}
                                             onChange={(e) => setCuentaUpdated({ 
                                                 ...cuentaUpdated, 
                                                 customName: e.target.value 
                                             })}
-                                            maxLength={50}
+                                            error={errors.customName}
+                                            placeholder="Ej: Caja general"
                                             disabled={readOnlyFields.customName}
-                                            style={readOnlyFields.customName ? { backgroundColor: '#f0f0f0' } : {}}
+                                            required={true}
                                         />
                                     )}
-                                    {errors.customName && <div className="invalid-feedback d-block">{errors.customName}</div>}
                                 </div>
                             </div>
 
                             {/* Moneda Base */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="baseCurrency" className="form-label">
-                                        Moneda Base <span className="text-danger">*</span>
-                                    </label>
-                                    <select
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputSelectModal
                                         id="baseCurrency"
-                                        className={`form-control ${errors.baseCurrency ? 'is-invalid' : ''}`}
+                                        label="Moneda Base"
                                         value={cuentaUpdated.baseCurrency}
-                                        onChange={(e) => setCuentaUpdated({ 
+                                        onChange={(value) => setCuentaUpdated({ 
                                             ...cuentaUpdated, 
-                                            baseCurrency: e.target.value 
+                                            baseCurrency: value 
                                         })}
-                                    >
-                                        <option value="">-- Seleccionar moneda --</option>
-                                        {currencies.map(currency => (
-                                            <option key={currency.id} value={currency.code}>
-                                                {currency.name} ({currency.code})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.baseCurrency && <div className="invalid-feedback d-block">{errors.baseCurrency}</div>}
+                                        error={errors.baseCurrency}
+                                        placeholder="Seleccionar moneda"
+                                        options={currencies.map(currency => ({
+                                            id: currency.code,
+                                            label: `${currency.name} (${currency.code})`
+                                        }))}
+                                        required={true}
+                                    />
                                 </div>
                             </div>
 
                             {/* Centro de Costos (Solo lectura si hay transacciones) */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="costCenterId" className="form-label">
-                                        Centro de Costos (Opcional)
-                                    </label>
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
                                         readOnlyFields.costCenterId,
-                                        <select
+                                        <InputSelectModal
                                             id="costCenterId"
-                                            className={`form-control ${errors.costCenterId ? 'is-invalid' : ''}`}
+                                            label="Centro de Costos"
                                             value={cuentaUpdated.costCenterId}
-                                            onChange={(e) => setCuentaUpdated({ 
+                                            onChange={(value) => setCuentaUpdated({ 
                                                 ...cuentaUpdated, 
-                                                costCenterId: e.target.value 
+                                                costCenterId: value 
                                             })}
-                                            disabled={readOnlyFields.costCenterId}
-                                            style={readOnlyFields.costCenterId ? { backgroundColor: '#f0f0f0' } : {}}
-                                        >
-                                            <option value="">-- Seleccionar centro de costos --</option>
-                                            {costCenters.map(center => (
-                                                <option key={center.id} value={center.id}>
-                                                    {center.name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            error={errors.costCenterId}
+                                            placeholder="Seleccionar centro de costos"
+                                            options={costCenters.map(center => ({
+                                                id: center.id,
+                                                name: center.name
+                                            }))}
+                                            clearable={true}
+                                        />
                                     )}
-                                    {errors.costCenterId && <div className="invalid-feedback d-block">{errors.costCenterId}</div>}
                                 </div>
                             </div>
 
                             {/* Regla de Depreciación (Solo lectura si hay transacciones) */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="depreciationRuleId" className="form-label">
-                                        Regla de Depreciación (Opcional)
-                                    </label>
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
                                         readOnlyFields.depreciationRuleId,
-                                        <select
+                                        <InputSelectModal
                                             id="depreciationRuleId"
-                                            className={`form-control ${errors.depreciationRuleId ? 'is-invalid' : ''}`}
+                                            label="Regla de Depreciación"
                                             value={cuentaUpdated.depreciationRuleId}
-                                            onChange={(e) => setCuentaUpdated({ 
+                                            onChange={(value) => setCuentaUpdated({ 
                                                 ...cuentaUpdated, 
-                                                depreciationRuleId: e.target.value 
+                                                depreciationRuleId: value 
                                             })}
-                                            disabled={readOnlyFields.depreciationRuleId}
-                                            style={readOnlyFields.depreciationRuleId ? { backgroundColor: '#f0f0f0' } : {}}
-                                        >
-                                            <option value="">-- Seleccionar regla de depreciación --</option>
-                                            {depreciationRules.map(rule => (
-                                                <option key={rule.id} value={rule.id}>
-                                                    {rule.name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            error={errors.depreciationRuleId}
+                                            placeholder="Seleccionar regla de depreciación"
+                                            options={depreciationRules.map(rule => ({
+                                                id: rule.id,
+                                                name: rule.name
+                                            }))}
+                                            clearable={true}
+                                        />
                                     )}
-                                    {errors.depreciationRuleId && <div className="invalid-feedback d-block">{errors.depreciationRuleId}</div>}
                                 </div>
                             </div>
 
                             {/* Naturaleza */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="nature" className="form-label">
-                                        Naturaleza de la Cuenta <span className="text-danger">*</span>
-                                    </label>
-                                    <select
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputSelectModal
                                         id="nature"
-                                        className={`form-control ${errors.nature ? 'is-invalid' : ''}`}
+                                        label="Naturaleza de la Cuenta"
                                         value={cuentaUpdated.nature}
-                                        onChange={(e) => setCuentaUpdated({ 
+                                        onChange={(value) => setCuentaUpdated({ 
                                             ...cuentaUpdated, 
-                                            nature: e.target.value 
+                                            nature: value 
                                         })}
-                                    >
-                                        <option value="">-- Seleccionar naturaleza --</option>
-                                        <option value="DEUDORA">Deudora</option>
-                                        <option value="ACREEDORA">Acreedora</option>
-                                    </select>
-                                    {errors.nature && <div className="invalid-feedback d-block">{errors.nature}</div>}
+                                        error={errors.nature}
+                                        placeholder="Seleccionar naturaleza"
+                                        options={[
+                                            { id: 'DEUDORA', label: 'Deudora' },
+                                            { id: 'ACREEDORA', label: 'Acreedora' }
+                                        ]}
+                                        required={true}
+                                    />
                                 </div>
                             </div>
 
                             {/* Estado */}
-                            <div className="row mb-3">
-                                <div className="col-12">
-                                    <label htmlFor="status" className="form-label">
-                                        Estado <span className="text-danger">*</span>
-                                    </label>
-                                    <select
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputSelectModal
                                         id="status"
-                                        className={`form-control ${errors.status ? 'is-invalid' : ''}`}
+                                        label="Estado"
                                         value={cuentaUpdated.status}
-                                        onChange={(e) => setCuentaUpdated({ 
+                                        onChange={(value) => setCuentaUpdated({ 
                                             ...cuentaUpdated, 
-                                            status: e.target.value 
+                                            status: value 
                                         })}
-                                    >
-                                        <option value="ACTIVE">Activa</option>
-                                        <option value="INACTIVE">Inactiva</option>
-                                    </select>
-                                    {errors.status && <div className="invalid-feedback d-block">{errors.status}</div>}
+                                        error={errors.status}
+                                        placeholder="Seleccionar estado"
+                                        options={[
+                                            { id: 'ACTIVE', label: 'Activa' },
+                                            { id: 'INACTIVE', label: 'Inactiva' }
+                                        ]}
+                                        required={true}
+                                    />
                                 </div>
                             </div>
                         </form>

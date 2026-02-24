@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import InputModal from "../../../components/molecules/InputModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
 const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
 
@@ -276,46 +277,50 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
                         </div>
 
                         {/* Naturaleza */}
-                        <div className="row mb-3">
-                            <div className="col-12">
-                                <label htmlFor="nature_filter" className="form-label">Naturaleza</label>
-                                <select
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModal
                                     id="nature_filter"
-                                    className="form-control"
+                                    label="Naturaleza"
                                     value={filters.find(filter => filter.column === 'nature:name')?.value || ""}
-                                    onChange={(e) => {
+                                    onChange={(value) => {
                                         setFilters(prev => prev.map(filter => filter.column === 'nature:name' ? {
                                             ...filter,
-                                            value: e.target.value,
+                                            value: value,
                                         } : filter));
                                     }}
-                                >
-                                    <option value="">-- Seleccionar --</option>
-                                    <option value="DEUDORA">Deudora</option>
-                                    <option value="ACREEDORA">Acreedora</option>
-                                </select>
+                                    error=""
+                                    placeholder="Seleccionar naturaleza"
+                                    options={[
+                                        { id: 'DEUDORA', label: 'Deudora' },
+                                        { id: 'ACREEDORA', label: 'Acreedora' }
+                                    ]}
+                                    clearable={true}
+                                />
                             </div>
                         </div>
 
                         {/* Estado */}
-                        <div className="row mb-3">
-                            <div className="col-12">
-                                <label htmlFor="status_filter" className="form-label">Estado</label>
-                                <select
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputSelectModal
                                     id="status_filter"
-                                    className="form-control"
+                                    label="Estado"
                                     value={filters.find(filter => filter.column === 'status:name')?.value || ""}
-                                    onChange={(e) => {
+                                    onChange={(value) => {
                                         setFilters(prev => prev.map(filter => filter.column === 'status:name' ? {
                                             ...filter,
-                                            value: e.target.value,
+                                            value: value,
                                         } : filter));
                                     }}
-                                >
-                                    <option value="">-- Seleccionar --</option>
-                                    <option value="ACTIVE">Activa</option>
-                                    <option value="INACTIVE">Inactiva</option>
-                                </select>
+                                    error=""
+                                    placeholder="Seleccionar estado"
+                                    options={[
+                                        { id: 'ACTIVE', label: 'Activa' },
+                                        { id: 'INACTIVE', label: 'Inactiva' }
+                                    ]}
+                                    clearable={true}
+                                />
                             </div>
                         </div>
                     </div>
