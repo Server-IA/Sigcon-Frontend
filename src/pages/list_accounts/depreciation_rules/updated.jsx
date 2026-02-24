@@ -36,10 +36,7 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
         usefulLife: '',
         residualValue: '',
         effectiveDate: '',
-        calculationBase: '',
-        parameters: '',
-        exceptions: '',
-        applicableStandard: '',
+        description: '',
         status: 'ACTIVE',
     });
 
@@ -54,10 +51,7 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
             usefulLife: rule.usefulLife ?? '',
             residualValue: rule.residualValue ?? '',
             effectiveDate: rule.effectiveDate ?? '',
-            calculationBase: rule.calculationBase ?? '',
-            parameters: rule.parameters ?? '',
-            exceptions: rule.exceptions ?? '',
-            applicableStandard: rule.applicableStandard ?? '',
+            description: rule.description ?? '',
             status: rule.status ?? 'ACTIVE',
         });
         setErrors({});
@@ -96,10 +90,7 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                 usefulLife: '',
                 residualValue: '',
                 effectiveDate: '',
-                calculationBase: '',
-                parameters: '',
-                exceptions: '',
-                applicableStandard: '',
+                description: '',
                 status: 'ACTIVE',
             });
 
@@ -279,50 +270,14 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                         </div>
 
                         <div className="row">
-                            <div className="col-md-6 mb-3">
+                            <div className="col-md-12 mb-3">
                                 <TextareaModal
-                                    id="dr_calculationBase_update"
-                                    label="Base de cálculo"
-                                    value={ruleUpdated.calculationBase}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, calculationBase: e.target.value })}
-                                    error={errors.calculationBase}
-                                    placeholder="Describa la base sobre la cual se calcula la depreciación"
-                                    required={true}
-                                />
-                            </div>
-                            <div className="col-md-6 mb-3">
-                                <TextareaModal
-                                    id="dr_parameters_update"
-                                    label="Parámetros"
-                                    value={ruleUpdated.parameters}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, parameters: e.target.value })}
-                                    error={errors.parameters}
-                                    placeholder="Describa los parámetros aplicables"
-                                    required={true}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="row">
-                            <div className="col-md-6 mb-3">
-                                <TextareaModal
-                                    id="dr_exceptions_update"
-                                    label="Excepciones"
-                                    value={ruleUpdated.exceptions}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, exceptions: e.target.value })}
-                                    error={errors.exceptions}
-                                    placeholder="Describa las excepciones aplicables"
-                                    required={true}
-                                />
-                            </div>
-                            <div className="col-md-6 mb-3">
-                                <TextareaModal
-                                    id="dr_applicableStandard_update"
-                                    label="Norma aplicable"
-                                    value={ruleUpdated.applicableStandard}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, applicableStandard: e.target.value })}
-                                    error={errors.applicableStandard}
-                                    placeholder="Ej. NIIF 16, Decreto 3019 de 1989"
+                                    id="dr_description_update"
+                                    label="Descripción"
+                                    value={ruleUpdated.description}
+                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, description: e.target.value })}
+                                    error={errors.description}
+                                    placeholder="Describa la base de cálculo, parámetros, excepciones y norma aplicable"
                                     required={true}
                                 />
                             </div>

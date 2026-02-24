@@ -45,10 +45,7 @@ const IndexDepreciationRules = () => {
         usefulLife: '',
         residualValue: '',
         effectiveDate: '',
-        calculationBase: '',
-        parameters: '',
-        exceptions: '',
-        applicableStandard: '',
+        description: '',
         status: 'ACTIVE',
     };
 
@@ -175,10 +172,7 @@ const IndexDepreciationRules = () => {
                         usefulLife: ruleRef.usefulLife ?? '',
                         residualValue: ruleRef.residualValue ?? '',
                         effectiveDate: ruleRef.effectiveDate ?? '',
-                        calculationBase: ruleRef.calculationBase ?? '',
-                        parameters: ruleRef.parameters ?? '',
-                        exceptions: ruleRef.exceptions ?? '',
-                        applicableStandard: ruleRef.applicableStandard ?? '',
+                        description: ruleRef.description ?? '',
                         status: ruleRef.status ?? 'ACTIVE',
                     });
                     setClickEdit(true);
