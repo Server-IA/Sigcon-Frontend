@@ -10,7 +10,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, hi
         { regex: true, value: '', column: 'code:name' },
         { regex: true, value: '', column: 'name:name' },
         { regex: true, value: '', column: 'accountClass:name' },
-        { regex: true, value: '', column: 'hierarchyLevel:name' },
+        { regex: true, value: '', column: 'level:name' },
         { regex: true, value: '', column: 'nature:name' },
         { regex: true, value: '', column: 'status:name' },
     ]);
@@ -140,13 +140,13 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, hi
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={getFilter('hierarchyLevel:name')?.regex || false}
+                                                checked={getFilter('level:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 type="checkbox"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Búsqueda por coincidencia"
-                                                onChange={(e) => updateFilter('hierarchyLevel:name', 'regex', e.target.checked)}
+                                                onChange={(e) => updateFilter('level:name', 'regex', e.target.checked)}
                                                 disabled={!dataTableRef?.current}
                                                 aria-label="Buscar"
                                             />
@@ -155,8 +155,8 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, hi
                                             id="puc_filter_hierarchyLevel"
                                             label="Nivel jerárquico"
                                             options={hierarchyLevels}
-                                            value={selectValue('hierarchyLevel:name')}
-                                            onChange={(value) => updateFilter('hierarchyLevel:name', 'value', value.join(','))}
+                                            value={selectValue('level:name')}
+                                            onChange={(value) => updateFilter('level:name', 'value', value.join(','))}
                                             multiple={true}
                                         />
                                     </div>

@@ -7,15 +7,15 @@ import { useEffect, useState } from 'react';
 
 const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage, accountClasses, hierarchyLevels, accountNatures, accountStatuses }) => {
 
-    const [errors, setErrors]             = useState({});
+    const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [loading, setLoading]           = useState(false);
+    const [loading, setLoading] = useState(false);
     const [accountUpdated, setAccountUpdated] = useState({
         id: '',
         code: '',
         name: '',
         accountClass: '',
-        hierarchyLevel: '',
+        level: '',
         nature: '',
         status: 'ACTIVE',
         hasTransactions: false,
@@ -23,13 +23,13 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
 
     useEffect(() => {
         setAccountUpdated({
-            id:              account.id             ?? '',
-            code:            account.code           ?? '',
-            name:            account.name           ?? '',
-            accountClass:    account.accountClass   ?? '',
-            hierarchyLevel:  account.hierarchyLevel ?? '',
-            nature:          account.nature         ?? '',
-            status:          account.status         ?? 'ACTIVE',
+            id: account.id ?? '',
+            code: account.code ?? '',
+            name: account.name ?? '',
+            accountClass: account.accountClass ?? '',
+            level: account.level ?? '',
+            nature: account.nature ?? '',
+            status: account.status ?? 'ACTIVE',
             hasTransactions: account.hasTransactions ?? false,
         });
         setErrors({});
@@ -51,7 +51,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
             setErrorMessage('Por favor seleccione la clase de la cuenta');
             return;
         }
-        if (!accountUpdated.hierarchyLevel) {
+        if (!accountUpdated.level) {
             setErrorMessage('Por favor seleccione el nivel jerárquico');
             return;
         }
@@ -60,26 +60,26 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
             return;
         }
 
-        const url = base_url(['api', 'puc-catalog', accountUpdated.id]);
+        const url = base_url(['api', 'v1', 'chart-of-accounts', accountUpdated.id]);
+        const payload = {
+            code: accountUpdated.code,
+            name: accountUpdated.name,
+            accountClass: accountUpdated.accountClass,
+            level: accountUpdated.level,
+            nature: accountUpdated.nature,
+            status: accountUpdated.status,
+        };
         try {
             setLoading(true);
-            // TODO: descomentar cuando el endpoint esté disponible
-            // await fetchHelper.put(url, accountUpdated, {}, 1000);
-            // dataTableRef?.current?.ajax.reload();
-
-            // Temporal: actualizar fila en la tabla mientras no hay endpoint
-            dataTableRef?.current?.rows().every(function () {
-                if (this.data().id === accountUpdated.id) {
-                    this.data({ ...this.data(), ...accountUpdated }).draw(false);
-                }
-            });
+            await fetchHelper.put(url, payload, {}, 1000);
+            dataTableRef?.current?.ajax.reload();
 
             setAccount({
                 id: '',
                 code: '',
                 name: '',
                 accountClass: '',
-                hierarchyLevel: '',
+                level: '',
                 nature: '',
                 status: 'ACTIVE',
                 hasTransactions: false,
@@ -139,7 +139,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                                     label="Identificador"
                                     placeholder=""
                                     value={accountUpdated.id}
-                                    onChange={() => {}}
+                                    onChange={() => { }}
                                     disabled
                                     readOnly
                                 />
@@ -202,11 +202,11 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                         <div className="row">
                             <div className="col mb-6 mt-2">
                                 <InputSelectModal
-                                    id="puc_hierarchyLevel_update"
+                                    id="puc_level_update"
                                     label="Nivel jerárquico"
-                                    value={accountUpdated.hierarchyLevel}
-                                    onChange={(value) => setAccountUpdated({ ...accountUpdated, hierarchyLevel: value })}
-                                    error={errors.hierarchyLevel}
+                                    value={accountUpdated.level}
+                                    onChange={(value) => setAccountUpdated({ ...accountUpdated, level: value })}
+                                    error={errors.level}
                                     placeholder="Seleccionar nivel"
                                     options={hierarchyLevels}
                                     required

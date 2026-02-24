@@ -11,62 +11,31 @@ import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 
 const ACCOUNT_CLASSES = [
-    { id: 'ASSET',              name: 'Activo' },
-    { id: 'LIABILITY',          name: 'Pasivo' },
-    { id: 'EQUITY',             name: 'Patrimonio' },
-    { id: 'INCOME',             name: 'Ingresos' },
-    { id: 'EXPENSE',            name: 'Gastos' },
-    { id: 'COST_OF_SALES',      name: 'Costos de venta' },
+    { id: 'ASSET', name: 'Activo' },
+    { id: 'LIABILITY', name: 'Pasivo' },
+    { id: 'EQUITY', name: 'Patrimonio' },
+    { id: 'INCOME', name: 'Ingresos' },
+    { id: 'EXPENSE', name: 'Gastos' },
+    { id: 'COST_OF_SALES', name: 'Costos de venta' },
     { id: 'COST_OF_PRODUCTION', name: 'Costos de producción o de operación' },
-    { id: 'ORDER_DEBIT',        name: 'Cuentas de orden deudoras' },
-    { id: 'ORDER_CREDIT',       name: 'Cuentas de orden acreedoras' },
+    { id: 'ORDER_DEBIT', name: 'Cuentas de orden deudoras' },
+    { id: 'ORDER_CREDIT', name: 'Cuentas de orden acreedoras' },
 ];
 
 const HIERARCHY_LEVELS = [
-    { id: 'GROUP',    name: 'Grupo' },
+    { id: 'GROUP', name: 'Grupo' },
     { id: 'SUBGROUP', name: 'Subgrupo' },
+    { id: 'ACCOUNT', name: 'Cuenta' },
 ];
 
 const ACCOUNT_NATURES = [
-    { id: 'DEBIT',  name: 'Deudora' },
+    { id: 'DEBIT', name: 'Deudora' },
     { id: 'CREDIT', name: 'Acreedora' },
 ];
 
 const ACCOUNT_STATUSES = [
-    { id: 'ACTIVE',   name: 'Activa' },
+    { id: 'ACTIVE', name: 'Activa' },
     { id: 'INACTIVE', name: 'Inactiva' },
-];
-
-// TODO: reemplazar con llamada real cuando el endpoint esté disponible
-const dataFalse = [
-    {
-        id: 1, idPuc: null, code: 'CC001',
-        name: 'Centro de Costos Administrativo',
-        description: 'Gastos generales de oficina y administración',
-        accountClass: null, hierarchyLevel: null, nature: null,
-        status: 'ACTIVE', companyId: 1, hasTransactions: false,
-    },
-    {
-        id: 2, idPuc: null, code: 'CC002',
-        name: 'Centro de Costos Comercial',
-        description: 'Gastos del área de ventas y mercadeo',
-        accountClass: null, hierarchyLevel: null, nature: null,
-        status: 'ACTIVE', companyId: 1, hasTransactions: false,
-    },
-    {
-        id: 3, idPuc: null, code: 'CC003',
-        name: 'Centro de Costos Producción',
-        description: 'Gastos directos del proceso productivo',
-        accountClass: null, hierarchyLevel: null, nature: null,
-        status: 'ACTIVE', companyId: 1, hasTransactions: true,
-    },
-    {
-        id: 4, idPuc: null, code: 'CC004',
-        name: 'Centro de Costos Tecnología',
-        description: 'Gastos del área de sistemas e infraestructura',
-        accountClass: null, hierarchyLevel: null, nature: null,
-        status: 'INACTIVE', companyId: 1, hasTransactions: false,
-    },
 ];
 
 const IndexPUC = () => {
@@ -83,6 +52,7 @@ const IndexPUC = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
+    const [data, setData] = useState([]);
     const [clickEdit, setClickEdit] = useState(false);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
 
@@ -93,16 +63,16 @@ const IndexPUC = () => {
 
     const [account, setAccount] = useState({
         id: '',
-        idPuc: null,
         code: '',
         name: '',
         accountClass: '',
-        hierarchyLevel: '',
+        level: '',
         nature: '',
         status: 'ACTIVE',
+        hasTransactions: false,
     });
 
-    const url = ['chartOfAccounts', 'datatable'];
+    const url = ['api', 'v1', 'chart-of-accounts', 'search'];
 
     const actions = [
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
@@ -114,6 +84,7 @@ const IndexPUC = () => {
         { title: 'Código', data: 'code', name: 'code' },
         { title: 'Nombre', data: 'name', name: 'name' },
         { title: 'Clase', data: 'accountClass', name: 'accountClass', render: (val) => val ?? '-' },
+        { title: 'Nivel', data: 'level', name: 'level', render: (val) => val ?? '-' },
         { title: 'Naturaleza', data: 'nature', name: 'nature', render: (val) => val ?? '-' },
         {
             title: 'Estado', data: 'status', name: 'status',
@@ -144,13 +115,13 @@ const IndexPUC = () => {
         }
         setAccount({
             id: '',
-            idPuc: null,
             code: '',
             name: '',
             accountClass: '',
-            hierarchyLevel: '',
+            level: '',
             nature: '',
             status: 'ACTIVE',
+            hasTransactions: false,
         });
         modalCreateInstance.current.show();
     };
@@ -193,7 +164,7 @@ const IndexPUC = () => {
         const handler = function () {
             const action = $(this).data('action');
             const id = Number($(this).data('id'));
-            const accountRef = dataFalse.find(m => m.id === id);
+            const accountRef = data.find(m => m.id === id);
 
             if (!accountRef) {
                 console.warn('Cuenta PUC no encontrada', id);
@@ -204,12 +175,10 @@ const IndexPUC = () => {
                 case 'edit':
                     setAccount({
                         id: accountRef.id ?? '',
-                        idPuc: accountRef.idPuc ?? null,
                         code: accountRef.code ?? '',
                         name: accountRef.name ?? '',
-                        description: accountRef.description ?? '',
                         accountClass: accountRef.accountClass ?? '',
-                        hierarchyLevel: accountRef.hierarchyLevel ?? '',
+                        level: accountRef.level ?? '',
                         nature: accountRef.nature ?? '',
                         status: accountRef.status ?? 'ACTIVE',
                         hasTransactions: accountRef.hasTransactions ?? false,
@@ -237,21 +206,19 @@ const IndexPUC = () => {
                             showCancelButton: true,
                             confirmButtonText: 'Eliminar',
                             cancelButtonText: 'Cancelar',
-                            preConfirm: (motivo) => {
-                                if (!motivo || motivo.trim() === '') {
-                                    window.Swal.showValidationMessage('No ingresó el motivo de eliminación');
+                            preConfirm: (reason) => {
+                                if (!reason || reason.trim() === '') {
+                                    window.Swal.showValidationMessage('Debe ingresar el motivo de eliminación');
                                 }
-                                return motivo;
+                                return reason;
                             }
-                        }).then(async (motivo) => {
-                            if (!motivo.isConfirmed) return;
+                        }).then(async (result) => {
+                            if (!result.isConfirmed) return;
 
                             try {
-                                // TODO: descomentar cuando el endpoint esté disponible
-                                // const deleteUrl = base_url(['chartOfAccounts', id]);
-                                // await fetchHelper.delete(deleteUrl, { deletionReason: motivo.value }, {}, 500, false);
-                                // dataTableRef?.current?.ajax.reload();
-
+                                const deleteUrl = base_url(['api', 'v1', 'chart-of-accounts', id]);
+                                await fetchHelper.delete(deleteUrl, { reason: result.value }, {}, 500, false);
+                                dataTableRef?.current?.ajax.reload();
                                 setMessage({
                                     message: 'Cuenta PUC eliminada exitosamente',
                                     type: 'success',
@@ -280,7 +247,7 @@ const IndexPUC = () => {
 
         table.on('click', '.action-btn', handler);
         return () => { table.off('click', '.action-btn', handler); };
-    }, []);
+    }, [data]);
 
     return (
         <>
@@ -298,10 +265,10 @@ const IndexPUC = () => {
                         method='POST'
                         buttons={buttons}
                         title='Catálogo PUC'
+                        setData={setData}
                         search={search}
                         setSearch={setSearch}
                         filtered={true}
-                        data={dataFalse}
                     />
                 </div>
 

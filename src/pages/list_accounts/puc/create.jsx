@@ -31,7 +31,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
             setErrorMessage('Por favor seleccione la clase de la cuenta');
             return;
         }
-        if (!account.hierarchyLevel) {
+        if (!account.level) {
             setErrorMessage('Por favor seleccione el nivel jerárquico');
             return;
         }
@@ -40,25 +40,28 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
             return;
         }
 
-        const url = base_url(['api', 'puc-catalog']);
+        const url = base_url(['api', 'v1', 'chart-of-accounts']);
+        const payload = {
+            code: account.code,
+            name: account.name,
+            accountClass: account.accountClass,
+            level: account.level,
+            nature: account.nature,
+        };
         try {
             setLoading(true);
-            // TODO: descomentar cuando el endpoint esté disponible
-            // await fetchHelper.post(url, account, {}, 1000);
-            // dataTableRef?.current?.ajax.reload();
-
-            // Temporal: insertar fila en la tabla mientras no hay endpoint
-            dataTableRef?.current?.row.add({ ...account, id: Date.now() }).draw();
+            await fetchHelper.post(url, payload, {}, 1000);
+            dataTableRef?.current?.ajax.reload();
 
             setAccount({
                 id: '',
-                idPuc: null,
                 code: '',
                 name: '',
                 accountClass: '',
-                hierarchyLevel: '',
+                level: '',
                 nature: '',
                 status: 'ACTIVE',
+                hasTransactions: false,
             });
 
             modalInstance?.current?.hide();
@@ -155,11 +158,11 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                         <div className="row">
                             <div className="col mb-6 mt-2">
                                 <InputSelectModal
-                                    id="puc_hierarchyLevel"
+                                    id="puc_level"
                                     label="Nivel jerárquico"
-                                    value={account.hierarchyLevel}
-                                    onChange={(value) => setAccount({ ...account, hierarchyLevel: value })}
-                                    error={errors.hierarchyLevel}
+                                    value={account.level}
+                                    onChange={(value) => setAccount({ ...account, level: value })}
+                                    error={errors.level}
                                     placeholder="Seleccionar nivel"
                                     options={hierarchyLevels}
                                     required
