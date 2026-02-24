@@ -18,7 +18,7 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
         setOptionMenus(optionMenus.map(parent => ({
             id: parent.id,
             name: parent.name,
-        })));
+        })).filter(option => option.id != menu.id));
     }, [menu]);
     
 
