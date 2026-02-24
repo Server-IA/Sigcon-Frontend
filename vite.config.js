@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
       env.VITE_ENVIRONMENT == 'local'
         ? '/'
         : env.VITE_ENVIRONMENT == 'development'
-        ? '/dev/sigcon/' 
+        ? '/sigcon/dev/' 
         : '/sigcon/',
     plugins: [
       react()
