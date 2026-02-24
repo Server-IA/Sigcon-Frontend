@@ -200,7 +200,7 @@ const UpdatedCuentaContable = ({
                                 <div className="col mb-6 mt-2">
                                     <InputModal
                                         type="text"
-                                        id="id"
+                                        id="edit_id"
                                         label="ID de Cuenta"
                                         value={cuentaUpdated.id}
                                         onChange={() => {}}
@@ -217,7 +217,7 @@ const UpdatedCuentaContable = ({
                                     {renderFieldWithTooltip(
                                         readOnlyFields.pucId,
                                         <InputSelectModal
-                                            id="pucId"
+                                            id="edit_pucId"
                                             label="Cuenta PUC"
                                             value={cuentaUpdated.pucId}
                                             onChange={(value) => {
@@ -247,7 +247,7 @@ const UpdatedCuentaContable = ({
                                         readOnlyFields.customName,
                                         <InputModal
                                             type="text"
-                                            id="customName"
+                                            id="edit_customName"
                                             label="Nombre Personalizado"
                                             value={cuentaUpdated.customName}
                                             onChange={(e) => setCuentaUpdated({ 
@@ -267,7 +267,7 @@ const UpdatedCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="baseCurrency"
+                                        id="edit_baseCurrency"
                                         label="Moneda Base"
                                         value={cuentaUpdated.baseCurrency}
                                         onChange={(value) => setCuentaUpdated({ 
@@ -291,7 +291,7 @@ const UpdatedCuentaContable = ({
                                     {renderFieldWithTooltip(
                                         readOnlyFields.costCenterId,
                                         <InputSelectModal
-                                            id="costCenterId"
+                                            id="edit_costCenterId"
                                             label="Centro de Costos"
                                             value={cuentaUpdated.costCenterId}
                                             onChange={(value) => setCuentaUpdated({ 
@@ -316,7 +316,7 @@ const UpdatedCuentaContable = ({
                                     {renderFieldWithTooltip(
                                         readOnlyFields.depreciationRuleId,
                                         <InputSelectModal
-                                            id="depreciationRuleId"
+                                            id="edit_depreciationRuleId"
                                             label="Regla de Depreciación"
                                             value={cuentaUpdated.depreciationRuleId}
                                             onChange={(value) => setCuentaUpdated({ 
@@ -339,7 +339,7 @@ const UpdatedCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="nature"
+                                        id="edit_nature"
                                         label="Naturaleza de la Cuenta"
                                         value={cuentaUpdated.nature}
                                         onChange={(value) => setCuentaUpdated({ 
@@ -361,7 +361,7 @@ const UpdatedCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="status"
+                                        id="edit_status"
                                         label="Estado"
                                         value={cuentaUpdated.status}
                                         onChange={(value) => setCuentaUpdated({ 
