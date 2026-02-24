@@ -1,6 +1,6 @@
 export const base_url = (array = [], get = {}) => {
 
-    let url = import.meta.env.VITE_API_URL || 'https://api.inmero.co/sigcon/dev/';
+    let url = `${import.meta.env.VITE_API_URL || 'https://api.inmero.co/sigcon/dev/'}`;
 
     var path = array.length > 0 ? array.join('/') : ''; // Construir el path
     var getData = Object.entries(get)
@@ -8,9 +8,9 @@ export const base_url = (array = [], get = {}) => {
         .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`) // Codificar valores
         .join('&');
 
-    const urlFinal = getData ? `${url}${path}?${getData}` : `${url}${path}`;
+    const urlFinal = getData ? `${url}/${path}?${getData}` : `${url}/${path}`;
   
-    return urlFinal;
+    return urlFinal.replace(/\/+/g, '/');
 }
 
 

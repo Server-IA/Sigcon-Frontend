@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import { base_redirect_path, base_url } from "../../utils/functions";
 import { fetchHelper } from "../../utils/fetch";
 
+import avatar from '../../../public/assets/img/avatars/1.png';
+
 // import { ComponentsFinal } from "../../utils/map_menu";
 
 const NavHorizontal = ({modules}) => {
@@ -169,10 +171,10 @@ const NavHorizontal = ({modules}) => {
                         <a className="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
                             <div className="avatar avatar-online">
                                 <img
-                                    // onError={(e) => {
-                                    //     e.target.src = '%BASE_URL%assets/img/avatars/3.png';
-                                    // }}
-                                    src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '%BASE_URL%assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                    onError={(e) => {
+                                        e.target.src = avatar;                                        
+                                    }}
+                                    src={base_url(['users/avatars', user?.avatar ?? ''])} alt="avatar" className="rounded-circle" />
                             </div>
                         </a>
                         <ul className="dropdown-menu dropdown-menu-end">
@@ -182,10 +184,11 @@ const NavHorizontal = ({modules}) => {
                                         <div className="flex-shrink-0 me-2">
                                             <div className="avatar avatar-online">
                                                 <img
-                                                    // onError={(e) => {
-                                                    //     e.target.src = '%BASE_URL%assets/img/avatars/1.png';
-                                                    // }}
-                                                    src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '%BASE_URL%assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                                    onError={(e) => {
+                                                        e.target.src = avatar;
+                                                        console.warn('Error al capturar el avatar');
+                                                    }}
+                                                    src={base_url(['users/avatars', user?.avatar ?? ''])} alt="avatar" className="rounded-circle" />
                                             </div>
                                         </div>
                                         <div className="flex-grow-1">
