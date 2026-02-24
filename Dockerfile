@@ -4,9 +4,7 @@ WORKDIR /app
 
 # 👇 Convertirlas en variables del sistema
 ENV VITE_ENVIRONMENT=local
-ENV VITE_API_URL_LOCAL=http://localhost:8080/
-ENV VITE_API_URL_DEVELOPMENT=https://api.inmero.co/dev/sigcon/
-ENV VITE_API_URL_PRODUCTION=https://api.inmero.co/sigcon/
+ENV VITE_API_URL=https://api.inmero.co/sigcon/dev
 
 COPY package*.json ./
 RUN npm install
