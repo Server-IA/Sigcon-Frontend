@@ -5,11 +5,48 @@ import PerfilPage from "../pages/perfil/index";
 import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
 
+<<<<<<< Updated upstream
+=======
+import IndexRoles from "../pages/parametrizacion/roles/index";
+import IndexParameters from "../pages/parametrizacion/parameters/index";
+import IndexCentrosCosto from "../pages/parametrizacion/centros-costo/index";
+import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
+>>>>>>> Stashed changes
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 import { base_url } from "./functions";
+<<<<<<< Updated upstream
 import { fetchHelper } from "./fetch"; 
+=======
+import { fetchHelper } from "./fetch";
+
+//aca tengo que agregar los nuevos modulos que cargue de parametrizacion
+// export const COMPONENT_MAP = {
+//     HOME: Home,
+//     PERFIL: PerfilPage,
+//     MODULOS: IndexModules,
+//     MENUS: IndexMenus,
+//     PERMISSIONS: PermissionsIndex,
+//     USERS: IndexUsers,
+//     ROLES: IndexRoles,
+//     PARAMETROS: IndexParameters,
+//     MENUSPERMISSIONS: MenuPermissionIndex
+// };
+
+export const COMPONENT_MAP = [
+    // { id: "HOME", name: "Dashboard", component: Home },
+    { id: "PERFIL", name: "Perfil", component: PerfilPage },
+    { id: "MODULOS", name: "Módulos", component: IndexModules },
+    { id: "MENUS", name: "Menus", component: IndexMenus },
+    { id: "PERMISSIONS", name: "Permisos", component: PermissionsIndex },
+    { id: "USERS", name: "Usuarios", component: IndexUsers },
+    { id: "ROLES", name: "Roles", component: IndexRoles },
+    { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
+    { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
+    { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
+]
+>>>>>>> Stashed changes
 
 export const COMPONENT_MAP = {
     HOME: Home,
