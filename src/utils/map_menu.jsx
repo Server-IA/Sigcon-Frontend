@@ -10,6 +10,7 @@ import IndexUsers from "../pages/parametrizacion/users/index";
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
 import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
+import IndexCuentasContables from "../pages/parametrizacion/cuentas-contables/index";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -39,6 +40,7 @@ export const COMPONENT_MAP = [
     { id: "ROLES", name: "Roles", component: IndexRoles },
     { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
     { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
+    { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
 ]
 
 export const getMenu = async () => {
