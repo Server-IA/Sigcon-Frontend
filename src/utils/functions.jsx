@@ -1,20 +1,6 @@
 export const base_url = (array = [], get = {}) => {
 
-    let url = '';
-    
-    switch(import.meta.env.VITE_ENVIRONMENT){
-        case 'local':
-            url = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080/';
-            break;
-        case 'development':
-            url = import.meta.env.VITE_API_URL_DEVELOPMENT || 'https://api.inmero.co/dev/sigcon/';
-            break;
-        case 'production':
-        default:
-            url = import.meta.env.VITE_API_URL_PRODUCTION || 'https://api.inmero.co/sigcon/';
-            break;
-    }
-
+    let url = import.meta.env.VITE_API_URL || 'https://api.inmero.co/sigcon/dev/';
 
     var path = array.length > 0 ? array.join('/') : ''; // Construir el path
     var getData = Object.entries(get)
