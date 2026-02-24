@@ -2,6 +2,8 @@ import { base_redirect_path } from './functions';
 
 export const request = async (url, data = {}, method = 'POST', time = 500, headers = {}, showErrorAlert, useToken) => {
 
+    console.log('url', url);
+
     if (useToken) {
         const token = localStorage.getItem('token');
         if (token) {
