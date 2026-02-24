@@ -1,16 +1,23 @@
 export const base_url = (array = [], get = {}) => {
 
-    let url = `${import.meta.env.VITE_API_URL || 'https://api.inmero.co/sigcon/dev/'}`;
+    let base = `${import.meta.env.VITE_API_URL || 'https://api.inmero.co/sigcon/dev/'}`;
 
-    var path = array.length > 0 ? array.join('/') : ''; // Construir el path
-    var getData = Object.entries(get)
-        .filter(([_, value]) => value !== undefined && value !== null && value !== '') // Filtrar valores vacíos
-        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`) // Codificar valores
+    // Quitar slash final de la base
+    base = base.replace(/\/+$/, '');
+    
+     // Construir path sin slash inicial
+    const path = array.length > 0
+        ? array.join('/').replace(/^\/+/, '')
+        : '';
+
+    const query = Object.entries(get)
+        .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
         .join('&');
 
-    const urlFinal = getData ? `${url}/${path}?${getData}` : `${url}/${path}`;
-  
-    return urlFinal.replace(/\/+/g, '/');
+    const urlFinal = path ? `${base}/${path}` : base;
+
+    return query ? `${urlFinal}?${query}` : urlFinal;
 }
 
 
