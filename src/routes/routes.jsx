@@ -9,6 +9,8 @@ const RecoveryPassword = lazy(() => import("../pages/auth/RecoveryPasswordPage")
 const Page404 = lazy(() => import("../pages/errors/page_404"));
 const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
 
+import PageLoad from '../pages/errors/page_load';
+
 import { useState, useEffect, Suspense } from 'react';
 import { getMenu } from '../utils/map_menu';
 
@@ -53,7 +55,7 @@ export const RenderRoutes = () => {
                 <Route
                     path="/login"
                     element={
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<PageLoad />}>
                             <Login />
                         </Suspense>
                     }
@@ -62,7 +64,7 @@ export const RenderRoutes = () => {
                 <Route
                     path="/forgot-password"
                     element={
-                        <Suspense fallback={null}>
+                        <Suspense fallback={PageLoad}>
                             <RecoveryPassword />
                         </Suspense>
                     }
@@ -70,7 +72,7 @@ export const RenderRoutes = () => {
                 <Route
                     path="/reset-password/:token"
                     element={
-                        <Suspense fallback={null}>
+                        <Suspense fallback={PageLoad}>
                             <ResetPassword />
                         </Suspense>
                     }
@@ -88,7 +90,7 @@ export const RenderRoutes = () => {
             }
 
             <Route path="*" element={
-                <Suspense fallback={null}>
+                <Suspense fallback={PageLoad}>
                     <Page404 />
                 </Suspense>
             } />

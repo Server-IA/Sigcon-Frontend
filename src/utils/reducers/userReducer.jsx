@@ -17,7 +17,8 @@ export default function userReducer(state = initialState, action) {
             localStorage.removeItem('token');
             return {
                 ...state,
-                user: null
+                user: null,
+                token: null
             };
         case "GET_USER":
             return {
