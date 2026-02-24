@@ -9,13 +9,14 @@ import IndexUsers from "../pages/parametrizacion/users/index";
 
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
+import IndexCentrosCosto from "../pages/parametrizacion/centros-costo/index";
 import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
 import IndexCuentasContables from "../pages/parametrizacion/cuentas-contables/index";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 import { base_url } from "./functions";
-import { fetchHelper } from "./fetch";
+import { fetchHelper } from "./fetch"; 
 
 //aca tengo que agregar los nuevos modulos que cargue de parametrizacion
 // export const COMPONENT_MAP = {
@@ -39,6 +40,7 @@ export const COMPONENT_MAP = [
     { id: "USERS", name: "Usuarios", component: IndexUsers },
     { id: "ROLES", name: "Roles", component: IndexRoles },
     { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
+    { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
     { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
     { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
 ]
