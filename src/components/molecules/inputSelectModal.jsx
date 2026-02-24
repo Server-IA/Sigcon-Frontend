@@ -20,7 +20,10 @@ const InputSelectModal = ({ id, label, value, onChange, error, options, placehol
             dropdownParent: $select.parent(), // clave si está en modal
             placeholder: placeholder || 'Seleccione una opción',
             width: '100%',
-            allowClear: required ? false : clearable
+            allowClear: required ? false : clearable,
+            language: {
+                noResults: () => 'No se encontraron resultados'
+            }
         });
 
         const handleChange = function () {

@@ -13,7 +13,7 @@ import { fetchHelper } from '../../utils/fetch';
 const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title, setData, filtered = false, search = {
     value: '',
     checked: true,
-}, setSearch = () => {}, data = []}) => {
+}, setSearch = () => {}, data = [], lengthMenu = [10, 25, 50, 75, 100]}) => {
     
     const token = useSelector(state => state.user.token);
 
@@ -22,7 +22,7 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
 
         const config = {
             dom: 'r<"row"<"col-sm-12 col-md-12 col-lg-4 mt-3 mt-md-0 d-flex justify-content-center justify-content-lg-start justify-content-md-center align-items-center"l><"col-sm-12 col-md-12 col-lg-8 d-flex justify-content-center justify-content-lg-end justify-content-md-center align-items-center"<"dt-action-buttons text-end pt-0 pt-md-0"B>>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-            lengthMenu: [10, 25, 50, 75, 100],
+            lengthMenu: lengthMenu,
             columns: columns,
             destroy: true,
             responsive: false,
