@@ -5,50 +5,20 @@ import { useState, useRef, useEffect } from "react";
 import { fetchHelper } from "../../../utils/fetch";
 import { base_url } from "../../../utils/functions";
 
-const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuUpdate }) => {
+const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuUpdate, modules, parents, components }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
-    const [modules, setModules] = useState([]);
-    const [menusPrincipales, setMenusPrincipales] = useState([]);
+    const [optionMenus, setOptionMenus] = useState([]);
 
     useEffect(() => {
-        const getModules = async () => {
-            const url = base_url(['api', 'modules']);
-            const body = {
-                length: -1,
-            }
-            const {data} = await fetchHelper.post(url, body, {}, 0);
-            setModules(
-                data.map(module => ({
-                    id: module.id,
-                    name: module.name,
-                }))
-            );
-        }
+        const optionMenus = parents.filter(parent => parent.moduleId == menu.moduleId);
 
-        const getMenusPrincipales = async () => {
-            const url = base_url(['api', 'menus', 'datatable']);
-            const body = {
-                length: -1,
-                parentId: -1,
-            }
-            const {data} = await fetchHelper.post(url, body, {}, 0);
-            setMenusPrincipales(
-                data.map(menu => ({
-                    id: menu.id,
-                    name: menu.label,
-                }))
-            );
-        }
-        
-        getModules();
-        getMenusPrincipales();
-    }, []);
-
-    useEffect(() => {
-        console.log(["Menu updated: ", menu]);
+        setOptionMenus(optionMenus.map(parent => ({
+            id: parent.id,
+            name: parent.name,
+        })).filter(option => option.id != menu.id));
     }, [menu]);
     
 
@@ -77,7 +47,6 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
             setErrorMessage('');
 
         }catch (error) {
-            console.log(error.msg);
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
@@ -167,16 +136,15 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
 
                     <div className="row">
                         <div className="col mb-6 mt-2">
-                            <InputModal
-                                type="select"
+                            <InputSelectModal
                                 id="component_updated"
                                 label="Componente del menu"
                                 value={menu.component}
-                                onChange={(e) => setMenu({ ...menu, component: e.target.value })}
+                                onChange={(value) => setMenu({ ...menu, component: value })}
                                 error={errors.component}
                                 placeholder="Componente del menu"
-                            >
-                            </InputModal>
+                                options={components}
+                            />
                         </div>
                         <div className="col mb-6 mt-2">
                             <InputSelectModal
@@ -200,7 +168,20 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 onChange={(value) => setMenu({ ...menu, parentId: value })}
                                 error={errors.parentId}
                                 placeholder="Menu principal"
-                                options={menusPrincipales}
+                                options={optionMenus}
+                                clearable={true}
+                            />
+                        </div>
+
+                        <div className="col mb-6 mt-2">
+                            <InputSelectModal
+                                id="status_updated"
+                                label="Estado del menu"
+                                value={menu.status}
+                                onChange={(value) => setMenu({ ...menu, status: value })}
+                                error={errors.status}
+                                placeholder="Estado del menu"
+                                options={[{ label: 'Activo', id: 'ACTIVE' }, { label: 'Inactivo', id: 'INACTIVE' }]}
                             />
                         </div>
                     </div>

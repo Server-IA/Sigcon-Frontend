@@ -1,13 +1,65 @@
 import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
 import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { Link } from "react-router-dom";
+import { base_redirect_path, base_url } from "../../utils/functions";
+import { fetchHelper } from "../../utils/fetch";
 
-const NavHorizontal = () => {
+import avatar from '../../../public/assets/img/avatars/1.png';
+
+// import { ComponentsFinal } from "../../utils/map_menu";
+
+const NavHorizontal = ({modules}) => {
+
+    // const rutaPerfil = ComponentsFinal.find(component => component.id === "PERFIL")?.path;
+
+    // console.log(ComponentsFinal);
 
     const user = useSelector(state => state.user).user;
+    const modulos = useSelector(state => state.modules).modules;
+
+    const urlPerfil = `${
+        modulos.find(modulo => modulo.id === 1)?.url
+    }/${modulos.find(modulo => modulo.id === 1)?.menus.find(menu => menu.componentName === "PERFIL")?.path}`;
+
+    const dispatch = useDispatch();
+    const handleLogout = async () => {
+
+        window.Swal.fire({
+            title: 'Cerrar sesión',
+            text: '¿Estás seguro de querer cerrar sesión?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: user?.parameters?.color_primary || '#3085d6',
+            cancelButtonColor: user?.parameters?.color_danger || '#d33',
+            confirmButtonText: 'Cerrar sesión',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'btn btn-primary waves-effect',
+                cancelButton: 'btn btn-secondary waves-effect',
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+
+                const url = base_url(['auth/logout']);
+
+                await fetchHelper.post(url, {}, {}, 500);
+                dispatch({ type: "LOGOUT" });
+                window.location.href = base_redirect_path(true);
+                window.Swal.fire({
+                    title: 'Cerrando sesión',
+                    text: 'Cerrando sesión...',
+                    icon: 'success',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                });
+            }
+        });
+    }
 
     useEffect(() => {
-        console.log(user);
+        console.log(modules);
+        console.log(modulos);
     }, [user]);
 
     return <>
@@ -117,68 +169,61 @@ const NavHorizontal = () => {
                     
                     <li className="nav-item navbar-dropdown dropdown-user dropdown">
                         <a className="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
-                        <div className="avatar avatar-online">
-                            <img src="../../assets/img/avatars/1.png" alt="avatar" className="rounded-circle" />
-                        </div>
+                            <div className="avatar avatar-online">
+                                <img
+                                    onError={(e) => {
+                                        e.target.src = avatar;                                        
+                                    }}
+                                    src={base_url(['users/avatars', user?.avatar ?? ''])} alt="avatar" className="rounded-circle" />
+                            </div>
                         </a>
                         <ul className="dropdown-menu dropdown-menu-end">
                             <li>
-                                <a className="dropdown-item" href="pages-account-settings-account.html">
-                                <div className="d-flex">
-                                    <div className="flex-shrink-0 me-2">
-                                        <div className="avatar avatar-online">
-                                            <img src="../../assets/img/avatars/1.png" alt="avatar" className="rounded-circle" />
+                                <Link to={urlPerfil} className="dropdown-item">
+                                    <div className="d-flex">
+                                        <div className="flex-shrink-0 me-2">
+                                            <div className="avatar avatar-online">
+                                                <img
+                                                    onError={(e) => {
+                                                        e.target.src = avatar;
+                                                        console.warn('Error al capturar el avatar');
+                                                    }}
+                                                    src={base_url(['users/avatars', user?.avatar ?? ''])} alt="avatar" className="rounded-circle" />
+                                            </div>
+                                        </div>
+                                        <div className="flex-grow-1">
+                                            <span className="fw-medium d-block small">{user?.name ?? ''} {user?.last_name ?? ''}</span>
+                                            <small className="text-muted">{user?.email ?? ''}</small>
                                         </div>
                                     </div>
-                                    <div className="flex-grow-1">
-                                        <span className="fw-medium d-block small">{user.name ?? ''} {user.last_name ?? ''}</span>
-                                        <small className="text-muted">{user.email ?? ''}</small>
-                                    </div>
-                                </div>
-                                </a>
-                            </li>
-                            <li>
-                                <div className="dropdown-divider"></div>
-                            </li>
-                            <li>
-                                <Link className="dropdown-item" to="/dashboard/perfil">
-                                    <i className="ri-user-3-line ri-22px me-3"></i><span className="align-middle">Perfil / Mis datos</span>
                                 </Link>
                             </li>
                             <li>
-                                <a className="dropdown-item" href="pages-account-settings-account.html">
-                                    <i className="ri-settings-4-line ri-22px me-3"></i><span className="align-middle">Settings</span>
-                                </a>
+                                <div className="dropdown-divider"></div>
                             </li>
-                            <li>
-                                <a className="dropdown-item" href="pages-account-settings-billing.html">
-                                    <span className="d-flex align-items-center align-middle">
-                                        <i className="flex-shrink-0 ri-file-text-line ri-22px me-3"></i>
-                                        <span className="flex-grow-1 align-middle">Billing</span>
-                                        <span className="flex-shrink-0 badge badge-center rounded-pill bg-danger">4</span>
-                                    </span>
-                                </a>
-                            </li>
+
+                            {
+                                modules?.filter((module) => module?.id == 1).map((module) => {
+                                    return module?.menus?.map((menu) => {
+                                        return (
+                                            <li key={menu.id}>
+                                                <Link to={`${module.url}/${menu.path}`} className="dropdown-item">
+                                                    <i className={`${menu.icon && menu.icon != '' ? menu.icon : 'ri-settings-5-fill'} ri-22px me-3`}></i><span className="align-middle">{menu.label}</span>
+                                                </Link>
+                                            </li>
+                                        )
+                                    })
+                                })
+                            }
                             <li>
                                 <div className="dropdown-divider"></div>
                             </li>
                             <li>
-                                <a className="dropdown-item" href="pages-pricing.html">
-                                    <i className="ri-money-dollar-circle-line ri-22px me-3"></i>
-                                    <span className="align-middle">Pricing</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a className="dropdown-item" href="pages-faq.html">
-                                    <i className="ri-question-line ri-22px me-3"></i><span className="align-middle">FAQ</span>
-                                </a>
-                            </li>
-                            <li>
                                 <div className="d-grid px-4 pt-2 pb-1">
-                                    <a className="btn btn-sm btn-danger d-flex" href="auth-login-cover.html" target="_blank">
+                                    <button className="btn btn-sm btn-danger d-flex" onClick={handleLogout}>
                                         <small className="align-middle">Logout</small>
                                         <i className="ri-logout-box-r-line ms-2 ri-16px"></i>
-                                    </a>
+                                    </button>
                                 </div>
                             </li>
                         </ul>

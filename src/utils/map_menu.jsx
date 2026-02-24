@@ -1,25 +1,22 @@
 import Home from "../pages/home/index";
-import PerfilPage from "../pages/perfil/index";
+import PerfilPage from "../pages/parametrizacion/perfil/index";
 
 // Parametrizacion
 import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
+import PermissionsIndex from "../pages/parametrizacion/permissions/index"
+import IndexUsers from "../pages/parametrizacion/users/index";
 
-<<<<<<< Updated upstream
-=======
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
 import IndexCentrosCosto from "../pages/parametrizacion/centros-costo/index";
 import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
->>>>>>> Stashed changes
+import IndexCuentasContables from "../pages/parametrizacion/cuentas-contables/index";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 import { base_url } from "./functions";
-<<<<<<< Updated upstream
 import { fetchHelper } from "./fetch"; 
-=======
-import { fetchHelper } from "./fetch";
 
 //aca tengo que agregar los nuevos modulos que cargue de parametrizacion
 // export const COMPONENT_MAP = {
@@ -45,25 +42,20 @@ export const COMPONENT_MAP = [
     { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
     { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
     { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
+    { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
 ]
->>>>>>> Stashed changes
 
-export const COMPONENT_MAP = {
-    HOME: Home,
-    PERFIL: PerfilPage,
-    MODULOS: IndexModules,
-    MENUS: IndexMenus
-};
 export const getMenu = async () => {
-    
     const modules = [];
+    const componentsFinal = [];
     const url = base_url(['api', 'modules', 'menu']);
-    const response = await fetchHelper.get(url, {}, 0);
+    const {data, error} = await fetchHelper.get(url, {}, 0);
 
     modules.push({
         id: 0,
         name: "Dashboard",
         url: "dashboard",
+        icon: "ri-home-smile-line",
         position: 0,
         menus: [
             {
@@ -71,31 +63,40 @@ export const getMenu = async () => {
                 label: "Home",
                 path: "",
                 position: 0,
+                icon: "ri-home-smile-line",
                 childrens: [],
-                component: COMPONENT_MAP.HOME
-            },
-            {
-                id: 1,
-                label: "Perfil",
-                path: "perfil",
-                position: 1,
-                childrens: [],
-                component: COMPONENT_MAP.PERFIL
+                component: Home,
+                componentName: "Home"
             }
         ]
     })
 
-    if (!response?.error) {
-        modules.push(...response.map(modules => ({
+    if (!error) {
+        modules.push(...data?.map(modules => ({
             ...modules,
-            menus: buildMenuTree(modules.menus.map(menu => ({
+            menus: buildMenuTree(modules?.menus?.map(menu => ({
                 ...menu,
-                component: COMPONENT_MAP[menu.component] || PageMaintenance
+                componentName: menu?.component,
+                component: COMPONENT_MAP.find(component => component.id === menu?.component)?.component || PageMaintenance,
             })))
         })));
     }
 
-    return modules;
+    // 🔹 Clonar sin la propiedad "component"
+    const removeComponentRecursively = (menus) =>
+        menus?.map(({ component, childrens, ...rest }) => ({
+            ...rest,
+            childrens: removeComponentRecursively(childrens)
+        }));
+
+    const modulesWithoutComponents = modules.map(module => ({
+        ...module,
+        menus: removeComponentRecursively(module.menus)
+    }));
+
+    componentsFinal.push(...modulesWithoutComponents);
+
+    return {modules, componentsFinal};
 }
 
 const buildMenuTree = (menus) => {

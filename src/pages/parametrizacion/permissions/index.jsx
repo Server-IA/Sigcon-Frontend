@@ -1,0 +1,258 @@
+import { useState, useRef, useEffect } from "react";
+import UpdatedPermission from "./updated";
+import CreatedPermission from "./create";
+import FilterPermission from "./filter";
+
+import DataTableReference from "../../../components/organism/DataTable";
+import { fetchHelper } from "../../../utils/fetch";
+import { base_url } from "../../../utils/functions";
+import AlertPage from "../../../components/molecules/AlertPage";
+
+const IndexPermissions = () => {
+
+    const [data, setData] = useState([]);
+    const tableRef = useRef(null);
+    const dataTableRef = useRef(null);
+    const [clickEdit, setClickEdit] = useState(false);
+    const [permissionCreate, setPermissionCreate] = useState(false);
+    const [permissionUpdate, setPermissionUpdate] = useState(false);
+    const [permissionDelete, setPermissionDelete] = useState(false);
+    const [permissionError, setPermissionError] = useState(false);
+
+    const [types] = useState([
+        { id: "READ", name: "Lectura" },
+        { id: "CREATE", name: "Creación" },
+        { id: "UPDATE", name: "Actualización" },
+        { id: "DELETE", name: "Eliminación" }
+    ]);
+
+    const [search, setSearch] = useState({value: '', checked: true});
+
+    const [permission, setPermission] = useState({
+        id: '',
+        name: '',
+        code: '',
+        type: '',
+        description: '',
+        roleIds: [],
+        moduleId: '',
+    });
+
+    const [modules, setModules] = useState([]);
+
+    const modalCreateRef = useRef(null);
+    const modalCreateInstance = useRef(null);
+
+    const modalUpdateRef = useRef(null);
+    const modalUpdateInstance = useRef(null);
+
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
+
+    const [errors, setErrors] = useState({});
+    const [errorMessage, setErrorMessage] = useState('');
+
+    const columns = [
+        { 
+            title: 'ID', 
+            data: 'id',
+            width: '80px',
+            searchable: false,
+        },
+        { 
+            title: 'Nombre del Permiso', 
+            data: 'name',
+            render: (name) => `<span class="fw-semibold">${name}</span>`
+        },
+        {
+            title: 'Módulo',
+            data: 'module.name',
+            name: 'module.name',
+        },
+        {
+            title: 'Código del Permiso',
+            data: 'code',
+        },
+        {
+            title: 'Descripción del Permiso',
+            data: 'description'
+        },
+        {
+            title: 'Tipo de Permiso',
+            data: 'type',
+            name: 'type',
+            render: (type) => types.find(t => t.id === type)?.name
+        },
+        {
+            title: 'Acciones', 
+            data: 'id',
+            orderable: false,
+            searchable: false,
+            width: '100px',
+            render: (id) => `
+                <div class="d-flex gap-1 justify-content-center">
+                    <button class="btn btn-sm btn-label-primary action-btn"
+                        data-action="edit"
+                        data-id="${id}"
+                        title="Editar">
+                        <i class="ri-edit-line"></i>
+                    </button>
+                </div>
+            `
+        },
+    ];
+
+    const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-outline-primary waves-effect mx-2 my-2',
+            action: function () {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                }
+                filterInstance.current.show();
+            }
+        },
+        {
+            text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Permiso</span>',
+            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
+            action: function () {
+                openModalCreate();
+            }
+        }
+    ];
+
+    const openModalCreate = () => {
+        if (!modalCreateInstance.current) {
+            modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
+        }
+        setPermission({ id: '', name: '', code: '', type: '', description: '', roleIds: [], moduleId: '' });
+        modalCreateInstance.current.show();
+        setErrorMessage('');
+        setErrors({});
+    };
+
+    const openModalUpdate = () => {
+        if (!modalUpdateInstance.current) {
+            modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
+        }
+        modalUpdateInstance.current.show();
+        setErrorMessage('');
+        setErrors({});
+    };
+
+    useEffect(() => {
+        if (!clickEdit) return;
+        openModalUpdate();
+        setClickEdit(false);
+    }, [clickEdit]);
+
+    useEffect(() => {
+        const table = dataTableRef?.current;
+        if (!table) return;
+
+        const handler = function () {
+            const action = $(this).data('action');
+            const id = Number($(this).data('id'));
+
+            switch (action) {
+                case 'edit':
+                    const permissionRef = data.find(p => p.id === id);
+                    if (!permissionRef) {
+                        console.warn('Permiso no encontrado', id);
+                        return;
+                    }
+                    setPermission({
+                        id: permissionRef.id || '',
+                        name: permissionRef.name || '',
+                        description: permissionRef.description || '',
+                        roleIds: permissionRef.roleIds || [],
+                        type: permissionRef.type || '',
+                        code: permissionRef.code || '',
+                        moduleId: permissionRef?.module?.id || '',
+                    });
+                    setClickEdit(true);
+                    break;
+                case 'delete':
+                    break;
+                default:
+                    console.warn('Acción no válida', action);
+                    break;
+            }
+        };
+
+        table.on('click', '.action-btn', handler);
+        return () => table.off('click', '.action-btn', handler);
+    }, [data]);
+
+    useEffect(() => {
+        const fetchModules = async () => {
+            const url = base_url(['api', 'modules']);
+            const response = await fetchHelper.post(url, { length: -1 }, {}, 0);
+            setModules(response.data);
+        };
+        fetchModules();
+    }, []);
+
+    return (
+        <div className="card">
+            <h5 className="card-header text-md-start text-center">
+                <i className="ri-shield-keyhole-line me-2"></i>
+                Gestión de Permisos
+            </h5>
+
+            <AlertPage type="success" message="Permiso creado correctamente" show={permissionCreate} onChange={() => setPermissionCreate(false)} />
+            <AlertPage type="success" message="Permiso actualizado correctamente" show={permissionUpdate} onChange={() => setPermissionUpdate(false)} />
+            <AlertPage type="success" message="Permiso eliminado correctamente" show={permissionDelete} onChange={() => setPermissionDelete(false)} />
+            <AlertPage type="danger" message="Error al eliminar el permiso. Verifique su conexión e intente nuevamente." show={permissionError} onChange={() => setPermissionError(false)} />
+
+            <div className="card-datatable text-nowrap">
+                <DataTableReference
+                    url_api={['roles', 'permissions']}
+                    columns={columns}
+                    tableRef={tableRef}
+                    dataTableRef={dataTableRef}
+                    method='POST'
+                    buttons={buttons}
+                    title='Permisos'
+                    setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
+                />
+            </div>
+
+            <FilterPermission
+                dataTableRef={dataTableRef}
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                modules={modules}
+                types={types}
+            />
+
+            <CreatedPermission
+                modalRef={modalCreateRef}
+                modalInstance={modalCreateInstance}
+                permission={permission}
+                setPermission={setPermission}
+                types={types}
+                modules={modules}
+                dataTableRef={dataTableRef}
+                setPermissionCreate={setPermissionCreate}
+            />
+
+            <UpdatedPermission
+                modalRef={modalUpdateRef}
+                modalInstance={modalUpdateInstance}
+                permission={permission}
+                setPermission={setPermission}
+                types={types}
+                modules={modules}
+                dataTableRef={dataTableRef}
+                setPermissionUpdate={setPermissionUpdate}
+            />
+        </div>
+    );
+};
+
+export default IndexPermissions;

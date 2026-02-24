@@ -7,10 +7,29 @@
 
 'use strict';
 
-// JS global variables
+/**
+ * Colores disponibles:
+ * - config.colors: primary, secondary, success, info, warning, danger, dark, black, white,
+ *   cardColor, bodyBg, bodyColor, headingColor, textMuted, borderColor
+ * - config.colors_label: variantes con transparencia (ej. primary -> #666cff29)
+ * - config.colors_dark: variantes para modo oscuro
+ *
+ * Uso en JavaScript/React:
+ *   window.config.colors.primary
+ *   window.config.colors_label.success
+ *
+ * Uso en CSS/SCSS (inyectados automáticamente en :root):
+ *   color: var(--config-primary);
+ *   background: var(--config-success);
+ *   border-color: var(--config-primary-label);
+ *   (modo oscuro) var(--config-dark-bodyBg);
+ */
+
+const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+console.log(user, 'user')
 window.config = {
   colors: {
-    primary: '#666cff',
+    primary: user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff',
     secondary: '#6d788d',
     success: '#72e128',
     info: '#26c6f9',
@@ -27,13 +46,31 @@ window.config = {
     borderColor: '#e5e5e8'
   },
   colors_label: {
-    primary: '#666cff29',
+    primary: `${user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff'}29`,
     secondary: '#6d788d29',
     success: '#72e12829',
     info: '#26c6f929',
     warning: '#fdb52829',
     danger: '#ff4d4929',
     dark: '#4b4b4b29'
+  },
+  colors_hover: {
+    primary: `${lightenColor(user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff', 20)}`,
+    secondary: '#6d788d',
+    success: '#72e128',
+    info: '#26c6f9',
+    warning: '#fdb528',
+    danger: '#ff4d49',
+    dark: '#4b4b4b'
+  },
+  colors_focus: {
+    primary: `${lightenColor(user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff', 70)}`,
+    secondary: '#6d788d',
+    success: '#72e128',
+    info: '#26c6f9',
+    warning: '#fdb528',
+    danger: '#ff4d49',
+    dark: '#4b4b4b'
   },
   colors_dark: {
     cardColor: '#30334e',
@@ -88,6 +125,7 @@ TemplateCustomizer.LANGUAGES.fr = { ... };
  */
 
 if (typeof TemplateCustomizer !== 'undefined') {
+
   window.templateCustomizer = new TemplateCustomizer({
     cssPath: assetsPath + 'vendor/css' + (rtlSupport ? '/rtl' : '') + '/',
     themesPath: assetsPath + 'vendor/css' + (rtlSupport ? '/rtl' : '') + '/',
@@ -104,4 +142,58 @@ if (typeof TemplateCustomizer !== 'undefined') {
     // defaultShowDropdownOnHover: false,
     controls: ['rtl', 'style', 'headerType', 'contentLayout', 'layoutCollapsed', 'layoutNavbarOptions', 'themes']
   });
+}
+
+/**
+ * Inyectar colores de config como variables CSS en :root
+ * Uso en CSS: var(--config-primary), var(--config-success), etc.
+ * Uso en JS/React: window.config.colors.primary
+ */
+(function injectConfigColors() {
+  if (typeof window.config === 'undefined' || !window.config.colors) return;
+  var root = document.documentElement;
+  var colors = window.config.colors;
+  var colorsHover = window.config.colors_hover || {};
+  var colorsLabel = window.config.colors_label || {};
+  var colorsDark = window.config.colors_dark || {};
+  var colorsFocus = window.config.colors_focus || {};
+  Object.keys(colorsFocus).forEach(function (key) {
+    root.style.setProperty('--config-' + key + '-focus', colorsFocus[key]);
+  });
+  Object.keys(colors).forEach(function (key) {
+    root.style.setProperty('--config-' + key, colors[key]);
+  });
+  Object.keys(colorsLabel).forEach(function (key) {
+    root.style.setProperty('--config-' + key + '-label', colorsLabel[key]);
+  });
+  Object.keys(colorsHover).forEach(function (key) {
+    root.style.setProperty('--config-' + key + '-hover', colorsHover[key]);
+  });
+  Object.keys(colorsDark).forEach(function (key) {
+    root.style.setProperty('--config-dark-' + key, colorsDark[key]);
+  });
+})();
+
+
+function lightenColor(hex, percent = 75) {
+  // Quitar #
+  hex = hex.replace("#", "");
+
+  // Convertir a RGB
+  let r = parseInt(hex.substring(0, 2), 16);
+  let g = parseInt(hex.substring(2, 4), 16);
+  let b = parseInt(hex.substring(4, 6), 16);
+
+  // Mezclar con blanco
+  r = Math.round(r + (255 - r) * (percent / 100));
+  g = Math.round(g + (255 - g) * (percent / 100));
+  b = Math.round(b + (255 - b) * (percent / 100));
+
+  // Convertir de nuevo a HEX
+  return (
+    "#" +
+    r.toString(16).padStart(2, "0") +
+    g.toString(16).padStart(2, "0") +
+    b.toString(16).padStart(2, "0")
+  );
 }

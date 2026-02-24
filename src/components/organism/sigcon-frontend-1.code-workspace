@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../sigcon-backend"
+		}
+	],
+	"settings": {}
+}

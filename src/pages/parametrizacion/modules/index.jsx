@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import DataTableReference from '../../../components/organism/DataTable';
 
@@ -7,6 +6,8 @@ import { base_url } from '../../../utils/functions';
 
 import CreateModule from './create';
 import UpdatedModule from './updated';
+import FilterModule from './filter';
+import AlertPage from '../../../components/molecules/AlertPage';
 
 const IndexModules = () => {
 
@@ -19,15 +20,23 @@ const IndexModules = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
+
+    const [search, setSearch] = useState({
+        value: '',
+        checked: true,
+    });
+
     const [data, setData] = useState([]);
     const [moduleCreate, setModuleCreate] = useState(false);
     const [moduleEdit, setModuleEdit] = useState(false);
     const [moduleDelete, setModuleDelete] = useState(false);
+    const [moduleError, setModuleError] = useState(false);
 
-    const url = ['api', 'modules'];
+    const url = ['api/modules'];
 
     const actions = [
-        { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
@@ -43,14 +52,15 @@ const IndexModules = () => {
     });
 
     const [columns, setColumns] = useState([
-        {title: 'Orden', data: 'position'},
-        {title: 'Nombre', data: 'name'},
-        {title: 'URL', data: 'url'},
-        {title: 'Icono', data: 'icon', render: (icon) => `<i class="${icon}"></i>`},
-        {title: 'Descripción', data: 'description'},
-        {title: 'Estado', data: 'status'},
-        {title: 'Acciones', data: 'id', render: (id) => {
-            return `
+        { title: 'Orden', data: 'position' },
+        { title: 'Nombre', data: 'name', name: 'name' },
+        { title: 'URL', data: 'url', name: 'url' },
+        { title: 'Icono', data: 'icon', render: (icon) => `<i class="${icon}"></i>` },
+        { title: 'Descripción', data: 'description' },
+        { title: 'Estado', data: 'status', name: 'status' },
+        {
+            title: 'Acciones', data: 'id', render: (id) => {
+                return `
                 <div class="d-flex gap-1">
                     ${actions.map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
@@ -61,7 +71,9 @@ const IndexModules = () => {
                     `).join('')}
                 </div>
             `
-        }},
+            },
+            searchable: false,
+        },
     ]);
 
     const openModalCreate = () => {
@@ -84,6 +96,16 @@ const IndexModules = () => {
 
     const buttons = [
         {
+            text: '<i class="ri-filter-3-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
+            action: async function (e, dt, button, config) {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                }
+                filterInstance.current.show();
+            }
+        },
+        {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Modulo</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
             action: async function (e, dt, button, config) {
@@ -101,11 +123,8 @@ const IndexModules = () => {
             const id = Number($(this).data('id'));
 
             switch (action) {
-                case 'view':
-                    console.log('view');
-                    break;
                 case 'edit':
-                    
+
                     const moduleRef = data.find(m => m.id === id);
 
                     if (!moduleRef) {
@@ -131,7 +150,7 @@ const IndexModules = () => {
                     modalUpdateInstance.current.show();
                     break;
                 case 'delete':
-                    
+
                     window.Swal.fire({
                         title: '¿Estás seguro?',
                         text: '¿Estás seguro de querer eliminar este módulo?',
@@ -139,25 +158,19 @@ const IndexModules = () => {
                         showCancelButton: true,
                         confirmButtonText: 'Eliminar',
                         cancelButtonText: 'Cancelar',
-                    }).then(async (result) => { 
+                    }).then(async (result) => {
                         if (result.isConfirmed) {
                             const url = base_url(['api', 'modules', 'delete', id]);
                             try {
                                 const response = await fetchHelper.delete(url, {}, {}, 500, false);
-                                if (response.status === 200) {
-                                    dataTableRef?.current?.ajax.reload();
-                                    setModuleDelete(true);
-                                }
-                            } catch (error) {
-                                console.error(error);
-                                window.Swal.fire({
-                                    title: 'Error',
-                                    text: 'Error al eliminar el módulo',
-                                    icon: 'error',
-                                });
-                            } finally {
                                 dataTableRef?.current?.ajax.reload();
                                 setModuleDelete(true);
+                                setModuleError(false);
+                            } catch (error) {
+                                console.error(error);
+                                setModuleError(true);
+                                setModuleDelete(false);
+                                dataTableRef?.current?.ajax.reload();
                             }
                         }
                     });
@@ -175,20 +188,10 @@ const IndexModules = () => {
     return <>
         <div className="card">
             <h5 className="card-header text-md-start text-center">Modulos</h5>
-            <div className={`alert alert-success alert-dismissible ${!moduleCreate ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Modulo creado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!moduleEdit ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Modulo actualizado correctamente</span>
-            </div>
-
-            <div className={`alert alert-success alert-dismissible ${!moduleDelete ? 'd-none' : ''}`} role="alert">
-                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <span>Modulo eliminado correctamente</span>
-            </div>
+            <AlertPage type="success" message="Modulo creado correctamente" show={moduleCreate} onChange={() => setModuleCreate(false)} />
+            <AlertPage type="success" message="Modulo actualizado correctamente" show={moduleEdit} onChange={() => setModuleEdit(false)} />
+            <AlertPage type="success" message="Modulo eliminado correctamente" show={moduleDelete} onChange={() => setModuleDelete(false)} />
+            <AlertPage type="danger" message="Error al eliminar el módulo. Verifique su conexión e intente nuevamente." show={moduleError} onChange={() => setModuleError(false)} />
             <div className="card-datatable text-nowrap">
                 <DataTableReference
                     url_api={url}
@@ -199,9 +202,18 @@ const IndexModules = () => {
                     buttons={buttons}
                     title='Modulos'
                     setData={setData}
+                    search={search}
+                    setSearch={setSearch}
+                    filtered={true}
                 />
             </div>
         </div>
+
+        <FilterModule
+            filterRef={filterRef}
+            filterInstance={filterInstance}
+            dataTableRef={dataTableRef}
+        />
 
         <CreateModule
             modalRef={modalCreateRef}

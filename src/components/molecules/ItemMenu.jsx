@@ -31,41 +31,50 @@ const ItemMenu = ({ item, parentPath = "" }) => {
     //     isPathActive(item, parentPath, cleanLocation);
 
     return (
-        <li className={`menu-item ${isOpen ? "open" : ""} ${isActive ? "active" : ""}`}>
-            <Link
-                to={itemPath}
-                className={`menu-link ${hasChildren ? "menu-toggle" : ""}`}
-            >
-                <i className={`menu-icon tf-icons ${item.icon || "ri-arrow-drop-right-line"}`}></i>
-                <div>{item?.name || item.label}</div>
-            </Link>
 
-            {hasChildren && (
-                <ul className="menu-sub">
-                    {item.childrens.map(child => (
-                        <ItemMenu
-                            key={child.id}
-                            item={child}
-                            parentPath={cleanItemPath}
-                        />
-                    ))}
-                </ul>
+        <>
+            {item.id == 0 ? (
+                
+                <li className={`menu-item ${isActive ? "active" : ""}`}>
+                    <Link
+                        to={itemPath}
+                        className={`menu-link `}
+                    >
+                        <i className={`menu-icon tf-icons ${item.icon || "ri-arrow-drop-right-line"}`}></i>
+                        <div>{item?.name || item.label}</div>
+                    </Link>
+                </li>
+            ) : (
+                <li className={`menu-item ${isOpen ? "open" : ""} ${isActive ? "active" : ""}`}>
+                    <Link
+                        to={itemPath}
+                        className={`menu-link ${hasChildren ? "menu-toggle" : ""}`}
+                    >
+                        <i className={`menu-icon tf-icons ${item.icon || "ri-arrow-drop-right-line"}`}></i>
+                        <div>{item?.name || item.label}</div>
+                    </Link>
+
+                    {hasChildren && (
+                        <ul className="menu-sub">
+                            {item.childrens.map(child => (
+                                <ItemMenu
+                                    key={child.id}
+                                    item={child}
+                                    parentPath={cleanItemPath}
+                                />
+                            ))}
+                        </ul>
+                    )}
+                </li>
             )}
-        </li>
+        </>
+
     );
 };
 
 const isPathActive = (item, parentPath, currentPath) => {
     const rawPath = item.path ?? item.url ?? "";
     const fullPath = buildFullPath(parentPath, rawPath).replace(/^\//, "");
-
-    console.log({
-        menu: item.label || item.name,
-        parentPath,
-        rawPath,
-        fullPath,
-        currentPath
-    });
 
     if (fullPath === currentPath) return true;
 
