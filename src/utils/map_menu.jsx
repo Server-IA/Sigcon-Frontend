@@ -9,7 +9,12 @@ import IndexUsers from "../pages/parametrizacion/users/index";
 
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
+import IndexCentrosCosto from "../pages/list_accounts/centros-costo/index";
 import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
+import IndexCuentasContables from "../pages/list_accounts/cuentas-contables/index";
+
+// List Accounts
+import IndexDepreciationRules from "../pages/list_accounts/depreciation_rules/index";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -41,17 +46,18 @@ export const COMPONENT_MAP = [
     { id: "USERS", name: "Usuarios", component: IndexUsers },
     { id: "ROLES", name: "Roles", component: IndexRoles },
     { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
+    { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
     { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
-
-    // List Accounts
-    { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
+    { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
+    { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
+    { id: "PUC", name: "Catálogo PUC", component: IndexPUC }
 ]
 
 export const getMenu = async () => {
     const modules = [];
     const componentsFinal = [];
     const url = base_url(['api', 'modules', 'menu']);
-    const {data, error} = await fetchHelper.get(url, {}, 0);
+    const { data, error } = await fetchHelper.get(url, {}, 0);
 
     modules.push({
         id: 0,
@@ -98,7 +104,7 @@ export const getMenu = async () => {
 
     componentsFinal.push(...modulesWithoutComponents);
 
-    return {modules, componentsFinal};
+    return { modules, componentsFinal };
 }
 
 const buildMenuTree = (menus) => {

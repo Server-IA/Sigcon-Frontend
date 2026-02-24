@@ -1,29 +1,23 @@
 export const base_url = (array = [], get = {}) => {
 
-    let url = '';
+    let base = `${import.meta.env.VITE_API_URL || 'https://api.inmero.co/sigcon/dev/'}`;
 
-    switch (import.meta.env.VITE_ENVIRONMENT) {
-        case 'local':
-            url = import.meta.env.VITE_API_URL_LOCAL || 'http://localhost:8080/';
-            break;
-        case 'development':
-            url = import.meta.env.VITE_API_URL_DEVELOPMENT || 'https://api.inmero.co/dev/sigcon/';
-            break;
-        case 'production':
-        default:
-            url = import.meta.env.VITE_API_URL_PRODUCTION || 'https://api.inmero.co/sigcon/';
-            break;
-    }
+    // Quitar slash final de la base
+    base = base.replace(/\/+$/, '');
 
-    var path = array.length > 0 ? array.join('/') : ''; // Construir el path
-    var getData = Object.entries(get)
-        .filter(([_, value]) => value !== undefined && value !== null && value !== '') // Filtrar valores vacíos
-        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`) // Codificar valores
+    // Construir path sin slash inicial
+    const path = array.length > 0
+        ? array.join('/').replace(/^\/+/, '')
+        : '';
+
+    const query = Object.entries(get)
+        .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
         .join('&');
 
-    const urlFinal = getData ? `${url}${path}?${getData}` : `${url}${path}`;
+    const urlFinal = path ? `${base}/${path}` : base;
 
-    return urlFinal;
+    return query ? `${urlFinal}?${query}` : urlFinal;
 }
 
 
@@ -31,15 +25,13 @@ export const base_redirect_path = (is_login = false) => {
     const joinPath = (...parts) =>
         parts.join('/').replace(/\/+/g, '/')
 
-    const base = import.meta.env.MODE === 'production' ? '/sigcon/' : '/'
+    const base = import.meta.env.VITE_ENVIRONMENT == 'local'
+        ? '/' : import.meta.env.VITE_ENVIRONMENT == 'development'
+            ? '/sigcon/dev/' : '/sigcon/'
 
-    const path = is_login
+    return is_login
         ? joinPath(base, '/login')
         : joinPath(base, '/dashboard')
-
-    console.log(['path', path]);
-
-    return path
 }
 
 export const validarArrays = (a, b) => {

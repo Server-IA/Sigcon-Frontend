@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import { base_redirect_path, base_url } from "../../utils/functions";
 import { fetchHelper } from "../../utils/fetch";
 
+import avatar from '../../../public/assets/img/avatars/1.png';
+
 // import { ComponentsFinal } from "../../utils/map_menu";
 
 const NavHorizontal = ({modules}) => {
@@ -38,7 +40,6 @@ const NavHorizontal = ({modules}) => {
             }
         }).then(async (result) => {
             if (result.isConfirmed) {
-                
 
                 const url = base_url(['auth/logout']);
 
@@ -169,7 +170,11 @@ const NavHorizontal = ({modules}) => {
                     <li className="nav-item navbar-dropdown dropdown-user dropdown">
                         <a className="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
                             <div className="avatar avatar-online">
-                                <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                <img
+                                    onError={(e) => {
+                                        e.target.src = avatar;                                        
+                                    }}
+                                    src={base_url(['users/avatars', user?.avatar ?? ''])} alt="avatar" className="rounded-circle" />
                             </div>
                         </a>
                         <ul className="dropdown-menu dropdown-menu-end">
@@ -178,7 +183,12 @@ const NavHorizontal = ({modules}) => {
                                     <div className="d-flex">
                                         <div className="flex-shrink-0 me-2">
                                             <div className="avatar avatar-online">
-                                                <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                                <img
+                                                    onError={(e) => {
+                                                        e.target.src = avatar;
+                                                        console.warn('Error al capturar el avatar');
+                                                    }}
+                                                    src={base_url(['users/avatars', user?.avatar ?? ''])} alt="avatar" className="rounded-circle" />
                                             </div>
                                         </div>
                                         <div className="flex-grow-1">
