@@ -45,7 +45,7 @@ const FilterRole = ({ filterRef, filterInstance, dataTableRef }) => {
                         </div>
                         <div className="modal-body">
                             <div className="row">
-                                <div className="col mb-6 mt-2">
+                                <div className="col-lg-6 col-md-12 col-sm-12 mb-6 mt-2">
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
@@ -81,7 +81,7 @@ const FilterRole = ({ filterRef, filterInstance, dataTableRef }) => {
                                     </div>
                                 </div>
 
-                                <div className="col mb-6 mt-2">
+                                <div className="col-lg-6 col-md-12 col-sm-12 mb-6 mt-2">
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input

@@ -155,7 +155,7 @@ const CreateCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="pucId"
+                                        id="create_pucId"
                                         label="Cuenta PUC"
                                         value={cuentaContable.pucId}
                                         onChange={(value) => {
@@ -182,7 +182,7 @@ const CreateCuentaContable = ({
                                 <div className="col mb-6 mt-2">
                                     <InputModal
                                         type="text"
-                                        id="customName"
+                                        id="create_customName"
                                         label="Nombre Personalizado"
                                         value={cuentaContable.customName}
                                         onChange={(e) => setCuentaContable({ 
@@ -200,7 +200,7 @@ const CreateCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="baseCurrency"
+                                        id="create_baseCurrency"
                                         label="Moneda Base"
                                         value={cuentaContable.baseCurrency}
                                         onChange={(value) => setCuentaContable({ 
@@ -222,7 +222,7 @@ const CreateCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="costCenterId"
+                                        id="create_costCenterId"
                                         label="Centro de Costos"
                                         value={cuentaContable.costCenterId}
                                         onChange={(value) => setCuentaContable({ 
@@ -244,7 +244,7 @@ const CreateCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="depreciationRuleId"
+                                        id="create_depreciationRuleId"
                                         label="Regla de Depreciación"
                                         value={cuentaContable.depreciationRuleId}
                                         onChange={(value) => setCuentaContable({ 
@@ -266,7 +266,7 @@ const CreateCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="nature"
+                                        id="create_nature"
                                         label="Naturaleza de la Cuenta"
                                         value={cuentaContable.nature}
                                         onChange={(value) => setCuentaContable({ 

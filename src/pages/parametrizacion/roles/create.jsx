@@ -30,6 +30,7 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
             ...role,
             permissionIds: permissions.flat(),
         });
+        console.log("Permissions", permissions);    
     }, [allModulesPermissions]);
 
     const handleCreateRole = async () => {
@@ -86,7 +87,7 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
                         </div>
 
                         {/* Error */}
-                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} />
+                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} onChange={() => setErrorMessage('')} />
 
                         <div className="row">
                             <div className="col mb-6 mt-2">
@@ -103,7 +104,7 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
                         </div>
 
                         <div className="col-12">
-                            <h5 className="mb-2">Role Permissions</h5>
+                            <h5 className="mb-2">Permisos del rol</h5>
                             <div className="col-md mb-5">
                                 <div className="accordion mt-4 accordion-header-primary" id="accordionStyle1">
                                     {allModulesPermissions.map((module) => {
@@ -137,7 +138,7 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
 
                                                 <div id={`${module.module.id}-accordion`} className="accordion-collapse collapse" data-bs-parent="#accordionStyle1">
                                                     <div className="accordion-body">
-                                                        <label class="switch switch-primary">
+                                                        <label className="switch switch-primary">
                                                             <input
                                                                 type="checkbox" 
                                                                 className="switch-input"
@@ -148,36 +149,40 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
                                                                     ...allModulesPermissions.map(m => m.module.id === module.module.id ? { ...m, checked: !module.checked } : m),
                                                                 ])}
                                                             />
-                                                            <span class="switch-toggle-slider">
-                                                                <span class="switch-on">
-                                                                    <i class="ri-check-line"></i>
+                                                            <span className="switch-toggle-slider">
+                                                                <span className="switch-on">
+                                                                    <i className="ri-check-line"></i>
                                                                 </span>
-                                                                <span class="switch-off">
-                                                                    <i class="ri-close-line"></i>
+                                                                <span className="switch-off">
+                                                                    <i className="ri-close-line"></i>
                                                                 </span>
                                                             </span>
-                                                            <span class="switch-label">Seleccionar todos</span>
+                                                            <span className="switch-label">Seleccionar todos</span>
                                                         </label>
                                                         <hr />
                                                         {permissionsModule.map((permission, index) => (
                                                             <div className="row" key={`${module.module.id}-permissions-row-${index}`}>
-                                                                {permission.map((p) => (
-                                                                    <div className="col-6" key={`${p.id}-permission`}>
+                                                                {permission.map((p, i) => (
+                                                                    <div className="col-6" key={`${p.id}-permission-${i}`}>
                                                                         <div className="form-check form-switch mb-2">
                                                                             <input
                                                                                 className="form-check-input"
                                                                                 type="checkbox"
                                                                                 value={p.id}
                                                                                 checked={role.permissionIds.includes(p.id)}
-                                                                                id={`${p.id}-permission`}
-                                                                                onChange={(e) => setRole({
-                                                                                    ...role,
-                                                                                    permissionIds:
-                                                                                        role.permissionIds.includes(p.id) ?
-                                                                                            role.permissionIds.filter(id => id !== p.id)
-                                                                                            : [...role.permissionIds, p.id] })}
+                                                                                id={`${p.id}-permission-${i}`}
+                                                                                onChange={(e) => {
+                                                                                    setRole({
+                                                                                        ...role,
+                                                                                        permissionIds:
+                                                                                            role.permissionIds.includes(p.id) ?
+                                                                                                role.permissionIds.filter(id => id !== p.id)
+                                                                                                : [...role.permissionIds, p.id]
+                                                                                    })
+                                                                                    console.log("Role", role, "Permission", p.id);
+                                                                                }}
                                                                             />
-                                                                            <label className="form-check-label" htmlFor={`${p.id}-permission`}>
+                                                                            <label className="form-check-label" htmlFor={`${p.id}-permission-${i}`}>
                                                                                 {p.name}
                                                                             </label>
                                                                         </div>
