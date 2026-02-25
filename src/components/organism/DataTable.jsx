@@ -21,7 +21,7 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
         if (!tableRef?.current || !dataTableRef) return;
 
         const config = {
-            dom: 'r<"row"<"col-sm-12 col-md-12 col-lg-4 mt-3 mt-md-0 d-flex justify-content-center justify-content-lg-start justify-content-md-center align-items-center"l><"col-sm-12 col-md-12 col-lg-8 d-flex justify-content-center justify-content-lg-end justify-content-md-center align-items-center"<"dt-action-buttons text-end pt-0 pt-md-0"B>>>t<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+            dom: 'r<"row"<"col-sm-12 col-md-12 col-lg-4 mt-3 mt-md-0 d-flex justify-content-center justify-content-lg-start justify-content-md-center align-items-center"l><"col-sm-12 col-md-12 col-lg-8 d-flex justify-content-center justify-content-lg-end justify-content-md-center align-items-center"<"dt-action-buttons text-end pt-0 pt-md-0"B>>>t<"row"<"col-sm-12 col-md-6 text-wrap"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-lg-end align-items-center"p>>',
             lengthMenu: lengthMenu,
             columns: columns,
             destroy: true,

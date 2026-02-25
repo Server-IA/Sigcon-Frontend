@@ -7,11 +7,6 @@ import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import AlertPage from '../../../components/molecules/AlertPage';
 
-
-
-// ============================================
-// Componente principal
-// ============================================
 const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setMessageRole, modules }) => {
 
     const [errors, setErrors] = useState({});
@@ -20,24 +15,30 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
     const [roleUpdated, setRoleUpdated] = useState({
         name: role.name,
         status: role.status,
-        permissionIds: []
+        permissionIds: role.permissionIds.map(id => parseInt(id))
     });
 
     useEffect(() => {
         setAllModulesPermissions(modules.map(m => {
-            return { ...m, checked: false }
+            return {
+                ...m,
+                checked: m.permissions.length == role.permissionIds.length && role.permissionIds.length > 0
+            }
         }));
+
+
     }, [modules]);
 
     useEffect(() => {
         const permissions = allModulesPermissions.filter(m => m.checked).map(m => m.permissions.map(p => p.id));
-        setRole({
+        setRoleUpdated({
             ...role,
             permissionIds: permissions.flat(),
         });
     }, [allModulesPermissions]);
 
     useEffect(() => {
+
         setRoleUpdated({
             id: role.id,
             status: role.status,
@@ -46,7 +47,6 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
         });        
         setErrors({});
         setErrorMessage('');
-        console.log("Role updated", roleUpdated);
 
     }, [role]);
 
@@ -109,10 +109,10 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
                         </div>
 
                         {/* Error */}
-                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} />
+                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} onChange={() => setErrorMessage('')} />
 
                         <div className="row">
-                            <div className="col mb-6 mt-2">
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-6 mt-2">
                                 <InputModal
                                     id="name_update"
                                     label="Nombre del rol"
@@ -123,7 +123,7 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
                                     required={true}
                                 />
                             </div>
-                            <div className="col mb-6 mt-2">
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-6 mt-2">
                                 <InputSelectModal
                                     id="status_update"
                                     label="Estado del rol"
@@ -138,10 +138,10 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
                         </div>
 
                         <div className="col-12">
-                            <h5 className="mb-2">Role Permissions</h5>
+                            <h5 className="mb-2">Permisos del rol</h5>
                             <div className="col-md mb-5">
                                 <div className="accordion mt-4 accordion-header-primary" id="accordionStyle1">
-                                    {modules.map((module) => {
+                                    {allModulesPermissions.map((module) => {
 
                                         const permissionsModule = chunkArray(module.permissions, 2);
 
@@ -160,26 +160,25 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
 
                                                 <div id={`${module.module.id}-accordion-update`} className="accordion-collapse collapse" data-bs-parent="#accordionStyle1">
                                                     <div className="accordion-body">
-                                                        <label class="switch switch-primary">
+                                                        <label className="switch switch-primary">
                                                             <input
                                                                 type="checkbox" 
                                                                 className="switch-input"
-                                                                value={module.module.id}
                                                                 checked={module.checked}
-                                                                id={`${module.module.id}-permission`}
+                                                                id={`${module.module.id}-permission-update`}
                                                                 onChange={(e) => setAllModulesPermissions([
-                                                                    ...allModulesPermissions.map(m => m.module.id === module.module.id ? { ...m, checked: !module.checked } : m),
+                                                                    ...allModulesPermissions.map(m => m.module.id === module.module.id ? { ...m, checked: !m.checked } : m),
                                                                 ])}
                                                             />
-                                                            <span class="switch-toggle-slider">
-                                                                <span class="switch-on">
-                                                                    <i class="ri-check-line"></i>
+                                                            <span className="switch-toggle-slider">
+                                                                <span className="switch-on">
+                                                                    <i className="ri-check-line"></i>
                                                                 </span>
-                                                                <span class="switch-off">
-                                                                    <i class="ri-close-line"></i>
+                                                                <span className="switch-off">
+                                                                    <i className="ri-close-line"></i>
                                                                 </span>
                                                             </span>
-                                                            <span class="switch-label">Seleccionar todos</span>
+                                                            <span className="switch-label">Seleccionar todos</span>
                                                         </label>
 
                                                         <hr />
