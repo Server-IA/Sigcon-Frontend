@@ -16,10 +16,13 @@ import IndexCuentasContables from "../pages/list_accounts/cuentas-contables/inde
 // List Accounts
 import IndexDepreciationRules from "../pages/list_accounts/depreciation_rules/index";
 
+// Reportes
+import BalanceComprobacion from "../pages/list_accounts/reportes/BalanceComprobacion";
+
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 import { base_url } from "./functions";
-import { fetchHelper } from "./fetch"; 
+import { fetchHelper } from "./fetch";
 
 //aca tengo que agregar los nuevos modulos que cargue de parametrizacion
 // export const COMPONENT_MAP = {
@@ -46,7 +49,8 @@ export const COMPONENT_MAP = [
     { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
     { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
     { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
-    { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules }
+    { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
+    { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion }
 ]
 
 export const getMenu = async () => {
@@ -76,14 +80,48 @@ export const getMenu = async () => {
     })
 
     if (!error) {
-        modules.push(...data?.map(modules => ({
-            ...modules,
-            menus: buildMenuTree(modules?.menus?.map(menu => ({
+
+        modules.push(...data?.map(mod => {
+            // Construir el árbol de menús normalmente
+            const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
                 ...menu,
                 componentName: menu?.component,
                 component: COMPONENT_MAP.find(component => component.id === menu?.component)?.component || PageMaintenance,
-            })))
-        })));
+            })));
+
+            // 🔹 MOCK: Inyectar "Generar Reportes" dentro de "Listas contables" (id: 2)
+            // TODO: Remover cuando el backend provea estos menús
+            if (mod.id === 2) {
+                menuTree.push({
+                    id: 9000,
+                    label: "Generar Reportes",
+                    path: "reportes",
+                    position: 99,
+                    icon: "ri-file-chart-line",
+                    parentId: null,
+                    component: PageMaintenance,
+                    componentName: "REPORTES",
+                    childrens: [
+                        {
+                            id: 9001,
+                            label: "Balance de Comprobación",
+                            path: "balance-comprobacion",
+                            position: 0,
+                            icon: "ri-bar-chart-box-line",
+                            parentId: 9000,
+                            component: BalanceComprobacion,
+                            componentName: "BALANCE_COMPROBACION",
+                            childrens: []
+                        }
+                    ]
+                });
+            }
+
+            return {
+                ...mod,
+                menus: menuTree
+            };
+        }));
     }
 
     // 🔹 Clonar sin la propiedad "component"
