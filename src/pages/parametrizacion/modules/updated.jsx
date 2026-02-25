@@ -2,11 +2,30 @@ import { useEffect, useState } from "react";
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import InputModal from "../../../components/molecules/InputModal";
+import TextareaModal from "../../../components/molecules/TextareaModal";
 
 const UpdatedModule = ({ modalRef, modalInstance, module, setModule, dataTableRef, setModuleEdit }) => {
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
+
+    useEffect(() => {
+        if (modalRef.current) {
+            modalRef.current.addEventListener('hidden.bs.modal', () => {
+                setErrors({});
+                setErrorMessage('');
+            });
+        }
+        return () => {
+            if (modalRef.current) {
+                modalRef.current.removeEventListener('hidden.bs.modal', () => {
+                    setErrors({});
+                    setErrorMessage('');
+                });
+            }
+        };
+    }, [modalRef.current]);
 
     const handleSubmit = async (e) => {
         try {
@@ -43,7 +62,6 @@ const UpdatedModule = ({ modalRef, modalInstance, module, setModule, dataTableRe
     }
 
     useEffect(() => {
-        setErrors({});  
         setErrorMessage('');
     }, [module]);
 
@@ -71,63 +89,78 @@ const UpdatedModule = ({ modalRef, modalInstance, module, setModule, dataTableRe
                         </div>
                         <div className="row">
                             <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline">
-                                    <input
-                                        type="text"
-                                        id="name"
-                                        className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-                                        placeholder="Nombre unico del modulo"
-                                        value={module.name}
-                                        onChange={(e) => setModule({ ...module, name: e.target.value })}
-                                    />
-                                    <label htmlFor="name">Nombre del modulo</label>
-                                    {errors.name && <div className="invalid-feedback">{errors.name}</div>}
-                                </div>
+                                <InputModal
+                                    type="text"
+                                    id="name_updated"
+                                    label="Nombre del modulo"
+                                    value={module.name}
+                                    onChange={(e) => {
+                                        setModule({ ...module, name: e.target.value })
+                                        setErrors((prev) => ({
+                                            ...prev,
+                                            name: '',
+                                        }))
+                                    }}
+                                    error={errors.name}
+                                    placeholder="Nombre del modulo"
+                                    required={true}
+                                />
                             </div>
 
                             <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline">
-                                    <input
-                                        type="number"
-                                        id="position"
-                                        className={`form-control ${errors.position ? 'is-invalid' : ''}`}
-                                        placeholder="Posicion del modulo"
-                                        value={module.position}
-                                        onChange={(e) => setModule({ ...module, position: e.target.value ? parseInt(e.target.value) : 1 })}
-                                    />
-                                    <label htmlFor="position">Posicion del modulo</label>
-                                    {errors.position && <div className="invalid-feedback">{errors.position}</div>}
-                                </div>
+                                <InputModal
+                                    type="number"
+                                    id="position_updated"
+                                    label="Posicion del modulo"
+                                    value={module.position}
+                                    onChange={(e) => {
+                                        setModule({ ...module, position: e.target.value ? parseInt(e.target.value) : 1 })
+                                        setErrors((prev) => ({
+                                            ...prev,
+                                            position: '',
+                                        }))
+                                    }}
+                                    error={errors.position}
+                                    placeholder="Posicion del modulo"
+                                    required={true}
+                                />
                             </div>
                         </div>
                         <div className="row g-4">
                             <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline">
-                                    <input
-                                        type="text"
-                                        id="url"
-                                        className={`form-control ${errors.url ? 'is-invalid' : ''}`}
-                                        placeholder="Url del modulo"
-                                        value={module.url}
-                                        onChange={(e) => setModule({ ...module, url: e.target.value })}
-                                    />
-                                    <label htmlFor="url">Url del modulo</label>
-                                    {errors.url && <div className="invalid-feedback">{errors.url}</div>}
-                                </div>
+                                <InputModal
+                                    type="text"
+                                    id="url_updated"
+                                    label="Url del modulo"
+                                    value={module.url}
+                                    onChange={(e) => {
+                                        setModule({ ...module, url: e.target.value })
+                                        setErrors((prev) => ({
+                                            ...prev,
+                                            url: '',
+                                        }))
+                                    }}
+                                    error={errors.url}
+                                    placeholder="Url del modulo"
+                                    required={true}
+                                />
                             </div>
                             <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline">
-                                    <input
-                                        type="text"
-                                        id="icon"
-                                        className={`form-control ${errors.icon ? 'is-invalid' : ''}`}
-                                        placeholder="Icono del modulo"
-                                        value={module.icon}
-                                        onChange={(e) => setModule({ ...module, icon: e.target.value })}
-                                    />
-                                    <label htmlFor="icon">Icono del modulo</label>
-                                    {errors.icon && <div className="invalid-feedback">{errors.icon}</div>}
-                                </div>
+                                <InputModal
+                                    type="text"
+                                    id="icon_updated"
+                                    label="Icono del modulo"
+                                    value={module.icon}
+                                    onChange={(e) => {
+                                        setModule({ ...module, icon: e.target.value })
+                                        setErrors((prev) => ({
+                                            ...prev,
+                                            icon: '',
+                                        }))
+                                    }}
+                                    error={errors.icon}
+                                    placeholder="Icono del modulo"
+                                />
                             </div>
                         </div>
 
@@ -147,17 +180,14 @@ const UpdatedModule = ({ modalRef, modalInstance, module, setModule, dataTableRe
 
                         <div className="row g-4">
                             <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline mb-6">
-                                    <textarea
-                                        className={`form-control h-px-100 ${errors.description ? 'is-invalid' : ''}`}
-                                        id="description"
-                                        placeholder="Descripcion del modulo"
-                                        value={module.description}
-                                        onChange={(e) => setModule({ ...module, description: e.target.value })}
-                                    ></textarea>
-                                    <label htmlFor="description">Descripcion del modulo</label>
-                                    {errors.description && <div className="invalid-feedback">{errors.description}</div>}
-                                </div>
+                                <TextareaModal
+                                    id="description_updated"
+                                    label="Descripcion del modulo"
+                                    value={module.description}
+                                    onChange={(e) => setModule({ ...module, description: e.target.value })}
+                                    error={errors.description}
+                                    placeholder="Descripcion del modulo"
+                                />
                             </div>
                         </div>
                     </div>

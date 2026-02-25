@@ -4,13 +4,35 @@ import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import AlertPage from '../../../components/molecules/AlertPage';
 
 const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuCreate, modules, parents, components }) => {
 
     const [errors, setErrors] = useState({});
-    const [errorMessage, setErrorMessage] = useState('');
+    const [error, setError] = useState({
+        message: '',
+        type: '',
+        show: false,
+    });
 
     const [optionMenus, setOptionMenus] = useState([]);
+
+    useEffect(() => {
+        if (modalRef.current) {
+            modalRef.current.addEventListener('hidden.bs.modal', () => {
+                setError({ message: '', type: '', show: false });
+                setErrors({});
+            });
+        }
+        return () => {
+            if (modalRef.current) {
+                modalRef.current.removeEventListener('hidden.bs.modal', () => {
+                    setError({ message: '', type: '', show: false });
+                    setErrors({});
+                });
+            }
+        };
+    }, [modalRef.current]);
 
     useEffect(() => {
         const optionMenus = parents.filter(parent => parent.moduleId == menu.moduleId);
@@ -55,7 +77,11 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                 });
                 setErrors(fieldErrors);
             }else if (error?.msg) {
-                setErrorMessage(error.msg);
+                setError({
+                    message: error.msg,
+                    type: 'danger',
+                    show: true,
+                });
             }
         }
     }
@@ -78,10 +104,8 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                             <i className="ri-information-line"></i> Iconos de Remix Icon <small>(Abrir en nueva pestaña)</small>
                         </a>
                     </p>
-                    <div className={`alert alert-danger alert-dismissible ${errorMessage == '' ? 'd-none' : ''}`} role="alert">
-                        <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        <span>{errorMessage}</span>
-                    </div>
+
+                    <AlertPage message={error.message} type={error.type} show={error.show} onChange={() => setError({ message: '', type: '', show: false })} />
 
                     <div className="row">
                         <div className="col mb-6 mt-2">
@@ -90,9 +114,16 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 id="label"
                                 label="Nombre del menu"
                                 value={menu.label}
-                                onChange={(e) => setMenu({ ...menu, label: e.target.value })}
+                                onChange={(e) => {
+                                    setMenu({ ...menu, label: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        label: '',
+                                    }))
+                                }}
                                 error={errors.label}
                                 placeholder="Nombre del menu"
+                                required={true}
                             />
                         </div>
 
@@ -102,9 +133,16 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 id="path"
                                 label="Ruta del menu"
                                 value={menu.path}
-                                onChange={(e) => setMenu({ ...menu, path: e.target.value })}
+                                onChange={(e) => {
+                                    setMenu({ ...menu, path: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        path: '',
+                                    }))
+                                }}
                                 error={errors.path}
                                 placeholder="Ruta del menu"
+                                required={true}
                             />
                         </div>
                     </div>
@@ -116,7 +154,13 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 id="icon"
                                 label="Icono del menu"
                                 value={menu.icon}
-                                onChange={(e) => setMenu({ ...menu, icon: e.target.value })}
+                                onChange={(e) => {
+                                    setMenu({ ...menu, icon: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        icon: '',
+                                    }))
+                                }}
                                 error={errors.icon}
                                 placeholder="Icono del menu"
                             />
@@ -127,9 +171,16 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 id="menuOrder"
                                 label="Orden del menu"
                                 value={menu.menuOrder}
-                                onChange={(e) => setMenu({ ...menu, menuOrder: e.target.value ? parseInt(e.target.value) : 1 })}
+                                onChange={(e) => {
+                                    setMenu({ ...menu, menuOrder: e.target.value ? parseInt(e.target.value) : 1 })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        menuOrder: '',
+                                    }))
+                                }}
                                 error={errors.menuOrder}
                                 placeholder="Orden del menu"
+                                required={true}
                             />
                         </div>
                     </div>
@@ -140,10 +191,17 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 id="component"
                                 label="Componente del menu"
                                 value={menu.component}
-                                onChange={(value) => setMenu({ ...menu, component: value })}
+                                onChange={(value) => {
+                                    setMenu({ ...menu, component: value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        component: '',
+                                    }))
+                                }}
                                 error={errors.component}
                                 placeholder="Componente del menu"
                                 options={components}
+                                required={true}
                             />
                         </div>
                         <div className="col mb-6 mt-2">
@@ -151,13 +209,20 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 id="moduleId"
                                 label="Modulo del menu"
                                 value={menu.moduleId}
-                                onChange={(value) => setMenu({
-                                    ...menu,
-                                    moduleId: value
-                                })}
+                                onChange={(value) => {
+                                    setMenu({
+                                        ...menu,
+                                        moduleId: value
+                                    })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        moduleId: '',
+                                    }))
+                                }}
                                 error={errors.moduleId}
                                 placeholder="Modulo del menu"
                                 options={modules}
+                                required={true}
                             />
                         </div>
                     </div>
