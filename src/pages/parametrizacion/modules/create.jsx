@@ -115,111 +115,92 @@ const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef
                                     required={true}
                                 />
                             </div>
-                            <div className="row">
-                                <div className="col mb-6 mt-2">
 
-                                    <InputModal
-                                        type="text"
-                                        id="name"
-                                        label="Nombre del modulo"
-                                        value={module.name}
-                                        onChange={(e) => {
-                                            setModule({ ...module, name: e.target.value })
-                                            setErrors((prev) => ({
-                                                ...prev,
-                                                name: '',
-                                            }))
-                                        }}
-                                        error={errors.name}
-                                        placeholder="Nombre del modulo"
-                                        required={true}
-                                    />
-                                </div>
-
-                                <div className="col mb-6 mt-2">
-                                    <InputModal
-                                        type="number"
-                                        id="position"
-                                        label="Posicion del modulo"
-                                        value={module.position}
-                                        onChange={(e) => {
-                                            setModule({ ...module, position: e.target.value ? parseInt(e.target.value) : 1 })
-                                            setErrors((prev) => ({
-                                                ...prev,
-                                                position: '',
-                                            }))
-                                        }}
-                                        error={errors.position}
-                                        placeholder="Posicion del modulo"
-                                        required={true}
-                                    />
-                                </div>
-                            </div>
-                            <div className="row g-4">
-                                <div className="col mb-6 mt-2">
-                                    <InputModal
-                                        type="text"
-                                        id="url"
-                                        label="Url del modulo"
-                                        value={module.url}
-                                        onChange={(e) => {
-                                            setModule({ ...module, url: e.target.value })
-                                            setErrors((prev) => ({
-                                                ...prev,
-                                                url: '',
-                                            }))
-                                        }}
-                                        error={errors.url}
-                                        placeholder="Url del modulo"
-                                        required={true}
-                                    />
-                                </div>
-                                <div className="col mb-6 mt-2">
-                                    <InputModal
-                                        type="text"
-                                        id="icon"
-                                        label="Icono del modulo"
-                                        value={module.icon}
-                                        onChange={(e) => {
-                                            setModule({ ...module, icon: e.target.value })
-                                            setErrors((prev) => ({
-                                                ...prev,
-                                                icon: '',
-                                            }))
-                                        }}
-                                        error={errors.icon}
-                                        placeholder="Icono del modulo"
-                                    />
-                                </div>
-
-                                <div className="row g-4">
-                                    <div className="col mb-6 mt-2">
-                                        <TextareaModal
-                                            id="description"
-                                            label="Descripcion del modulo"
-                                            value={module.description}
-                                            onChange={(e) => {
-                                                setModule({ ...module, description: e.target.value })
-                                                setErrors((prev) => ({
-                                                    ...prev,
-                                                    description: '',
-                                                }))
-                                            }}
-                                            error={errors.description}
-                                            placeholder="Descripcion del modulo"
-                                        />
-                                    </div>
-                                    <div className="modal-footer">
-                                        <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
-                                            Cerrar
-                                        </button>
-                                        <button type="button" className="btn btn-primary" onClick={handleSubmit}>Guardar</button>
-                                    </div>
-                                </div>
+                            <div className="col mb-6 mt-2">
+                                <InputModal
+                                    type="number"
+                                    id="position"
+                                    label="Posicion del modulo"
+                                    value={module.position}
+                                    onChange={(e) => {
+                                        setModule({ ...module, position: e.target.value ? parseInt(e.target.value) : 1 })
+                                        setErrors((prev) => ({
+                                            ...prev,
+                                            position: '',
+                                        }))
+                                    }}
+                                    error={errors.position}
+                                    placeholder="Posicion del modulo"
+                                    required={true}
+                                />
                             </div>
                         </div>
+                        <div className="row g-4">
+                            <div className="col mb-6 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="url"
+                                    label="Url del modulo"
+                                    value={module.url}
+                                    onChange={(e) => {
+                                        setModule({ ...module, url: e.target.value })
+                                        setErrors((prev) => ({
+                                            ...prev,
+                                            url: '',
+                                        }))
+                                    }}
+                                    error={errors.url}
+                                    placeholder="Url del modulo"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col mb-6 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="icon"
+                                    label="Icono del modulo"
+                                    value={module.icon}
+                                    onChange={(e) => {
+                                        setModule({ ...module, icon: e.target.value })
+                                        setErrors((prev) => ({
+                                            ...prev,
+                                            icon: '',
+                                        }))
+                                    }}
+                                    error={errors.icon}
+                                    placeholder="Icono del modulo"
+                                />
+                            </div>
+                        </div>
+                        <div className="row g-4">
+                            <div className="col mb-6 mt-2">
+                                <TextareaModal
+                                    id="description"
+                                    label="Descripcion del modulo"
+                                    value={module.description}
+                                    onChange={(e) => {
+                                        setModule({ ...module, description: e.target.value })
+                                        setErrors((prev) => ({
+                                            ...prev,
+                                            description: '',
+                                        }))
+                                    }}
+                                    error={errors.description}
+                                    placeholder="Descripcion del modulo"
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                Cerrar
+                            </button>
+                            <button type="button" className="btn btn-primary" onClick={handleSubmit}>Guardar</button>
+                        </div>
                     </div>
-                </>;
+                </div>
+            </div>
+        </div>
+    </>;
 }
 
-                export default CreateModule;
+export default CreateModule;
