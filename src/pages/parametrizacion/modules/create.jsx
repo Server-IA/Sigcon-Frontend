@@ -46,6 +46,9 @@ const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef
                 icon: '',
                 position: '',
                 status: 'ACTIVE',
+                createdAt: '',
+                updatedAt: '',
+                deletedAt: '',
             });
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
@@ -112,6 +115,21 @@ const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef
                                 required={true}
                             />
                         </div>
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <div className="form-floating form-floating-outline">
+                                    <input
+                                        type="text"
+                                        id="name"
+                                        className={`form-control ${errors.name ? 'is-invalid' : ''}`}
+                                        placeholder="Nombre unico del modulo"
+                                        value={module.name}
+                                        onChange={(e) => setModule({ ...module, name: e.target.value })}
+                                    />
+                                    <label htmlFor="name">Nombre del modulo</label>
+                                    {errors.name && <div className="invalid-feedback">{errors.name}</div>}
+                                </div>
+                            </div>
 
                         <div className="col mb-6 mt-2">
                             <InputModal
@@ -168,7 +186,6 @@ const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef
                                 placeholder="Icono del modulo"
                             />
                         </div>
-                    </div>
 
                     <div className="row g-4">
                         <div className="col mb-6 mt-2">
@@ -188,14 +205,13 @@ const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef
                             />
                         </div>
                     </div>
+                    <div className="modal-footer">
+                        <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Cerrar
+                        </button>
+                        <button type="button" className="btn btn-primary" onClick={handleSubmit}>Guardar</button>
+                    </div>
                 </div>
-                <div className="modal-footer">
-                    <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        Cerrar
-                    </button>
-                    <button type="button" className="btn btn-primary" onClick={handleSubmit}>Guardar</button>
-                </div>
-            </div>
             </div>
         </div>
     </>;

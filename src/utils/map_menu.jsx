@@ -21,6 +21,9 @@ import BalanceComprobacion from "../pages/list_accounts/reportes/BalanceComproba
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
+// List Accounts
+import IndexPUC from "../pages/list_accounts/puc/index";
+
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
 
@@ -50,6 +53,7 @@ export const COMPONENT_MAP = [
     { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
     { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
     { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
+    { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
     { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion }
 ]
 

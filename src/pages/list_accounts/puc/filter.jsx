@@ -1,32 +1,18 @@
-import { useEffect, useState } from "react";
-import InputModal from "../../../components/molecules/InputModal";
-import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import { useEffect, useState } from 'react';
+import InputModal from '../../../components/molecules/InputModal';
+import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
-// ─── Constantes ────────────────────────────────────────────────────────────────
-const DEPRECIATION_TYPES = [
-    { id: 'LINEAR', name: 'Lineal' },
-    { id: 'DECLINING_BALANCE', name: 'Decreciente' },
-    { id: 'ACCELERATED', name: 'Acelerada' },
-    { id: 'PRODUCTION_UNITS', name: 'Unidades de producción' },
-    { id: 'MINIMUM_USEFUL_LIFE', name: 'Vida útil mínima' },
-];
-
-const RULE_STATUSES = [
-    { id: 'ACTIVE', name: 'Activa' },
-    { id: 'INACTIVE', name: 'Inactiva' },
-];
-
-// ─── Componente ─────────────────────────────────────────────────────────────────
-const FilterDepreciationRule = ({ filterRef, filterInstance, dataTableRef }) => {
+const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, hierarchyLevels, accountNatures, accountStatuses }) => {
 
     const getTable = () => dataTableRef?.current?.table();
 
     const [filters, setFilters] = useState([
+        { regex: true, value: '', column: 'code:name' },
         { regex: true, value: '', column: 'name:name' },
-        { regex: true, value: '', column: 'depreciationType:name' },
-        { regex: true, value: '', column: 'accountName:name' },
+        { regex: true, value: '', column: 'accountClass:name' },
+        { regex: true, value: '', column: 'level:name' },
+        { regex: true, value: '', column: 'nature:name' },
         { regex: true, value: '', column: 'status:name' },
-        { regex: false, value: '', column: 'effectiveDate:name' },
     ]);
 
     useEffect(() => {
@@ -52,19 +38,46 @@ const FilterDepreciationRule = ({ filterRef, filterInstance, dataTableRef }) => 
 
     return (
         <>
-            <div className="modal fade" ref={filterRef} id="modalFilterDepreciationRule" tabIndex={-1} aria-hidden="true">
+            <div className="modal fade" ref={filterRef} id="modalFilterPUC" tabIndex={-1} aria-hidden="true">
                 <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
                     <div className="modal-content">
                         <div className="modal-header">
-                            <h4 className="modal-title">Filtrar Reglas de Depreciación</h4>
+                            <h4 className="modal-title" id="modalFilterPUCTitle">Filtrar Catálogo PUC</h4>
                             <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
                         </div>
 
                         <div className="modal-body">
 
-                            {/* Nombre */}
+                            {/* Código + Nombre */}
                             <div className="row">
-                                <div className="col-md-12 mb-4 mt-2">
+                                <div className="col-md-6 mb-4 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                checked={getFilter('code:name')?.regex || false}
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
+                                                data-bs-original-title="Búsqueda por coincidencia"
+                                                onChange={(e) => updateFilter('code:name', 'regex', e.target.checked)}
+                                                disabled={!dataTableRef?.current}
+                                                aria-label="Buscar"
+                                            />
+                                        </div>
+                                        <InputModal
+                                            type="text"
+                                            id="puc_filter_code"
+                                            label="Código"
+                                            value={getFilter('code:name')?.value || ''}
+                                            onChange={(e) => updateFilter('code:name', 'value', e.target.value)}
+                                            placeholder="Buscar por código"
+                                            error=""
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="col-md-6 mb-4 mt-2">
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
@@ -81,8 +94,8 @@ const FilterDepreciationRule = ({ filterRef, filterInstance, dataTableRef }) => 
                                         </div>
                                         <InputModal
                                             type="text"
-                                            id="dr_filter_name"
-                                            label="Nombre de la regla"
+                                            id="puc_filter_name"
+                                            label="Nombre de la cuenta"
                                             value={getFilter('name:name')?.value || ''}
                                             onChange={(e) => updateFilter('name:name', 'value', e.target.value)}
                                             placeholder="Buscar por nombre"
@@ -92,81 +105,92 @@ const FilterDepreciationRule = ({ filterRef, filterInstance, dataTableRef }) => 
                                 </div>
                             </div>
 
-                            {/* Tipo de depreciación */}
+                            {/* Clase */}
                             <div className="row">
                                 <div className="col-md-12 mb-4 mt-2">
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={getFilter('depreciationType:name')?.regex || false}
+                                                checked={getFilter('accountClass:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 type="checkbox"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Búsqueda por coincidencia"
-                                                onChange={(e) => updateFilter('depreciationType:name', 'regex', e.target.checked)}
+                                                onChange={(e) => updateFilter('accountClass:name', 'regex', e.target.checked)}
                                                 disabled={!dataTableRef?.current}
                                                 aria-label="Buscar"
                                             />
                                         </div>
                                         <InputSelectModal
-                                            id="dr_filter_depreciationType"
-                                            label="Tipo de depreciación"
-                                            options={DEPRECIATION_TYPES}
-                                            value={selectValue('depreciationType:name')}
-                                            onChange={(value) => updateFilter('depreciationType:name', 'value', value.join(','))}
+                                            id="puc_filter_accountClass"
+                                            label="Clase de la cuenta"
+                                            options={accountClasses}
+                                            value={selectValue('accountClass:name')}
+                                            onChange={(value) => updateFilter('accountClass:name', 'value', value.join(','))}
                                             multiple={true}
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Cuenta contable */}
+                            {/* Nivel jerárquico + Naturaleza */}
                             <div className="row">
-                                <div className="col-md-12 mb-4 mt-2">
+                                <div className="col-md-6 mb-4 mt-2">
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={getFilter('accountName:name')?.regex || false}
+                                                checked={getFilter('level:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 type="checkbox"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Búsqueda por coincidencia"
-                                                onChange={(e) => updateFilter('accountName:name', 'regex', e.target.checked)}
+                                                onChange={(e) => updateFilter('level:name', 'regex', e.target.checked)}
                                                 disabled={!dataTableRef?.current}
                                                 aria-label="Buscar"
                                             />
                                         </div>
-                                        <InputModal
-                                            type="text"
-                                            id="dr_filter_accountName"
-                                            label="Cuenta contable"
-                                            value={getFilter('accountName:name')?.value || ''}
-                                            onChange={(e) => updateFilter('accountName:name', 'value', e.target.value)}
-                                            placeholder="Buscar por cuenta contable"
-                                            error=""
+                                        <InputSelectModal
+                                            id="puc_filter_hierarchyLevel"
+                                            label="Nivel jerárquico"
+                                            options={hierarchyLevels}
+                                            value={selectValue('level:name')}
+                                            onChange={(value) => updateFilter('level:name', 'value', value.join(','))}
+                                            multiple={true}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="col-md-6 mb-4 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                checked={getFilter('nature:name')?.regex || false}
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
+                                                data-bs-original-title="Búsqueda por coincidencia"
+                                                onChange={(e) => updateFilter('nature:name', 'regex', e.target.checked)}
+                                                disabled={!dataTableRef?.current}
+                                                aria-label="Buscar"
+                                            />
+                                        </div>
+                                        <InputSelectModal
+                                            id="puc_filter_nature"
+                                            label="Naturaleza"
+                                            options={accountNatures}
+                                            value={selectValue('nature:name')}
+                                            onChange={(value) => updateFilter('nature:name', 'value', value.join(','))}
+                                            multiple={true}
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Fecha de vigencia + Estado */}
+                            {/* Estado */}
                             <div className="row">
-                                <div className="col-md-6 mb-4 mt-2">
-                                    <div className="input-group">
-                                        <InputModal
-                                            type="date"
-                                            id="dr_filter_effectiveDate"
-                                            label="Fecha de vigencia"
-                                            value={getFilter('effectiveDate:name')?.value || ''}
-                                            onChange={(e) => updateFilter('effectiveDate:name', 'value', e.target.value)}
-                                            placeholder="DD/MM/AAAA"
-                                            error=""
-                                        />
-                                    </div>
-                                </div>
-
                                 <div className="col-md-6 mb-4 mt-2">
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
@@ -183,9 +207,9 @@ const FilterDepreciationRule = ({ filterRef, filterInstance, dataTableRef }) => 
                                             />
                                         </div>
                                         <InputSelectModal
-                                            id="dr_filter_status"
-                                            label="Estado de la regla"
-                                            options={RULE_STATUSES}
+                                            id="puc_filter_status"
+                                            label="Estado de la cuenta"
+                                            options={accountStatuses}
                                             value={selectValue('status:name')}
                                             onChange={(value) => updateFilter('status:name', 'value', value.join(','))}
                                             multiple={true}
@@ -235,4 +259,4 @@ const FilterDepreciationRule = ({ filterRef, filterInstance, dataTableRef }) => 
     );
 };
 
-export default FilterDepreciationRule;
+export default FilterPUC;
