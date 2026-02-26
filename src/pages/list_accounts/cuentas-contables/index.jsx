@@ -282,7 +282,8 @@ const IndexCuentasContables = () => {
             <AlertPage 
                 message={message.message} 
                 type={message.type} 
-                show={message.show} 
+                show={message.show}
+                onChange={() => setMessage({ message: '', type: '', show: false })}
             />
 
             <div className="card-datatable text-nowrap">
