@@ -243,10 +243,10 @@ const IndexCentrosCosto = () => {
         <>
             <div className="card">
                 <h5 className="card-header text-md-start text-center">Centro de costos</h5>
-                <AlertPage type="success" message="Centro de Costo creado exitosamente" show={centroCostoCreate} />
-                <AlertPage type="success" message="Centro de Costo actualizado exitosamente" show={centroCostoEdit} />
-                <AlertPage type="success" message="Centro de Costo eliminado/inactivado exitosamente" show={centroCostoDelete} />
-                <AlertPage type="danger" message="Error al eliminar el centro de costo. Verifique su conexión e intente nuevamente." show={centroCostoError} />
+                <AlertPage type="success" message="Centro de Costo creado exitosamente" show={centroCostoCreate} onChange={() => setCentroCostoCreate(false)} />
+                <AlertPage type="success" message="Centro de Costo actualizado exitosamente" show={centroCostoEdit} onChange={() => setCentroCostoEdit(false)} />
+                <AlertPage type="success" message="Centro de Costo eliminado/inactivado exitosamente" show={centroCostoDelete} onChange={() => setCentroCostoDelete(false)} />
+                <AlertPage type="danger" message="Error al eliminar el centro de costo. Verifique su conexión e intente nuevamente." show={centroCostoError} onChange={() => setCentroCostoError(false)} />
                 <div className="card-datatable text-nowrap">
                     <DataTableReference
                         url_api={API_LIST}

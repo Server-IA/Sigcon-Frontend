@@ -23,9 +23,10 @@ const ACCOUNT_CLASSES = [
 ];
 
 const LEVELS = [
-    { id: 'GROUP',    name: 'Grupo' },
-    { id: 'SUBGROUP', name: 'Subgrupo' },
-    { id: 'ACCOUNT',  name: 'Cuenta' },
+    { id: 'CLASS',      name: 'Clase' },
+    { id: 'GROUP',      name: 'Grupo' },
+    { id: 'ACCOUNT',    name: 'Cuenta' },
+    { id: 'SUBACCOUNT', name: 'Subcuenta' },
 ];
 
 const ACCOUNT_NATURES = [

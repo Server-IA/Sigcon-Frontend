@@ -43,8 +43,16 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
             setErrorMessage('El código de la cuenta es obligatorio');
             return;
         }
+        if (!/^[0-9]{1,10}$/.test(accountUpdated.code)) {
+            setErrorMessage('El código solo debe contener números y tener máximo 10 dígitos');
+            return;
+        }
         if (!accountUpdated.name || accountUpdated.name.trim() === '') {
             setErrorMessage('El nombre de la cuenta es obligatorio');
+            return;
+        }
+        if (!/^[A-Za-z0-9_\-\s]{1,100}$/.test(accountUpdated.name)) {
+            setErrorMessage('El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)');
             return;
         }
         if (!accountUpdated.accountClass) {
