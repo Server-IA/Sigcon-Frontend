@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 
-import DataTableReference from '../../../components/organism/DataTable';
+import DataTableReference from "../../../components/organism/DataTable";
+import CreateDepreciationRule from "./create";
+import UpdatedDepreciationRule from "./updated";
+
+import { base_url } from "../../../utils/functions";
+import { fetchHelper } from "../../../utils/fetch";
 import AlertPage from '../../../components/molecules/AlertPage';
-
-import { fetchHelper } from '../../../utils/fetch';
-import { base_url } from '../../../utils/functions';
-
-import CreateDepreciationRule from './create';
-import UpdatedDepreciationRule from './updated';
-import FilterDepreciationRule from './filter';
+import FilterDepreciationRule from "./filter";
 
 const IndexDepreciationRules = () => {
 
@@ -46,10 +45,7 @@ const IndexDepreciationRules = () => {
         usefulLife: '',
         residualValue: '',
         effectiveDate: '',
-        calculationBase: '',
-        parameters: '',
-        exceptions: '',
-        applicableStandard: '',
+        description: '',
         status: 'ACTIVE',
     };
 
@@ -176,10 +172,7 @@ const IndexDepreciationRules = () => {
                         usefulLife: ruleRef.usefulLife ?? '',
                         residualValue: ruleRef.residualValue ?? '',
                         effectiveDate: ruleRef.effectiveDate ?? '',
-                        calculationBase: ruleRef.calculationBase ?? '',
-                        parameters: ruleRef.parameters ?? '',
-                        exceptions: ruleRef.exceptions ?? '',
-                        applicableStandard: ruleRef.applicableStandard ?? '',
+                        description: ruleRef.description ?? '',
                         status: ruleRef.status ?? 'ACTIVE',
                     });
                     setClickEdit(true);

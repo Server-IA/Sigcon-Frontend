@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import InputModal from '../../../components/molecules/InputModal';
-import InputSelectModal from '../../../components/molecules/inputSelectModal';
+import { useEffect, useState } from "react";
+import InputModal from "../../../components/molecules/InputModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const DEPRECIATION_TYPES = [

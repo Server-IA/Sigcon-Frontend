@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 
-import InputModal from '../../../components/molecules/InputModal';
-import InputSelectModal from '../../../components/molecules/inputSelectModal';
-import TextareaModal from '../../../components/molecules/TextareaModal';
+import InputModal from "../../../components/molecules/InputModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import TextareaModal from "../../../components/molecules/TextareaModal";
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
@@ -61,10 +61,7 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                 usefulLife: '',
                 residualValue: '',
                 effectiveDate: '',
-                calculationBase: '',
-                parameters: '',
-                exceptions: '',
-                applicableStandard: '',
+                description: '',
                 status: 'ACTIVE',
             });
 
@@ -215,50 +212,14 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                         </div>
 
                         <div className="row">
-                            <div className="col-md-6 mb-3">
+                            <div className="col-md-12 mb-3">
                                 <TextareaModal
-                                    id="dr_calculationBase_create"
-                                    label="Base de cálculo"
-                                    value={rule.calculationBase}
-                                    onChange={(e) => setRule({ ...rule, calculationBase: e.target.value })}
-                                    error={errors.calculationBase}
-                                    placeholder="Describa la base sobre la cual se calcula la depreciación"
-                                    required={true}
-                                />
-                            </div>
-                            <div className="col-md-6 mb-3">
-                                <TextareaModal
-                                    id="dr_parameters_create"
-                                    label="Parámetros"
-                                    value={rule.parameters}
-                                    onChange={(e) => setRule({ ...rule, parameters: e.target.value })}
-                                    error={errors.parameters}
-                                    placeholder="Describa los parámetros aplicables"
-                                    required={true}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="row">
-                            <div className="col-md-6 mb-3">
-                                <TextareaModal
-                                    id="dr_exceptions_create"
-                                    label="Excepciones"
-                                    value={rule.exceptions}
-                                    onChange={(e) => setRule({ ...rule, exceptions: e.target.value })}
-                                    error={errors.exceptions}
-                                    placeholder="Describa las excepciones aplicables"
-                                    required={true}
-                                />
-                            </div>
-                            <div className="col-md-6 mb-3">
-                                <TextareaModal
-                                    id="dr_applicableStandard_create"
-                                    label="Norma aplicable"
-                                    value={rule.applicableStandard}
-                                    onChange={(e) => setRule({ ...rule, applicableStandard: e.target.value })}
-                                    error={errors.applicableStandard}
-                                    placeholder="Ej. NIIF 16, Decreto 3019 de 1989"
+                                    id="dr_description_create"
+                                    label="Descripción"
+                                    value={rule.description}
+                                    onChange={(e) => setRule({ ...rule, description: e.target.value })}
+                                    error={errors.description}
+                                    placeholder="Describa la base de cálculo, parámetros, excepciones y norma aplicable"
                                     required={true}
                                 />
                             </div>
