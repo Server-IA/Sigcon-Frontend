@@ -56,6 +56,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
             level:        account.level,
             nature:       account.nature,
         };
+        console.log('DEBUG create payload:', payload);
         try {
             setLoading(true);
             await fetchHelper.post(url, payload, {}, 1000);

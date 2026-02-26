@@ -11,15 +11,15 @@ import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 
 const ACCOUNT_CLASSES = [
-    { id: 'ASSET',              name: 'Activo' },
-    { id: 'LIABILITY',          name: 'Pasivo' },
-    { id: 'EQUITY',             name: 'Patrimonio' },
-    { id: 'INCOME',             name: 'Ingresos' },
-    { id: 'EXPENSE',            name: 'Gastos' },
-    { id: 'COST_OF_SALES',      name: 'Costos de venta' },
-    { id: 'COST_OF_PRODUCTION', name: 'Costos de producción o de operación' },
-    { id: 'ORDER_DEBIT',        name: 'Cuentas de orden deudoras' },
-    { id: 'ORDER_CREDIT',       name: 'Cuentas de orden acreedoras' },
+    { id: 'ASSET',             name: 'Activo' },
+    { id: 'LIABILITY',         name: 'Pasivo' },
+    { id: 'EQUITY',            name: 'Patrimonio' },
+    { id: 'REVENUE',           name: 'Ingresos' },
+    { id: 'EXPENSE',           name: 'Gastos' },
+    { id: 'COST_OF_SALES',     name: 'Costos de venta' },
+    { id: 'PRODUCTION_COST',   name: 'Costos de producción o de operación' },
+    { id: 'MEMORANDUM_DEBIT',  name: 'Cuentas de orden deudoras' },
+    { id: 'MEMORANDUM_CREDIT', name: 'Cuentas de orden acreedoras' },
 ];
 
 const LEVELS = [
@@ -203,13 +203,25 @@ const IndexPUC = () => {
                             text: 'Ingrese el motivo por el cual elimina esta cuenta PUC:',
                             input: 'textarea',
                             inputPlaceholder: 'Escriba el motivo aquí...',
-                            inputAttributes: { 'aria-label': 'Motivo de eliminación' },
+                            inputAttributes: {
+                                'aria-label': 'Motivo de eliminación',
+                                maxlength: '255',
+                            },
                             showCancelButton: true,
                             confirmButtonText: 'Eliminar',
                             cancelButtonText: 'Cancelar',
                             preConfirm: (reason) => {
                                 if (!reason || reason.trim() === '') {
                                     window.Swal.showValidationMessage('Debe ingresar el motivo de eliminación');
+                                    return false;
+                                }
+                                if (reason.length > 255) {
+                                    window.Swal.showValidationMessage('El motivo no puede superar los 255 caracteres');
+                                    return false;
+                                }
+                                if (!/^[A-Za-z0-9_\-\s]{1,255}$/.test(reason)) {
+                                    window.Swal.showValidationMessage('El motivo solo puede contener letras, números, guiones y espacios');
+                                    return false;
                                 }
                                 return reason;
                             }

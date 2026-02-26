@@ -67,6 +67,10 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
             setErrorMessage('Por favor seleccione la naturaleza de la cuenta');
             return;
         }
+        if (!accountUpdated.status) {
+            setErrorMessage('Por favor seleccione el estado de la cuenta');
+            return;
+        }
 
         const url = base_url(['api', 'v1', 'chart-of-accounts', accountUpdated.id]);
         const payload = {
@@ -77,6 +81,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
             nature:       accountUpdated.nature,
             status:       accountUpdated.status,
         };
+        console.log('DEBUG update payload:', payload);
         try {
             setLoading(true);
             await fetchHelper.put(url, payload, {}, 1000);
