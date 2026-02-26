@@ -2,11 +2,35 @@ import '../../../styles/vendor/animate-css/animate.css'
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import { useEffect, useState } from 'react';
+import PageAlert from '../../../components/molecules/AlertPage';
+import InputModal from '../../../components/molecules/InputModal';
+import TextareaModal from '../../../components/molecules/TextareaModal';
 
 const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef, setModuleCreate }) => {
 
     const [errors, setErrors] = useState({});
-    const [errorMessage, setErrorMessage] = useState('');
+    const [error, setError] = useState({
+        message: '',
+        type: '',
+        show: false,
+    });
+
+    useEffect(() => {
+        if (modalRef.current) {
+            modalRef.current.addEventListener('hidden.bs.modal', () => {
+                setErrors({});
+                setError({ message: '', type: '', show: false });
+            });
+        }
+        return () => {
+            if (modalRef.current) {
+                modalRef.current.removeEventListener('hidden.bs.modal', () => {
+                    setErrors({});
+                    setError({ message: '', type: '', show: false });
+                });
+            }
+        };
+    }, [modalRef.current]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -39,38 +63,57 @@ const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef
                     fieldErrors[err.field] = err.message;
                 });
                 setErrors(fieldErrors);
-            } else if (error?.msg) {
-                setErrorMessage(error.msg);
+            }else if (error?.msg) {
+                setError({ message: error.msg, type: 'danger', show: true });
             }
         }
     }
 
     useEffect(() => {
-        setErrors({});
-        setErrorMessage('');
+        setError({ message: '', type: '', show: false });
+        console.log(module);
     }, [module]);
 
     return <>
         <div className="modal fade" ref={modalRef} id="modalCenter" tabIndex={-1} aria-hidden="true">
             <div className="modal-dialog modal-dialog-centered" role="document">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h4 className="modal-title" id="modalCenterTitle">Agregar Modulo</h4>
-                        <button
-                            type="button"
-                            className="btn-close"
-                            data-bs-dismiss="modal"
-                            aria-label="Close"></button>
-                    </div>
-                    <div className="modal-body">
-                        <p className="text-muted m-0">
-                            <a href="https://remixicon.com/" target="_blank" rel="noopener noreferrer">
-                                <i className="ri-information-line"></i> Iconos de Remix Icon <small>(Abrir en nueva pestaña)</small>
-                            </a>
-                        </p>
-                        <div className={`alert alert-danger alert-dismissible ${errorMessage == '' ? 'd-none' : ''}`} role="alert">
-                            <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            <span>{errorMessage}</span>
+            <div className="modal-content">
+                <div className="modal-header">
+                    <h4 className="modal-title" id="modalCenterTitle">Agregar Modulo</h4>
+                    <button
+                        type="button"
+                        className="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div className="modal-body">
+                    <p className="text-muted m-0">
+                        <a href="https://remixicon.com/" target="_blank" rel="noopener noreferrer">
+                            <i className="ri-information-line"></i> Iconos de Remix Icon <small>(Abrir en nueva pestaña)</small>
+                        </a>
+                    </p>
+                    
+                    <PageAlert message={error.message} type={error.type} show={error.show} onChange={() => setError({ message: '', type: '', show: false })} />
+
+                    <div className="row">
+                        <div className="col mb-6 mt-2">
+
+                            <InputModal
+                                type="text"
+                                id="name"
+                                label="Nombre del modulo"
+                                value={module.name}
+                                onChange={(e) => {
+                                    setModule({ ...module, name: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        name: '',
+                                    }))
+                                }}
+                                error={errors.name}
+                                placeholder="Nombre del modulo"
+                                required={true}
+                            />
                         </div>
                         <div className="row">
                             <div className="col mb-6 mt-2">
@@ -88,66 +131,78 @@ const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef
                                 </div>
                             </div>
 
-                            <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline">
-                                    <input
-                                        type="number"
-                                        id="position"
-                                        className={`form-control ${errors.position ? 'is-invalid' : ''}`}
-                                        placeholder="Posicion del modulo"
-                                        value={module.position}
-                                        onChange={(e) => setModule({ ...module, position: e.target.value ? parseInt(e.target.value) : 1 })}
-                                    />
-                                    <label htmlFor="position">Posicion del modulo</label>
-                                    {errors.position && <div className="invalid-feedback">{errors.position}</div>}
-                                </div>
-                            </div>
+                        <div className="col mb-6 mt-2">
+                            <InputModal
+                                type="number"
+                                id="position"
+                                label="Posicion del modulo"
+                                value={module.position}
+                                onChange={(e) => {
+                                    setModule({ ...module, position: e.target.value ? parseInt(e.target.value) : 1 })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        position: '',
+                                    }))
+                                }}
+                                error={errors.position}
+                                placeholder="Posicion del modulo"
+                                required={true}
+                            />
                         </div>
-                        <div className="row g-4">
-                            <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline">
-                                    <input
-                                        type="text"
-                                        id="url"
-                                        className={`form-control ${errors.url ? 'is-invalid' : ''}`}
-                                        placeholder="Url del modulo"
-                                        value={module.url}
-                                        onChange={(e) => setModule({ ...module, url: e.target.value })}
-                                    />
-                                    <label htmlFor="url">Url del modulo</label>
-                                    {errors.url && <div className="invalid-feedback">{errors.url}</div>}
-                                </div>
-                            </div>
-                            <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline">
-                                    <input
-                                        type="text"
-                                        id="icon"
-                                        className={`form-control ${errors.icon ? 'is-invalid' : ''}`}
-                                        placeholder="Icono del modulo"
-                                        value={module.icon}
-                                        onChange={(e) => setModule({ ...module, icon: e.target.value })}
-                                    />
-                                    <label htmlFor="icon">Icono del modulo</label>
-                                    {errors.icon && <div className="invalid-feedback">{errors.icon}</div>}
-                                </div>
-                            </div>
+                    </div>
+                    <div className="row g-4">
+                        <div className="col mb-6 mt-2">
+                            <InputModal
+                                type="text"
+                                id="url"
+                                label="Url del modulo"
+                                value={module.url}
+                                onChange={(e) => {
+                                    setModule({ ...module, url: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        url: '',
+                                    }))
+                                }}
+                                error={errors.url}
+                                placeholder="Url del modulo"
+                                required={true}
+                            />
+                        </div>
+                        <div className="col mb-6 mt-2">
+                            <InputModal
+                                type="text"
+                                id="icon"
+                                label="Icono del modulo"
+                                value={module.icon}
+                                onChange={(e) => {
+                                    setModule({ ...module, icon: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        icon: '',
+                                    }))
+                                }}
+                                error={errors.icon}
+                                placeholder="Icono del modulo"
+                            />
                         </div>
 
-                        <div className="row g-4">
-                            <div className="col mb-6 mt-2">
-                                <div className="form-floating form-floating-outline mb-6">
-                                    <textarea
-                                        className={`form-control h-px-100 ${errors.description ? 'is-invalid' : ''}`}
-                                        id="description"
-                                        placeholder="Descripcion del modulo"
-                                        value={module.description}
-                                        onChange={(e) => setModule({ ...module, description: e.target.value })}
-                                    ></textarea>
-                                    <label htmlFor="description">Descripcion del modulo</label>
-                                    {errors.description && <div className="invalid-feedback">{errors.description}</div>}
-                                </div>
-                            </div>
+                    <div className="row g-4">
+                        <div className="col mb-6 mt-2">
+                            <TextareaModal
+                                id="description"
+                                label="Descripcion del modulo"
+                                value={module.description}
+                                onChange={(e) => {
+                                    setModule({ ...module, description: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        description: '',
+                                    }))
+                                }}
+                                error={errors.description}
+                                placeholder="Descripcion del modulo"
+                            />
                         </div>
                     </div>
                     <div className="modal-footer">

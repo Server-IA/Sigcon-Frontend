@@ -82,7 +82,6 @@ const IndexModules = () => {
                 modalCreateRef.current
             );
         }
-        modalCreateInstance.current.show();
         setModule({
             id: '',
             name: '',
@@ -92,6 +91,7 @@ const IndexModules = () => {
             position: '',
             status: 'ACTIVE',
         });
+        modalCreateInstance.current.show();
     };
 
     const buttons = [
