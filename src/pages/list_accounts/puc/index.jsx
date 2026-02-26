@@ -11,48 +11,48 @@ import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 
 const ACCOUNT_CLASSES = [
-    { id: 'ASSET', name: 'Activo' },
-    { id: 'LIABILITY', name: 'Pasivo' },
-    { id: 'EQUITY', name: 'Patrimonio' },
-    { id: 'INCOME', name: 'Ingresos' },
-    { id: 'EXPENSE', name: 'Gastos' },
-    { id: 'COST_OF_SALES', name: 'Costos de venta' },
+    { id: 'ASSET',              name: 'Activo' },
+    { id: 'LIABILITY',          name: 'Pasivo' },
+    { id: 'EQUITY',             name: 'Patrimonio' },
+    { id: 'INCOME',             name: 'Ingresos' },
+    { id: 'EXPENSE',            name: 'Gastos' },
+    { id: 'COST_OF_SALES',      name: 'Costos de venta' },
     { id: 'COST_OF_PRODUCTION', name: 'Costos de producción o de operación' },
-    { id: 'ORDER_DEBIT', name: 'Cuentas de orden deudoras' },
-    { id: 'ORDER_CREDIT', name: 'Cuentas de orden acreedoras' },
+    { id: 'ORDER_DEBIT',        name: 'Cuentas de orden deudoras' },
+    { id: 'ORDER_CREDIT',       name: 'Cuentas de orden acreedoras' },
 ];
 
-const HIERARCHY_LEVELS = [
-    { id: 'GROUP', name: 'Grupo' },
+const LEVELS = [
+    { id: 'GROUP',    name: 'Grupo' },
     { id: 'SUBGROUP', name: 'Subgrupo' },
-    { id: 'ACCOUNT', name: 'Cuenta' },
+    { id: 'ACCOUNT',  name: 'Cuenta' },
 ];
 
 const ACCOUNT_NATURES = [
-    { id: 'DEBIT', name: 'Deudora' },
+    { id: 'DEBIT',  name: 'Deudora' },
     { id: 'CREDIT', name: 'Acreedora' },
 ];
 
 const ACCOUNT_STATUSES = [
-    { id: 'ACTIVE', name: 'Activa' },
+    { id: 'ACTIVE',   name: 'Activa' },
     { id: 'INACTIVE', name: 'Inactiva' },
 ];
 
 const IndexPUC = () => {
 
-    const tableRef = useRef(null);
+    const tableRef    = useRef(null);
     const dataTableRef = useRef(null);
 
-    const filterRef = useRef(null);
+    const filterRef      = useRef(null);
     const filterInstance = useRef(null);
 
-    const modalCreateRef = useRef(null);
+    const modalCreateRef      = useRef(null);
     const modalCreateInstance = useRef(null);
 
-    const modalUpdateRef = useRef(null);
+    const modalUpdateRef      = useRef(null);
     const modalUpdateInstance = useRef(null);
 
-    const [data, setData] = useState([]);
+    const [data, setData]       = useState([]);
     const [clickEdit, setClickEdit] = useState(false);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
 
@@ -75,17 +75,17 @@ const IndexPUC = () => {
     const url = ['api', 'v1', 'chart-of-accounts', 'search'];
 
     const actions = [
-        { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        { key: 'edit',   icon: 'ri-edit-line',       class: 'btn-label-primary', title: 'Editar' },
+        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger',  title: 'Eliminar' },
     ];
 
     const columns = [
-        { title: 'ID', data: 'id', searchable: false },
-        { title: 'Código', data: 'code', name: 'code' },
-        { title: 'Nombre', data: 'name', name: 'name' },
-        { title: 'Clase', data: 'accountClass', name: 'accountClass', render: (val) => val ?? '-' },
-        { title: 'Nivel', data: 'level', name: 'level', render: (val) => val ?? '-' },
-        { title: 'Naturaleza', data: 'nature', name: 'nature', render: (val) => val ?? '-' },
+        { title: 'ID',         data: 'id',           searchable: false },
+        { title: 'Código',     data: 'code',         name: 'code' },
+        { title: 'Nombre',     data: 'name',         name: 'name' },
+        { title: 'Clase',      data: 'accountClass', name: 'accountClass', render: (val) => val ?? '-' },
+        { title: 'Nivel',      data: 'level',        name: 'level',        render: (val) => val ?? '-' },
+        { title: 'Naturaleza', data: 'nature',       name: 'nature',       render: (val) => val ?? '-' },
         {
             title: 'Estado', data: 'status', name: 'status',
             render: (status) => status === 'ACTIVE'
@@ -163,7 +163,7 @@ const IndexPUC = () => {
 
         const handler = function () {
             const action = $(this).data('action');
-            const id = Number($(this).data('id'));
+            const id     = Number($(this).data('id'));
             const accountRef = data.find(m => m.id === id);
 
             if (!accountRef) {
@@ -174,13 +174,13 @@ const IndexPUC = () => {
             switch (action) {
                 case 'edit':
                     setAccount({
-                        id: accountRef.id ?? '',
-                        code: accountRef.code ?? '',
-                        name: accountRef.name ?? '',
-                        accountClass: accountRef.accountClass ?? '',
-                        level: accountRef.level ?? '',
-                        nature: accountRef.nature ?? '',
-                        status: accountRef.status ?? 'ACTIVE',
+                        id:              accountRef.id              ?? '',
+                        code:            accountRef.code            ?? '',
+                        name:            accountRef.name            ?? '',
+                        accountClass:    accountRef.accountClass    ?? '',
+                        level:           accountRef.level           ?? '',
+                        nature:          accountRef.nature          ?? '',
+                        status:          accountRef.status          ?? 'ACTIVE',
                         hasTransactions: accountRef.hasTransactions ?? false,
                     });
                     setClickEdit(true);
@@ -277,7 +277,7 @@ const IndexPUC = () => {
                     filterInstance={filterInstance}
                     dataTableRef={dataTableRef}
                     accountClasses={ACCOUNT_CLASSES}
-                    hierarchyLevels={HIERARCHY_LEVELS}
+                    levels={LEVELS}
                     accountNatures={ACCOUNT_NATURES}
                     accountStatuses={ACCOUNT_STATUSES}
                 />
@@ -291,7 +291,7 @@ const IndexPUC = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 accountClasses={ACCOUNT_CLASSES}
-                hierarchyLevels={HIERARCHY_LEVELS}
+                levels={LEVELS}
                 accountNatures={ACCOUNT_NATURES}
             />
 
@@ -303,7 +303,7 @@ const IndexPUC = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 accountClasses={ACCOUNT_CLASSES}
-                hierarchyLevels={HIERARCHY_LEVELS}
+                levels={LEVELS}
                 accountNatures={ACCOUNT_NATURES}
                 accountStatuses={ACCOUNT_STATUSES}
             />

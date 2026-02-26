@@ -5,11 +5,11 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import { useEffect, useState } from 'react';
 
-const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage, accountClasses, hierarchyLevels, accountNatures, accountStatuses }) => {
+const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage, accountClasses, levels, accountNatures, accountStatuses }) => {
 
-    const [errors, setErrors] = useState({});
+    const [errors, setErrors]             = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading]           = useState(false);
     const [accountUpdated, setAccountUpdated] = useState({
         id: '',
         code: '',
@@ -23,13 +23,13 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
 
     useEffect(() => {
         setAccountUpdated({
-            id: account.id ?? '',
-            code: account.code ?? '',
-            name: account.name ?? '',
-            accountClass: account.accountClass ?? '',
-            level: account.level ?? '',
-            nature: account.nature ?? '',
-            status: account.status ?? 'ACTIVE',
+            id:              account.id             ?? '',
+            code:            account.code           ?? '',
+            name:            account.name           ?? '',
+            accountClass:    account.accountClass   ?? '',
+            level:           account.level           ?? '',
+            nature:          account.nature         ?? '',
+            status:          account.status         ?? 'ACTIVE',
             hasTransactions: account.hasTransactions ?? false,
         });
         setErrors({});
@@ -62,12 +62,12 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
 
         const url = base_url(['api', 'v1', 'chart-of-accounts', accountUpdated.id]);
         const payload = {
-            code: accountUpdated.code,
-            name: accountUpdated.name,
+            code:         accountUpdated.code,
+            name:         accountUpdated.name,
             accountClass: accountUpdated.accountClass,
-            level: accountUpdated.level,
-            nature: accountUpdated.nature,
-            status: accountUpdated.status,
+            level:        accountUpdated.level,
+            nature:       accountUpdated.nature,
+            status:       accountUpdated.status,
         };
         try {
             setLoading(true);
@@ -139,7 +139,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                                     label="Identificador"
                                     placeholder=""
                                     value={accountUpdated.id}
-                                    onChange={() => { }}
+                                    onChange={() => {}}
                                     disabled
                                     readOnly
                                 />
@@ -208,7 +208,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                                     onChange={(value) => setAccountUpdated({ ...accountUpdated, level: value })}
                                     error={errors.level}
                                     placeholder="Seleccionar nivel"
-                                    options={hierarchyLevels}
+                                    options={levels}
                                     required
                                 />
                             </div>
