@@ -4,8 +4,8 @@ export const base_url = (array = [], get = {}) => {
 
     // Quitar slash final de la base
     base = base.replace(/\/+$/, '');
-    
-     // Construir path sin slash inicial
+
+    // Construir path sin slash inicial
     const path = array.length > 0
         ? array.join('/').replace(/^\/+/, '')
         : '';
@@ -27,8 +27,8 @@ export const base_redirect_path = (is_login = false) => {
 
     const base = import.meta.env.VITE_ENVIRONMENT == 'local'
         ? '/' : import.meta.env.VITE_ENVIRONMENT == 'development'
-        ? '/sigcon/dev/' : '/sigcon/'
-      
+            ? '/sigcon/dev/' : '/sigcon/'
+
     return is_login
         ? joinPath(base, '/login')
         : joinPath(base, '/dashboard')
@@ -36,13 +36,13 @@ export const base_redirect_path = (is_login = false) => {
 
 export const validarArrays = (a, b) => {
     if (a.length !== b.length) return false;
-  
+
     const sortedA = [...a].sort();
     const sortedB = [...b].sort();
-  
+
     return sortedA.every((value, index) => value === sortedB[index]);
 }
-  
+
 
 export const chunkArray = (array, size) => {
     const result = [];
@@ -55,22 +55,22 @@ export const chunkArray = (array, size) => {
 export function lightenColor(hex, percent = 75) {
     // Quitar #
     hex = hex.replace("#", "");
-  
+
     // Convertir a RGB
     let r = parseInt(hex.substring(0, 2), 16);
     let g = parseInt(hex.substring(2, 4), 16);
     let b = parseInt(hex.substring(4, 6), 16);
-  
+
     // Mezclar con blanco
     r = Math.round(r + (255 - r) * (percent / 100));
     g = Math.round(g + (255 - g) * (percent / 100));
     b = Math.round(b + (255 - b) * (percent / 100));
-  
+
     // Convertir de nuevo a HEX
     return (
-      "#" +
-      r.toString(16).padStart(2, "0") +
-      g.toString(16).padStart(2, "0") +
-      b.toString(16).padStart(2, "0")
+        "#" +
+        r.toString(16).padStart(2, "0") +
+        g.toString(16).padStart(2, "0") +
+        b.toString(16).padStart(2, "0")
     );
 }
