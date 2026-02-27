@@ -9,7 +9,12 @@ import CreateMenuPermission from "./create";
 import UpdateMenuPermission from "./updated";
 import FilterMenuPermission from "./filter";
 
+import { refreshMenu } from '../../../routes/routes';
+import { useDispatch } from 'react-redux';
+
 const MenuPermissionIndex = () => {
+
+    const dispatch = useDispatch();
 
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
@@ -193,6 +198,7 @@ const MenuPermissionIndex = () => {
                             try {
                                 await fetchHelper.delete(url, {}, {}, 500, false);
                                 dataTableRefMenu?.current?.ajax.reload();
+                                dispatch(refreshMenu());
                                 setMenuPermissionDelete(true);
                                 setMenuPermissionError(false);
                             } catch (error) {
