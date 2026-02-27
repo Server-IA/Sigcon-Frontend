@@ -25949,7 +25949,7 @@ html:not(.layout-footer-fixed) .content-wrapper {
   display: block;
 }
 .app-brand .layout-menu-toggle svg path {
-  fill: #262b43;
+  fill: var(--bs-primary);
 }
 
 .menu-vertical .app-brand {

@@ -4,15 +4,15 @@ import { useSelector } from "react-redux";
 import MenuNav from "../organism/MenuNav";
 import NavHorizontal from "../organism/NavHorizontal";
 
-const MainTemplate = ({modules}) =>{
+const MainTemplate = () =>{
 
     return (
         <>
             <div className="layout-wrapper layout-content-navbar">
                 <div className="layout-container">
-                    <MenuNav modules={modules} />
+                    <MenuNav />
                     <div className="layout-page">
-                        <NavHorizontal modules={modules} />
+                        <NavHorizontal />
                         <div className="content-wrapper">
                             <div className="container-xxl flex-grow-1 container-p-y">
                                 <div className="row g-6">

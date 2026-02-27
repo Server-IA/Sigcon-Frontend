@@ -4,8 +4,12 @@ import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { refreshMenu } from '../../../routes/routes';
+import { useDispatch } from 'react-redux';
 
 const UpdateMenuPermission = ({ modalRef, modalInstance, menuPermission, setMenuPermission, dataTableRef, setMenuUpdate }) => {
+
+    const dispatch = useDispatch();
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
@@ -54,6 +58,7 @@ const UpdateMenuPermission = ({ modalRef, modalInstance, menuPermission, setMenu
 
             const url = base_url(['api', 'menu-permissions', 'update']);
             await fetchHelper.put(url, menuPermission, {}, 1000);
+            dispatch(refreshMenu());
             setMenuPermission({
                 id: '',
                 menu_id: '',
