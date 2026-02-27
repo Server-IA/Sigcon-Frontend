@@ -101,7 +101,7 @@
   font-size: 1.25rem;
 }
 
-.profile-page .btn {
+/* .profile-page .btn {
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   font-size: 0.9375rem;
@@ -145,7 +145,7 @@
 
 .profile-page .btn-danger:hover:not(:disabled) {
   background: #b91c1c;
-}
+} */
 
 /* ===== Layout página Perfil ===== */
 .profile-page {

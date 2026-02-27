@@ -2,6 +2,7 @@ import { Route } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
 import MainTemplate from '../components/templates/MainTemplate';
 import AuthTemplate from '../components/templates/AuthTemplate';
+import PageMaintenance from '../pages/errors/page_maintenance';
 
 import { lazy } from 'react';
 const Login = lazy(() => import("../pages/auth/LoginPage"));
@@ -12,14 +13,19 @@ const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
 import PageLoad from '../pages/errors/page_load';
 
 import { useState, useEffect, Suspense } from 'react';
-import { getMenu } from '../utils/map_menu';
+import { getMenu, COMPONENT_MAP } from '../utils/map_menu';
 
 import { useDispatch, useSelector } from 'react-redux';
+
+export const refreshMenu = () => async (dispatch) => {
+    const menuModules = await getMenu();
+    dispatch({ type: "SET_MODULES", payload: menuModules });
+};
 
 export const RenderRoutes = () => {
     
     const dispatch = useDispatch();
-    const [modules, setModules] = useState([]);
+    const modules = useSelector(state => state.modules.modules ?? []);
     const [routesReady, setRoutesReady] = useState(false);
 
     useEffect(() => {
@@ -33,9 +39,8 @@ export const RenderRoutes = () => {
                 dispatch({ type: "SET_USER", payload: userData });
                 dispatch({ type: "SET_TOKEN", payload: token });
     
-                const {modules: menuModules, componentsFinal} = await getMenu();
-                setModules(menuModules);
-                dispatch({ type: "SET_MODULES", payload: componentsFinal });
+                const menuModules = await getMenu();
+                dispatch({ type: "SET_MODULES", payload: menuModules });
             }
     
             setRoutesReady(true);
@@ -64,7 +69,7 @@ export const RenderRoutes = () => {
                 <Route
                     path="/forgot-password"
                     element={
-                        <Suspense fallback={PageLoad}>
+                        <Suspense fallback={<PageLoad />}>
                             <RecoveryPassword />
                         </Suspense>
                     }
@@ -72,7 +77,7 @@ export const RenderRoutes = () => {
                 <Route
                     path="/reset-password/:token"
                     element={
-                        <Suspense fallback={PageLoad}>
+                        <Suspense fallback={<PageLoad />}>
                             <ResetPassword />
                         </Suspense>
                     }
@@ -81,7 +86,7 @@ export const RenderRoutes = () => {
 
             {
                 modules.length > 0 && (
-                    <Route element={<MainTemplate modules={modules} />}>
+                    <Route element={<MainTemplate />}>
                         {modules.flatMap(module =>
                             module.menus.flatMap(menu => renderMenuRoutesFlat(menu, module.url))
                         )}
@@ -90,7 +95,7 @@ export const RenderRoutes = () => {
             }
 
             <Route path="*" element={
-                <Suspense fallback={PageLoad}>
+                <Suspense fallback={<PageLoad />}>
                     <Page404 />
                 </Suspense>
             } />
@@ -106,12 +111,16 @@ const renderMenuRoutesFlat = (menu, parentPath = "") => {
     const fullPath = rawPath
         ? `/${[parentPath, rawPath].filter(Boolean).join("/")}`
         : `/${parentPath}`;
+    
+    const ComponentResolved =
+        COMPONENT_MAP.find(c => c.id === menu.componentName)?.component
+        || PageMaintenance;
 
     const routes = [
         <Route
             key={fullPath}
             path={fullPath}
-            element={<menu.component />}
+            element={<ComponentResolved />}
         />
     ];
 

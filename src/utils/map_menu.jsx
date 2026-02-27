@@ -27,39 +27,8 @@ import IndexPUC from "../pages/list_accounts/puc/index";
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
 
-//aca tengo que agregar los nuevos modulos que cargue de parametrizacion
-// export const COMPONENT_MAP = {
-//     HOME: Home,
-//     PERFIL: PerfilPage,
-//     MODULOS: IndexModules,
-//     MENUS: IndexMenus,
-//     PERMISSIONS: PermissionsIndex,
-//     USERS: IndexUsers,
-//     ROLES: IndexRoles,
-//     PARAMETROS: IndexParameters,
-//     MENUSPERMISSIONS: MenuPermissionIndex
-// };
-
-export const COMPONENT_MAP = [
-    // { id: "HOME", name: "Dashboard", component: Home },
-    { id: "PERFIL", name: "Perfil", component: PerfilPage },
-    { id: "MODULOS", name: "Módulos", component: IndexModules },
-    { id: "MENUS", name: "Menus", component: IndexMenus },
-    { id: "PERMISSIONS", name: "Permisos", component: PermissionsIndex },
-    { id: "USERS", name: "Usuarios", component: IndexUsers },
-    { id: "ROLES", name: "Roles", component: IndexRoles },
-    { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
-    { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
-    { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
-    { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
-    { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
-    { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
-    { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion }
-]
-
 export const getMenu = async () => {
     const modules = [];
-    const componentsFinal = [];
     const url = base_url(['api', 'modules', 'menu']);
     const { data, error } = await fetchHelper.get(url, {}, 0);
 
@@ -77,8 +46,8 @@ export const getMenu = async () => {
                 position: 0,
                 icon: "ri-home-smile-line",
                 childrens: [],
-                component: Home,
-                componentName: "Home"
+                // component: Home,
+                componentName: "HOME"
             }
         ]
     })
@@ -90,36 +59,7 @@ export const getMenu = async () => {
             const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
                 ...menu,
                 componentName: menu?.component,
-                component: COMPONENT_MAP.find(component => component.id === menu?.component)?.component || PageMaintenance,
             })));
-
-            // 🔹 MOCK: Inyectar "Generar Reportes" dentro de "Listas contables" (id: 2)
-            // TODO: Remover cuando el backend provea estos menús
-            if (mod.id === 2) {
-                menuTree.push({
-                    id: 9000,
-                    label: "Generar Reportes",
-                    path: "reportes",
-                    position: 99,
-                    icon: "ri-file-chart-line",
-                    parentId: null,
-                    component: PageMaintenance,
-                    componentName: "REPORTES",
-                    childrens: [
-                        {
-                            id: 9001,
-                            label: "Balance de Comprobación",
-                            path: "balance-comprobacion",
-                            position: 0,
-                            icon: "ri-bar-chart-box-line",
-                            parentId: 9000,
-                            component: BalanceComprobacion,
-                            componentName: "BALANCE_COMPROBACION",
-                            childrens: []
-                        }
-                    ]
-                });
-            }
 
             return {
                 ...mod,
@@ -128,21 +68,7 @@ export const getMenu = async () => {
         }));
     }
 
-    // 🔹 Clonar sin la propiedad "component"
-    const removeComponentRecursively = (menus) =>
-        menus?.map(({ component, childrens, ...rest }) => ({
-            ...rest,
-            childrens: removeComponentRecursively(childrens)
-        }));
-
-    const modulesWithoutComponents = modules.map(module => ({
-        ...module,
-        menus: removeComponentRecursively(module.menus)
-    }));
-
-    componentsFinal.push(...modulesWithoutComponents);
-
-    return { modules, componentsFinal };
+    return modules;
 }
 
 const buildMenuTree = (menus) => {
@@ -175,3 +101,20 @@ const buildMenuTree = (menus) => {
 export const buildFullPath = (parent = "", current = "") => {
     return `/${[parent, current].filter(Boolean).join("/")}`;
 };
+
+export const COMPONENT_MAP = [
+    { id: "HOME", name: "Home", component: Home },
+    { id: "PERFIL", name: "Perfil", component: PerfilPage },
+    { id: "MODULOS", name: "Módulos", component: IndexModules },
+    { id: "MENUS", name: "Menus", component: IndexMenus },
+    { id: "PERMISSIONS", name: "Permisos", component: PermissionsIndex },
+    { id: "USERS", name: "Usuarios", component: IndexUsers },
+    { id: "ROLES", name: "Roles", component: IndexRoles },
+    { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
+    { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
+    { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
+    { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
+    { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
+    { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
+    { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion }
+];

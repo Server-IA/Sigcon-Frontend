@@ -6,8 +6,12 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
 
+import { useDispatch } from 'react-redux';
+import { refreshMenu } from '../../../routes/routes';
+
 const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuCreate, modules, parents, components }) => {
 
+    const dispatch = useDispatch();
     const [errors, setErrors] = useState({});
     const [error, setError] = useState({
         message: '',
@@ -50,6 +54,7 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
 
             const url = base_url(['api', 'menus', 'store']);
             await fetchHelper.post(url, menu, {}, 1000);
+            dispatch(refreshMenu());
             setMenu({
                 id: '',
                 label: '',
@@ -201,7 +206,7 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 error={errors.component}
                                 placeholder="Componente del menu"
                                 options={components}
-                                required={true}
+                                clearable={true}
                             />
                         </div>
                         <div className="col mb-6 mt-2">

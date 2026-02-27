@@ -4,9 +4,12 @@ import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import { useState, useRef, useEffect } from "react";
 import { fetchHelper } from "../../../utils/fetch";
 import { base_url } from "../../../utils/functions";
+import { useDispatch } from 'react-redux';
+import { refreshMenu } from '../../../routes/routes';
 
 const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuUpdate, modules, parents, components }) => {
 
+    const dispatch = useDispatch();
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
@@ -46,6 +49,7 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
 
             const url = base_url(['api', 'menus', 'update']);
             await fetchHelper.put(url, menu, {}, 1000);
+            dispatch(refreshMenu());
             setMenu({
                 id: '',
                 label: '',

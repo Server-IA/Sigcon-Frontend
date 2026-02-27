@@ -30,7 +30,7 @@ console.log(user, 'user')
 window.config = {
   colors: {
     primary: user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff',
-    secondary: '#6d788d',
+    secondary: user?.parameters?.find(p => p.name === 'secondary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'secondary')?.value || '#6d788d',
     success: '#72e128',
     info: '#26c6f9',
     warning: '#fdb528',
@@ -46,8 +46,8 @@ window.config = {
     borderColor: '#e5e5e8'
   },
   colors_label: {
-    primary: `${user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff'}29`,
-    secondary: '#6d788d29',
+    primary: `${lightenColor(user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff', 90)}`,
+    secondary: `${lightenColor(user?.parameters?.find(p => p.name === 'secondary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'secondary')?.value || '#6d788d', 90)}`,
     success: '#72e12829',
     info: '#26c6f929',
     warning: '#fdb52829',
@@ -56,7 +56,7 @@ window.config = {
   },
   colors_hover: {
     primary: `${lightenColor(user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff', 20)}`,
-    secondary: '#6d788d',
+    secondary: `${lightenColor(user?.parameters?.find(p => p.name === 'secondary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'secondary')?.value || '#6d788d', 20)}`,
     success: '#72e128',
     info: '#26c6f9',
     warning: '#fdb528',
@@ -65,7 +65,7 @@ window.config = {
   },
   colors_focus: {
     primary: `${lightenColor(user?.parameters?.find(p => p.name === 'primary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'primary')?.value || '#666cff', 70)}`,
-    secondary: '#6d788d',
+    secondary: `${lightenColor(user?.parameters?.find(p => p.name === 'secondary')?.userParameter?.value || user?.parameters?.find(p => p.name === 'secondary')?.value || '#6d788d', 70)}`,
     success: '#72e128',
     info: '#26c6f9',
     warning: '#fdb528',

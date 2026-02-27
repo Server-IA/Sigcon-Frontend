@@ -74,7 +74,7 @@ const ThemeSelector = () => {
             const varName = `--config-${param.name.toLowerCase().replace(/\s+/g, '-')}`;
             document.documentElement.style.setProperty(varName, newValue);
             const varNameLabel = `--config-${param.name.toLowerCase().replace(/\s+/g, '-')}-label`;
-            document.documentElement.style.setProperty(varNameLabel, `${newValue}29`);
+            document.documentElement.style.setProperty(varNameLabel, `${lightenColor(newValue, 90)}`);
             const varNameHover = `--config-${param.name.toLowerCase().replace(/\s+/g, '-')}-hover`;
             document.documentElement.style.setProperty(varNameHover, `${lightenColor(newValue, 20)}`);
             const varNameFocus = `--config-${param.name.toLowerCase().replace(/\s+/g, '-')}-focus`;
@@ -212,7 +212,7 @@ const ThemeSelector = () => {
 
             <div className="theme-selector-actions">
                 <Button variant="primary" onClick={handleSaveTheme}>Guardar Cambios</Button>
-                <Button className="btn-gray" onClick={handleSaveNewTheme}>Guardar nuevo tema</Button>
+                {/* <Button variant="secondary" onClick={handleSaveNewTheme}>Guardar nuevo tema</Button> */}
             </div>
         </div>
     );
