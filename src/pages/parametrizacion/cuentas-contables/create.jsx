@@ -92,6 +92,7 @@ const CreateCuentaContable = ({
             return;
         }
 
+        // Construir CreateChartOfAccountDTO según swagger
         const requestBody = {
             code: cuentaContable.code.trim(),
             name: cuentaContable.name.trim(),
@@ -100,6 +101,7 @@ const CreateCuentaContable = ({
             nature: cuentaContable.nature,
         };
 
+        // POST /api/v1/chart-of-accounts → 201 Created
         const url = base_url(['api', 'v1', 'chart-of-accounts']);
         try {
             setLoading(true);
@@ -119,7 +121,7 @@ const CreateCuentaContable = ({
             setErrors({});
             setErrorMessage('');
         } catch (error) {
-            console.log(error);
+            console.error('Error POST /api/v1/chart-of-accounts:', error);
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
@@ -127,8 +129,11 @@ const CreateCuentaContable = ({
                     fieldErrors[err.field] = err.message;
                 });
                 setErrors(fieldErrors);
-            } else if (error?.msg) {
+            }
+            if (error?.msg) {
                 setErrorMessage(error.msg);
+            } else if (!errores || errores.length === 0) {
+                setErrorMessage('Error al crear la cuenta contable');
             }
         } finally {
             setLoading(false);
@@ -160,7 +165,7 @@ const CreateCuentaContable = ({
                         />
 
                         <form onSubmit={handleSubmit}>
-                            {/* Código de la Cuenta */}
+                            {/* Código de la Cuenta — swagger: pattern ^[0-9]{1,10}$ */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputModal
@@ -168,18 +173,21 @@ const CreateCuentaContable = ({
                                         id="create_code"
                                         label="Código de la Cuenta"
                                         value={cuentaContable.code}
-                                        onChange={(e) => setCuentaContable({ 
-                                            ...cuentaContable, 
-                                            code: e.target.value 
-                                        })}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                                            setCuentaContable({ ...cuentaContable, code: val });
+                                        }}
                                         error={errors.code}
                                         placeholder="Ej: 110505"
                                         required={true}
+                                        maxLength={10}
+                                        inputMode="numeric"
+                                        pattern="^[0-9]{1,10}$"
                                     />
                                 </div>
                             </div>
 
-                            {/* Nombre de la Cuenta */}
+                            {/* Nombre de la Cuenta — swagger: pattern ^[A-Za-z0-9_\-\s]{1,100}$ */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputModal
@@ -194,6 +202,8 @@ const CreateCuentaContable = ({
                                         error={errors.name}
                                         placeholder="Ej: Caja General"
                                         required={true}
+                                        maxLength={100}
+                                        pattern="^[A-Za-z0-9_\-\s]{1,100}$"
                                     />
                                 </div>
                             </div>

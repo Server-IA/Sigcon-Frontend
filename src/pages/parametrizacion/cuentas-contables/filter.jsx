@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
+// Swagger: accountClass enum values matching CreateChartOfAccountDTO / UpdateChartOfAccountDTO
 const ACCOUNT_CLASS_OPTIONS = [
     { id: 'ASSET', label: 'Activo' },
     { id: 'LIABILITY', label: 'Pasivo' },
@@ -14,6 +15,7 @@ const ACCOUNT_CLASS_OPTIONS = [
     { id: 'MEMORANDUM_CREDIT', label: 'Cuentas de orden acreedoras' },
 ];
 
+// Swagger: level enum values
 const ACCOUNT_LEVEL_OPTIONS = [
     { id: 'CLASS', label: 'Clase' },
     { id: 'GROUP', label: 'Grupo' },
@@ -21,6 +23,23 @@ const ACCOUNT_LEVEL_OPTIONS = [
     { id: 'SUBACCOUNT', label: 'Subcuenta' },
 ];
 
+// Swagger: nature enum values
+const NATURE_OPTIONS = [
+    { id: 'DEBIT', label: 'Deudora' },
+    { id: 'CREDIT', label: 'Acreedora' },
+];
+
+// Swagger: status enum values
+const STATUS_OPTIONS = [
+    { id: 'ACTIVE', label: 'Activa' },
+    { id: 'INACTIVE', label: 'Inactiva' },
+];
+
+/**
+ * Filtros para POST /api/v1/chart-of-accounts/search (DataTableRequest)
+ * Los filtros se envían como column search dentro del DataTableRequest.
+ * Cada filtro corresponde a una columna del DataTable con su name.
+ */
 const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
 
     const getTable = () => {
@@ -95,7 +114,7 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
                             aria-label="Close"></button>
                     </div>
                     <div className="modal-body">    
-                        {/* Código de la Cuenta */}
+                        {/* Código de la Cuenta — swagger GET: code pattern ^[0-9]{1,100}$ */}
                         <div className="row mb-3">
                             <div className="col-12">
                                 <div className="input-group">
@@ -122,19 +141,22 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
                                         label="Código"
                                         value={filters.find(filter => filter.column === 'code:name')?.value || ""}
                                         onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '');
                                             setFilters(prev => prev.map(filter => filter.column === 'code:name' ? {
                                                 ...filter,
-                                                value: e.target.value,
+                                                value: val,
                                             } : filter));
                                         }}
                                         placeholder="Ej: 110505"
                                         error=""
+                                        maxLength={100}
+                                        inputMode="numeric"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Nombre de la Cuenta */}
+                        {/* Nombre de la Cuenta — swagger GET: name pattern */}
                         <div className="row mb-3">
                             <div className="col-12">
                                 <div className="input-group">
@@ -168,6 +190,7 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
                                         }}
                                         placeholder="Ej: Caja General"
                                         error=""
+                                        maxLength={100}
                                     />
                                 </div>
                             </div>
@@ -215,7 +238,7 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
                             </div>
                         </div>
 
-                        {/* Naturaleza */}
+                        {/* Naturaleza — swagger: nature enum [DEBIT, CREDIT] */}
                         <div className="row">
                             <div className="col mb-6 mt-2">
                                 <InputSelectModal
@@ -230,16 +253,13 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
                                     }}
                                     error=""
                                     placeholder="Seleccionar naturaleza"
-                                    options={[
-                                        { id: 'DEBIT', label: 'Deudora' },
-                                        { id: 'CREDIT', label: 'Acreedora' }
-                                    ]}
+                                    options={NATURE_OPTIONS}
                                     clearable={true}
                                 />
                             </div>
                         </div>
 
-                        {/* Estado */}
+                        {/* Estado — swagger: status enum [ACTIVE, INACTIVE] */}
                         <div className="row">
                             <div className="col mb-6 mt-2">
                                 <InputSelectModal
@@ -254,10 +274,7 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
                                     }}
                                     error=""
                                     placeholder="Seleccionar estado"
-                                    options={[
-                                        { id: 'ACTIVE', label: 'Activa' },
-                                        { id: 'INACTIVE', label: 'Inactiva' }
-                                    ]}
+                                    options={STATUS_OPTIONS}
                                     clearable={true}
                                 />
                             </div>

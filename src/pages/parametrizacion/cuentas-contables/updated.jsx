@@ -107,6 +107,7 @@ const UpdatedCuentaContable = ({
             return;
         }
 
+        // Construir UpdateChartOfAccountDTO según swagger
         const requestBody = {
             code: cuentaUpdated.code.trim(),
             name: cuentaUpdated.name.trim(),
@@ -116,6 +117,7 @@ const UpdatedCuentaContable = ({
             status: cuentaUpdated.status,
         };
 
+        // PUT /api/v1/chart-of-accounts/{id} → 200 OK
         const url = base_url(['api', 'v1', 'chart-of-accounts', cuentaContable.id]);
         try {
             setLoading(true);
@@ -135,7 +137,7 @@ const UpdatedCuentaContable = ({
             setErrors({});
             setErrorMessage('');
         } catch (error) {
-            console.log(error);
+            console.error('Error PUT /api/v1/chart-of-accounts/' + cuentaContable.id + ':', error);
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
@@ -143,8 +145,11 @@ const UpdatedCuentaContable = ({
                     fieldErrors[err.field] = err.message;
                 });
                 setErrors(fieldErrors);
-            } else if (error?.msg) {
+            }
+            if (error?.msg) {
                 setErrorMessage(error.msg);
+            } else if (!errores || errores.length === 0) {
+                setErrorMessage('Error al actualizar la cuenta contable');
             }
         } finally {
             setLoading(false);
@@ -192,7 +197,7 @@ const UpdatedCuentaContable = ({
                                 </div>
                             </div>
 
-                            {/* Código de la Cuenta */}
+                            {/* Código de la Cuenta — swagger: pattern ^[0-9]{1,10}$ */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputModal
@@ -200,18 +205,21 @@ const UpdatedCuentaContable = ({
                                         id="edit_code"
                                         label="Código de la Cuenta"
                                         value={cuentaUpdated.code}
-                                        onChange={(e) => setCuentaUpdated({ 
-                                            ...cuentaUpdated, 
-                                            code: e.target.value 
-                                        })}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                                            setCuentaUpdated({ ...cuentaUpdated, code: val });
+                                        }}
                                         error={errors.code}
                                         placeholder="Ej: 110505"
                                         required={true}
+                                        maxLength={10}
+                                        inputMode="numeric"
+                                        pattern="^[0-9]{1,10}$"
                                     />
                                 </div>
                             </div>
 
-                            {/* Nombre de la Cuenta */}
+                            {/* Nombre de la Cuenta — swagger: pattern ^[A-Za-z0-9_\-\s]{1,100}$ */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputModal
@@ -226,6 +234,8 @@ const UpdatedCuentaContable = ({
                                         error={errors.name}
                                         placeholder="Ej: Caja General"
                                         required={true}
+                                        maxLength={100}
+                                        pattern="^[A-Za-z0-9_\-\s]{1,100}$"
                                     />
                                 </div>
                             </div>
