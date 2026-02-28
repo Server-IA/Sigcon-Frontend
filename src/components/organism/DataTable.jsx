@@ -1,4 +1,4 @@
-import '../../styles/vendor/flatpickr/flatpickr.css';
+import '../../../public/assets/vendor/libs/flatpickr/flatpickr.css';
 
 import esES from '../../jsons/languaje/es-ES-DataTable.json';
 
@@ -103,18 +103,17 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
                         data: [],
                         recordsTotal: 0,
                         recordsFiltered: 0
-                    });
+                    })
                     if(error.status === 403){
-                        if (dataTableRef.current) {
-                            dataTableRef.current.destroy();
-                        }
-                    
+                        
+                        // console.log("Error 403");
+                        
                         $(tableRef.current).html(`
                             <tbody>
                                 <tr>
                                     <td colspan="${columns.length}" class="text-center text-danger py-5">
                                         <i class="ri-lock-line fs-2 d-block mb-2"></i>
-                                        No tiene permisos para ver esta información
+                                        ${error.message || error.msg || 'No tiene permisos para ver esta información'}
                                     </td>
                                 </tr>
                             </tbody>
