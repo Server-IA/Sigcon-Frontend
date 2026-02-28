@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
 
@@ -9,6 +9,7 @@ import CreateCuentaContable from './create';
 import UpdatedCuentaContable from './updated';
 import FilterCuentaContable from './filter';
 
+<<<<<<< HEAD
 const ACCOUNT_CLASS_LABELS = {
     ASSET: 'Activo',
     LIABILITY: 'Pasivo',
@@ -27,6 +28,10 @@ const ACCOUNT_LEVEL_LABELS = {
     ACCOUNT: 'Cuenta',
     SUBACCOUNT: 'Subcuenta',
 };
+=======
+// Swagger: nature enum DEBIT / CREDIT  (AccountFilterRequest, CreateAccountingAccountRequest)
+const NATURE_LABELS = { DEBIT: 'Deudora', CREDIT: 'Acreedora' };
+>>>>>>> developer
 
 const IndexCuentasContables = () => {
 
@@ -42,25 +47,45 @@ const IndexCuentasContables = () => {
     const filterRef = useRef(null);
     const filterInstance = useRef(null);
 
-    const [search, setSearch] = useState({
-        value: '',
-        checked: true,
-    });
+    const [search, setSearch] = useState({ value: '', checked: true });
 
     const [data, setData] = useState([]);
-    const [message, setMessage] = useState({
-        message: '',
-        type: '',
-        show: false,
-    });
+    const [message, setMessage] = useState({ message: '', type: '', show: false });
 
+<<<<<<< HEAD
     const url = ['api', 'v1', 'chart-of-accounts', 'search'];
+=======
+    // AccountFilterRequest — swagger POST /api/v1/accounting-accounts
+    const initialFilters = {
+        custom_name: '',
+        base_currency: '',
+        cost_center_id: null,
+        depreciation_rule_id: null,
+        nature: '',
+        status: '',
+        puc_id: null,
+    };
+    const [activeFilters, setActiveFilters] = useState(initialFilters);
+
+    // Swagger: POST /api/v1/accounting-accounts → { dtRequest: DataTableRequest, filters: AccountFilterRequest }
+    const url = ['api', 'v1', 'accounting-accounts'];
+
+    // Keep a ref so the requestWrapper closure always reads the latest filters
+    const activeFiltersRef = useRef(activeFilters);
+    useEffect(() => { activeFiltersRef.current = activeFilters; }, [activeFilters]);
+
+    const requestWrapper = useCallback(
+        (dtData) => ({ dtRequest: dtData, filters: activeFiltersRef.current }),
+        []
+    );
+>>>>>>> developer
 
     const actions = [
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Inactivar' },
     ];
 
+<<<<<<< HEAD
     const initialCuentaContable = {
         id: '',
         code: '',
@@ -115,63 +140,85 @@ const IndexCuentasContables = () => {
             render: (status) => {
                 return status === 'ACTIVE' ? 'Activa' : 'Inactiva';
             }
+=======
+    // Snake_case field names matching swagger UpdateAccountingAccountRequest / CreateAccountingAccountRequest
+    const initialCuentaContable = {
+        id: '',
+        puc_id: '',
+        pucCode: '',
+        custom_name: '',
+        base_currency: '',
+        cost_center_id: '',
+        depreciation_rule_id: '',
+        nature: '',
+        status: 'ACTIVE',
+    };
+
+    const [cuentaContable, setCuentaContable] = useState(initialCuentaContable);
+
+    // Column `data` keys must match backend response field names
+    const [columns] = useState([
+        { title: 'Código PUC',          data: 'pucCode',              name: 'pucCode' },
+        { title: 'Nombre Personalizado', data: 'custom_name',          name: 'customName' },
+        { title: 'Moneda Base',          data: 'base_currency',        name: 'baseCurrency' },
+        { title: 'Centro de Costos',     data: 'costCenterName',       name: 'costCenterName', defaultContent: '—' },
+        { title: 'Regla de Depreciación', data: 'depreciationRuleName', name: 'depreciationRuleName', defaultContent: '—' },
+        {
+            title: 'Naturaleza', data: 'nature', name: 'nature',
+            render: (nature) => NATURE_LABELS[nature] ?? nature,
+>>>>>>> developer
         },
         {
-            title: 'Acciones', 
-            data: 'id', 
-            searchable: false,
-            render: (id) => {
-                return `
+            title: 'Estado', data: 'status', name: 'status',
+            render: (status) => status === 'ACTIVE' ? 'Activa' : 'Inactiva',
+        },
+        {
+            title: 'Acciones', data: 'id', searchable: false,
+            render: (id) => `
                 <div class="d-flex gap-1">
                     ${actions.map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
-                            data-action="${a.key}"
-                            data-id="${id}"
-                            title="${a.title}">
-                            <i class="ri-${a.icon}"></i>
+                            data-action="${a.key}" data-id="${id}" title="${a.title}">
+                            <i class="${a.icon}"></i>
                         </button>
                     `).join('')}
-                </div>
-            `
-            },
+                </div>`,
         },
     ]);
 
     const openModalCreate = () => {
         if (!modalCreateInstance.current) {
-            modalCreateInstance.current = new window.bootstrap.Modal(
-                modalCreateRef.current
-            );
+            modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
         modalCreateInstance.current.show();
         setCuentaContable(initialCuentaContable);
+<<<<<<< HEAD
         setMessage({
             message: '',
             type: '',
             show: false,
         });
+=======
+        setMessage({ message: '', type: '', show: false });
+>>>>>>> developer
     };
 
     const buttons = [
         {
             text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
-            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
-            action: async function (e, dt, button, config) {
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2',
+            action: function () {
                 if (!filterInstance.current) {
-                    filterInstance.current = new window.bootstrap.Modal(
-                        filterRef.current
-                    );
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
                 }
                 filterInstance.current.show();
-            }
+            },
         },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Cuenta</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
-            action: async function (e, dt, button, config) {
-                openModalCreate();
-            }
-        }
+            action: function () { openModalCreate(); },
+        },
     ];
 
     useEffect(() => {
@@ -189,12 +236,22 @@ const IndexCuentasContables = () => {
                 return;
             }
 
+            // Snake_case fields matching swagger response
             const cuentaData = {
                 id: cuentaRef.id,
+<<<<<<< HEAD
                 code: cuentaRef.code ?? '',
                 name: cuentaRef.name ?? '',
                 accountClass: cuentaRef.accountClass ?? '',
                 level: cuentaRef.level ?? '',
+=======
+                puc_id: cuentaRef.puc_id ?? '',
+                pucCode: cuentaRef.pucCode ?? '',
+                custom_name: cuentaRef.custom_name ?? '',
+                base_currency: cuentaRef.base_currency ?? '',
+                cost_center_id: cuentaRef.cost_center_id ?? '',
+                depreciation_rule_id: cuentaRef.depreciation_rule_id ?? '',
+>>>>>>> developer
                 nature: cuentaRef.nature ?? '',
                 status: cuentaRef.status ?? 'ACTIVE',
             };
@@ -202,16 +259,9 @@ const IndexCuentasContables = () => {
             switch (action) {
                 case 'edit':
                     setCuentaContable(cuentaData);
-                    setMessage({
-                        message: '',
-                        type: '',
-                        show: false,
-                    });
-
+                    setMessage({ message: '', type: '', show: false });
                     if (!modalUpdateInstance.current) {
-                        modalUpdateInstance.current = new window.bootstrap.Modal(
-                            modalUpdateRef.current
-                        );
+                        modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
                     }
                     modalUpdateInstance.current.show();
                     break;
@@ -219,12 +269,17 @@ const IndexCuentasContables = () => {
                 case 'delete':
                     window.Swal.fire({
                         title: '¿Estás seguro?',
+<<<<<<< HEAD
                         text: '¿Estás seguro de querer eliminar esta cuenta contable?',
+=======
+                        text: '¿Deseas inactivar esta cuenta contable? (CFG-RF-08)',
+>>>>>>> developer
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonText: 'Eliminar',
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => {
+<<<<<<< HEAD
                         if (result.isConfirmed) {
                             // Solicitar motivo — swagger: DeleteChartOfAccountDTO
                             // reason: required, pattern ^[A-Za-z0-9_\-\s]{1,255}$, maxLength 255
@@ -273,6 +328,47 @@ const IndexCuentasContables = () => {
                                 }
                             });
                         }
+=======
+                        if (!result.isConfirmed) return;
+                        // Swagger: DELETE /api/v1/accounting-accounts/delete/{id}?reason={reason}
+                        window.Swal.fire({
+                            title: 'Motivo de inactivación',
+                            input: 'text',
+                            inputLabel: 'Indique el motivo por el cual desea inactivar esta cuenta',
+                            inputPlaceholder: 'Ej: Cuenta obsoleta',
+                            inputAttributes: { 'aria-label': 'Motivo', maxlength: 255 },
+                            inputValidator: (value) => {
+                                if (!value || value.trim() === '') return 'El motivo es obligatorio';
+                            },
+                            showCancelButton: true,
+                            confirmButtonText: 'Inactivar',
+                            cancelButtonText: 'Cancelar',
+                        }).then(async (reasonResult) => {
+                            if (!reasonResult.isConfirmed) return;
+                            // reason como query param según swagger
+                            const deleteUrl = base_url(
+                                ['api', 'v1', 'accounting-accounts', 'delete', id],
+                                { reason: reasonResult.value.trim() }
+                            );
+                            try {
+                                await fetchHelper.delete(deleteUrl, null, {}, 500, false);
+                                setMessage({
+                                    message: 'Cuenta contable inactivada exitosamente',
+                                    type: 'success',
+                                    show: true,
+                                });
+                            } catch (error) {
+                                console.error('Error DELETE /api/v1/accounting-accounts/delete/' + id, error);
+                                setMessage({
+                                    message: error.msg || error.message || 'Error al inactivar la cuenta contable',
+                                    type: 'danger',
+                                    show: true,
+                                });
+                            } finally {
+                                dataTableRef?.current?.ajax.reload();
+                            }
+                        });
+>>>>>>> developer
                     });
                     break;
             }
@@ -307,6 +403,7 @@ const IndexCuentasContables = () => {
                     search={search}
                     setSearch={setSearch}
                     filtered={true}
+                    requestWrapper={requestWrapper}
                 />
             </div>
 
@@ -314,6 +411,9 @@ const IndexCuentasContables = () => {
                 filterRef={filterRef}
                 filterInstance={filterInstance}
                 dataTableRef={dataTableRef}
+                activeFilters={activeFilters}
+                setActiveFilters={setActiveFilters}
+                initialFilters={initialFilters}
             />
         </div>
 

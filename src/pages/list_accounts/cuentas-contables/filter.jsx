@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
+<<<<<<< HEAD
 // Swagger: accountClass enum values matching CreateChartOfAccountDTO / UpdateChartOfAccountDTO
 const ACCOUNT_CLASS_OPTIONS = [
     { id: 'ASSET', label: 'Activo' },
@@ -41,11 +41,17 @@ const STATUS_OPTIONS = [
  * Cada filtro corresponde a una columna del DataTable con su name.
  */
 const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
+=======
+// AccountFilterRequest fields — filters are applied server-side via POST /api/v1/accounting-accounts
+// Fields: custom_name, base_currency, puc_id, cost_center_id, depreciation_rule_id, nature, status
+>>>>>>> developer
 
-    const getTable = () => {
-        return dataTableRef?.current?.table();
-    };
+const NATURE_OPTIONS = [
+    { id: 'DEBIT',  label: 'Deudora' },
+    { id: 'CREDIT', label: 'Acreedora' },
+];
 
+<<<<<<< HEAD
     const [filters, setFilters] = useState([
         {
             regex: true,
@@ -78,41 +84,52 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
             column: 'status:name',
         },
     ]);
+=======
+const STATUS_OPTIONS = [
+    { id: 'ACTIVE',   label: 'Activa' },
+    { id: 'INACTIVE', label: 'Inactiva' },
+];
+>>>>>>> developer
 
-    useEffect(() => {
-        const table = getTable();
-        if (!table) return;
-        filters.forEach(filter => {
-            table.column(filter.column).search(filter.value, filter.regex, false);
-        });
-    }, [filters]);
+const FilterCuentaContable = ({
+    filterRef,
+    filterInstance,
+    dataTableRef,
+    activeFilters,
+    setActiveFilters,
+    initialFilters,
+}) => {
 
     const handleFilter = () => {
-        if (!dataTableRef?.current) return;
-        dataTableRef.current.table().draw();
-        filterInstance.current.hide();
-    }
+        // activeFilters already updated via setActiveFilters on each onChange;
+        // just reload the DataTable (requestWrapper in index.jsx picks up the latest ref)
+        dataTableRef?.current?.ajax.reload();
+        filterInstance?.current?.hide();
+    };
 
     const handleReset = () => {
-        if (!dataTableRef?.current) return;
-        setFilters(filters.map(f => ({ ...f, value: '' })));
-        dataTableRef.current.table().columns().search('');
-        dataTableRef.current.table().draw();
-        filterInstance.current.hide();
-    }
+        setActiveFilters(initialFilters);
+        // Slight delay so requestWrapperRef syncs before reload
+        setTimeout(() => {
+            dataTableRef?.current?.ajax.reload();
+        }, 0);
+        filterInstance?.current?.hide();
+    };
 
     return (
-        <div className="modal fade" ref={filterRef} id="modalCenter" tabIndex={-1} aria-hidden="true">
+        <div className="modal fade" ref={filterRef} id="filterCuentasContables" tabIndex={-1} aria-hidden="true">
             <div className="modal-dialog modal-dialog-centered" role="document">
                 <div className="modal-content">
                     <div className="modal-header">
-                        <h4 className="modal-title" id="modalCenterTitle">Filtrar Cuentas Contables</h4>
+                        <h4 className="modal-title" id="filterCuentasContablesTitle">Filtrar Cuentas Contables</h4>
                         <button
                             type="button"
                             className="btn-close"
                             data-bs-dismiss="modal"
-                            aria-label="Close"></button>
+                            aria-label="Close">
+                        </button>
                     </div>
+<<<<<<< HEAD
                     <div className="modal-body">    
                         {/* Código de la Cuenta — swagger GET: code pattern ^[0-9]{1,100}$ */}
                         <div className="row mb-3">
@@ -241,55 +258,89 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
                         {/* Naturaleza — swagger: nature enum [DEBIT, CREDIT] */}
                         <div className="row">
                             <div className="col mb-6 mt-2">
-                                <InputSelectModal
-                                    id="nature_filter"
-                                    label="Naturaleza"
-                                    value={filters.find(filter => filter.column === 'nature:name')?.value || ""}
-                                    onChange={(value) => {
-                                        setFilters(prev => prev.map(filter => filter.column === 'nature:name' ? {
-                                            ...filter,
-                                            value: value,
-                                        } : filter));
-                                    }}
+=======
+                    <div className="modal-body">
+
+                        {/* Nombre Personalizado — AccountFilterRequest.custom_name */}
+                        <div className="row mb-3">
+                            <div className="col-12">
+                                <InputModal
+                                    type="text"
+                                    id="filter_custom_name"
+                                    label="Nombre Personalizado"
+                                    value={activeFilters.custom_name}
+                                    onChange={(e) => setActiveFilters(prev => ({ ...prev, custom_name: e.target.value }))}
+                                    placeholder="Ej: Caja general"
                                     error=""
-                                    placeholder="Seleccionar naturaleza"
-                                    options={NATURE_OPTIONS}
-                                    clearable={true}
                                 />
                             </div>
                         </div>
 
-                        {/* Estado — swagger: status enum [ACTIVE, INACTIVE] */}
-                        <div className="row">
-                            <div className="col mb-6 mt-2">
-                                <InputSelectModal
-                                    id="status_filter"
-                                    label="Estado"
-                                    value={filters.find(filter => filter.column === 'status:name')?.value || ""}
-                                    onChange={(value) => {
-                                        setFilters(prev => prev.map(filter => filter.column === 'status:name' ? {
-                                            ...filter,
-                                            value: value,
-                                        } : filter));
-                                    }}
+                        {/* Moneda Base — AccountFilterRequest.base_currency */}
+                        <div className="row mb-3">
+                            <div className="col-12">
+                                <InputModal
+                                    type="text"
+                                    id="filter_base_currency"
+                                    label="Moneda Base"
+                                    value={activeFilters.base_currency}
+                                    onChange={(e) => setActiveFilters(prev => ({ ...prev, base_currency: e.target.value }))}
+                                    placeholder="Ej: USD, COP"
                                     error=""
-                                    placeholder="Seleccionar estado"
-                                    options={STATUS_OPTIONS}
-                                    clearable={true}
                                 />
                             </div>
                         </div>
+
+                        {/* Naturaleza — AccountFilterRequest.nature */}
+                        <div className="row mb-3">
+                            <div className="col-12">
+>>>>>>> developer
+                                <InputSelectModal
+                                    id="filter_nature"
+                                    label="Naturaleza"
+                                    value={activeFilters.nature}
+                                    onChange={(value) => setActiveFilters(prev => ({ ...prev, nature: value }))}
+                                    placeholder="Seleccionar naturaleza"
+                                    options={NATURE_OPTIONS}
+                                    clearable={true}
+                                    error=""
+                                />
+                            </div>
+                        </div>
+
+<<<<<<< HEAD
+                        {/* Estado — swagger: status enum [ACTIVE, INACTIVE] */}
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+=======
+                        {/* Estado — AccountFilterRequest.status */}
+                        <div className="row mb-3">
+                            <div className="col-12">
+>>>>>>> developer
+                                <InputSelectModal
+                                    id="filter_status"
+                                    label="Estado"
+                                    value={activeFilters.status}
+                                    onChange={(value) => setActiveFilters(prev => ({ ...prev, status: value }))}
+                                    placeholder="Seleccionar estado"
+                                    options={STATUS_OPTIONS}
+                                    clearable={true}
+                                    error=""
+                                />
+                            </div>
+                        </div>
+
                     </div>
                     <div className="modal-footer">
-                        <button 
-                            type="button" 
-                            className="btn btn-secondary" 
+                        <button
+                            type="button"
+                            className="btn btn-secondary"
                             onClick={handleReset}>
                             Limpiar Filtros
                         </button>
-                        <button 
-                            type="button" 
-                            className="btn btn-primary" 
+                        <button
+                            type="button"
+                            className="btn btn-primary"
                             onClick={handleFilter}>
                             Buscar
                         </button>

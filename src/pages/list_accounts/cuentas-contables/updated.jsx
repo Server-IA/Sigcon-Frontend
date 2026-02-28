@@ -48,6 +48,7 @@ const UpdatedCuentaContable = ({
     const [errorMessage, setErrorMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [cuentaUpdated, setCuentaUpdated] = useState(cuentaContable);
+<<<<<<< HEAD
 
     const initialState = {
         id: '',
@@ -58,8 +59,41 @@ const UpdatedCuentaContable = ({
         nature: '',
         status: 'ACTIVE',
     };
+=======
+    const [readOnlyFields, setReadOnlyFields] = useState({
+        puc_id: false,
+        cost_center_id: false,
+        depreciation_rule_id: false,
+        custom_name: false,
+    });
 
-    // Actualizar estado cuando cambia la cuenta
+    // Data loading — swagger endpoints:
+    // POST /api/v1/chart-of-accounts/search
+    // POST /api/v1/accounting-lists/currency-types/search
+    // POST /api/v1/cost-centers/search
+    // POST /api/v1/depretation-rules/search
+    useEffect(() => {
+        const dtBody = { draw: 1, start: 0, length: 1000 };
+        const loadData = async () => {
+            // Promise.allSettled: a 403 on one endpoint won't block the others
+            const [pucRes, currRes, ccRes, drRes] = await Promise.allSettled([
+                fetchHelper.post(base_url(['api', 'v1', 'chart-of-accounts', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'depretation-rules', 'search']), dtBody, {}, 0),
+            ]);
+            if (pucRes.status === 'fulfilled')  setPucs(pucRes.value.data || []);
+            if (currRes.status === 'fulfilled') setCurrencies(currRes.value.data || []);
+            if (ccRes.status === 'fulfilled')   setCostCenters(ccRes.value.data || []);
+            if (drRes.status === 'fulfilled')   setDepreciationRules(drRes.value.data || []);
+            const failed = [pucRes, currRes, ccRes, drRes].filter(r => r.status === 'rejected');
+            if (failed.length) console.warn('Algunos datos no pudieron cargarse:', failed.map(f => f.reason));
+        };
+        loadData();
+    }, []);
+>>>>>>> developer
+
+    // Sync local state when the selected account changes
     useEffect(() => {
         setCuentaUpdated(cuentaContable);
     }, [cuentaContable]);
@@ -67,6 +101,7 @@ const UpdatedCuentaContable = ({
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+<<<<<<< HEAD
         // Validar campos obligatorios
         if (!cuentaUpdated.code || cuentaUpdated.code.trim() === '') {
             setErrorMessage('Por favor diligencie el código de la cuenta');
@@ -82,6 +117,19 @@ const UpdatedCuentaContable = ({
         }
         if (!cuentaUpdated.level) {
             setErrorMessage('Por favor seleccione el nivel jerárquico');
+=======
+        // Validar campos obligatorios (swagger UpdateAccountingAccountRequest)
+        if (!cuentaUpdated.puc_id) {
+            setErrorMessage('Por favor seleccione una cuenta PUC');
+            return;
+        }
+        if (!cuentaUpdated.custom_name || cuentaUpdated.custom_name.trim() === '') {
+            setErrorMessage('El nombre personalizado de la cuenta es obligatorio');
+            return;
+        }
+        if (!cuentaUpdated.base_currency) {
+            setErrorMessage('Por favor seleccione una moneda base');
+>>>>>>> developer
             return;
         }
         if (!cuentaUpdated.nature) {
@@ -90,6 +138,7 @@ const UpdatedCuentaContable = ({
         }
         if (!cuentaUpdated.status) {
             setErrorMessage('Por favor seleccione el estado de la cuenta');
+<<<<<<< HEAD
             return;
         }
 
@@ -124,6 +173,45 @@ const UpdatedCuentaContable = ({
             await fetchHelper.put(url, requestBody, {}, 1000);
             
             setCuentaContable(initialState);
+=======
+            return;
+        }
+
+        // Swagger: maxLength 50, pattern ^[a-zA-Z0-9 _-]+$
+        const nameRegex = /^[a-zA-Z0-9 _-]{1,50}$/;
+        if (!nameRegex.test(cuentaUpdated.custom_name)) {
+            setErrorMessage('El nombre debe tener entre 1 y 50 caracteres, solo alfanuméricos, espacios, guiones y guiones bajos');
+            return;
+        }
+
+        // Swagger: PUT /api/v1/accounting-accounts/update
+        const updateUrl = base_url(['api', 'v1', 'accounting-accounts', 'update']);
+        const body = {
+            id: cuentaUpdated.id,
+            puc_id: cuentaUpdated.puc_id,
+            custom_name: cuentaUpdated.custom_name.trim(),
+            base_currency: cuentaUpdated.base_currency,
+            cost_center_id: cuentaUpdated.cost_center_id || null,
+            depreciation_rule_id: cuentaUpdated.depreciation_rule_id || null,
+            nature: cuentaUpdated.nature,
+            status: cuentaUpdated.status,
+        };
+        try {
+            setLoading(true);
+            await fetchHelper.put(updateUrl, body, {}, 1000);
+            
+            setCuentaContable({
+                id: '',
+                puc_id: '',
+                pucCode: '',
+                custom_name: '',
+                base_currency: '',
+                cost_center_id: '',
+                depreciation_rule_id: '',
+                nature: '',
+                status: 'ACTIVE',
+            });
+>>>>>>> developer
             
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
@@ -177,7 +265,8 @@ const UpdatedCuentaContable = ({
                         <AlertPage 
                             message={errorMessage} 
                             type="danger" 
-                            show={errorMessage !== ''} 
+                            show={errorMessage !== ''}
+                            onChange={() => setErrorMessage('')}
                         />
 
                         <form onSubmit={handleSubmit}>
@@ -200,6 +289,7 @@ const UpdatedCuentaContable = ({
                             {/* Código de la Cuenta — swagger: pattern ^[0-9]{1,10}$ */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
+<<<<<<< HEAD
                                     <InputModal
                                         type="text"
                                         id="edit_code"
@@ -216,12 +306,39 @@ const UpdatedCuentaContable = ({
                                         inputMode="numeric"
                                         pattern="^[0-9]{1,10}$"
                                     />
+=======
+                                    {renderFieldWithTooltip(
+                                        readOnlyFields.puc_id,
+                                        <InputSelectModal
+                                            id="pucId_updated"
+                                            label="Cuenta PUC"
+                                            value={cuentaUpdated.puc_id}
+                                            onChange={(value) => {
+                                                const selectedPuc = pucs.find(p => p.id === parseInt(value));
+                                                setCuentaUpdated({
+                                                    ...cuentaUpdated,
+                                                    puc_id: parseInt(value) || '',
+                                                    pucCode: selectedPuc?.code || ''
+                                                });
+                                            }}
+                                            error={errors.puc_id}
+                                            placeholder="Seleccionar cuenta PUC"
+                                            options={pucs.map(puc => ({
+                                                id: puc.id,
+                                                label: `${puc.code} - ${puc.name}`
+                                            }))}
+                                            required={true}
+                                            disabled={readOnlyFields.puc_id}
+                                        />
+                                    )}
+>>>>>>> developer
                                 </div>
                             </div>
 
                             {/* Nombre de la Cuenta — swagger: pattern ^[A-Za-z0-9_\-\s]{1,100}$ */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
+<<<<<<< HEAD
                                     <InputModal
                                         type="text"
                                         id="edit_name"
@@ -237,6 +354,26 @@ const UpdatedCuentaContable = ({
                                         maxLength={100}
                                         pattern="^[A-Za-z0-9_\-\s]{1,100}$"
                                     />
+=======
+                                    {renderFieldWithTooltip(
+                                        readOnlyFields.custom_name,
+                                        <InputModal
+                                            type="text"
+                                            id="customName_updated"
+                                            label="Nombre Personalizado"
+                                            value={cuentaUpdated.custom_name}
+                                            onChange={(e) => setCuentaUpdated({ 
+                                                ...cuentaUpdated, 
+                                                custom_name: e.target.value 
+                                            })}
+                                            error={errors.custom_name}
+                                            placeholder="Ej: Caja general"
+                                            maxLength={50}
+                                            disabled={readOnlyFields.custom_name}
+                                            required={true}
+                                        />
+                                    )}
+>>>>>>> developer
                                 </div>
                             </div>
 
@@ -244,6 +381,7 @@ const UpdatedCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
+<<<<<<< HEAD
                                         id="edit_accountClass"
                                         label="Clase Contable"
                                         value={cuentaUpdated.accountClass}
@@ -254,6 +392,21 @@ const UpdatedCuentaContable = ({
                                         error={errors.accountClass}
                                         placeholder="Seleccionar clase"
                                         options={ACCOUNT_CLASS_OPTIONS}
+=======
+                                        id="baseCurrency_updated"
+                                        label="Moneda Base"
+                                        value={cuentaUpdated.base_currency}
+                                        onChange={(value) => setCuentaUpdated({ 
+                                            ...cuentaUpdated, 
+                                            base_currency: value 
+                                        })}
+                                        error={errors.base_currency}
+                                        placeholder="Seleccionar moneda"
+                                        options={currencies.map(currency => ({
+                                            id: currency.isoCode,
+                                            label: `${currency.name} (${currency.isoCode})`
+                                        }))}
+>>>>>>> developer
                                         required={true}
                                     />
                                 </div>
@@ -262,6 +415,7 @@ const UpdatedCuentaContable = ({
                             {/* Nivel Jerárquico */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
+<<<<<<< HEAD
                                     <InputSelectModal
                                         id="edit_level"
                                         label="Nivel Jerárquico"
@@ -275,6 +429,54 @@ const UpdatedCuentaContable = ({
                                         options={ACCOUNT_LEVEL_OPTIONS}
                                         required={true}
                                     />
+=======
+                                    {renderFieldWithTooltip(
+                                        readOnlyFields.cost_center_id,
+                                        <InputSelectModal
+                                            id="costCenterId_updated"
+                                            label="Centro de Costos"
+                                            value={cuentaUpdated.cost_center_id}
+                                            onChange={(value) => setCuentaUpdated({ 
+                                                ...cuentaUpdated, 
+                                                cost_center_id: parseInt(value) || null
+                                            })}
+                                            error={errors.cost_center_id}
+                                            placeholder="Seleccionar centro de costos (opcional)"
+                                            options={costCenters.map(center => ({
+                                                id: center.id,
+                                                label: `${center.code} - ${center.name}`
+                                            }))}
+                                            clearable={true}
+                                            disabled={readOnlyFields.cost_center_id}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Regla de Depreciación (Solo lectura si hay transacciones) */}
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    {renderFieldWithTooltip(
+                                        readOnlyFields.depreciation_rule_id,
+                                        <InputSelectModal
+                                            id="depreciationRuleId_updated"
+                                            label="Regla de Depreciación"
+                                            value={cuentaUpdated.depreciation_rule_id}
+                                            onChange={(value) => setCuentaUpdated({ 
+                                                ...cuentaUpdated, 
+                                                depreciation_rule_id: parseInt(value) || null
+                                            })}
+                                            error={errors.depreciation_rule_id}
+                                            placeholder="Seleccionar regla de depreciación (opcional)"
+                                            options={depreciationRules.map(rule => ({
+                                                id: rule.id,
+                                                label: rule.name
+                                            }))}
+                                            clearable={true}
+                                            disabled={readOnlyFields.depreciation_rule_id}
+                                        />
+                                    )}
+>>>>>>> developer
                                 </div>
                             </div>
 
@@ -291,7 +493,14 @@ const UpdatedCuentaContable = ({
                                         })}
                                         error={errors.nature}
                                         placeholder="Seleccionar naturaleza"
+<<<<<<< HEAD
                                         options={NATURE_OPTIONS}
+=======
+                                        options={[
+                                            { id: 'DEBIT', label: 'Deudora' },
+                                            { id: 'CREDIT', label: 'Acreedora' }
+                                        ]}
+>>>>>>> developer
                                         required={true}
                                     />
                                 </div>
