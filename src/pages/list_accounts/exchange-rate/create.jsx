@@ -1,5 +1,5 @@
 import { useState } from "react";
-import InputSelectModal from "../../../components/molecules/InputSelectModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import AlertPage from "../../../components/molecules/AlertPage";
 import InputModal from "../../../components/molecules/InputModal";
 import InputDateRange from "../../../components/molecules/InputDateRange";
