@@ -7,6 +7,11 @@ const InputSelectModal = ({ id, label, value, onChange, error, options, placehol
     onChangeRef.current = onChange;
 
     useEffect(() => {
+        console.log(id);
+        console.log(options);
+    }, []);
+
+    useEffect(() => {
 
         const $select = $(selectRef.current);
 
@@ -20,7 +25,10 @@ const InputSelectModal = ({ id, label, value, onChange, error, options, placehol
             dropdownParent: $select.parent(), // clave si está en modal
             placeholder: placeholder || 'Seleccione una opción',
             width: '100%',
-            allowClear: required ? false : clearable
+            allowClear: required ? false : clearable,
+            language: {
+                noResults: () => 'No se encontraron resultados'
+            }
         });
 
         const handleChange = function () {
@@ -53,7 +61,7 @@ const InputSelectModal = ({ id, label, value, onChange, error, options, placehol
             >
                 <option value="">{placeholder || 'Seleccione una opción'}</option>
                 {options.map(option => (
-                    <option key={String(option.id).replace(/\s+/g, '_')} value={option.id}>
+                    <option key={`${String(option.id).replace(/\s+/g, '_')}_${String(id).replace(/\s+/g, '_')}`} value={option.id}>
                         {option.label || option.name}
                     </option>
                 ))}

@@ -9,44 +9,28 @@ import IndexUsers from "../pages/parametrizacion/users/index";
 
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
+import IndexCentrosCosto from "../pages/list_accounts/centros-costo/index";
 import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
+import IndexCuentasContables from "../pages/list_accounts/cuentas-contables/index";
+
+// List Accounts
+import IndexDepreciationRules from "../pages/list_accounts/depreciation_rules/index";
+import ExchangeRateIndex from "../pages/list_accounts/exchange-rate/index";
+
+// Reportes
+import BalanceComprobacion from "../pages/list_accounts/reportes/BalanceComprobacion";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
+
+// List Accounts
+import IndexPUC from "../pages/list_accounts/puc/index";
 
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
 
-//aca tengo que agregar los nuevos modulos que cargue de parametrizacion
-// export const COMPONENT_MAP = {
-//     HOME: Home,
-//     PERFIL: PerfilPage,
-//     MODULOS: IndexModules,
-//     MENUS: IndexMenus,
-//     PERMISSIONS: PermissionsIndex,
-//     USERS: IndexUsers,
-//     ROLES: IndexRoles,
-//     PARAMETROS: IndexParameters,
-//     MENUSPERMISSIONS: MenuPermissionIndex
-// };
-
-export const COMPONENT_MAP = [
-    // { id: "HOME", name: "Dashboard", component: Home },
-    { id: "PERFIL", name: "Perfil", component: PerfilPage },
-    { id: "MODULOS", name: "Módulos", component: IndexModules },
-    { id: "MENUS", name: "Menus", component: IndexMenus },
-    { id: "PERMISSIONS", name: "Permisos", component: PermissionsIndex },
-    { id: "USERS", name: "Usuarios", component: IndexUsers },
-    { id: "ROLES", name: "Roles", component: IndexRoles },
-    { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
-    { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
-]
-
 export const getMenu = async () => {
     const modules = [];
-    const componentsFinal = [];
     const url = base_url(['api', 'modules', 'menu']);
-    const {data, error} = await fetchHelper.get(url, {}, 0);
-
     modules.push({
         id: 0,
         name: "Dashboard",
@@ -61,38 +45,38 @@ export const getMenu = async () => {
                 position: 0,
                 icon: "ri-home-smile-line",
                 childrens: [],
-                component: Home,
-                componentName: "Home"
+                // component: Home,
+                componentName: "HOME"
             }
         ]
     })
+    try {
+        const { data, error } = await fetchHelper.get(url, {}, 0);
+        if (!error) {
+    
+            modules.push(...data?.map(mod => {
+                // Construir el árbol de menús normalmente
+                const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
+                    ...menu,
+                    componentName: menu?.component,
+                })));
+    
+                return {
+                    ...mod,
+                    menus: menuTree
+                };
+            }));
+        }
 
-    if (!error) {
-        modules.push(...data?.map(modules => ({
-            ...modules,
-            menus: buildMenuTree(modules?.menus?.map(menu => ({
-                ...menu,
-                componentName: menu?.component,
-                component: COMPONENT_MAP.find(component => component.id === menu?.component)?.component || PageMaintenance,
-            })))
-        })));
+    } catch (error) {
+        console.log(error);
+    }finally {
+        return modules;
     }
 
-    // 🔹 Clonar sin la propiedad "component"
-    const removeComponentRecursively = (menus) =>
-        menus?.map(({ component, childrens, ...rest }) => ({
-            ...rest,
-            childrens: removeComponentRecursively(childrens)
-        }));
 
-    const modulesWithoutComponents = modules.map(module => ({
-        ...module,
-        menus: removeComponentRecursively(module.menus)
-    }));
 
-    componentsFinal.push(...modulesWithoutComponents);
-
-    return {modules, componentsFinal};
+    return modules;
 }
 
 const buildMenuTree = (menus) => {
@@ -125,3 +109,21 @@ const buildMenuTree = (menus) => {
 export const buildFullPath = (parent = "", current = "") => {
     return `/${[parent, current].filter(Boolean).join("/")}`;
 };
+
+export const COMPONENT_MAP = [
+    { id: "HOME", name: "Home", component: Home },
+    { id: "PERFIL", name: "Perfil", component: PerfilPage },
+    { id: "MODULOS", name: "Módulos", component: IndexModules },
+    { id: "MENUS", name: "Menus", component: IndexMenus },
+    { id: "PERMISSIONS", name: "Permisos", component: PermissionsIndex },
+    { id: "USERS", name: "Usuarios", component: IndexUsers },
+    { id: "ROLES", name: "Roles", component: IndexRoles },
+    { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
+    { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
+    { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
+    { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
+    { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
+    { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
+    { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion },
+    { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex }
+];

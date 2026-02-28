@@ -58,7 +58,7 @@ export const default_buttons = (url_api, title) => {
     const buttons = [
         {
             extend: 'excel',
-            text: '<i class="ri-file-excel-line me-1"></i><span class="d-none d-sm-inline-block">Excel</span>',
+            text: '<i class="ri-file-excel-line me-1"></i>  Excel',
             className: `dropdown-item`,
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,
@@ -97,7 +97,7 @@ export const default_buttons = (url_api, title) => {
         },
         {
             extend: 'csv',
-            text: '<i class="ri-file-text-line me-1"></i><span class="d-none d-sm-inline-block">CSV</span>',
+            text: '<i class="ri-file-text-line me-1"></i> CSV',
             className: 'dropdown-item',
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,
@@ -134,7 +134,7 @@ export const default_buttons = (url_api, title) => {
         },
         {
             extend: 'pdf',
-            text: '<i class="ri-file-pdf-2-line me-1"></i><span class="d-none d-sm-inline-block">PDF</span>',
+            text: '<i class="ri-file-pdf-2-line me-1"></i> PDF',
             className: 'dropdown-item',
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,

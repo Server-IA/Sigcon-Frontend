@@ -5,16 +5,15 @@ import { Link } from "react-router-dom";
 import { base_redirect_path, base_url } from "../../utils/functions";
 import { fetchHelper } from "../../utils/fetch";
 
+import avatar from '../../../public/assets/img/avatars/1.png';
+import { refreshMenu } from "../../routes/routes";
+
 // import { ComponentsFinal } from "../../utils/map_menu";
 
-const NavHorizontal = ({modules}) => {
-
-    // const rutaPerfil = ComponentsFinal.find(component => component.id === "PERFIL")?.path;
-
-    // console.log(ComponentsFinal);
+const NavHorizontal = () => {
 
     const user = useSelector(state => state.user).user;
-    const modulos = useSelector(state => state.modules).modules;
+    const modulos = useSelector(state => state.modules).modules || [];
 
     const urlPerfil = `${
         modulos.find(modulo => modulo.id === 1)?.url
@@ -38,7 +37,6 @@ const NavHorizontal = ({modules}) => {
             }
         }).then(async (result) => {
             if (result.isConfirmed) {
-                
 
                 const url = base_url(['auth/logout']);
 
@@ -57,25 +55,34 @@ const NavHorizontal = ({modules}) => {
     }
 
     useEffect(() => {
-        console.log(modules);
         console.log(modulos);
     }, [user]);
+
+    useEffect(() => {
+        dispatch(refreshMenu());
+    }, [dispatch]);
+
+    const toggleMenu = () => {
+        if (window.Helpers) {
+            window.Helpers.toggleCollapsed();
+        }
+    }
 
     return <>
         <nav
             className="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
             id="layout-navbar">
             <div className="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0 d-xl-none">
-                <a className="nav-item nav-link px-0 me-xl-6" href="javascript:void(0)">
-                <i className="ri-menu-fill ri-22px"></i>
-                </a>
+                <Link className="nav-item nav-link px-0 me-xl-6" onClick={toggleMenu}>
+                    <i className="ri-menu-fill ri-22px"></i>
+                </Link>
             </div>
 
             <div className="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
 
                 <ul className="navbar-nav flex-row align-items-center ms-auto">
                     
-                    <li className="nav-item dropdown-style-switcher dropdown me-1 me-xl-0">
+                    {/* <li className="nav-item dropdown-style-switcher dropdown me-1 me-xl-0">
                         <a
                         className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow"
                         href="javascript:void(0);"
@@ -164,12 +171,16 @@ const NavHorizontal = ({modules}) => {
                                 </div>
                             </li>
                         </ul>
-                    </li>
+                    </li> */}
                     
                     <li className="nav-item navbar-dropdown dropdown-user dropdown">
-                        <a className="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+                        <a className="nav-link dropdown-toggle hide-arrow" onClick={() => {}} data-bs-toggle="dropdown">
                             <div className="avatar avatar-online">
-                                <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                <img
+                                    onError={(e) => {
+                                        e.target.src = avatar;                                        
+                                    }}
+                                    src={base_url(['users/avatars', user?.avatar ?? ''])} alt="avatar" className="rounded-circle" />
                             </div>
                         </a>
                         <ul className="dropdown-menu dropdown-menu-end">
@@ -178,7 +189,12 @@ const NavHorizontal = ({modules}) => {
                                     <div className="d-flex">
                                         <div className="flex-shrink-0 me-2">
                                             <div className="avatar avatar-online">
-                                                <img src={user?.avatar ? `${base_url(['users/avatars', user.avatar])}` : '/assets/img/avatars/1.png'} alt="avatar" className="rounded-circle" />
+                                                <img
+                                                    onError={(e) => {
+                                                        e.target.src = avatar;
+                                                        console.warn('Error al capturar el avatar');
+                                                    }}
+                                                    src={base_url(['users/avatars', user?.avatar ?? ''])} alt="avatar" className="rounded-circle" />
                                             </div>
                                         </div>
                                         <div className="flex-grow-1">
@@ -193,7 +209,7 @@ const NavHorizontal = ({modules}) => {
                             </li>
 
                             {
-                                modules?.filter((module) => module?.id == 1).map((module) => {
+                                modulos?.filter((module) => module?.id == 1).map((module) => {
                                     return module?.menus?.map((menu) => {
                                         return (
                                             <li key={menu.id}>

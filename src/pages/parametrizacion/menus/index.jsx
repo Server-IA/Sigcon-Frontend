@@ -1,3 +1,4 @@
+//menus/filter.jsx
 import { useState, useRef, useEffect } from "react";
 
 import DataTableReference from "../../../components/organism/DataTable";
@@ -6,13 +7,15 @@ import UpdatedMenu from "./updated";
 
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { COMPONENT_MAP } from '../../../utils/map_menu';
 import AlertPage from '../../../components/molecules/AlertPage';
 import FilterMenu from "./filter";
+import { refreshMenu } from "../../../routes/routes";
 
 const IndexMenus = () => {
 
+    const dispatch = useDispatch();
     const [data, setData] = useState([]);
     const tableRefMenu = useRef(null);
     const dataTableRefMenu = useRef(null);
@@ -228,6 +231,10 @@ const IndexMenus = () => {
         setComponents(filtered);
     }, [menu]);
 
+    // useEffect(() => {
+    //     dispatch(refreshMenu());
+    // }, [menuCreate, menuUpdate, menuDelete, dispatch]);
+
     useEffect(() => {
         const table = dataTableRefMenu?.current;
         if (!table) return;
@@ -274,6 +281,7 @@ const IndexMenus = () => {
                             try {
                                 await fetchHelper.delete(url, {}, {}, 500, false);
                                 dataTableRefMenu?.current?.ajax.reload();
+                                dispatch(refreshMenu());
                                 setMenuDelete(true);
                                 setMenuError(false);
                             } catch (error) {

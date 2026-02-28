@@ -4,13 +4,33 @@ import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import { useState, useRef, useEffect } from "react";
 import { fetchHelper } from "../../../utils/fetch";
 import { base_url } from "../../../utils/functions";
+import { useDispatch } from 'react-redux';
+import { refreshMenu } from '../../../routes/routes';
 
 const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuUpdate, modules, parents, components }) => {
 
+    const dispatch = useDispatch();
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
     const [optionMenus, setOptionMenus] = useState([]);
+
+    useEffect(() => {
+        if (modalRef.current) {
+            modalRef.current.addEventListener('hidden.bs.modal', () => {
+                setErrors({});
+                setErrorMessage('');
+            });
+        }
+        return () => {
+            if (modalRef.current) {
+                modalRef.current.removeEventListener('hidden.bs.modal', () => {
+                    setErrors({});
+                    setErrorMessage('');
+                });
+            }
+        };
+    }, [modalRef.current]);
 
     useEffect(() => {
         const optionMenus = parents.filter(parent => parent.moduleId == menu.moduleId);
@@ -18,7 +38,7 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
         setOptionMenus(optionMenus.map(parent => ({
             id: parent.id,
             name: parent.name,
-        })));
+        })).filter(option => option.id != menu.id));
     }, [menu]);
     
 
@@ -29,6 +49,7 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
 
             const url = base_url(['api', 'menus', 'update']);
             await fetchHelper.put(url, menu, {}, 1000);
+            dispatch(refreshMenu());
             setMenu({
                 id: '',
                 label: '',
@@ -90,9 +111,16 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 id="label_updated"
                                 label="Nombre del menu"
                                 value={menu.label}
-                                onChange={(e) => setMenu({ ...menu, label: e.target.value })}
+                                onChange={(e) => {
+                                    setMenu({ ...menu, label: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        label: '',
+                                    }))
+                                }}
                                 error={errors.label}
                                 placeholder="Nombre del menu"
+                                required={true}
                             />
                         </div>
 
@@ -102,9 +130,16 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 id="path_updated"
                                 label="Ruta del menu"
                                 value={menu.path}
-                                onChange={(e) => setMenu({ ...menu, path: e.target.value })}
+                                onChange={(e) => {
+                                    setMenu({ ...menu, path: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        path: '',
+                                    }))
+                                }}
                                 error={errors.path}
                                 placeholder="Ruta del menu"
+                                required={true}
                             />
                         </div>
                     </div>
@@ -116,7 +151,13 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 id="icon_updated"
                                 label="Icono del menu"
                                 value={menu.icon}
-                                onChange={(e) => setMenu({ ...menu, icon: e.target.value })}
+                                onChange={(e) => {
+                                    setMenu({ ...menu, icon: e.target.value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        icon: '',
+                                    }))
+                                }}
                                 error={errors.icon}
                                 placeholder="Icono del menu"
                             />
@@ -127,9 +168,16 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 id="menuOrder_updated"
                                 label="Orden del menu"
                                 value={menu.menuOrder}
-                                onChange={(e) => setMenu({ ...menu, menuOrder: e.target.value ? parseInt(e.target.value) : 1 })}
+                                onChange={(e) => {
+                                    setMenu({ ...menu, menuOrder: e.target.value ? parseInt(e.target.value) : 1 })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        menuOrder: '',
+                                    }))
+                                }}
                                 error={errors.menuOrder}
                                 placeholder="Orden del menu"
+                                required={true}
                             />
                         </div>
                     </div>
@@ -140,10 +188,17 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 id="component_updated"
                                 label="Componente del menu"
                                 value={menu.component}
-                                onChange={(value) => setMenu({ ...menu, component: value })}
+                                onChange={(value) => {
+                                    setMenu({ ...menu, component: value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        component: '',
+                                    }))
+                                }}
                                 error={errors.component}
                                 placeholder="Componente del menu"
                                 options={components}
+                                required={true}
                             />
                         </div>
                         <div className="col mb-6 mt-2">
@@ -151,10 +206,17 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 id="moduleId_updated"
                                 label="Modulo del menu"
                                 value={menu.moduleId}
-                                onChange={(value) => setMenu({ ...menu, moduleId: value })}
+                                onChange={(value) => {
+                                    setMenu({ ...menu, moduleId: value })
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        moduleId: '',
+                                    }))
+                                }}
                                 error={errors.moduleId}
                                 placeholder="Modulo del menu"
                                 options={modules}
+                                required={true}
                             />
                         </div>
                     </div>
