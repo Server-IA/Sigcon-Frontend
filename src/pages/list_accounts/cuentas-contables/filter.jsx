@@ -1,95 +1,18 @@
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
-<<<<<<< HEAD
-// Swagger: accountClass enum values matching CreateChartOfAccountDTO / UpdateChartOfAccountDTO
-const ACCOUNT_CLASS_OPTIONS = [
-    { id: 'ASSET', label: 'Activo' },
-    { id: 'LIABILITY', label: 'Pasivo' },
-    { id: 'EQUITY', label: 'Patrimonio' },
-    { id: 'REVENUE', label: 'Ingresos' },
-    { id: 'EXPENSE', label: 'Gastos' },
-    { id: 'COST_OF_SALES', label: 'Costos de venta' },
-    { id: 'PRODUCTION_COST', label: 'Costos de producción' },
-    { id: 'MEMORANDUM_DEBIT', label: 'Cuentas de orden deudoras' },
-    { id: 'MEMORANDUM_CREDIT', label: 'Cuentas de orden acreedoras' },
-];
-
-// Swagger: level enum values
-const ACCOUNT_LEVEL_OPTIONS = [
-    { id: 'CLASS', label: 'Clase' },
-    { id: 'GROUP', label: 'Grupo' },
-    { id: 'ACCOUNT', label: 'Cuenta' },
-    { id: 'SUBACCOUNT', label: 'Subcuenta' },
-];
-
-// Swagger: nature enum values
-const NATURE_OPTIONS = [
-    { id: 'DEBIT', label: 'Deudora' },
-    { id: 'CREDIT', label: 'Acreedora' },
-];
-
-// Swagger: status enum values
-const STATUS_OPTIONS = [
-    { id: 'ACTIVE', label: 'Activa' },
-    { id: 'INACTIVE', label: 'Inactiva' },
-];
-
-/**
- * Filtros para POST /api/v1/chart-of-accounts/search (DataTableRequest)
- * Los filtros se envían como column search dentro del DataTableRequest.
- * Cada filtro corresponde a una columna del DataTable con su name.
- */
-const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
-=======
 // AccountFilterRequest fields — filters are applied server-side via POST /api/v1/accounting-accounts
 // Fields: custom_name, base_currency, puc_id, cost_center_id, depreciation_rule_id, nature, status
->>>>>>> developer
 
 const NATURE_OPTIONS = [
     { id: 'DEBIT',  label: 'Deudora' },
     { id: 'CREDIT', label: 'Acreedora' },
 ];
 
-<<<<<<< HEAD
-    const [filters, setFilters] = useState([
-        {
-            regex: true,
-            value: '',
-            column: 'code:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'name:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'accountClass:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'level:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'nature:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'status:name',
-        },
-    ]);
-=======
 const STATUS_OPTIONS = [
     { id: 'ACTIVE',   label: 'Activa' },
     { id: 'INACTIVE', label: 'Inactiva' },
 ];
->>>>>>> developer
 
 const FilterCuentaContable = ({
     filterRef,
@@ -129,136 +52,6 @@ const FilterCuentaContable = ({
                             aria-label="Close">
                         </button>
                     </div>
-<<<<<<< HEAD
-                    <div className="modal-body">    
-                        {/* Código de la Cuenta — swagger GET: code pattern ^[0-9]{1,100}$ */}
-                        <div className="row mb-3">
-                            <div className="col-12">
-                                <div className="input-group">
-                                    <div className="input-group-text form-check mb-0">
-                                        <input
-                                            checked={filters.find(filter => filter.column === 'code:name')?.regex || false}
-                                            className="form-check-input m-auto"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="top"
-                                            data-bs-original-title="Búsqueda por coincidencia"
-                                            type="checkbox"
-                                            onChange={(e) => {
-                                                setFilters(prev => prev.map(filter => filter.column === 'code:name' ? {
-                                                    ...filter,
-                                                    regex: e.target.checked,
-                                                } : filter));
-                                            }}
-                                            disabled={!dataTableRef?.current}
-                                            aria-label="Buscar" />
-                                    </div>
-                                    <InputModal
-                                        type="text"
-                                        id="code_filter"
-                                        label="Código"
-                                        value={filters.find(filter => filter.column === 'code:name')?.value || ""}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9]/g, '');
-                                            setFilters(prev => prev.map(filter => filter.column === 'code:name' ? {
-                                                ...filter,
-                                                value: val,
-                                            } : filter));
-                                        }}
-                                        placeholder="Ej: 110505"
-                                        error=""
-                                        maxLength={100}
-                                        inputMode="numeric"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Nombre de la Cuenta — swagger GET: name pattern */}
-                        <div className="row mb-3">
-                            <div className="col-12">
-                                <div className="input-group">
-                                    <div className="input-group-text form-check mb-0">
-                                        <input
-                                            checked={filters.find(filter => filter.column === 'name:name')?.regex || false}
-                                            className="form-check-input m-auto"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="top"
-                                            data-bs-original-title="Búsqueda por coincidencia"
-                                            type="checkbox"
-                                            onChange={(e) => {
-                                                setFilters(prev => prev.map(filter => filter.column === 'name:name' ? {
-                                                    ...filter,
-                                                    regex: e.target.checked,
-                                                } : filter));
-                                            }}
-                                            disabled={!dataTableRef?.current}
-                                            aria-label="Buscar" />
-                                    </div>
-                                    <InputModal
-                                        type="text"
-                                        id="name_filter"
-                                        label="Nombre"
-                                        value={filters.find(filter => filter.column === 'name:name')?.value || ""}
-                                        onChange={(e) => {
-                                            setFilters(prev => prev.map(filter => filter.column === 'name:name' ? {
-                                                ...filter,
-                                                value: e.target.value,
-                                            } : filter));
-                                        }}
-                                        placeholder="Ej: Caja General"
-                                        error=""
-                                        maxLength={100}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Clase Contable */}
-                        <div className="row">
-                            <div className="col mb-6 mt-2">
-                                <InputSelectModal
-                                    id="accountClass_filter"
-                                    label="Clase Contable"
-                                    value={filters.find(filter => filter.column === 'accountClass:name')?.value || ""}
-                                    onChange={(value) => {
-                                        setFilters(prev => prev.map(filter => filter.column === 'accountClass:name' ? {
-                                            ...filter,
-                                            value: value,
-                                        } : filter));
-                                    }}
-                                    error=""
-                                    placeholder="Seleccionar clase"
-                                    options={ACCOUNT_CLASS_OPTIONS}
-                                    clearable={true}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Nivel Jerárquico */}
-                        <div className="row">
-                            <div className="col mb-6 mt-2">
-                                <InputSelectModal
-                                    id="level_filter"
-                                    label="Nivel Jerárquico"
-                                    value={filters.find(filter => filter.column === 'level:name')?.value || ""}
-                                    onChange={(value) => {
-                                        setFilters(prev => prev.map(filter => filter.column === 'level:name' ? {
-                                            ...filter,
-                                            value: value,
-                                        } : filter));
-                                    }}
-                                    error=""
-                                    placeholder="Seleccionar nivel"
-                                    options={ACCOUNT_LEVEL_OPTIONS}
-                                    clearable={true}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Naturaleza — swagger: nature enum [DEBIT, CREDIT] */}
-                        <div className="row">
-                            <div className="col mb-6 mt-2">
-=======
                     <div className="modal-body">
 
                         {/* Nombre Personalizado — AccountFilterRequest.custom_name */}
@@ -294,7 +87,6 @@ const FilterCuentaContable = ({
                         {/* Naturaleza — AccountFilterRequest.nature */}
                         <div className="row mb-3">
                             <div className="col-12">
->>>>>>> developer
                                 <InputSelectModal
                                     id="filter_nature"
                                     label="Naturaleza"
@@ -308,15 +100,9 @@ const FilterCuentaContable = ({
                             </div>
                         </div>
 
-<<<<<<< HEAD
-                        {/* Estado — swagger: status enum [ACTIVE, INACTIVE] */}
-                        <div className="row">
-                            <div className="col mb-6 mt-2">
-=======
                         {/* Estado — AccountFilterRequest.status */}
                         <div className="row mb-3">
                             <div className="col-12">
->>>>>>> developer
                                 <InputSelectModal
                                     id="filter_status"
                                     label="Estado"

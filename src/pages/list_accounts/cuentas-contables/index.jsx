@@ -9,29 +9,8 @@ import CreateCuentaContable from './create';
 import UpdatedCuentaContable from './updated';
 import FilterCuentaContable from './filter';
 
-<<<<<<< HEAD
-const ACCOUNT_CLASS_LABELS = {
-    ASSET: 'Activo',
-    LIABILITY: 'Pasivo',
-    EQUITY: 'Patrimonio',
-    REVENUE: 'Ingresos',
-    EXPENSE: 'Gastos',
-    COST_OF_SALES: 'Costos de venta',
-    PRODUCTION_COST: 'Costos de producción',
-    MEMORANDUM_DEBIT: 'Cuentas de orden deudoras',
-    MEMORANDUM_CREDIT: 'Cuentas de orden acreedoras',
-};
-
-const ACCOUNT_LEVEL_LABELS = {
-    CLASS: 'Clase',
-    GROUP: 'Grupo',
-    ACCOUNT: 'Cuenta',
-    SUBACCOUNT: 'Subcuenta',
-};
-=======
 // Swagger: nature enum DEBIT / CREDIT  (AccountFilterRequest, CreateAccountingAccountRequest)
 const NATURE_LABELS = { DEBIT: 'Deudora', CREDIT: 'Acreedora' };
->>>>>>> developer
 
 const IndexCuentasContables = () => {
 
@@ -52,9 +31,6 @@ const IndexCuentasContables = () => {
     const [data, setData] = useState([]);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
 
-<<<<<<< HEAD
-    const url = ['api', 'v1', 'chart-of-accounts', 'search'];
-=======
     // AccountFilterRequest — swagger POST /api/v1/accounting-accounts
     const initialFilters = {
         custom_name: '',
@@ -78,69 +54,12 @@ const IndexCuentasContables = () => {
         (dtData) => ({ dtRequest: dtData, filters: activeFiltersRef.current }),
         []
     );
->>>>>>> developer
 
     const actions = [
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Inactivar' },
     ];
 
-<<<<<<< HEAD
-    const initialCuentaContable = {
-        id: '',
-        code: '',
-        name: '',
-        accountClass: '',
-        level: '',
-        nature: '',
-        status: 'ACTIVE',
-    };
-
-    const [cuentaContable, setCuentaContable] = useState(initialCuentaContable);
-
-    const [columns, setColumns] = useState([
-        { 
-            title: 'Código', 
-            data: 'code',
-            name: 'code'
-        },
-        { 
-            title: 'Nombre', 
-            data: 'name',
-            name: 'name'
-        },
-        { 
-            title: 'Clase', 
-            data: 'accountClass',
-            name: 'accountClass',
-            render: (accountClass) => {
-                return ACCOUNT_CLASS_LABELS[accountClass] || accountClass;
-            }
-        },
-        { 
-            title: 'Nivel', 
-            data: 'level',
-            name: 'level',
-            render: (level) => {
-                return ACCOUNT_LEVEL_LABELS[level] || level;
-            }
-        },
-        { 
-            title: 'Naturaleza', 
-            data: 'nature',
-            name: 'nature',
-            render: (nature) => {
-                return nature === 'DEBIT' ? 'Deudora' : nature === 'CREDIT' ? 'Acreedora' : nature;
-            }
-        },
-        { 
-            title: 'Estado', 
-            data: 'status',
-            name: 'status',
-            render: (status) => {
-                return status === 'ACTIVE' ? 'Activa' : 'Inactiva';
-            }
-=======
     // Snake_case field names matching swagger UpdateAccountingAccountRequest / CreateAccountingAccountRequest
     const initialCuentaContable = {
         id: '',
@@ -166,7 +85,6 @@ const IndexCuentasContables = () => {
         {
             title: 'Naturaleza', data: 'nature', name: 'nature',
             render: (nature) => NATURE_LABELS[nature] ?? nature,
->>>>>>> developer
         },
         {
             title: 'Estado', data: 'status', name: 'status',
@@ -192,15 +110,7 @@ const IndexCuentasContables = () => {
         }
         modalCreateInstance.current.show();
         setCuentaContable(initialCuentaContable);
-<<<<<<< HEAD
-        setMessage({
-            message: '',
-            type: '',
-            show: false,
-        });
-=======
         setMessage({ message: '', type: '', show: false });
->>>>>>> developer
     };
 
     const buttons = [
@@ -239,19 +149,12 @@ const IndexCuentasContables = () => {
             // Snake_case fields matching swagger response
             const cuentaData = {
                 id: cuentaRef.id,
-<<<<<<< HEAD
-                code: cuentaRef.code ?? '',
-                name: cuentaRef.name ?? '',
-                accountClass: cuentaRef.accountClass ?? '',
-                level: cuentaRef.level ?? '',
-=======
                 puc_id: cuentaRef.puc_id ?? '',
                 pucCode: cuentaRef.pucCode ?? '',
                 custom_name: cuentaRef.custom_name ?? '',
                 base_currency: cuentaRef.base_currency ?? '',
                 cost_center_id: cuentaRef.cost_center_id ?? '',
                 depreciation_rule_id: cuentaRef.depreciation_rule_id ?? '',
->>>>>>> developer
                 nature: cuentaRef.nature ?? '',
                 status: cuentaRef.status ?? 'ACTIVE',
             };
@@ -269,66 +172,12 @@ const IndexCuentasContables = () => {
                 case 'delete':
                     window.Swal.fire({
                         title: '¿Estás seguro?',
-<<<<<<< HEAD
-                        text: '¿Estás seguro de querer eliminar esta cuenta contable?',
-=======
                         text: '¿Deseas inactivar esta cuenta contable? (CFG-RF-08)',
->>>>>>> developer
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: 'Eliminar',
+                        confirmButtonText: 'Inactivar',
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => {
-<<<<<<< HEAD
-                        if (result.isConfirmed) {
-                            // Solicitar motivo — swagger: DeleteChartOfAccountDTO
-                            // reason: required, pattern ^[A-Za-z0-9_\-\s]{1,255}$, maxLength 255
-                            window.Swal.fire({
-                                title: 'Motivo de eliminación',
-                                input: 'text',
-                                inputLabel: 'Indique el motivo por el cual desea eliminar esta cuenta',
-                                inputPlaceholder: 'Ej: Cuenta duplicada en catálogo',
-                                inputAttributes: {
-                                    'aria-label': 'Motivo',
-                                    maxlength: 255,
-                                },
-                                inputValidator: (value) => {
-                                    if (!value || value.trim() === '') {
-                                        return 'El motivo de eliminación es obligatorio';
-                                    }
-                                    const reasonRegex = /^[A-Za-z0-9_\-\s]{1,255}$/;
-                                    if (!reasonRegex.test(value.trim())) {
-                                        return 'Solo se permiten caracteres alfanuméricos, espacios, guiones y guiones bajos (máximo 255)';
-                                    }
-                                },
-                                showCancelButton: true,
-                                confirmButtonText: 'Eliminar',
-                                cancelButtonText: 'Cancelar',
-                            }).then(async (reasonResult) => {
-                                if (reasonResult.isConfirmed) {
-                                    // DELETE /api/v1/chart-of-accounts/{id} con body DeleteChartOfAccountDTO
-                                    const deleteUrl = base_url(['api', 'v1', 'chart-of-accounts', id]);
-                                    try {
-                                        await fetchHelper.delete(deleteUrl, { reason: reasonResult.value.trim() }, {}, 500, false);
-                                        setMessage({
-                                            message: 'Cuenta contable eliminada exitosamente',
-                                            type: 'success',
-                                            show: true,
-                                        });
-                                    } catch (error) {
-                                        console.error('Error DELETE /api/v1/chart-of-accounts/' + id + ':', error);
-                                        setMessage({
-                                            message: error.msg || error.message || 'Error al eliminar la cuenta contable',
-                                            type: 'danger',
-                                            show: true,
-                                        });
-                                    } finally {
-                                        dataTableRef?.current?.ajax.reload();
-                                    }
-                                }
-                            });
-                        }
-=======
                         if (!result.isConfirmed) return;
                         // Swagger: DELETE /api/v1/accounting-accounts/delete/{id}?reason={reason}
                         window.Swal.fire({
@@ -368,7 +217,6 @@ const IndexCuentasContables = () => {
                                 dataTableRef?.current?.ajax.reload();
                             }
                         });
->>>>>>> developer
                     });
                     break;
             }
@@ -382,12 +230,13 @@ const IndexCuentasContables = () => {
 
     return <>
         <div className="card">
-            <h5 className="card-header text-md-start text-center">Catálogo de Cuentas Contables (PUC)</h5>
+            <h5 className="card-header text-md-start text-center">Cuentas Contables</h5>
 
             <AlertPage 
                 message={message.message} 
                 type={message.type} 
-                show={message.show} 
+                show={message.show}
+                onChange={() => setMessage({ message: '', type: '', show: false })}
             />
 
             <div className="card-datatable text-nowrap">
