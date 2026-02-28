@@ -9,6 +9,7 @@ import { base_url } from '../../../utils/functions';
 import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
+import DropzoneModal from '../../../components/molecules/DropzoneModal';
 
 const ACCOUNT_CLASSES = [
     { id: 'ASSET',             name: 'Activo' },
@@ -52,6 +53,9 @@ const IndexPUC = () => {
 
     const modalUpdateRef      = useRef(null);
     const modalUpdateInstance = useRef(null);
+
+    const modalBulkRef      = useRef(null);
+    const modalBulkInstance = useRef(null);
 
     const [data, setData]       = useState([]);
     const [clickEdit, setClickEdit] = useState(false);
@@ -134,10 +138,17 @@ const IndexPUC = () => {
         modalUpdateInstance.current.show();
     };
 
+    const openModalBulk = () => {
+        if (!modalBulkInstance.current) {
+            modalBulkInstance.current = new window.bootstrap.Modal(modalBulkRef.current);
+        }
+        modalBulkInstance.current.show();
+    };
+
     const buttons = [
         {
             text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
-            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
             action: function () {
                 if (!filterInstance.current) {
                     filterInstance.current = new window.bootstrap.Modal(filterRef.current);
@@ -146,8 +157,13 @@ const IndexPUC = () => {
             }
         },
         {
+            text: '<i class="ri-upload-2-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Cargue Masivo</span>',
+            className: 'btn rounded-pill btn-label-success waves-effect mx-1 my-2',
+            action: function () { openModalBulk(); }
+        },
+        {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Cuenta PUC</span>',
-            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
+            className: 'btn rounded-pill btn-primary waves-effect mx-1 my-2',
             action: function () { openModalCreate(); }
         },
     ];
@@ -319,6 +335,20 @@ const IndexPUC = () => {
                 levels={LEVELS}
                 accountNatures={ACCOUNT_NATURES}
                 accountStatuses={ACCOUNT_STATUSES}
+            />
+
+            <DropzoneModal
+                modalRef={modalBulkRef}
+                title="Cargue Masivo PUC"
+                uploadUrl={base_url(['api', 'v1', 'chart-of-accounts', 'bulk'])}
+                acceptedFiles=".xlsx,.xls,.csv"
+                maxFiles={1}
+                maxFilesize={5}
+                onSuccess={() => {
+                    dataTableRef?.current?.ajax.reload();
+                    setMessage({ message: 'Cargue masivo completado exitosamente', type: 'success', show: true });
+                    modalBulkInstance?.current?.hide();
+                }}
             />
         </>
     );
