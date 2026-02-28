@@ -5,6 +5,31 @@ import { useEffect, useState } from 'react';
 import AlertPage from '../../../components/molecules/AlertPage';
 import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
+
+const ACCOUNT_CLASS_OPTIONS = [
+    { id: 'ASSET', label: 'Activo' },
+    { id: 'LIABILITY', label: 'Pasivo' },
+    { id: 'EQUITY', label: 'Patrimonio' },
+    { id: 'REVENUE', label: 'Ingresos' },
+    { id: 'EXPENSE', label: 'Gastos' },
+    { id: 'COST_OF_SALES', label: 'Costos de venta' },
+    { id: 'PRODUCTION_COST', label: 'Costos de producción' },
+    { id: 'MEMORANDUM_DEBIT', label: 'Cuentas de orden deudoras' },
+    { id: 'MEMORANDUM_CREDIT', label: 'Cuentas de orden acreedoras' },
+];
+
+const ACCOUNT_LEVEL_OPTIONS = [
+    { id: 'CLASS', label: 'Clase (1 dígito)' },
+    { id: 'GROUP', label: 'Grupo (2 dígitos)' },
+    { id: 'ACCOUNT', label: 'Cuenta (4 dígitos)' },
+    { id: 'SUBACCOUNT', label: 'Subcuenta (6 dígitos)' },
+];
+
+const NATURE_OPTIONS = [
+    { id: 'DEBIT', label: 'Deudora' },
+    { id: 'CREDIT', label: 'Acreedora' },
+];
+
 const CreateCuentaContable = ({ 
     modalRef, 
     modalInstance, 
@@ -16,56 +41,36 @@ const CreateCuentaContable = ({
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [pucs, setPucs] = useState([]);
-    const [currencies, setCurrencies] = useState([]);
-    const [costCenters, setCostCenters] = useState([]);
-    const [depreciationRules, setDepreciationRules] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    // Cargar datos de selecciones
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                // Cargar PUC
-                const pucUrl = base_url(['api', 'puc-catalog']);
-                const pucResponse = await fetchHelper.get(pucUrl, {}, 0);
-                setPucs(pucResponse.data || []);
-
-                // Cargar Monedas
-                const currencyUrl = base_url(['api', 'currencies']);
-                const currencyResponse = await fetchHelper.get(currencyUrl, {}, 0);
-                setCurrencies(currencyResponse.data || []);
-
-                // Cargar Centros de Costos
-                const costCenterUrl = base_url(['api', 'cost-centers']);
-                const costCenterResponse = await fetchHelper.get(costCenterUrl, {}, 0);
-                setCostCenters(costCenterResponse.data || []);
-
-                // Cargar Reglas de Depreciación
-                const depRuleUrl = base_url(['api', 'depreciation-rules']);
-                const depRuleResponse = await fetchHelper.get(depRuleUrl, {}, 0);
-                setDepreciationRules(depRuleResponse.data || []);
-            } catch (error) {
-                console.error('Error cargando datos:', error);
-            }
-        };
-        loadData();
-    }, []);
+    const initialState = {
+        id: '',
+        code: '',
+        name: '',
+        accountClass: '',
+        level: '',
+        nature: '',
+        status: 'ACTIVE',
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         // Validar campos obligatorios
-        if (!cuentaContable.pucId) {
-            setErrorMessage('Por favor seleccione una cuenta PUC');
+        if (!cuentaContable.code || cuentaContable.code.trim() === '') {
+            setErrorMessage('Por favor diligencie el código de la cuenta');
             return;
         }
-        if (!cuentaContable.customName || cuentaContable.customName.trim() === '') {
-            setErrorMessage('El nombre personalizado de la cuenta es obligatorio');
+        if (!cuentaContable.name || cuentaContable.name.trim() === '') {
+            setErrorMessage('Por favor diligencie el nombre de la cuenta');
             return;
         }
-        if (!cuentaContable.baseCurrency) {
-            setErrorMessage('Por favor seleccione una moneda base');
+        if (!cuentaContable.accountClass) {
+            setErrorMessage('Por favor seleccione la clase de la cuenta');
+            return;
+        }
+        if (!cuentaContable.level) {
+            setErrorMessage('Por favor seleccione el nivel jerárquico');
             return;
         }
         if (!cuentaContable.nature) {
@@ -73,30 +78,36 @@ const CreateCuentaContable = ({
             return;
         }
 
-        // Validar formato del nombre
-        const nameRegex = /^[a-zA-Z0-9\s\-_]{1,50}$/;
-        if (!nameRegex.test(cuentaContable.customName)) {
-            setErrorMessage('El nombre debe tener entre 1 y 50 caracteres, solo alfanuméricos, espacios, guiones y guiones bajos');
+        // Validar formato del código (solo números, máximo 10 dígitos)
+        const codeRegex = /^[0-9]{1,10}$/;
+        if (!codeRegex.test(cuentaContable.code.trim())) {
+            setErrorMessage('El código debe contener solo números (máximo 10 dígitos)');
             return;
         }
 
-        const url = base_url(['api', 'accounting-accounts']);
+        // Validar formato del nombre
+        const nameRegex = /^[A-Za-z0-9_\-\s]{1,100}$/;
+        if (!nameRegex.test(cuentaContable.name.trim())) {
+            setErrorMessage('El nombre debe tener entre 1 y 100 caracteres, solo alfanuméricos, espacios, guiones y guiones bajos');
+            return;
+        }
+
+        // Construir CreateChartOfAccountDTO según swagger
+        const requestBody = {
+            code: cuentaContable.code.trim(),
+            name: cuentaContable.name.trim(),
+            accountClass: cuentaContable.accountClass,
+            level: cuentaContable.level,
+            nature: cuentaContable.nature,
+        };
+
+        // POST /api/v1/chart-of-accounts → 201 Created
+        const url = base_url(['api', 'v1', 'chart-of-accounts']);
         try {
             setLoading(true);
-            await fetchHelper.post(url, cuentaContable, {}, 1000);
+            await fetchHelper.post(url, requestBody, {}, 1000);
             
-            setCuentaContable({
-                id: '',
-                pucId: '',
-                pucCode: '',
-                customName: '',
-                baseCurrency: '',
-                costCenterId: '',
-                depreciationRuleId: '',
-                nature: '',
-                status: 'ACTIVE',
-                companyId: '',
-            });
+            setCuentaContable(initialState);
             
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
@@ -110,7 +121,7 @@ const CreateCuentaContable = ({
             setErrors({});
             setErrorMessage('');
         } catch (error) {
-            console.log(error);
+            console.error('Error POST /api/v1/chart-of-accounts:', error);
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
@@ -118,8 +129,11 @@ const CreateCuentaContable = ({
                     fieldErrors[err.field] = err.message;
                 });
                 setErrors(fieldErrors);
-            } else if (error?.msg) {
+            }
+            if (error?.msg) {
                 setErrorMessage(error.msg);
+            } else if (!errores || errores.length === 0) {
+                setErrorMessage('Error al crear la cuenta contable');
             }
         } finally {
             setLoading(false);
@@ -151,113 +165,83 @@ const CreateCuentaContable = ({
                         />
 
                         <form onSubmit={handleSubmit}>
-                            {/* Selección de PUC */}
-                            <div className="row">
-                                <div className="col mb-6 mt-2">
-                                    <InputSelectModal
-                                        id="pucId"
-                                        label="Cuenta PUC"
-                                        value={cuentaContable.pucId}
-                                        onChange={(value) => {
-                                            const selectedPuc = pucs.find(p => p.id === parseInt(value));
-                                            setCuentaContable({
-                                                ...cuentaContable,
-                                                pucId: parseInt(value) || '',
-                                                pucCode: selectedPuc?.code || ''
-                                            });
-                                        }}
-                                        error={errors.pucId}
-                                        placeholder="Seleccionar cuenta PUC"
-                                        options={pucs.map(puc => ({
-                                            id: puc.id,
-                                            label: `${puc.code} - ${puc.name}`
-                                        }))}
-                                        required={true}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Nombre Personalizado */}
+                            {/* Código de la Cuenta — swagger: pattern ^[0-9]{1,10}$ */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputModal
                                         type="text"
-                                        id="customName"
-                                        label="Nombre Personalizado"
-                                        value={cuentaContable.customName}
+                                        id="create_code"
+                                        label="Código de la Cuenta"
+                                        value={cuentaContable.code}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                                            setCuentaContable({ ...cuentaContable, code: val });
+                                        }}
+                                        error={errors.code}
+                                        placeholder="Ej: 110505"
+                                        required={true}
+                                        maxLength={10}
+                                        inputMode="numeric"
+                                        pattern="^[0-9]{1,10}$"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Nombre de la Cuenta — swagger: pattern ^[A-Za-z0-9_\-\s]{1,100}$ */}
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputModal
+                                        type="text"
+                                        id="create_name"
+                                        label="Nombre de la Cuenta"
+                                        value={cuentaContable.name}
                                         onChange={(e) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            customName: e.target.value 
+                                            name: e.target.value 
                                         })}
-                                        error={errors.customName}
-                                        placeholder="Ej: Caja general"
+                                        error={errors.name}
+                                        placeholder="Ej: Caja General"
+                                        required={true}
+                                        maxLength={100}
+                                        pattern="^[A-Za-z0-9_\-\s]{1,100}$"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Clase Contable */}
+                            <div className="row">
+                                <div className="col mb-6 mt-2">
+                                    <InputSelectModal
+                                        id="create_accountClass"
+                                        label="Clase Contable"
+                                        value={cuentaContable.accountClass}
+                                        onChange={(value) => setCuentaContable({ 
+                                            ...cuentaContable, 
+                                            accountClass: value 
+                                        })}
+                                        error={errors.accountClass}
+                                        placeholder="Seleccionar clase"
+                                        options={ACCOUNT_CLASS_OPTIONS}
                                         required={true}
                                     />
                                 </div>
                             </div>
 
-                            {/* Moneda Base */}
+                            {/* Nivel Jerárquico */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="baseCurrency"
-                                        label="Moneda Base"
-                                        value={cuentaContable.baseCurrency}
+                                        id="create_level"
+                                        label="Nivel Jerárquico"
+                                        value={cuentaContable.level}
                                         onChange={(value) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            baseCurrency: value 
+                                            level: value 
                                         })}
-                                        error={errors.baseCurrency}
-                                        placeholder="Seleccionar moneda"
-                                        options={currencies.map(currency => ({
-                                            id: currency.code,
-                                            label: `${currency.name} (${currency.code})`
-                                        }))}
+                                        error={errors.level}
+                                        placeholder="Seleccionar nivel"
+                                        options={ACCOUNT_LEVEL_OPTIONS}
                                         required={true}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Centro de Costos (Opcional) */}
-                            <div className="row">
-                                <div className="col mb-6 mt-2">
-                                    <InputSelectModal
-                                        id="costCenterId"
-                                        label="Centro de Costos"
-                                        value={cuentaContable.costCenterId}
-                                        onChange={(value) => setCuentaContable({ 
-                                            ...cuentaContable, 
-                                            costCenterId: value 
-                                        })}
-                                        error={errors.costCenterId}
-                                        placeholder="Seleccionar centro de costos"
-                                        options={costCenters.map(center => ({
-                                            id: center.id,
-                                            name: center.name
-                                        }))}
-                                        clearable={true}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Regla de Depreciación (Opcional) */}
-                            <div className="row">
-                                <div className="col mb-6 mt-2">
-                                    <InputSelectModal
-                                        id="depreciationRuleId"
-                                        label="Regla de Depreciación"
-                                        value={cuentaContable.depreciationRuleId}
-                                        onChange={(value) => setCuentaContable({ 
-                                            ...cuentaContable, 
-                                            depreciationRuleId: value 
-                                        })}
-                                        error={errors.depreciationRuleId}
-                                        placeholder="Seleccionar regla de depreciación"
-                                        options={depreciationRules.map(rule => ({
-                                            id: rule.id,
-                                            name: rule.name
-                                        }))}
-                                        clearable={true}
                                     />
                                 </div>
                             </div>
@@ -266,7 +250,7 @@ const CreateCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
-                                        id="nature"
+                                        id="create_nature"
                                         label="Naturaleza de la Cuenta"
                                         value={cuentaContable.nature}
                                         onChange={(value) => setCuentaContable({ 
@@ -275,10 +259,7 @@ const CreateCuentaContable = ({
                                         })}
                                         error={errors.nature}
                                         placeholder="Seleccionar naturaleza"
-                                        options={[
-                                            { id: 'DEUDORA', label: 'Deudora' },
-                                            { id: 'ACREEDORA', label: 'Acreedora' }
-                                        ]}
+                                        options={NATURE_OPTIONS}
                                         required={true}
                                     />
                                 </div>

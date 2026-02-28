@@ -9,6 +9,25 @@ import CreateCuentaContable from './create';
 import UpdatedCuentaContable from './updated';
 import FilterCuentaContable from './filter';
 
+const ACCOUNT_CLASS_LABELS = {
+    ASSET: 'Activo',
+    LIABILITY: 'Pasivo',
+    EQUITY: 'Patrimonio',
+    REVENUE: 'Ingresos',
+    EXPENSE: 'Gastos',
+    COST_OF_SALES: 'Costos de venta',
+    PRODUCTION_COST: 'Costos de producción',
+    MEMORANDUM_DEBIT: 'Cuentas de orden deudoras',
+    MEMORANDUM_CREDIT: 'Cuentas de orden acreedoras',
+};
+
+const ACCOUNT_LEVEL_LABELS = {
+    CLASS: 'Clase',
+    GROUP: 'Grupo',
+    ACCOUNT: 'Cuenta',
+    SUBACCOUNT: 'Subcuenta',
+};
+
 const IndexCuentasContables = () => {
 
     const tableRef = useRef(null);
@@ -35,57 +54,58 @@ const IndexCuentasContables = () => {
         show: false,
     });
 
-    const url = ['api/accounting-accounts'];
+    const url = ['api', 'v1', 'chart-of-accounts', 'search'];
 
     const actions = [
-        { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
 
-    const [cuentaContable, setCuentaContable] = useState({
+    const initialCuentaContable = {
         id: '',
-        pucId: '',
-        pucCode: '',
-        customName: '',
-        baseCurrency: '',
-        costCenterId: '',
-        depreciationRuleId: '',
+        code: '',
+        name: '',
+        accountClass: '',
+        level: '',
         nature: '',
         status: 'ACTIVE',
-        companyId: '',
-    });
+    };
+
+    const [cuentaContable, setCuentaContable] = useState(initialCuentaContable);
 
     const [columns, setColumns] = useState([
         { 
-            title: 'Código PUC', 
-            data: 'pucCode',
-            name: 'pucCode'
+            title: 'Código', 
+            data: 'code',
+            name: 'code'
         },
         { 
-            title: 'Nombre Personalizado', 
-            data: 'customName',
-            name: 'customName'
+            title: 'Nombre', 
+            data: 'name',
+            name: 'name'
         },
         { 
-            title: 'Moneda Base', 
-            data: 'baseCurrency',
-            name: 'baseCurrency'
+            title: 'Clase', 
+            data: 'accountClass',
+            name: 'accountClass',
+            render: (accountClass) => {
+                return ACCOUNT_CLASS_LABELS[accountClass] || accountClass;
+            }
         },
         { 
-            title: 'Centro de Costos', 
-            data: 'costCenterName',
-        },
-        { 
-            title: 'Regla de Depreciación', 
-            data: 'depreciationRuleName',
+            title: 'Nivel', 
+            data: 'level',
+            name: 'level',
+            render: (level) => {
+                return ACCOUNT_LEVEL_LABELS[level] || level;
+            }
         },
         { 
             title: 'Naturaleza', 
             data: 'nature',
             name: 'nature',
             render: (nature) => {
-                return nature === 'DEUDORA' ? 'Deudora' : 'Acreedora';
+                return nature === 'DEBIT' ? 'Deudora' : nature === 'CREDIT' ? 'Acreedora' : nature;
             }
         },
         { 
@@ -124,18 +144,7 @@ const IndexCuentasContables = () => {
             );
         }
         modalCreateInstance.current.show();
-        setCuentaContable({
-            id: '',
-            pucId: '',
-            pucCode: '',
-            customName: '',
-            baseCurrency: '',
-            costCenterId: '',
-            depreciationRuleId: '',
-            nature: '',
-            status: 'ACTIVE',
-            companyId: '',
-        });
+        setCuentaContable(initialCuentaContable);
         setMessage({
             message: '',
             type: '',
@@ -182,28 +191,15 @@ const IndexCuentasContables = () => {
 
             const cuentaData = {
                 id: cuentaRef.id,
-                pucId: cuentaRef.pucId ?? '',
-                pucCode: cuentaRef.pucCode ?? '',
-                customName: cuentaRef.customName ?? '',
-                baseCurrency: cuentaRef.baseCurrency ?? '',
-                costCenterId: cuentaRef.costCenterId ?? '',
-                depreciationRuleId: cuentaRef.depreciationRuleId ?? '',
+                code: cuentaRef.code ?? '',
+                name: cuentaRef.name ?? '',
+                accountClass: cuentaRef.accountClass ?? '',
+                level: cuentaRef.level ?? '',
                 nature: cuentaRef.nature ?? '',
                 status: cuentaRef.status ?? 'ACTIVE',
-                companyId: cuentaRef.companyId ?? '',
             };
 
             switch (action) {
-                case 'view':
-                    setCuentaContable(cuentaData);
-                    setMessage({
-                        message: '',
-                        type: '',
-                        show: false,
-                    });
-                    // Aquí podrías abrir un modal de vista si lo requieres
-                    break;
-
                 case 'edit':
                     setCuentaContable(cuentaData);
                     setMessage({
@@ -223,38 +219,51 @@ const IndexCuentasContables = () => {
                 case 'delete':
                     window.Swal.fire({
                         title: '¿Estás seguro?',
-                        text: '¿Estás seguro de querer inactivar esta cuenta contable?',
+                        text: '¿Estás seguro de querer eliminar esta cuenta contable?',
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: 'Inactivar',
+                        confirmButtonText: 'Eliminar',
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => {
                         if (result.isConfirmed) {
+                            // Solicitar motivo — swagger: DeleteChartOfAccountDTO
+                            // reason: required, pattern ^[A-Za-z0-9_\-\s]{1,255}$, maxLength 255
                             window.Swal.fire({
-                                title: 'Motivo de inactivación',
-                                input: 'textarea',
-                                inputLabel: 'Indique el motivo por el cual desea inactivar esta cuenta',
-                                inputPlaceholder: 'Motivo...',
+                                title: 'Motivo de eliminación',
+                                input: 'text',
+                                inputLabel: 'Indique el motivo por el cual desea eliminar esta cuenta',
+                                inputPlaceholder: 'Ej: Cuenta duplicada en catálogo',
                                 inputAttributes: {
-                                    'aria-label': 'Motivo'
+                                    'aria-label': 'Motivo',
+                                    maxlength: 255,
+                                },
+                                inputValidator: (value) => {
+                                    if (!value || value.trim() === '') {
+                                        return 'El motivo de eliminación es obligatorio';
+                                    }
+                                    const reasonRegex = /^[A-Za-z0-9_\-\s]{1,255}$/;
+                                    if (!reasonRegex.test(value.trim())) {
+                                        return 'Solo se permiten caracteres alfanuméricos, espacios, guiones y guiones bajos (máximo 255)';
+                                    }
                                 },
                                 showCancelButton: true,
-                                confirmButtonText: 'Inactivar',
+                                confirmButtonText: 'Eliminar',
                                 cancelButtonText: 'Cancelar',
                             }).then(async (reasonResult) => {
                                 if (reasonResult.isConfirmed) {
-                                    const url = base_url(['api', 'accounting-accounts', id]);
+                                    // DELETE /api/v1/chart-of-accounts/{id} con body DeleteChartOfAccountDTO
+                                    const deleteUrl = base_url(['api', 'v1', 'chart-of-accounts', id]);
                                     try {
-                                        await fetchHelper.delete(url, { reason: reasonResult.value || 'Sin especificar' }, {}, 500, false);
+                                        await fetchHelper.delete(deleteUrl, { reason: reasonResult.value.trim() }, {}, 500, false);
                                         setMessage({
-                                            message: 'Cuenta contable inactivada exitosamente',
+                                            message: 'Cuenta contable eliminada exitosamente',
                                             type: 'success',
                                             show: true,
                                         });
                                     } catch (error) {
-                                        console.error(error);
+                                        console.error('Error DELETE /api/v1/chart-of-accounts/' + id + ':', error);
                                         setMessage({
-                                            message: error.msg || 'Error al inactivar la cuenta',
+                                            message: error.msg || error.message || 'Error al eliminar la cuenta contable',
                                             type: 'danger',
                                             show: true,
                                         });
@@ -277,13 +286,12 @@ const IndexCuentasContables = () => {
 
     return <>
         <div className="card">
-            <h5 className="card-header text-md-start text-center">Cuentas Contables</h5>
+            <h5 className="card-header text-md-start text-center">Catálogo de Cuentas Contables (PUC)</h5>
 
             <AlertPage 
                 message={message.message} 
                 type={message.type} 
-                show={message.show}
-                onChange={() => setMessage({ message: '', type: '', show: false })}
+                show={message.show} 
             />
 
             <div className="card-datatable text-nowrap">
