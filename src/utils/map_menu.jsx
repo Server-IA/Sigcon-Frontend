@@ -15,6 +15,7 @@ import IndexCuentasContables from "../pages/list_accounts/cuentas-contables/inde
 
 // List Accounts
 import IndexDepreciationRules from "../pages/list_accounts/depreciation_rules/index";
+import ExchangeRateIndex from "../pages/list_accounts/exchange-rate/index";
 
 // Reportes
 import BalanceComprobacion from "../pages/list_accounts/reportes/BalanceComprobacion";
@@ -30,8 +31,6 @@ import { fetchHelper } from "./fetch";
 export const getMenu = async () => {
     const modules = [];
     const url = base_url(['api', 'modules', 'menu']);
-    const { data, error } = await fetchHelper.get(url, {}, 0);
-
     modules.push({
         id: 0,
         name: "Dashboard",
@@ -51,22 +50,31 @@ export const getMenu = async () => {
             }
         ]
     })
+    try {
+        const { data, error } = await fetchHelper.get(url, {}, 0);
+        if (!error) {
+    
+            modules.push(...data?.map(mod => {
+                // Construir el árbol de menús normalmente
+                const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
+                    ...menu,
+                    componentName: menu?.component,
+                })));
+    
+                return {
+                    ...mod,
+                    menus: menuTree
+                };
+            }));
+        }
 
-    if (!error) {
-
-        modules.push(...data?.map(mod => {
-            // Construir el árbol de menús normalmente
-            const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
-                ...menu,
-                componentName: menu?.component,
-            })));
-
-            return {
-                ...mod,
-                menus: menuTree
-            };
-        }));
+    } catch (error) {
+        console.log(error);
+    }finally {
+        return modules;
     }
+
+
 
     return modules;
 }
@@ -116,5 +124,6 @@ export const COMPONENT_MAP = [
     { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
     { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
     { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
-    { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion }
+    { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion },
+    { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex }
 ];
