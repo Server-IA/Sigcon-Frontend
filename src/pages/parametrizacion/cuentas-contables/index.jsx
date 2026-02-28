@@ -226,31 +226,44 @@ const IndexCuentasContables = () => {
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => {
                         if (result.isConfirmed) {
+                            // Solicitar motivo — swagger: DeleteChartOfAccountDTO
+                            // reason: required, pattern ^[A-Za-z0-9_\-\s]{1,255}$, maxLength 255
                             window.Swal.fire({
                                 title: 'Motivo de eliminación',
-                                input: 'textarea',
+                                input: 'text',
                                 inputLabel: 'Indique el motivo por el cual desea eliminar esta cuenta',
-                                inputPlaceholder: 'Motivo...',
+                                inputPlaceholder: 'Ej: Cuenta duplicada en catálogo',
                                 inputAttributes: {
-                                    'aria-label': 'Motivo'
+                                    'aria-label': 'Motivo',
+                                    maxlength: 255,
+                                },
+                                inputValidator: (value) => {
+                                    if (!value || value.trim() === '') {
+                                        return 'El motivo de eliminación es obligatorio';
+                                    }
+                                    const reasonRegex = /^[A-Za-z0-9_\-\s]{1,255}$/;
+                                    if (!reasonRegex.test(value.trim())) {
+                                        return 'Solo se permiten caracteres alfanuméricos, espacios, guiones y guiones bajos (máximo 255)';
+                                    }
                                 },
                                 showCancelButton: true,
                                 confirmButtonText: 'Eliminar',
                                 cancelButtonText: 'Cancelar',
                             }).then(async (reasonResult) => {
                                 if (reasonResult.isConfirmed) {
+                                    // DELETE /api/v1/chart-of-accounts/{id} con body DeleteChartOfAccountDTO
                                     const deleteUrl = base_url(['api', 'v1', 'chart-of-accounts', id]);
                                     try {
-                                        await fetchHelper.delete(deleteUrl, { reason: reasonResult.value || 'Sin especificar' }, {}, 500, false);
+                                        await fetchHelper.delete(deleteUrl, { reason: reasonResult.value.trim() }, {}, 500, false);
                                         setMessage({
                                             message: 'Cuenta contable eliminada exitosamente',
                                             type: 'success',
                                             show: true,
                                         });
                                     } catch (error) {
-                                        console.error(error);
+                                        console.error('Error DELETE /api/v1/chart-of-accounts/' + id + ':', error);
                                         setMessage({
-                                            message: error.msg || 'Error al eliminar la cuenta',
+                                            message: error.msg || error.message || 'Error al eliminar la cuenta contable',
                                             type: 'danger',
                                             show: true,
                                         });
