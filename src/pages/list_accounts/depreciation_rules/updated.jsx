@@ -1,6 +1,5 @@
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
-import TextareaModal from "../../../components/molecules/TextareaModal";
 
 import { useState, useEffect } from "react";
 import { fetchHelper } from "../../../utils/fetch";
@@ -25,18 +24,14 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [accounts, setAccounts] = useState([]);
 
     const [ruleUpdated, setRuleUpdated] = useState({
         id: '',
         name: '',
         depreciationType: '',
-        accountId: '',
         depreciationRate: '',
         usefulLife: '',
         residualValue: '',
-        effectiveDate: '',
-        description: '',
         status: 'ACTIVE',
     });
 
@@ -46,39 +41,29 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
             id: rule.id ?? '',
             name: rule.name ?? '',
             depreciationType: rule.depreciationType ?? '',
-            accountId: rule.accountId ?? '',
             depreciationRate: rule.depreciationRate ?? '',
             usefulLife: rule.usefulLife ?? '',
             residualValue: rule.residualValue ?? '',
-            effectiveDate: rule.effectiveDate ?? '',
-            description: rule.description ?? '',
             status: rule.status ?? 'ACTIVE',
         });
         setErrors({});
         setErrorMessage('');
     }, [rule]);
 
-    // Cargar cuentas contables activas
-    useEffect(() => {
-        const loadAccounts = async () => {
-            try {
-                const url = base_url(['chartOfAccounts', 'active']);
-                const { data } = await fetchHelper.get(url, {}, 0);
-                if (data) {
-                    setAccounts(data.map(a => ({ id: a.id, label: `${a.code} - ${a.name}` })));
-                }
-            } catch (err) {
-                console.error('Error al cargar cuentas contables:', err);
-            }
-        };
-        loadAccounts();
-    }, []);
-
     // ── Enviar actualización ──
     const handleUpdate = async () => {
         try {
-            const url = base_url(['depreciationRules', ruleUpdated.id]);
-            await fetchHelper.put(url, ruleUpdated, {}, 1000);
+            const url = base_url(['depreciationRules', 'update']);
+            const payload = {
+                id: Number(ruleUpdated.id),
+                name: ruleUpdated.name,
+                depretationType: ruleUpdated.depreciationType,
+                depretationRate: Number(ruleUpdated.depreciationRate),
+                usefulLifeYears: Number(ruleUpdated.usefulLife),
+                residualValue: Number(ruleUpdated.residualValue),
+                status: ruleUpdated.status,
+            };
+            await fetchHelper.put(url, payload, {}, 1000);
 
             setRule({
                 id: '',
@@ -90,7 +75,10 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                 usefulLife: '',
                 residualValue: '',
                 effectiveDate: '',
-                description: '',
+                calculationBase: '',
+                parameters: '',
+                exception: '',
+                applicableNorm: '',
                 status: 'ACTIVE',
             });
 
@@ -129,7 +117,7 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                             <span>{errorMessage}</span>
                         </div>
 
-                        {/* ID (solo lectura) */}
+                        {/* ID (solo lectura) + Nombre */}
                         <div className="row">
                             <div className="col-md-4 mb-4 mt-2">
                                 <div style={{ cursor: 'not-allowed' }}>
@@ -146,8 +134,6 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                                     />
                                 </div>
                             </div>
-
-                            {/* Nombre */}
                             <div className="col-md-8 mb-4 mt-2">
                                 <InputModal
                                     type="text"
@@ -162,7 +148,7 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                             </div>
                         </div>
 
-                        {/* Tipo de depreciación + Cuenta contable */}
+                        {/* Tipo de depreciación + Estado */}
                         <div className="row">
                             <div className="col-md-6 mb-4 mt-2">
                                 <InputSelectModal
@@ -170,77 +156,9 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                                     label="Tipo de depreciación"
                                     value={ruleUpdated.depreciationType}
                                     onChange={(value) => setRuleUpdated({ ...ruleUpdated, depreciationType: value })}
-                                    error={errors.depreciationType}
+                                    error={errors.depretationType}
                                     placeholder="Seleccione el tipo"
                                     options={DEPRECIATION_TYPES}
-                                    required={true}
-                                />
-                            </div>
-                            <div className="col-md-6 mb-4 mt-2">
-                                <InputSelectModal
-                                    id="dr_accountId_update"
-                                    label="Cuenta contable asociada"
-                                    value={ruleUpdated.accountId}
-                                    onChange={(value) => setRuleUpdated({ ...ruleUpdated, accountId: value })}
-                                    error={errors.accountId}
-                                    placeholder="Seleccione la cuenta"
-                                    options={accounts}
-                                    required={true}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Tasa + Vida útil + Valor residual */}
-                        <div className="row">
-                            <div className="col-md-4 mb-4 mt-2">
-                                <InputModal
-                                    type="number"
-                                    id="dr_depreciationRate_update"
-                                    label="Tasa de depreciación (%)"
-                                    value={ruleUpdated.depreciationRate}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, depreciationRate: e.target.value })}
-                                    error={errors.depreciationRate}
-                                    placeholder="Ej. 20.00"
-                                    required={true}
-                                />
-                            </div>
-                            <div className="col-md-4 mb-4 mt-2">
-                                <InputModal
-                                    type="number"
-                                    id="dr_usefulLife_update"
-                                    label="Vida útil (años)"
-                                    value={ruleUpdated.usefulLife}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, usefulLife: e.target.value })}
-                                    error={errors.usefulLife}
-                                    placeholder="Ej. 5"
-                                    required={true}
-                                />
-                            </div>
-                            <div className="col-md-4 mb-4 mt-2">
-                                <InputModal
-                                    type="number"
-                                    id="dr_residualValue_update"
-                                    label="Valor residual"
-                                    value={ruleUpdated.residualValue}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, residualValue: e.target.value })}
-                                    error={errors.residualValue}
-                                    placeholder="Ej. 0.00"
-                                    required={true}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Fecha de vigencia + Estado */}
-                        <div className="row">
-                            <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
-                                    id="dr_effectiveDate_update"
-                                    label="Fecha de vigencia"
-                                    value={ruleUpdated.effectiveDate}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, effectiveDate: e.target.value })}
-                                    error={errors.effectiveDate}
-                                    placeholder="DD/MM/AAAA"
                                     required={true}
                                 />
                             </div>
@@ -258,26 +176,41 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                             </div>
                         </div>
 
-                        {/* Descripción estructurada */}
+                        {/* Tasa + Vida útil + Valor residual */}
                         <div className="row">
-                            <div className="col-md-12 mb-2 mt-2">
-                                <div className="d-flex align-items-center gap-2 mb-3">
-                                    <i className="ri-file-list-3-line text-primary fs-5"></i>
-                                    <span className="fw-semibold">Descripción estructurada</span>
-                                    <span className="text-danger">*</span>
-                                </div>
+                            <div className="col-md-4 mb-4 mt-2">
+                                <InputModal
+                                    type="number"
+                                    id="dr_depreciationRate_update"
+                                    label="Tasa de depreciación (%)"
+                                    value={ruleUpdated.depreciationRate}
+                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, depreciationRate: e.target.value })}
+                                    error={errors.depretationRate}
+                                    placeholder="Ej. 20.00"
+                                    required={true}
+                                />
                             </div>
-                        </div>
-
-                        <div className="row">
-                            <div className="col-md-12 mb-3">
-                                <TextareaModal
-                                    id="dr_description_update"
-                                    label="Descripción"
-                                    value={ruleUpdated.description}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, description: e.target.value })}
-                                    error={errors.description}
-                                    placeholder="Describa la base de cálculo, parámetros, excepciones y norma aplicable"
+                            <div className="col-md-4 mb-4 mt-2">
+                                <InputModal
+                                    type="number"
+                                    id="dr_usefulLife_update"
+                                    label="Vida útil (años)"
+                                    value={ruleUpdated.usefulLife}
+                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, usefulLife: e.target.value })}
+                                    error={errors.usefulLifeYears}
+                                    placeholder="Ej. 5"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col-md-4 mb-4 mt-2">
+                                <InputModal
+                                    type="number"
+                                    id="dr_residualValue_update"
+                                    label="Valor residual"
+                                    value={ruleUpdated.residualValue}
+                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, residualValue: e.target.value })}
+                                    error={errors.residualValue}
+                                    placeholder="Ej. 0.00"
                                     required={true}
                                 />
                             </div>

@@ -45,13 +45,16 @@ const IndexDepreciationRules = () => {
         usefulLife: '',
         residualValue: '',
         effectiveDate: '',
-        description: '',
+        calculationBase: '',
+        parameters: '',
+        exception: '',
+        applicableNorm: '',
         status: 'ACTIVE',
     };
 
     const [rule, setRule] = useState(emptyRule);
 
-    const url = ['depreciationRules', 'datatable'];
+    const url = ['depreciationRules', 'search'];
 
     const DEPRECIATION_TYPE_LABELS = {
         LINEAR: 'Lineal',
@@ -172,7 +175,10 @@ const IndexDepreciationRules = () => {
                         usefulLife: ruleRef.usefulLife ?? '',
                         residualValue: ruleRef.residualValue ?? '',
                         effectiveDate: ruleRef.effectiveDate ?? '',
-                        description: ruleRef.description ?? '',
+                        calculationBase: ruleRef.descriptionStructured?.calculationBase ?? '',
+                        parameters: ruleRef.descriptionStructured?.parameters ?? '',
+                        exception: ruleRef.descriptionStructured?.exception ?? '',
+                        applicableNorm: ruleRef.descriptionStructured?.applicableNorm ?? '',
                         status: ruleRef.status ?? 'ACTIVE',
                     });
                     setClickEdit(true);
@@ -210,8 +216,8 @@ const IndexDepreciationRules = () => {
                             if (!motivo.isConfirmed) return;
 
                             try {
-                                const deleteUrl = base_url(['depreciationRules', id]);
-                                await fetchHelper.delete(deleteUrl, { deletionReason: motivo.value }, {}, 500, false);
+                                const deleteUrl = base_url(['depreciationRules', 'delete', id], { reason: motivo.value });
+                                await fetchHelper.delete(deleteUrl, {}, {}, 500, false);
                                 dataTableRef?.current?.ajax.reload();
                                 setRuleDelete(true);
                             } catch (error) {
