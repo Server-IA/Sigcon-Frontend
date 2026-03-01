@@ -5,33 +5,8 @@ import { base_url } from '../../../utils/functions';
 import CreateCentroCosto from './create';
 import UpdatedCentroCosto from './updated';
 import FilterCentroCosto from './filter';
-import AlertPage from '../../../components/molecules/AlertPage';
 
-//
-//
-//
-//
-//
-//A cuántas veces me han sacado del Tenampa
-//Ya bien borracho y con un nudo en la garganta
-//Voy por la calle, cantando mis canciones
-//Y los mariachis, van pisando mis talones
-//Les pedí 20, 30 o cinco mil canciones
-//Y me cantaron Me Caí de la Nube
-//Me revolqué, grité, canté de sentimiento
-//Me recordaron a un amor que yo antes tuve
-//Y en el Tenampa se recuerdan muchas cosas
-//Y los mariachis, son los amos y señores
-//Te tomas cuatro, cinco, 20 o 30 copas
-//Y las canciones me recuerdan sus amores
-//
-//
-//
-//
-
-
-const API_LIST = ['api', 'centros-costo'];
-const API_DELETE = (id) => ['api', 'centros-costo', 'delete', id];
+const API_SEARCH = ['api', 'v1', 'cost-centers', 'search'];
 
 const IndexCentrosCosto = () => {
     const tableRef = useRef(null);
@@ -52,6 +27,8 @@ const IndexCentrosCosto = () => {
     const [centroCostoEdit, setCentroCostoEdit] = useState(false);
     const [centroCostoDelete, setCentroCostoDelete] = useState(false);
     const [centroCostoError, setCentroCostoError] = useState(false);
+    const [centroCostoUpdateError, setCentroCostoUpdateError] = useState(false);
+    const [modalUpdateMode, setModalUpdateMode] = useState('view'); // 'view' | 'edit'
 
     const [search, setSearch] = useState({ value: '', checked: true });
 
@@ -147,9 +124,9 @@ const IndexCentrosCosto = () => {
 
     const onReasonDeleteSubmit = async () => {
         if (!deleteTarget) return;
-        const url = base_url(API_DELETE(deleteTarget.id));
+        const url = base_url(['api', 'v1', 'cost-centers', deleteTarget.id], deletionReason ? { reason: deletionReason } : {});
         try {
-            await fetchHelper.delete(url, { deletionReason }, {}, 500, false);
+            await fetchHelper.delete(url, {}, {}, 500, false);
             dataTableRef?.current?.ajax.reload();
             modalReasonDeleteInstance.current?.hide();
             setCentroCostoDelete(true);
@@ -196,6 +173,8 @@ const IndexCentrosCosto = () => {
                 case 'view': {
                     const row = data.find((m) => m.id === id);
                     if (!row) return;
+                    setModalUpdateMode('view');
+                    setCentroCostoUpdateError(false);
                     setCentroCosto({
                         id: row.id,
                         code: row.code ?? '',
@@ -213,6 +192,8 @@ const IndexCentrosCosto = () => {
                 case 'edit': {
                     const row = data.find((m) => m.id === id);
                     if (!row) return;
+                    setModalUpdateMode('edit');
+                    setCentroCostoUpdateError(false);
                     setCentroCosto({
                         id: row.id,
                         code: row.code ?? '',
@@ -247,9 +228,10 @@ const IndexCentrosCosto = () => {
                 <AlertPage type="success" message="Centro de Costo actualizado exitosamente" show={centroCostoEdit} onChange={() => setCentroCostoEdit(false)} />
                 <AlertPage type="success" message="Centro de Costo eliminado/inactivado exitosamente" show={centroCostoDelete} onChange={() => setCentroCostoDelete(false)} />
                 <AlertPage type="danger" message="Error al eliminar el centro de costo. Verifique su conexión e intente nuevamente." show={centroCostoError} onChange={() => setCentroCostoError(false)} />
+                <AlertPage type="danger" message="Error al actualizar el centro de costo. Verifique los datos e intente nuevamente." show={centroCostoUpdateError} onChange={() => setCentroCostoUpdateError(false)} />
                 <div className="card-datatable text-nowrap">
                     <DataTableReference
-                        url_api={API_LIST}
+                        url_api={API_SEARCH}
                         columns={columns}
                         tableRef={tableRef}
                         dataTableRef={dataTableRef}
@@ -282,9 +264,10 @@ const IndexCentrosCosto = () => {
                 setCentroCosto={setCentroCosto}
                 dataTableRef={dataTableRef}
                 setCentroCostoEdit={setCentroCostoEdit}
+                setCentroCostoUpdateError={setCentroCostoUpdateError}
+                mode={modalUpdateMode}
             />
 
-            {/* Modal 1: Confirmación de eliminación */}
             <div className="modal fade" ref={modalConfirmDeleteRef} tabIndex={-1} aria-hidden="true">
                 <div className="modal-dialog modal-dialog-centered" role="document">
                     <div className="modal-content">
@@ -306,7 +289,6 @@ const IndexCentrosCosto = () => {
                 </div>
             </div>
 
-            {/* Modal 2: Motivo de eliminación */}
             <div className="modal fade" ref={modalReasonDeleteRef} tabIndex={-1} aria-hidden="true">
                 <div className="modal-dialog modal-dialog-centered" role="document">
                     <div className="modal-content">
