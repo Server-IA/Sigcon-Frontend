@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
 
@@ -8,6 +8,9 @@ import { base_url } from '../../../utils/functions';
 import CreateCuentaContable from './create';
 import UpdatedCuentaContable from './updated';
 import FilterCuentaContable from './filter';
+
+// Swagger: nature enum DEBIT / CREDIT  (AccountFilterRequest, CreateAccountingAccountRequest)
+const NATURE_LABELS = { DEBIT: 'Deudora', CREDIT: 'Acreedora' };
 
 const IndexCuentasContables = () => {
 
@@ -23,146 +26,95 @@ const IndexCuentasContables = () => {
     const filterRef = useRef(null);
     const filterInstance = useRef(null);
 
-    const [search, setSearch] = useState({
-        value: '',
-        checked: true,
-    });
+    const [search, setSearch] = useState({ value: '', checked: true });
 
     const [data, setData] = useState([]);
-    const [message, setMessage] = useState({
-        message: '',
-        type: '',
-        show: false,
-    });
+    const [message, setMessage] = useState({ message: '', type: '', show: false });
 
-    const url = ['api/accounting-accounts'];
+    // Swagger: POST /api/v1/accounting-accounts → { dtRequest: DataTableRequest, filters: AccountFilterRequest }
+    const url = ['api', 'v1', 'accounting-accounts'];
 
     const actions = [
-        { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Inactivar' },
     ];
 
-    const [cuentaContable, setCuentaContable] = useState({
-        id: '',
-        pucId: '',
-        pucCode: '',
-        customName: '',
-        baseCurrency: '',
-        costCenterId: '',
-        depreciationRuleId: '',
-        nature: '',
+    // Snake_case field names matching swagger UpdateAccountingAccountRequest / CreateAccountingAccountRequest
+    const initialCuentaContable = {
+        id: null,
+        puc_id: null,
+        custom_name: null,
+        currency_type_id: null,
+        cost_center_id: null,
+        tax_rule_id: null,
+        nature: null,
         status: 'ACTIVE',
-        companyId: '',
-    });
+    };
 
-    const [columns, setColumns] = useState([
-        { 
-            title: 'Código PUC', 
-            data: 'pucCode',
-            name: 'pucCode'
-        },
-        { 
-            title: 'Nombre Personalizado', 
-            data: 'customName',
-            name: 'customName'
-        },
-        { 
-            title: 'Moneda Base', 
-            data: 'baseCurrency',
-            name: 'baseCurrency'
-        },
-        { 
-            title: 'Centro de Costos', 
-            data: 'costCenterName',
-        },
-        { 
-            title: 'Regla de Depreciación', 
-            data: 'depreciationRuleName',
-        },
-        { 
-            title: 'Naturaleza', 
-            data: 'nature',
-            name: 'nature',
-            render: (nature) => {
-                return nature === 'DEUDORA' ? 'Deudora' : 'Acreedora';
-            }
-        },
-        { 
-            title: 'Estado', 
-            data: 'status',
-            name: 'status',
-            render: (status) => {
-                return status === 'ACTIVE' ? 'Activa' : 'Inactiva';
-            }
+    const [cuentaContable, setCuentaContable] = useState(initialCuentaContable);
+
+    // Column `data` keys must match backend response field names
+    const [columns] = useState([
+        { title: 'Nombre Personalizado', data: 'customName',          name: 'customName' },
+        { title: 'Código PUC',          data: 'pucAccount.code',       name: 'pucAccountCode' },
+        { title: 'Moneda Base',          data: 'currencyType.name',        name: 'baseCurrency' },
+        { title: 'Centro de Costos',     data: 'costCenter.name',       name: 'costCenterName', defaultContent: '—' },
+        { title: 'Regla tributaria', data: 'taxRuleId', name: 'taxRuleId', defaultContent: '—' },
+        {
+            title: 'Naturaleza', data: 'nature', name: 'nature',
+            render: (nature) => NATURE_LABELS[nature] ?? nature,
         },
         {
-            title: 'Acciones', 
-            data: 'id', 
-            searchable: false,
-            render: (id) => {
-                return `
+            title: 'Estado', data: 'status', name: 'status',
+            render: (status) => status === 'ACTIVE' ? 'Activa' : 'Inactiva',
+        },
+        {
+            title: 'Acciones', data: 'id', searchable: false,
+            render: (id) => `
                 <div class="d-flex gap-1">
                     ${actions.map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
-                            data-action="${a.key}"
-                            data-id="${id}"
-                            title="${a.title}">
-                            <i class="ri-${a.icon}"></i>
+                            data-action="${a.key}" data-id="${id}" title="${a.title}">
+                            <i class="${a.icon}"></i>
                         </button>
                     `).join('')}
-                </div>
-            `
-            },
+                </div>`,
         },
     ]);
 
     const openModalCreate = () => {
         if (!modalCreateInstance.current) {
-            modalCreateInstance.current = new window.bootstrap.Modal(
-                modalCreateRef.current
-            );
+            modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
         modalCreateInstance.current.show();
-        setCuentaContable({
-            id: '',
-            pucId: '',
-            pucCode: '',
-            customName: '',
-            baseCurrency: '',
-            costCenterId: '',
-            depreciationRuleId: '',
-            nature: '',
-            status: 'ACTIVE',
-            companyId: '',
-        });
-        setMessage({
-            message: '',
-            type: '',
-            show: false,
-        });
+        setCuentaContable(initialCuentaContable);
+        setMessage({ message: '', type: '', show: false });
+    };
+
+    const openModalUpdate = () => {
+        if (!modalUpdateInstance.current) {
+            modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
+        }
+        modalUpdateInstance.current.show();
+        setMessage({ message: '', type: '', show: false });
     };
 
     const buttons = [
         {
             text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
-            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2 ',
-            action: async function (e, dt, button, config) {
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2',
+            action: function () {
                 if (!filterInstance.current) {
-                    filterInstance.current = new window.bootstrap.Modal(
-                        filterRef.current
-                    );
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
                 }
                 filterInstance.current.show();
-            }
+            },
         },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Cuenta</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
-            action: async function (e, dt, button, config) {
-                openModalCreate();
-            }
-        }
+            action: function () { openModalCreate(); },
+        },
     ];
 
     useEffect(() => {
@@ -180,90 +132,72 @@ const IndexCuentasContables = () => {
                 return;
             }
 
+            // Snake_case fields matching swagger response
             const cuentaData = {
                 id: cuentaRef.id,
-                pucId: cuentaRef.pucId ?? '',
-                pucCode: cuentaRef.pucCode ?? '',
-                customName: cuentaRef.customName ?? '',
-                baseCurrency: cuentaRef.baseCurrency ?? '',
-                costCenterId: cuentaRef.costCenterId ?? '',
-                depreciationRuleId: cuentaRef.depreciationRuleId ?? '',
-                nature: cuentaRef.nature ?? '',
+                puc_id: cuentaRef.puc_id ?? null,
+                custom_name: cuentaRef.customName ?? null,
+                currency_type_id: cuentaRef.currencyType?.id ?? null,
+                cost_center_id: cuentaRef.costCenter?.id ?? null,
+                tax_rule_id: cuentaRef.taxRuleId ?? null,
+                nature: cuentaRef.nature ?? null,
                 status: cuentaRef.status ?? 'ACTIVE',
-                companyId: cuentaRef.companyId ?? '',
             };
 
             switch (action) {
-                case 'view':
-                    setCuentaContable(cuentaData);
-                    setMessage({
-                        message: '',
-                        type: '',
-                        show: false,
-                    });
-                    // Aquí podrías abrir un modal de vista si lo requieres
-                    break;
-
                 case 'edit':
                     setCuentaContable(cuentaData);
-                    setMessage({
-                        message: '',
-                        type: '',
-                        show: false,
-                    });
-
-                    if (!modalUpdateInstance.current) {
-                        modalUpdateInstance.current = new window.bootstrap.Modal(
-                            modalUpdateRef.current
-                        );
-                    }
-                    modalUpdateInstance.current.show();
+                    openModalUpdate();
                     break;
 
                 case 'delete':
                     window.Swal.fire({
                         title: '¿Estás seguro?',
-                        text: '¿Estás seguro de querer inactivar esta cuenta contable?',
+                        text: '¿Deseas inactivar esta cuenta contable? (CFG-RF-08)',
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonText: 'Inactivar',
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => {
-                        if (result.isConfirmed) {
-                            window.Swal.fire({
-                                title: 'Motivo de inactivación',
-                                input: 'textarea',
-                                inputLabel: 'Indique el motivo por el cual desea inactivar esta cuenta',
-                                inputPlaceholder: 'Motivo...',
-                                inputAttributes: {
-                                    'aria-label': 'Motivo'
-                                },
-                                showCancelButton: true,
-                                confirmButtonText: 'Inactivar',
-                                cancelButtonText: 'Cancelar',
-                            }).then(async (reasonResult) => {
-                                if (reasonResult.isConfirmed) {
-                                    const url = base_url(['api', 'accounting-accounts', id]);
-                                    try {
-                                        await fetchHelper.delete(url, { reason: reasonResult.value || 'Sin especificar' }, {}, 500, false);
-                                        setMessage({
-                                            message: 'Cuenta contable inactivada exitosamente',
-                                            type: 'success',
-                                            show: true,
-                                        });
-                                    } catch (error) {
-                                        console.error(error);
-                                        setMessage({
-                                            message: error.msg || 'Error al inactivar la cuenta',
-                                            type: 'danger',
-                                            show: true,
-                                        });
-                                    } finally {
-                                        dataTableRef?.current?.ajax.reload();
-                                    }
-                                }
-                            });
-                        }
+                        if (!result.isConfirmed) return;
+                        // Swagger: DELETE /api/v1/accounting-accounts/delete/{id}?reason={reason}
+                        window.Swal.fire({
+                            title: 'Motivo de inactivación',
+                            input: 'text',
+                            inputLabel: 'Indique el motivo por el cual desea inactivar esta cuenta',
+                            inputPlaceholder: 'Ej: Cuenta obsoleta',
+                            inputAttributes: { 'aria-label': 'Motivo', maxlength: 255 },
+                            inputValidator: (value) => {
+                                if (!value || value.trim() === '') return 'El motivo es obligatorio';
+                            },
+                            showCancelButton: true,
+                            confirmButtonText: 'Inactivar',
+                            cancelButtonText: 'Cancelar',
+                        }).then(async (reasonResult) => {
+                            if (!reasonResult.isConfirmed) return;
+                            // reason como query param según swagger
+                            const deleteUrl = base_url(
+                                ['api', 'v1', 'accounting-accounts', 'delete', id],
+                                { reason: reasonResult.value.trim() }
+                            );
+                            try {
+                                await fetchHelper.delete(deleteUrl, null, {}, 500, false);
+                                setMessage({
+                                    message: 'Cuenta contable inactivada exitosamente',
+                                    type: 'success',
+                                    show: true,
+                                });
+                            } catch (error) {
+                                console.error('Error DELETE /api/v1/accounting-accounts/delete/' + id, error);
+                                setMessage({
+                                    message: error.msg || error.message || 'Error al inactivar la cuenta contable',
+                                    type: 'danger',
+                                    show: true,
+                                });
+                            } finally {
+                                dataTableRef?.current?.ajax.reload();
+                            }
+                        });
                     });
                     break;
             }
@@ -299,6 +233,7 @@ const IndexCuentasContables = () => {
                     search={search}
                     setSearch={setSearch}
                     filtered={true}
+                    // requestWrapper={requestWrapper}
                 />
             </div>
 
@@ -306,6 +241,9 @@ const IndexCuentasContables = () => {
                 filterRef={filterRef}
                 filterInstance={filterInstance}
                 dataTableRef={dataTableRef}
+                // activeFilters={activeFilters}
+                // setActiveFilters={setActiveFilters}
+                // initialFilters={initialFilters}
             />
         </div>
 

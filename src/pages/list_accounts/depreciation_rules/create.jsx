@@ -6,6 +6,7 @@ import TextareaModal from "../../../components/molecules/TextareaModal";
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import InputDate from '../../../components/molecules/InputDate';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const DEPRECIATION_TYPES = [
@@ -33,11 +34,10 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
     useEffect(() => {
         const loadAccounts = async () => {
             try {
-                const url = base_url(['chartOfAccounts', 'active']);
-                const { data } = await fetchHelper.get(url, {}, 0);
-                if (data) {
-                    setAccounts(data.map(a => ({ id: a.id, label: `${a.code} - ${a.name}` })));
-                }
+                const url = base_url(['api', 'v1', 'accounting-accounts']);
+                const response = await fetchHelper.post(url, {length: -1, columns: [{data: 'status', search: {value: 'ACTIVE', regex: false}}]}, {  }, 0);
+                const list = response?.content ?? response?.data ?? [];
+                setAccounts(list.map(a => ({ id: a.id, label: a.customName })));
             } catch (err) {
                 console.error('Error al cargar cuentas contables:', err);
             }
@@ -48,8 +48,23 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
     // ── Enviar formulario ──
     const handleCreate = async () => {
         try {
-            const url = base_url(['depreciationRules']);
-            await fetchHelper.post(url, rule, {}, 1000);
+            const url = base_url(['api', 'v1', 'depreciation-rules', 'store']);
+            const payload = {
+                name: rule.name,
+                depretationType: rule.depreciationType,
+                accountingAccountId: Number(rule.accountId),
+                depretationRate: Number(rule.depreciationRate),
+                usefulLifeYears: Number(rule.usefulLife),
+                residualValue: Number(rule.residualValue),
+                effectiveDate: rule.effectiveDate,
+                descriptionStructured: {
+                    calculationBase: rule.calculationBase,
+                    parameters: rule.parameters,
+                    exception: rule.exception,
+                    applicableNorm: rule.applicableNorm,
+                },
+            };
+            await fetchHelper.post(url, payload, {}, 1000);
 
             setRule({
                 id: '',
@@ -61,7 +76,10 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                 usefulLife: '',
                 residualValue: '',
                 effectiveDate: '',
-                description: '',
+                calculationBase: '',
+                parameters: '',
+                exception: '',
+                applicableNorm: '',
                 status: 'ACTIVE',
             });
 
@@ -146,7 +164,7 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
 
                         {/* Tasa + Vida útil */}
                         <div className="row">
-                            <div className="col-md-4 mb-4 mt-2">
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-4 mt-2">
                                 <InputModal
                                     type="number"
                                     id="dr_depreciationRate_create"
@@ -158,7 +176,7 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                                     required={true}
                                 />
                             </div>
-                            <div className="col-md-4 mb-4 mt-2">
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-4 mt-2">
                                 <InputModal
                                     type="number"
                                     id="dr_usefulLife_create"
@@ -170,7 +188,12 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                                     required={true}
                                 />
                             </div>
-                            <div className="col-md-4 mb-4 mt-2">
+                        </div>
+
+                        {/* Fecha de vigencia */}
+                        <div className="row">
+                            
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-4 mt-2">
                                 <InputModal
                                     type="number"
                                     id="dr_residualValue_create"
@@ -182,19 +205,14 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                                     required={true}
                                 />
                             </div>
-                        </div>
-
-                        {/* Fecha de vigencia */}
-                        <div className="row">
-                            <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-4 mt-2">
+                                <InputDate
                                     id="dr_effectiveDate_create"
                                     label="Fecha de vigencia"
-                                    value={rule.effectiveDate}
-                                    onChange={(e) => setRule({ ...rule, effectiveDate: e.target.value })}
+                                    date={rule.effectiveDate}
+                                    onChange={(date) => setRule({ ...rule, effectiveDate: date })}
                                     error={errors.effectiveDate}
-                                    placeholder="DD/MM/AAAA"
+                                    placeholder="dd-mm-yyyy"
                                     required={true}
                                 />
                             </div>
@@ -212,14 +230,50 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                         </div>
 
                         <div className="row">
-                            <div className="col-md-12 mb-3">
+                            <div className="col-md-6 mb-3">
                                 <TextareaModal
-                                    id="dr_description_create"
-                                    label="Descripción"
-                                    value={rule.description}
-                                    onChange={(e) => setRule({ ...rule, description: e.target.value })}
-                                    error={errors.description}
-                                    placeholder="Describa la base de cálculo, parámetros, excepciones y norma aplicable"
+                                    id="dr_calculationBase_create"
+                                    label="Base de cálculo"
+                                    value={rule.calculationBase}
+                                    onChange={(e) => setRule({ ...rule, calculationBase: e.target.value })}
+                                    error={errors['descriptionStructured.calculationBase']}
+                                    placeholder="Ej. Costo histórico del activo menos valor residual"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col-md-6 mb-3">
+                                <TextareaModal
+                                    id="dr_parameters_create"
+                                    label="Parámetros"
+                                    value={rule.parameters}
+                                    onChange={(e) => setRule({ ...rule, parameters: e.target.value })}
+                                    error={errors['descriptionStructured.parameters']}
+                                    placeholder="Ej. Tasa fija anual del 20% sobre el valor en libros"
+                                    required={true}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="row">
+                            <div className="col-md-6 mb-3">
+                                <TextareaModal
+                                    id="dr_exception_create"
+                                    label="Excepciones"
+                                    value={rule.exception}
+                                    onChange={(e) => setRule({ ...rule, exception: e.target.value })}
+                                    error={errors['descriptionStructured.exception']}
+                                    placeholder="Ej. No aplica para activos adquiridos en el último trimestre"
+                                    required={true}
+                                />
+                            </div>
+                            <div className="col-md-6 mb-3">
+                                <TextareaModal
+                                    id="dr_applicableNorm_create"
+                                    label="Norma aplicable"
+                                    value={rule.applicableNorm}
+                                    onChange={(e) => setRule({ ...rule, applicableNorm: e.target.value })}
+                                    error={errors['descriptionStructured.applicableNorm']}
+                                    placeholder="Ej. NIC 16 - Propiedades, Planta y Equipo"
                                     required={true}
                                 />
                             </div>

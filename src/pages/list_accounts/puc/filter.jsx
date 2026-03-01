@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
-const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, hierarchyLevels, accountNatures, accountStatuses }) => {
+const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, levels, accountNatures, accountStatuses }) => {
 
     const getTable = () => dataTableRef?.current?.table();
 
@@ -154,7 +154,7 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, hi
                                         <InputSelectModal
                                             id="puc_filter_hierarchyLevel"
                                             label="Nivel jerárquico"
-                                            options={hierarchyLevels}
+                                            options={levels}
                                             value={selectValue('level:name')}
                                             onChange={(value) => updateFilter('level:name', 'value', value.join(','))}
                                             multiple={true}

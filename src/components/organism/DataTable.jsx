@@ -93,7 +93,6 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
         }else{
             config.ajax = async function(data, callback, settings) {
                 try {
-
                     const response = await fetchHelper.post(base_url(url_api), data, {}, 0);
                     callback(response);
 

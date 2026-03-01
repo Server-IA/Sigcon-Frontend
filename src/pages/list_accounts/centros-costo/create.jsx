@@ -4,30 +4,9 @@ import { fetchHelper } from '../../../utils/fetch';
 import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import TextareaModal from '../../../components/molecules/TextareaModal';
+import AlertPage from '../../../components/molecules/AlertPage';
 
-//
-//
-//
-//
-//
-//
-//Ay, ay, ay
-//
-//Les pedí 20, 30 o cinco mil canciones
-//Y me cantaron Me Caí de la Nube
-//Me revolqué, grité, canté de sentimiento
-//Me recordaron a un amor que yo antes tuve
-
-//En el Tenampa se recuerdan muchas cosas
-//Y los mariachis, son los amos y señores
-//Te tomas cuatro, cinco, 20 o 30 copas
-//Y las canciones me recuerdan sus amores
-//
-//
-//
-//
-//
-const API_STORE = ['api', 'centros-costo', 'store'];
+const API_STORE = ['api', 'v1', 'cost-centers', 'store'];
 
 const COMPANY_ID_HARDCODED = 79;
 
@@ -93,25 +72,31 @@ const CreateCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCost
                         <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div className="modal-body">
-                        <div className={`alert alert-danger alert-dismissible ${errorMessage ? '' : 'd-none'}`} role="alert">
-                            <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            <span>{errorMessage}</span>
-                        </div>
+
+                        <AlertPage
+                            message={errorMessage}
+                            type="danger"
+                            show={errorMessage ? true : false}
+                            onChange={() => setErrorMessage('')}
+                        />
 
                         <div className="row">
-                            <div className="col-md-6 mb-3">
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                                 <InputModal
                                     type="text"
                                     id="name"
                                     label="Nombre del Centro de Costo"
                                     value={centroCosto.name}
-                                    onChange={(e) => setCentroCosto({ ...centroCosto, name: e.target.value })}
+                                    onChange={(e) => {
+                                        setCentroCosto({ ...centroCosto, name: e.target.value });
+                                        setErrors({ ...errors, name: null });
+                                    }}
                                     error={errors.name}
                                     placeholder="Nombre"
                                     required
                                 />
                             </div>
-                            <div className="col-md-6 mb-3">
+                            {/* <div className="col-md-6 mb-3">
                                 <InputModal
                                     type="text"
                                     id="companyId"
@@ -120,23 +105,24 @@ const CreateCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCost
                                     readOnly
                                     placeholder="Id empresa"
                                 />
-                            </div>
-                        </div>
-
-                        <div className="row">
-                            <div className="col-md-6 mb-3">
+                            </div> */}
+                            
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                                 <InputModal
                                     type="text"
                                     id="code"
                                     label="Código del Centro de Costo"
                                     value={centroCosto.code}
-                                    onChange={(e) => setCentroCosto({ ...centroCosto, code: e.target.value })}
+                                    onChange={(e) => {
+                                        setCentroCosto({ ...centroCosto, code: e.target.value.toUpperCase().trim().replace(/ /g, '') });
+                                        setErrors({ ...errors, code: null });
+                                    }}
                                     error={errors.code}
                                     placeholder="EJ: CC001"
                                     required
                                 />
                             </div>
-                            <div className="col-md-6 mb-3">
+                            {/* <div className="col-md-6 mb-3">
                                 <InputSelectModal
                                     id="status_create"
                                     label="Estado"
@@ -150,7 +136,7 @@ const CreateCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCost
                                     ]}
                                     required
                                 />
-                            </div>
+                            </div> */}
                         </div>
 
                         <div className="row">

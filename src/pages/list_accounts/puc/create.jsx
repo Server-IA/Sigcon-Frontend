@@ -5,11 +5,11 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import { useEffect, useState } from 'react';
 
-const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage, accountClasses, hierarchyLevels, accountNatures }) => {
+const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage, accountClasses, levels, accountNatures }) => {
 
-    const [errors, setErrors] = useState({});
+    const [errors, setErrors]             = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading]           = useState(false);
 
     useEffect(() => {
         setErrors({});
@@ -23,8 +23,16 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
             setErrorMessage('El código de la cuenta es obligatorio');
             return;
         }
+        if (!/^[0-9]{1,10}$/.test(account.code)) {
+            setErrorMessage('El código solo debe contener números y tener máximo 10 dígitos');
+            return;
+        }
         if (!account.name || account.name.trim() === '') {
             setErrorMessage('El nombre de la cuenta es obligatorio');
+            return;
+        }
+        if (!/^[A-Za-z0-9_\-\s]{1,100}$/.test(account.name)) {
+            setErrorMessage('El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)');
             return;
         }
         if (!account.accountClass) {
@@ -42,12 +50,13 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
 
         const url = base_url(['api', 'v1', 'chart-of-accounts']);
         const payload = {
-            code: account.code,
-            name: account.name,
+            code:         account.code,
+            name:         account.name,
             accountClass: account.accountClass,
-            level: account.level,
-            nature: account.nature,
+            level:        account.level,
+            nature:       account.nature,
         };
+        console.log('DEBUG create payload:', payload);
         try {
             setLoading(true);
             await fetchHelper.post(url, payload, {}, 1000);
@@ -108,6 +117,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                             message={errorMessage}
                             type="danger"
                             show={errorMessage !== ''}
+                            onChange={() => setErrorMessage('')}
                         />
 
                         <div className="row">
@@ -164,7 +174,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                                     onChange={(value) => setAccount({ ...account, level: value })}
                                     error={errors.level}
                                     placeholder="Seleccionar nivel"
-                                    options={hierarchyLevels}
+                                    options={levels}
                                     required
                                 />
                             </div>

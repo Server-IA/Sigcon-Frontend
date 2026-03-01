@@ -7,31 +7,7 @@ import UpdatedCentroCosto from './updated';
 import FilterCentroCosto from './filter';
 import AlertPage from '../../../components/molecules/AlertPage';
 
-//
-//
-//
-//
-//
-//A cuántas veces me han sacado del Tenampa
-//Ya bien borracho y con un nudo en la garganta
-//Voy por la calle, cantando mis canciones
-//Y los mariachis, van pisando mis talones
-//Les pedí 20, 30 o cinco mil canciones
-//Y me cantaron Me Caí de la Nube
-//Me revolqué, grité, canté de sentimiento
-//Me recordaron a un amor que yo antes tuve
-//Y en el Tenampa se recuerdan muchas cosas
-//Y los mariachis, son los amos y señores
-//Te tomas cuatro, cinco, 20 o 30 copas
-//Y las canciones me recuerdan sus amores
-//
-//
-//
-//
-
-
-const API_LIST = ['api', 'centros-costo'];
-const API_DELETE = (id) => ['api', 'centros-costo', 'delete', id];
+const API_SEARCH = ['api', 'v1', 'cost-centers', 'search'];
 
 const IndexCentrosCosto = () => {
     const tableRef = useRef(null);
@@ -56,11 +32,11 @@ const IndexCentrosCosto = () => {
     const [search, setSearch] = useState({ value: '', checked: true });
 
     const [centroCosto, setCentroCosto] = useState({
-        id: '',
-        code: '',
-        name: '',
-        description: '',
-        status: '',
+        id: null,
+        code: null,
+        name: null,
+        description: null,
+        status: 'ACTIVE',
         companyId: 79,
     });
 
@@ -119,11 +95,11 @@ const IndexCentrosCosto = () => {
         }
         modalCreateInstance.current.show();
         setCentroCosto({
-            id: '',
-            code: '',
-            name: '',
-            description: '',
-            status: '',
+            id: null,
+            code: null,
+            name: null,
+            description: null,
+            status: 'ACTIVE',
             companyId: 79,
         });
     };
@@ -147,9 +123,9 @@ const IndexCentrosCosto = () => {
 
     const onReasonDeleteSubmit = async () => {
         if (!deleteTarget) return;
-        const url = base_url(API_DELETE(deleteTarget.id));
+        const url = base_url(['api', 'v1', 'cost-centers', deleteTarget.id], deletionReason ? { reason: deletionReason } : {});
         try {
-            await fetchHelper.delete(url, { deletionReason }, {}, 500, false);
+            await fetchHelper.delete(url, {}, {}, 500, false);
             dataTableRef?.current?.ajax.reload();
             modalReasonDeleteInstance.current?.hide();
             setCentroCostoDelete(true);
@@ -249,7 +225,7 @@ const IndexCentrosCosto = () => {
                 <AlertPage type="danger" message="Error al eliminar el centro de costo. Verifique su conexión e intente nuevamente." show={centroCostoError} onChange={() => setCentroCostoError(false)} />
                 <div className="card-datatable text-nowrap">
                     <DataTableReference
-                        url_api={API_LIST}
+                        url_api={API_SEARCH}
                         columns={columns}
                         tableRef={tableRef}
                         dataTableRef={dataTableRef}
@@ -284,7 +260,6 @@ const IndexCentrosCosto = () => {
                 setCentroCostoEdit={setCentroCostoEdit}
             />
 
-            {/* Modal 1: Confirmación de eliminación */}
             <div className="modal fade" ref={modalConfirmDeleteRef} tabIndex={-1} aria-hidden="true">
                 <div className="modal-dialog modal-dialog-centered" role="document">
                     <div className="modal-content">
@@ -306,7 +281,6 @@ const IndexCentrosCosto = () => {
                 </div>
             </div>
 
-            {/* Modal 2: Motivo de eliminación */}
             <div className="modal fade" ref={modalReasonDeleteRef} tabIndex={-1} aria-hidden="true">
                 <div className="modal-dialog modal-dialog-centered" role="document">
                     <div className="modal-content">

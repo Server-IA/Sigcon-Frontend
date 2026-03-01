@@ -63,7 +63,7 @@ const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef
                     fieldErrors[err.field] = err.message;
                 });
                 setErrors(fieldErrors);
-            }else if (error?.msg) {
+            } else if (error?.msg) {
                 setError({ message: error.msg, type: 'danger', show: true });
             }
         }
@@ -92,7 +92,7 @@ const CreateModule = ({ modalRef, modalInstance, module, setModule, dataTableRef
                                 <i className="ri-information-line"></i> Iconos de Remix Icon <small>(Abrir en nueva pestaña)</small>
                             </a>
                         </p>
-                        
+
                         <PageAlert message={error.message} type={error.type} show={error.show} onChange={() => setError({ message: '', type: '', show: false })} />
 
                         <div className="row">

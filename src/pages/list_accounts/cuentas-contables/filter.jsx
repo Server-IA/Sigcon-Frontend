@@ -1,49 +1,64 @@
 import { useEffect, useState } from "react";
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import { base_url } from "../../../utils/functions";
+import { fetchHelper } from "../../../utils/fetch";
 
-const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
+// AccountFilterRequest fields — filters are applied server-side via POST /api/v1/accounting-accounts
+// Fields: custom_name, base_currency, puc_id, cost_center_id, depreciation_rule_id, nature, status
 
-    const getTable = () => {
-        return dataTableRef?.current?.table();
-    };
+const NATURE_OPTIONS = [
+    { id: 'DEBIT',  label: 'Deudora' },
+    { id: 'CREDIT', label: 'Acreedora' },
+];
+
+const STATUS_OPTIONS = [
+    { id: 'ACTIVE',   label: 'Activa' },
+    { id: 'INACTIVE', label: 'Inactiva' },
+];
+
+const FilterCuentaContable = ({
+    filterRef,
+    filterInstance,
+    dataTableRef
+}) => {
+
+    const getTable = () => dataTableRef?.current?.table();
+
+    const [pucs, setPucs] = useState([]);
+    const [currencies, setCurrencies] = useState([]);
+    const [costCenters, setCostCenters] = useState([]);
+
+    useEffect(() => {
+        const dtBody = { length: -1, columns: [{data:'status', search: {value: 'ACTIVE', regex: false}}] };
+        const loadData = async () => {
+            // Promise.allSettled: a 403 on one endpoint won't block the others
+            const [pucRes, currRes, ccRes] = await Promise.allSettled([
+                fetchHelper.post(base_url(['api', 'v1', 'chart-of-accounts', 'search']), {dtBody}, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']), dtBody, {}, 0),
+                // fetchHelper.post(base_url(['api', 'v1', 'depretation-rules', 'search']), dtBody, {}, 0),
+            ]);
+            if (pucRes.status === 'fulfilled')  setPucs(pucRes.value.data || []);
+            if (currRes.status === 'fulfilled') setCurrencies(currRes.value.data || []);
+            if (ccRes.status === 'fulfilled')   setCostCenters(ccRes.value.data || []);
+            // if (drRes.status === 'fulfilled')   setDepreciationRules(drRes.value.data || []);
+            const failed = [pucRes, currRes, ccRes].filter(r => r.status === 'rejected');
+            if (failed.length) console.warn('Algunos datos no pudieron cargarse:', failed.map(f => f.reason));
+
+            console.log(pucs, currencies, costCenters);
+
+        };
+        loadData();
+    }, []);
 
     const [filters, setFilters] = useState([
-        {
-            regex: true,
-            value: '',
-            column: 'customName:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'pucCode:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'baseCurrency:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'costCenterName:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'depreciationRuleName:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'nature:name',
-        },
-        {
-            regex: true,
-            value: '',
-            column: 'status:name',
-        },
+        { regex: true, value: '', column: 'pucAccount:name' },
+        { regex: true, value: '', column: 'customName:name' },
+        { regex: true, value: '', column: 'baseCurrency:name' },
+        { regex: true, value: '', column: 'costCenterName:name' },
+        { regex: true, value: '', column: 'nature:name' },
+        { regex: true, value: '', column: 'status:name' },
     ]);
 
     useEffect(() => {
@@ -52,289 +67,159 @@ const FilterCuentaContable = ({ filterRef, filterInstance, dataTableRef }) => {
         filters.forEach(filter => {
             table.column(filter.column).search(filter.value, filter.regex, false);
         });
+        console.log(table)
     }, [filters]);
 
-    const handleFilter = () => {
-        if (!dataTableRef?.current) return;
-        dataTableRef.current.table().draw();
-        filterInstance.current.hide();
-    }
+    const getFilter = (column) => filters.find(f => f.column === column);
 
-    const handleReset = () => {
-        if (!dataTableRef?.current) return;
-        setFilters(filters.map(f => ({ ...f, value: '' })));
-        dataTableRef.current.table().columns().search('');
-        dataTableRef.current.table().draw();
-        filterInstance.current.hide();
-    }
+    const updateFilter = (column, key, value) => {
+        setFilters(prev => prev.map(f =>
+            f.column === column ? { ...f, [key]: value } : f
+        ));
+    };
+
+    const selectValue = (column) => {
+        const val = getFilter(column)?.value;
+        return val === '' ? [] : val.split(',');
+    };
 
     return (
-        <div className="modal fade" ref={filterRef} id="modalCenter" tabIndex={-1} aria-hidden="true">
+        <div className="modal fade" ref={filterRef} id="filterCuentasContables" tabIndex={-1} aria-hidden="true">
             <div className="modal-dialog modal-dialog-centered" role="document">
                 <div className="modal-content">
                     <div className="modal-header">
-                        <h4 className="modal-title" id="modalCenterTitle">Filtrar Cuentas Contables</h4>
+                        <h4 className="modal-title" id="filterCuentasContablesTitle">Filtrar Cuentas Contables</h4>
                         <button
                             type="button"
                             className="btn-close"
                             data-bs-dismiss="modal"
-                            aria-label="Close"></button>
+                            aria-label="Close">
+                        </button>
                     </div>
-                    <div className="modal-body">    
-                        {/* Nombre Personalizado */}
+                    <div className="modal-body">
+
+                        {/* Nombre Personalizado — AccountFilterRequest.custom_name */}
                         <div className="row mb-3">
                             <div className="col-12">
                                 <div className="input-group">
                                     <div className="input-group-text form-check mb-0">
                                         <input
-                                            checked={filters.find(filter => filter.column === 'customName:name')?.regex || false}
+                                            checked={getFilter('customName:name')?.regex || false}
                                             className="form-check-input m-auto"
+                                            type="checkbox"
                                             data-bs-toggle="tooltip"
                                             data-bs-placement="top"
                                             data-bs-original-title="Búsqueda por coincidencia"
-                                            type="checkbox"
-                                            onChange={(e) => {
-                                                setFilters(prev => prev.map(filter => filter.column === 'customName:name' ? {
-                                                    ...filter,
-                                                    regex: e.target.checked,
-                                                } : filter));
-                                            }}
+                                            onChange={(e) => updateFilter('customName:name', 'regex', e.target.checked)}
                                             disabled={!dataTableRef?.current}
-                                            aria-label="Buscar" />
+                                            aria-label="Buscar"
+                                        />
                                     </div>
+
                                     <InputModal
                                         type="text"
-                                        id="customName_filter"
+                                        id="filter_custom_name"
                                         label="Nombre Personalizado"
-                                        value={filters.find(filter => filter.column === 'customName:name')?.value || ""}
-                                        onChange={(e) => {
-                                            setFilters(prev => prev.map(filter => filter.column === 'customName:name' ? {
-                                                ...filter,
-                                                value: e.target.value,
-                                            } : filter));
-                                        }}
+                                        value={getFilter('customName:name')?.value || ''}
+                                        onChange={(e) => updateFilter('customName:name', 'value', e.target.value)}
                                         placeholder="Ej: Caja general"
                                         error=""
                                     />
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Código PUC */}
-                        <div className="row mb-3">
-                            <div className="col-12">
+                            {/* Moneda Base — AccountFilterRequest.base_currency */}
+                            <div className="col-12 mt-3">
                                 <div className="input-group">
-                                    <div className="input-group-text form-check mb-0">
-                                        <input
-                                            checked={filters.find(filter => filter.column === 'pucCode:name')?.regex || false}
-                                            className="form-check-input m-auto"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="top"
-                                            data-bs-original-title="Búsqueda por coincidencia"
-                                            type="checkbox"
-                                            onChange={(e) => {
-                                                setFilters(prev => prev.map(filter => filter.column === 'pucCode:name' ? {
-                                                    ...filter,
-                                                    regex: e.target.checked,
-                                                } : filter));
-                                            }}
-                                            disabled={!dataTableRef?.current}
-                                            aria-label="Buscar" />
-                                    </div>
-                                    <InputModal
-                                        type="text"
-                                        id="pucCode_filter"
-                                        label="Código PUC"
-                                        value={filters.find(filter => filter.column === 'pucCode:name')?.value || ""}
-                                        onChange={(e) => {
-                                            setFilters(prev => prev.map(filter => filter.column === 'pucCode:name' ? {
-                                                ...filter,
-                                                value: e.target.value,
-                                            } : filter));
-                                        }}
-                                        placeholder="Ej: 110505"
-                                        error=""
-                                    />
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Moneda Base */}
-                        <div className="row mb-3">
-                            <div className="col-12">
-                                <div className="input-group">
-                                    <div className="input-group-text form-check mb-0">
-                                        <input
-                                            checked={filters.find(filter => filter.column === 'baseCurrency:name')?.regex || false}
-                                            className="form-check-input m-auto"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="top"
-                                            data-bs-original-title="Búsqueda por coincidencia"
-                                            type="checkbox"
-                                            onChange={(e) => {
-                                                setFilters(prev => prev.map(filter => filter.column === 'baseCurrency:name' ? {
-                                                    ...filter,
-                                                    regex: e.target.checked,
-                                                } : filter));
-                                            }}
-                                            disabled={!dataTableRef?.current}
-                                            aria-label="Buscar" />
-                                    </div>
-                                    <InputModal
-                                        type="text"
-                                        id="baseCurrency_filter"
+                                    <InputSelectModal
+                                        id="filter_base_currency"
                                         label="Moneda Base"
-                                        value={filters.find(filter => filter.column === 'baseCurrency:name')?.value || ""}
-                                        onChange={(e) => {
-                                            setFilters(prev => prev.map(filter => filter.column === 'baseCurrency:name' ? {
-                                                ...filter,
-                                                value: e.target.value,
-                                            } : filter));
-                                        }}
-                                        placeholder="Ej: USD, COP"
-                                        error=""
+                                        value={getFilter('baseCurrency:name')?.value?.split(',') || []}
+                                        onChange={(value) => updateFilter('baseCurrency:name', 'value', value.filter(v => v !== '').join(','))}
+                                        placeholder="Seleccionar moneda base"
+                                        options={currencies.map(c => ({ id: c.name, name: c.name }))}
+                                        multiple={true}
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Centro de Costos */}
+                        
+
+                        {/* Naturaleza — AccountFilterRequest.nature */}
                         <div className="row mb-3">
-                            <div className="col-12">
-                                <div className="input-group">
-                                    <div className="input-group-text form-check mb-0">
-                                        <input
-                                            checked={filters.find(filter => filter.column === 'costCenterName:name')?.regex || false}
-                                            className="form-check-input m-auto"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="top"
-                                            data-bs-original-title="Búsqueda por coincidencia"
-                                            type="checkbox"
-                                            onChange={(e) => {
-                                                setFilters(prev => prev.map(filter => filter.column === 'costCenterName:name' ? {
-                                                    ...filter,
-                                                    regex: e.target.checked,
-                                                } : filter));
-                                            }}
-                                            disabled={!dataTableRef?.current}
-                                            aria-label="Buscar" />
-                                    </div>
-                                    <InputModal
-                                        type="text"
-                                        id="costCenterName_filter"
-                                        label="Centro de Costos"
-                                        value={filters.find(filter => filter.column === 'costCenterName:name')?.value || ""}
-                                        onChange={(e) => {
-                                            setFilters(prev => prev.map(filter => filter.column === 'costCenterName:name' ? {
-                                                ...filter,
-                                                value: e.target.value,
-                                            } : filter));
-                                        }}
-                                        placeholder="Nombre del centro"
-                                        error=""
-                                    />
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Regla de Depreciación */}
-                        <div className="row mb-3">
-                            <div className="col-12">
-                                <div className="input-group">
-                                    <div className="input-group-text form-check mb-0">
-                                        <input
-                                            checked={filters.find(filter => filter.column === 'depreciationRuleName:name')?.regex || false}
-                                            className="form-check-input m-auto"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="top"
-                                            data-bs-original-title="Búsqueda por coincidencia"
-                                            type="checkbox"
-                                            onChange={(e) => {
-                                                setFilters(prev => prev.map(filter => filter.column === 'depreciationRuleName:name' ? {
-                                                    ...filter,
-                                                    regex: e.target.checked,
-                                                } : filter));
-                                            }}
-                                            disabled={!dataTableRef?.current}
-                                            aria-label="Buscar" />
-                                    </div>
-                                    <InputModal
-                                        type="text"
-                                        id="depreciationRuleName_filter"
-                                        label="Regla de Depreciación"
-                                        value={filters.find(filter => filter.column === 'depreciationRuleName:name')?.value || ""}
-                                        onChange={(e) => {
-                                            setFilters(prev => prev.map(filter => filter.column === 'depreciationRuleName:name' ? {
-                                                ...filter,
-                                                value: e.target.value,
-                                            } : filter));
-                                        }}
-                                        placeholder="Nombre de la regla"
-                                        error=""
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Naturaleza */}
-                        <div className="row">
-                            <div className="col mb-6 mt-2">
+                            {/* Código PUC — AccountFilterRequest.puc_id */}
+                            <div className="col-12 mt-3">
                                 <InputSelectModal
-                                    id="nature_filter"
+                                    id="filter_puc_id"
+                                    label="Código PUC"
+                                    value={getFilter('pucAccount:name')?.value?.split(',') || []}
+                                    onChange={(value) => updateFilter('pucAccount:name', 'value', value.filter(v => v !== '').join(','))}
+                                    placeholder="Seleccionar código PUC"
+                                    options={pucs.map(p => ({ id: p.code, name: p.code }))}
+                                    multiple={true}
+                                />
+                            </div>
+
+                            <div className="col-12 mt-3">
+                                <InputSelectModal
+                                    id="filter_nature"
                                     label="Naturaleza"
-                                    value={filters.find(filter => filter.column === 'nature:name')?.value || ""}
-                                    onChange={(value) => {
-                                        setFilters(prev => prev.map(filter => filter.column === 'nature:name' ? {
-                                            ...filter,
-                                            value: value,
-                                        } : filter));
-                                    }}
-                                    error=""
+                                    value={getFilter('nature:name')?.value?.split(',') || []}
+                                    onChange={(value) => updateFilter('nature:name', 'value', value.filter(v => v !== '').join(','))}
                                     placeholder="Seleccionar naturaleza"
-                                    options={[
-                                        { id: 'DEUDORA', label: 'Deudora' },
-                                        { id: 'ACREEDORA', label: 'Acreedora' }
-                                    ]}
-                                    clearable={true}
+                                    options={NATURE_OPTIONS}
+                                    multiple={true}
                                 />
                             </div>
                         </div>
 
-                        {/* Estado */}
-                        <div className="row">
-                            <div className="col mb-6 mt-2">
+                        {/* Estado — AccountFilterRequest.status */}
+                        <div className="row mb-3">
+                            {/* Centros de costos */}
+                            <div className="col-12 mt-3">
                                 <InputSelectModal
-                                    id="status_filter"
+                                    id="filter_cost_center_id"
+                                    label="Centro de Costos"
+                                    value={getFilter('costCenterName:name')?.value?.split(',') || []}
+                                    onChange={(value) => updateFilter('costCenterName:name', 'value', value.filter(v => v !== '').join(','))}
+                                    placeholder="Seleccionar centro de costos"
+                                    options={costCenters.map(c => ({ id: c.name, name: c.name }))}
+                                    multiple={true}
+                                />
+                            </div>
+                            <div className="col-12 mt-3">
+                                <InputSelectModal
+                                    id="filter_status"
                                     label="Estado"
-                                    value={filters.find(filter => filter.column === 'status:name')?.value || ""}
-                                    onChange={(value) => {
-                                        setFilters(prev => prev.map(filter => filter.column === 'status:name' ? {
-                                            ...filter,
-                                            value: value,
-                                        } : filter));
-                                    }}
-                                    error=""
+                                    value={getFilter('status:name')?.value?.split(',') || []}
+                                    onChange={(value) => updateFilter('status:name', 'value', value.filter(v => v !== '').join(','))}
                                     placeholder="Seleccionar estado"
-                                    options={[
-                                        { id: 'ACTIVE', label: 'Activa' },
-                                        { id: 'INACTIVE', label: 'Inactiva' }
-                                    ]}
-                                    clearable={true}
+                                    options={STATUS_OPTIONS}
+                                    multiple={true}
                                 />
                             </div>
                         </div>
+
                     </div>
                     <div className="modal-footer">
-                        <button 
-                            type="button" 
-                            className="btn btn-secondary" 
-                            onClick={handleReset}>
+                        <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => {
+                                setFilters(prev => prev.map(f => ({ ...f, value: '', regex: true })));
+                                dataTableRef?.current?.ajax.reload();
+                            }}>
                             Limpiar Filtros
                         </button>
-                        <button 
-                            type="button" 
-                            className="btn btn-primary" 
-                            onClick={handleFilter}>
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => {
+                                dataTableRef?.current?.ajax.reload();
+                                filterInstance?.current?.hide();
+                            }}>
                             Buscar
                         </button>
                     </div>

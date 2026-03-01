@@ -19,35 +19,29 @@ const CreateCuentaContable = ({
     const [pucs, setPucs] = useState([]);
     const [currencies, setCurrencies] = useState([]);
     const [costCenters, setCostCenters] = useState([]);
-    const [depreciationRules, setDepreciationRules] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    // Cargar datos de selecciones
+    // Data loading — swagger endpoints:
+    // POST /api/v1/chart-of-accounts/search
+    // POST /api/v1/accounting-lists/currency-types/search
+    // POST /api/v1/cost-centers/search
+    // POST /api/v1/depretation-rules/search
     useEffect(() => {
+        const dtBody = { length: -1, columns: [{data:'status', search: {value: 'ACTIVE', regex: false}}] };
         const loadData = async () => {
-            try {
-                // Cargar PUC
-                const pucUrl = base_url(['api', 'puc-catalog']);
-                const pucResponse = await fetchHelper.get(pucUrl, {}, 0);
-                setPucs(pucResponse.data || []);
-
-                // Cargar Monedas
-                const currencyUrl = base_url(['api', 'currencies']);
-                const currencyResponse = await fetchHelper.get(currencyUrl, {}, 0);
-                setCurrencies(currencyResponse.data || []);
-
-                // Cargar Centros de Costos
-                const costCenterUrl = base_url(['api', 'cost-centers']);
-                const costCenterResponse = await fetchHelper.get(costCenterUrl, {}, 0);
-                setCostCenters(costCenterResponse.data || []);
-
-                // Cargar Reglas de Depreciación
-                const depRuleUrl = base_url(['api', 'depreciation-rules']);
-                const depRuleResponse = await fetchHelper.get(depRuleUrl, {}, 0);
-                setDepreciationRules(depRuleResponse.data || []);
-            } catch (error) {
-                console.error('Error cargando datos:', error);
-            }
+            // Promise.allSettled: a 403 on one endpoint won't block the others
+            const [pucRes, currRes, ccRes] = await Promise.allSettled([
+                fetchHelper.post(base_url(['api', 'v1', 'chart-of-accounts', 'search']), {dtBody}, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']), dtBody, {}, 0),
+                // fetchHelper.post(base_url(['api', 'v1', 'depretation-rules', 'search']), dtBody, {}, 0),
+            ]);
+            if (pucRes.status === 'fulfilled')  setPucs(pucRes.value.data || []);
+            if (currRes.status === 'fulfilled') setCurrencies(currRes.value.data || []);
+            if (ccRes.status === 'fulfilled')   setCostCenters(ccRes.value.data || []);
+            // if (drRes.status === 'fulfilled')   setDepreciationRules(drRes.value.data || []);
+            const failed = [pucRes, currRes, ccRes].filter(r => r.status === 'rejected');
+            if (failed.length) console.warn('Algunos datos no pudieron cargarse:', failed.map(f => f.reason));
         };
         loadData();
     }, []);
@@ -55,48 +49,48 @@ const CreateCuentaContable = ({
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validar campos obligatorios
-        if (!cuentaContable.pucId) {
-            setErrorMessage('Por favor seleccione una cuenta PUC');
+        // Validar campos obligatorios (swagger: puc_id, custom_name, base_currency, nature son requeridos)
+        if (!cuentaContable.puc_id) {
+            setErrors({ ...errors, puc_id: 'Por favor seleccione una cuenta PUC' });
             return;
         }
-        if (!cuentaContable.customName || cuentaContable.customName.trim() === '') {
-            setErrorMessage('El nombre personalizado de la cuenta es obligatorio');
+        if (!cuentaContable.custom_name || cuentaContable.custom_name.trim() === '') {
+            setErrors({ ...errors, custom_name: 'El nombre personalizado de la cuenta es obligatorio' });
             return;
         }
-        if (!cuentaContable.baseCurrency) {
-            setErrorMessage('Por favor seleccione una moneda base');
+        if (!cuentaContable.currency_type_id) {
+            setErrors({ ...errors, currency_type_id: 'Por favor seleccione una moneda base' });
+            return;
+        }
+        if (!cuentaContable.cost_center_id) {
+            setErrors({ ...errors, cost_center_id: 'Por favor seleccione un centro de costos' });
             return;
         }
         if (!cuentaContable.nature) {
-            setErrorMessage('Por favor seleccione la naturaleza de la cuenta');
+            setErrors({ ...errors, nature: 'Por favor seleccione la naturaleza de la cuenta' });
             return;
         }
 
-        // Validar formato del nombre
-        const nameRegex = /^[a-zA-Z0-9\s\-_]{1,50}$/;
-        if (!nameRegex.test(cuentaContable.customName)) {
-            setErrorMessage('El nombre debe tener entre 1 y 50 caracteres, solo alfanuméricos, espacios, guiones y guiones bajos');
+        // Swagger CreateAccountingAccountRequest: maxLength 50, pattern ^[a-zA-Z0-9 _-]+$
+        const nameRegex = /^[a-zA-Z0-9 _-]{1,50}$/;
+        if (!nameRegex.test(cuentaContable.custom_name)) {
+            setErrors({ ...errors, custom_name: 'El nombre debe tener entre 1 y 50 caracteres, solo alfanuméricos, espacios, guiones y guiones bajos' });
             return;
         }
 
-        const url = base_url(['api', 'accounting-accounts']);
+        // Swagger: POST /api/v1/accounting-accounts/store
+        const storeUrl = base_url(['api', 'v1', 'accounting-accounts', 'store']);
+        const body = {
+            puc_id: cuentaContable.puc_id,
+            custom_name: cuentaContable.custom_name.trim(),
+            currency_type_id: cuentaContable.currency_type_id,
+            cost_center_id: cuentaContable.cost_center_id || null,
+            tax_rule_id: cuentaContable.tax_rule_id || null,
+            nature: cuentaContable.nature,
+        };
         try {
             setLoading(true);
-            await fetchHelper.post(url, cuentaContable, {}, 1000);
-            
-            setCuentaContable({
-                id: '',
-                pucId: '',
-                pucCode: '',
-                customName: '',
-                baseCurrency: '',
-                costCenterId: '',
-                depreciationRuleId: '',
-                nature: '',
-                status: 'ACTIVE',
-                companyId: '',
-            });
+            await fetchHelper.post(storeUrl, body, {}, 1000);
             
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
@@ -147,7 +141,8 @@ const CreateCuentaContable = ({
                         <AlertPage 
                             message={errorMessage} 
                             type="danger" 
-                            show={errorMessage !== ''} 
+                            show={errorMessage !== ''}
+                            onChange={() => setErrorMessage('')}
                         />
 
                         <form onSubmit={handleSubmit}>
@@ -157,16 +152,16 @@ const CreateCuentaContable = ({
                                     <InputSelectModal
                                         id="pucId"
                                         label="Cuenta PUC"
-                                        value={cuentaContable.pucId}
+                                        value={cuentaContable.puc_id}
                                         onChange={(value) => {
                                             const selectedPuc = pucs.find(p => p.id === parseInt(value));
                                             setCuentaContable({
                                                 ...cuentaContable,
-                                                pucId: parseInt(value) || '',
+                                                puc_id: parseInt(value) || '',
                                                 pucCode: selectedPuc?.code || ''
                                             });
                                         }}
-                                        error={errors.pucId}
+                                        error={errors.puc_id}
                                         placeholder="Seleccionar cuenta PUC"
                                         options={pucs.map(puc => ({
                                             id: puc.id,
@@ -184,13 +179,14 @@ const CreateCuentaContable = ({
                                         type="text"
                                         id="customName"
                                         label="Nombre Personalizado"
-                                        value={cuentaContable.customName}
+                                        value={cuentaContable.custom_name}
                                         onChange={(e) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            customName: e.target.value 
+                                            custom_name: e.target.value 
                                         })}
-                                        error={errors.customName}
+                                        error={errors.custom_name}
                                         placeholder="Ej: Caja general"
+                                        maxLength={50}
                                         required={true}
                                     />
                                 </div>
@@ -202,16 +198,16 @@ const CreateCuentaContable = ({
                                     <InputSelectModal
                                         id="baseCurrency"
                                         label="Moneda Base"
-                                        value={cuentaContable.baseCurrency}
+                                        value={cuentaContable.currency_type_id}
                                         onChange={(value) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            baseCurrency: value 
+                                            currency_type_id: value 
                                         })}
-                                        error={errors.baseCurrency}
+                                        error={errors.currency_type_id}
                                         placeholder="Seleccionar moneda"
                                         options={currencies.map(currency => ({
-                                            id: currency.code,
-                                            label: `${currency.name} (${currency.code})`
+                                            id: currency.id,
+                                            label: `${currency.name} (${currency.isoCode})`
                                         }))}
                                         required={true}
                                     />
@@ -224,43 +220,43 @@ const CreateCuentaContable = ({
                                     <InputSelectModal
                                         id="costCenterId"
                                         label="Centro de Costos"
-                                        value={cuentaContable.costCenterId}
+                                        value={cuentaContable.cost_center_id}
                                         onChange={(value) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            costCenterId: value 
+                                            cost_center_id: parseInt(value) || null
                                         })}
-                                        error={errors.costCenterId}
-                                        placeholder="Seleccionar centro de costos"
+                                        error={errors.cost_center_id}
+                                        placeholder="Seleccionar centro de costos (opcional)"
                                         options={costCenters.map(center => ({
                                             id: center.id,
-                                            name: center.name
+                                            label: `${center.code} - ${center.name}`
                                         }))}
-                                        clearable={true}
+                                        required={true}
                                     />
                                 </div>
                             </div>
 
                             {/* Regla de Depreciación (Opcional) */}
-                            <div className="row">
+                            {/* <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
                                         id="depreciationRuleId"
                                         label="Regla de Depreciación"
-                                        value={cuentaContable.depreciationRuleId}
+                                        value={cuentaContable.depreciation_rule_id}
                                         onChange={(value) => setCuentaContable({ 
                                             ...cuentaContable, 
-                                            depreciationRuleId: value 
+                                            depreciation_rule_id: parseInt(value) || null
                                         })}
-                                        error={errors.depreciationRuleId}
-                                        placeholder="Seleccionar regla de depreciación"
+                                        error={errors.depreciation_rule_id}
+                                        placeholder="Seleccionar regla de depreciación (opcional)"
                                         options={depreciationRules.map(rule => ({
                                             id: rule.id,
-                                            name: rule.name
+                                            label: rule.name
                                         }))}
                                         clearable={true}
                                     />
                                 </div>
-                            </div>
+                            </div> */}
 
                             {/* Naturaleza */}
                             <div className="row">
@@ -276,8 +272,8 @@ const CreateCuentaContable = ({
                                         error={errors.nature}
                                         placeholder="Seleccionar naturaleza"
                                         options={[
-                                            { id: 'DEUDORA', label: 'Deudora' },
-                                            { id: 'ACREEDORA', label: 'Acreedora' }
+                                            { id: 'DEBIT', label: 'Deudora' },
+                                            { id: 'CREDIT', label: 'Acreedora' }
                                         ]}
                                         required={true}
                                     />
