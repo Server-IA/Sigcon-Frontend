@@ -9,50 +9,55 @@ import { base_url } from '../../../utils/functions';
 import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
+import DropzoneModal from '../../../components/molecules/DropzoneModal';
 
 const ACCOUNT_CLASSES = [
-    { id: 'ASSET', name: 'Activo' },
-    { id: 'LIABILITY', name: 'Pasivo' },
-    { id: 'EQUITY', name: 'Patrimonio' },
-    { id: 'INCOME', name: 'Ingresos' },
-    { id: 'EXPENSE', name: 'Gastos' },
-    { id: 'COST_OF_SALES', name: 'Costos de venta' },
-    { id: 'COST_OF_PRODUCTION', name: 'Costos de producción o de operación' },
-    { id: 'ORDER_DEBIT', name: 'Cuentas de orden deudoras' },
-    { id: 'ORDER_CREDIT', name: 'Cuentas de orden acreedoras' },
+    { id: 'ASSET',             name: 'Activo' },
+    { id: 'LIABILITY',         name: 'Pasivo' },
+    { id: 'EQUITY',            name: 'Patrimonio' },
+    { id: 'REVENUE',           name: 'Ingresos' },
+    { id: 'EXPENSE',           name: 'Gastos' },
+    { id: 'COST_OF_SALES',     name: 'Costos de venta' },
+    { id: 'PRODUCTION_COST',   name: 'Costos de producción o de operación' },
+    { id: 'MEMORANDUM_DEBIT',  name: 'Cuentas de orden deudoras' },
+    { id: 'MEMORANDUM_CREDIT', name: 'Cuentas de orden acreedoras' },
 ];
 
-const HIERARCHY_LEVELS = [
-    { id: 'GROUP', name: 'Grupo' },
-    { id: 'SUBGROUP', name: 'Subgrupo' },
-    { id: 'ACCOUNT', name: 'Cuenta' },
+const LEVELS = [
+    { id: 'CLASS',      name: 'Clase' },
+    { id: 'GROUP',      name: 'Grupo' },
+    { id: 'ACCOUNT',    name: 'Cuenta' },
+    { id: 'SUBACCOUNT', name: 'Subcuenta' },
 ];
 
 const ACCOUNT_NATURES = [
-    { id: 'DEBIT', name: 'Deudora' },
+    { id: 'DEBIT',  name: 'Deudora' },
     { id: 'CREDIT', name: 'Acreedora' },
 ];
 
 const ACCOUNT_STATUSES = [
-    { id: 'ACTIVE', name: 'Activa' },
+    { id: 'ACTIVE',   name: 'Activa' },
     { id: 'INACTIVE', name: 'Inactiva' },
 ];
 
 const IndexPUC = () => {
 
-    const tableRef = useRef(null);
+    const tableRef    = useRef(null);
     const dataTableRef = useRef(null);
 
-    const filterRef = useRef(null);
+    const filterRef      = useRef(null);
     const filterInstance = useRef(null);
 
-    const modalCreateRef = useRef(null);
+    const modalCreateRef      = useRef(null);
     const modalCreateInstance = useRef(null);
 
-    const modalUpdateRef = useRef(null);
+    const modalUpdateRef      = useRef(null);
     const modalUpdateInstance = useRef(null);
 
-    const [data, setData] = useState([]);
+    const modalBulkRef      = useRef(null);
+    const modalBulkInstance = useRef(null);
+
+    const [data, setData]       = useState([]);
     const [clickEdit, setClickEdit] = useState(false);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
 
@@ -75,17 +80,17 @@ const IndexPUC = () => {
     const url = ['api', 'v1', 'chart-of-accounts', 'search'];
 
     const actions = [
-        { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        { key: 'edit',   icon: 'ri-edit-line',       class: 'btn-label-primary', title: 'Editar' },
+        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger',  title: 'Eliminar' },
     ];
 
     const columns = [
-        { title: 'ID', data: 'id', searchable: false },
-        { title: 'Código', data: 'code', name: 'code' },
-        { title: 'Nombre', data: 'name', name: 'name' },
-        { title: 'Clase', data: 'accountClass', name: 'accountClass', render: (val) => val ?? '-' },
-        { title: 'Nivel', data: 'level', name: 'level', render: (val) => val ?? '-' },
-        { title: 'Naturaleza', data: 'nature', name: 'nature', render: (val) => val ?? '-' },
+        { title: 'ID',         data: 'id',           searchable: false },
+        { title: 'Código',     data: 'code',         name: 'code' },
+        { title: 'Nombre',     data: 'name',         name: 'name' },
+        { title: 'Clase',      data: 'accountClass', name: 'accountClass', render: (val) => val ?? '-' },
+        { title: 'Nivel',      data: 'level',        name: 'level',        render: (val) => val ?? '-' },
+        { title: 'Naturaleza', data: 'nature',       name: 'nature',       render: (val) => val ?? '-' },
         {
             title: 'Estado', data: 'status', name: 'status',
             render: (status) => status === 'ACTIVE'
@@ -133,10 +138,17 @@ const IndexPUC = () => {
         modalUpdateInstance.current.show();
     };
 
+    const openModalBulk = () => {
+        if (!modalBulkInstance.current) {
+            modalBulkInstance.current = new window.bootstrap.Modal(modalBulkRef.current);
+        }
+        modalBulkInstance.current.show();
+    };
+
     const buttons = [
         {
             text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
-            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
             action: function () {
                 if (!filterInstance.current) {
                     filterInstance.current = new window.bootstrap.Modal(filterRef.current);
@@ -145,8 +157,13 @@ const IndexPUC = () => {
             }
         },
         {
+            text: '<i class="ri-upload-2-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Cargue Masivo</span>',
+            className: 'btn rounded-pill btn-label-success waves-effect mx-1 my-2',
+            action: function () { openModalBulk(); }
+        },
+        {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Cuenta PUC</span>',
-            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
+            className: 'btn rounded-pill btn-primary waves-effect mx-1 my-2',
             action: function () { openModalCreate(); }
         },
     ];
@@ -163,7 +180,7 @@ const IndexPUC = () => {
 
         const handler = function () {
             const action = $(this).data('action');
-            const id = Number($(this).data('id'));
+            const id     = Number($(this).data('id'));
             const accountRef = data.find(m => m.id === id);
 
             if (!accountRef) {
@@ -174,13 +191,13 @@ const IndexPUC = () => {
             switch (action) {
                 case 'edit':
                     setAccount({
-                        id: accountRef.id ?? '',
-                        code: accountRef.code ?? '',
-                        name: accountRef.name ?? '',
-                        accountClass: accountRef.accountClass ?? '',
-                        level: accountRef.level ?? '',
-                        nature: accountRef.nature ?? '',
-                        status: accountRef.status ?? 'ACTIVE',
+                        id:              accountRef.id              ?? '',
+                        code:            accountRef.code            ?? '',
+                        name:            accountRef.name            ?? '',
+                        accountClass:    accountRef.accountClass    ?? '',
+                        level:           accountRef.level           ?? '',
+                        nature:          accountRef.nature          ?? '',
+                        status:          accountRef.status          ?? 'ACTIVE',
                         hasTransactions: accountRef.hasTransactions ?? false,
                     });
                     setClickEdit(true);
@@ -202,13 +219,25 @@ const IndexPUC = () => {
                             text: 'Ingrese el motivo por el cual elimina esta cuenta PUC:',
                             input: 'textarea',
                             inputPlaceholder: 'Escriba el motivo aquí...',
-                            inputAttributes: { 'aria-label': 'Motivo de eliminación' },
+                            inputAttributes: {
+                                'aria-label': 'Motivo de eliminación',
+                                maxlength: '255',
+                            },
                             showCancelButton: true,
                             confirmButtonText: 'Eliminar',
                             cancelButtonText: 'Cancelar',
                             preConfirm: (reason) => {
                                 if (!reason || reason.trim() === '') {
                                     window.Swal.showValidationMessage('Debe ingresar el motivo de eliminación');
+                                    return false;
+                                }
+                                if (reason.length > 255) {
+                                    window.Swal.showValidationMessage('El motivo no puede superar los 255 caracteres');
+                                    return false;
+                                }
+                                if (!/^[A-Za-z0-9_\-\s]{1,255}$/.test(reason)) {
+                                    window.Swal.showValidationMessage('El motivo solo puede contener letras, números, guiones y espacios');
+                                    return false;
                                 }
                                 return reason;
                             }
@@ -277,7 +306,7 @@ const IndexPUC = () => {
                     filterInstance={filterInstance}
                     dataTableRef={dataTableRef}
                     accountClasses={ACCOUNT_CLASSES}
-                    hierarchyLevels={HIERARCHY_LEVELS}
+                    levels={LEVELS}
                     accountNatures={ACCOUNT_NATURES}
                     accountStatuses={ACCOUNT_STATUSES}
                 />
@@ -291,7 +320,7 @@ const IndexPUC = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 accountClasses={ACCOUNT_CLASSES}
-                hierarchyLevels={HIERARCHY_LEVELS}
+                levels={LEVELS}
                 accountNatures={ACCOUNT_NATURES}
             />
 
@@ -303,9 +332,23 @@ const IndexPUC = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 accountClasses={ACCOUNT_CLASSES}
-                hierarchyLevels={HIERARCHY_LEVELS}
+                levels={LEVELS}
                 accountNatures={ACCOUNT_NATURES}
                 accountStatuses={ACCOUNT_STATUSES}
+            />
+
+            <DropzoneModal
+                modalRef={modalBulkRef}
+                title="Cargue Masivo PUC"
+                uploadUrl={base_url(['api', 'v1', 'chart-of-accounts', 'bulk'])}
+                acceptedFiles=".xlsx,.xls,.csv"
+                maxFiles={1}
+                maxFilesize={5}
+                onSuccess={() => {
+                    dataTableRef?.current?.ajax.reload();
+                    setMessage({ message: 'Cargue masivo completado exitosamente', type: 'success', show: true });
+                    modalBulkInstance?.current?.hide();
+                }}
             />
         </>
     );

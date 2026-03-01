@@ -40,3 +40,11 @@
 .read-the-docs {
   color: #888;
 }
+
+/* DataTable: evitar que los botones de la barra de herramientas
+   hagan wrap y que el último se estire al 100% del ancho */
+.dt-action-buttons .dt-buttons {
+  flex-wrap: nowrap !important;
+  display: flex !important;
+  align-items: center !important;
+}
