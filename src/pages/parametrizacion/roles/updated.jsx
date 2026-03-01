@@ -31,14 +31,13 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
 
     useEffect(() => {
         const permissions = allModulesPermissions.filter(m => m.checked).map(m => m.permissions.map(p => p.id));
-        setRoleUpdated({
+        setRole({
             ...role,
             permissionIds: permissions.flat(),
         });
     }, [allModulesPermissions]);
 
     useEffect(() => {
-
         setRoleUpdated({
             id: role.id,
             status: role.status,
