@@ -32,11 +32,11 @@ const IndexCentrosCosto = () => {
     const [search, setSearch] = useState({ value: '', checked: true });
 
     const [centroCosto, setCentroCosto] = useState({
-        id: '',
-        code: '',
-        name: '',
-        description: '',
-        status: '',
+        id: null,
+        code: null,
+        name: null,
+        description: null,
+        status: 'ACTIVE',
         companyId: 79,
     });
 
@@ -95,11 +95,11 @@ const IndexCentrosCosto = () => {
         }
         modalCreateInstance.current.show();
         setCentroCosto({
-            id: '',
-            code: '',
-            name: '',
-            description: '',
-            status: '',
+            id: null,
+            code: null,
+            name: null,
+            description: null,
+            status: 'ACTIVE',
             companyId: 79,
         });
     };

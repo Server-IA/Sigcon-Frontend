@@ -6,6 +6,7 @@ import TextareaModal from "../../../components/molecules/TextareaModal";
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import InputDate from '../../../components/molecules/InputDate';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const DEPRECIATION_TYPES = [
@@ -33,10 +34,10 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
     useEffect(() => {
         const loadAccounts = async () => {
             try {
-                const url = base_url(['chartOfAccounts'], { status: 'ACTIVE', size: 100, page: 0 });
-                const response = await fetchHelper.get(url, {}, 0);
+                const url = base_url(['api', 'v1', 'accounting-accounts']);
+                const response = await fetchHelper.post(url, {length: -1, columns: [{data: 'status', search: {value: 'ACTIVE', regex: false}}]}, {  }, 0);
                 const list = response?.content ?? response?.data ?? [];
-                setAccounts(list.map(a => ({ id: a.id, label: `${a.code} - ${a.name}` })));
+                setAccounts(list.map(a => ({ id: a.id, label: a.customName })));
             } catch (err) {
                 console.error('Error al cargar cuentas contables:', err);
             }
@@ -47,7 +48,7 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
     // ── Enviar formulario ──
     const handleCreate = async () => {
         try {
-            const url = base_url(['depreciationRules', 'store']);
+            const url = base_url(['api', 'v1', 'depreciation-rules', 'store']);
             const payload = {
                 name: rule.name,
                 depretationType: rule.depreciationType,
@@ -163,7 +164,7 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
 
                         {/* Tasa + Vida útil */}
                         <div className="row">
-                            <div className="col-md-4 mb-4 mt-2">
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-4 mt-2">
                                 <InputModal
                                     type="number"
                                     id="dr_depreciationRate_create"
@@ -175,7 +176,7 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                                     required={true}
                                 />
                             </div>
-                            <div className="col-md-4 mb-4 mt-2">
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-4 mt-2">
                                 <InputModal
                                     type="number"
                                     id="dr_usefulLife_create"
@@ -187,7 +188,12 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                                     required={true}
                                 />
                             </div>
-                            <div className="col-md-4 mb-4 mt-2">
+                        </div>
+
+                        {/* Fecha de vigencia */}
+                        <div className="row">
+                            
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-4 mt-2">
                                 <InputModal
                                     type="number"
                                     id="dr_residualValue_create"
@@ -199,19 +205,14 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                                     required={true}
                                 />
                             </div>
-                        </div>
-
-                        {/* Fecha de vigencia */}
-                        <div className="row">
-                            <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                            <div className="col-lg-6 col-md-12 col-sm-12 mb-4 mt-2">
+                                <InputDate
                                     id="dr_effectiveDate_create"
                                     label="Fecha de vigencia"
-                                    value={rule.effectiveDate}
-                                    onChange={(e) => setRule({ ...rule, effectiveDate: e.target.value })}
+                                    date={rule.effectiveDate}
+                                    onChange={(date) => setRule({ ...rule, effectiveDate: date })}
                                     error={errors.effectiveDate}
-                                    placeholder="DD/MM/AAAA"
+                                    placeholder="dd-mm-yyyy"
                                     required={true}
                                 />
                             </div>

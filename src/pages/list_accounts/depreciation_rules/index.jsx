@@ -54,7 +54,7 @@ const IndexDepreciationRules = () => {
 
     const [rule, setRule] = useState(emptyRule);
 
-    const url = ['depreciationRules', 'search'];
+    const url = ['api', 'v1', 'depreciation-rules', 'search'];
 
     const DEPRECIATION_TYPE_LABELS = {
         LINEAR: 'Lineal',
@@ -73,15 +73,15 @@ const IndexDepreciationRules = () => {
         { title: 'ID', data: 'id', searchable: false },
         { title: 'Nombre', data: 'name', name: 'name' },
         {
-            title: 'Tipo de depreciación', data: 'depreciationType', name: 'depreciationType',
+            title: 'Tipo de depreciación', data: 'depretationType', name: 'depreciationType',
             render: (val) => DEPRECIATION_TYPE_LABELS[val] ?? val ?? '-'
         },
-        { title: 'Cuenta contable', data: 'accountName', name: 'accountName', render: (val) => val ?? '-' },
+        { title: 'Cuenta contable', data: 'accountingAccountDTO.customName', name: 'accountName', render: (val) => val ?? '-' },
         {
-            title: 'Tasa (%)', data: 'depreciationRate', name: 'depreciationRate',
+            title: 'Tasa (%)', data: 'depretationRate', name: 'depreciationRate',
             render: (val) => val != null ? `${Number(val).toFixed(2)}%` : '-'
         },
-        { title: 'Vida útil (años)', data: 'usefulLife', name: 'usefulLife', render: (val) => val ?? '-' },
+        { title: 'Vida útil (años)', data: 'usefulLifeYears', name: 'usefulLife', render: (val) => val ?? '-' },
         {
             title: 'Valor residual', data: 'residualValue', name: 'residualValue',
             render: (val) => val != null ? Number(val).toFixed(2) : '-'
@@ -168,11 +168,11 @@ const IndexDepreciationRules = () => {
                     setRule({
                         id: ruleRef.id ?? '',
                         name: ruleRef.name ?? '',
-                        depreciationType: ruleRef.depreciationType ?? '',
+                        depretationType: ruleRef.depretationType ?? '',
                         accountId: ruleRef.accountId ?? '',
-                        accountName: ruleRef.accountName ?? '',
-                        depreciationRate: ruleRef.depreciationRate ?? '',
-                        usefulLife: ruleRef.usefulLife ?? '',
+                        accountName: ruleRef.accountingAccountDTO.customName ?? '',
+                        depretationRate: ruleRef.depretationRate ?? '',
+                        usefulLifeYears: ruleRef.usefulLifeYears ?? '',
                         residualValue: ruleRef.residualValue ?? '',
                         effectiveDate: ruleRef.effectiveDate ?? '',
                         calculationBase: ruleRef.descriptionStructured?.calculationBase ?? '',
