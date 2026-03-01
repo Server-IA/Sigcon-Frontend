@@ -5,38 +5,7 @@ import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import TextareaModal from '../../../components/molecules/TextareaModal';
 
-//
-//
-//
-//
-//
-//Desde el día en que te miré
-//Ibas bien acompañada
-//Ibas con él de la mano
-//De repente te reías
-//De reojo me mirabas
-//No es mi gran amigo él
-//Pero, claro, lo conozco
-//Y no suelo ser aquel
-//Que no le importa con quién
-//Trato de ser respetuoso
-//Ay, pero ven tantito
-//Es la única vez que te voy a contar mi secreto
-//Si no tuvieras compromiso
-//Te perdería el respeto
-//Te perdería el respeto
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-const API_UPDATE = ['api', 'centros-costo', 'update'];
+
 
 const COMPANY_ID_HARDCODED = 79;
 
@@ -50,7 +19,7 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
             ...centroCosto,
             companyId: centroCosto.companyId ?? COMPANY_ID_HARDCODED,
         };
-        const url = base_url(API_UPDATE);
+        const url = base_url(['api', 'v1', 'cost-centers', centroCosto.id]);
         try {
             await fetchHelper.put(url, payload, {}, 500, false);
             setCentroCosto({

@@ -5,29 +5,7 @@ import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import TextareaModal from '../../../components/molecules/TextareaModal';
 
-//
-//
-//
-//
-//
-//
-//Ay, ay, ay
-//
-//Les pedí 20, 30 o cinco mil canciones
-//Y me cantaron Me Caí de la Nube
-//Me revolqué, grité, canté de sentimiento
-//Me recordaron a un amor que yo antes tuve
-
-//En el Tenampa se recuerdan muchas cosas
-//Y los mariachis, son los amos y señores
-//Te tomas cuatro, cinco, 20 o 30 copas
-//Y las canciones me recuerdan sus amores
-//
-//
-//
-//
-//
-const API_STORE = ['api', 'centros-costo', 'store'];
+const API_STORE = ['api', 'v1', 'cost-centers', 'store'];
 
 const COMPANY_ID_HARDCODED = 79;
 
