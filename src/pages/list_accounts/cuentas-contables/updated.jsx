@@ -24,76 +24,55 @@ const UpdatedCuentaContable = ({
     const [loading, setLoading] = useState(false);
     const [cuentaUpdated, setCuentaUpdated] = useState(cuentaContable);
     const [readOnlyFields, setReadOnlyFields] = useState({
-        pucId: false,
-        costCenterId: false,
-        depreciationRuleId: false,
-        customName: false,
+        puc_id: false,
+        cost_center_id: false,
+        depreciation_rule_id: false,
+        custom_name: false,
     });
 
-    // Cargar datos de selecciones
+    // Data loading — swagger endpoints:
+    // POST /api/v1/chart-of-accounts/search
+    // POST /api/v1/accounting-lists/currency-types/search
+    // POST /api/v1/cost-centers/search
+    // POST /api/v1/depretation-rules/search
     useEffect(() => {
+        const dtBody = { draw: 1, start: 0, length: 1000 };
         const loadData = async () => {
-            try {
-                // Cargar PUC
-                const pucUrl = base_url(['api', 'puc-catalog']);
-                const pucResponse = await fetchHelper.get(pucUrl, {}, 0);
-                setPucs(pucResponse.data || []);
-
-                // Cargar Monedas
-                const currencyUrl = base_url(['api', 'currencies']);
-                const currencyResponse = await fetchHelper.get(currencyUrl, {}, 0);
-                setCurrencies(currencyResponse.data || []);
-
-                // Cargar Centros de Costos
-                const costCenterUrl = base_url(['api', 'cost-centers']);
-                const costCenterResponse = await fetchHelper.get(costCenterUrl, {}, 0);
-                setCostCenters(costCenterResponse.data || []);
-
-                // Cargar Reglas de Depreciación
-                const depRuleUrl = base_url(['api', 'depreciation-rules']);
-                const depRuleResponse = await fetchHelper.get(depRuleUrl, {}, 0);
-                setDepreciationRules(depRuleResponse.data || []);
-            } catch (error) {
-                console.error('Error cargando datos:', error);
-            }
+            // Promise.allSettled: a 403 on one endpoint won't block the others
+            const [pucRes, currRes, ccRes, drRes] = await Promise.allSettled([
+                fetchHelper.post(base_url(['api', 'v1', 'chart-of-accounts', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'depretation-rules', 'search']), dtBody, {}, 0),
+            ]);
+            if (pucRes.status === 'fulfilled')  setPucs(pucRes.value.data || []);
+            if (currRes.status === 'fulfilled') setCurrencies(currRes.value.data || []);
+            if (ccRes.status === 'fulfilled')   setCostCenters(ccRes.value.data || []);
+            if (drRes.status === 'fulfilled')   setDepreciationRules(drRes.value.data || []);
+            const failed = [pucRes, currRes, ccRes, drRes].filter(r => r.status === 'rejected');
+            if (failed.length) console.warn('Algunos datos no pudieron cargarse:', failed.map(f => f.reason));
         };
         loadData();
     }, []);
 
-    // Actualizar estado cuando cambia la cuenta
+    // Sync local state when the selected account changes
     useEffect(() => {
         setCuentaUpdated(cuentaContable);
-        // Verificar si hay transacciones y deshabilitar campos
-        checkReadOnlyFields();
     }, [cuentaContable]);
-
-    const checkReadOnlyFields = async () => {
-        if (!cuentaContable.id) return;
-        
-        try {
-            // Aquí se haría una llamada al backend para verificar si hay transacciones
-            // Por ahora, asumimos que el backend retorna esta información
-            const url = base_url(['api', 'accounting-accounts', cuentaContable.id, 'readonly-fields']);
-            const response = await fetchHelper.get(url, {}, 0);
-            setReadOnlyFields(response.data || {});
-        } catch (error) {
-            console.error('Error verificando campos de solo lectura:', error);
-        }
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validar campos obligatorios
-        if (!cuentaUpdated.pucId) {
+        // Validar campos obligatorios (swagger UpdateAccountingAccountRequest)
+        if (!cuentaUpdated.puc_id) {
             setErrorMessage('Por favor seleccione una cuenta PUC');
             return;
         }
-        if (!cuentaUpdated.customName || cuentaUpdated.customName.trim() === '') {
+        if (!cuentaUpdated.custom_name || cuentaUpdated.custom_name.trim() === '') {
             setErrorMessage('El nombre personalizado de la cuenta es obligatorio');
             return;
         }
-        if (!cuentaUpdated.baseCurrency) {
+        if (!cuentaUpdated.base_currency) {
             setErrorMessage('Por favor seleccione una moneda base');
             return;
         }
@@ -101,30 +80,44 @@ const UpdatedCuentaContable = ({
             setErrorMessage('Por favor seleccione la naturaleza de la cuenta');
             return;
         }
+        if (!cuentaUpdated.status) {
+            setErrorMessage('Por favor seleccione el estado de la cuenta');
+            return;
+        }
 
-        // Validar formato del nombre
-        const nameRegex = /^[a-zA-Z0-9\s\-_]{1,50}$/;
-        if (!nameRegex.test(cuentaUpdated.customName)) {
+        // Swagger: maxLength 50, pattern ^[a-zA-Z0-9 _-]+$
+        const nameRegex = /^[a-zA-Z0-9 _-]{1,50}$/;
+        if (!nameRegex.test(cuentaUpdated.custom_name)) {
             setErrorMessage('El nombre debe tener entre 1 y 50 caracteres, solo alfanuméricos, espacios, guiones y guiones bajos');
             return;
         }
 
-        const url = base_url(['api', 'accounting-accounts', cuentaContable.id]);
+        // Swagger: PUT /api/v1/accounting-accounts/update
+        const updateUrl = base_url(['api', 'v1', 'accounting-accounts', 'update']);
+        const body = {
+            id: cuentaUpdated.id,
+            puc_id: cuentaUpdated.puc_id,
+            custom_name: cuentaUpdated.custom_name.trim(),
+            base_currency: cuentaUpdated.base_currency,
+            cost_center_id: cuentaUpdated.cost_center_id || null,
+            depreciation_rule_id: cuentaUpdated.depreciation_rule_id || null,
+            nature: cuentaUpdated.nature,
+            status: cuentaUpdated.status,
+        };
         try {
             setLoading(true);
-            await fetchHelper.put(url, cuentaUpdated, {}, 1000);
+            await fetchHelper.put(updateUrl, body, {}, 1000);
             
             setCuentaContable({
                 id: '',
-                pucId: '',
+                puc_id: '',
                 pucCode: '',
-                customName: '',
-                baseCurrency: '',
-                costCenterId: '',
-                depreciationRuleId: '',
+                custom_name: '',
+                base_currency: '',
+                cost_center_id: '',
+                depreciation_rule_id: '',
                 nature: '',
                 status: 'ACTIVE',
-                companyId: '',
             });
             
             dataTableRef?.current?.ajax.reload();
@@ -190,7 +183,8 @@ const UpdatedCuentaContable = ({
                         <AlertPage 
                             message={errorMessage} 
                             type="danger" 
-                            show={errorMessage !== ''} 
+                            show={errorMessage !== ''}
+                            onChange={() => setErrorMessage('')}
                         />
 
                         <form onSubmit={handleSubmit}>
@@ -214,26 +208,27 @@ const UpdatedCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
-                                        readOnlyFields.pucId,
+                                        readOnlyFields.puc_id,
                                         <InputSelectModal
                                             id="pucId_updated"
                                             label="Cuenta PUC"
-                                            value={cuentaUpdated.pucId}
+                                            value={cuentaUpdated.puc_id}
                                             onChange={(value) => {
                                                 const selectedPuc = pucs.find(p => p.id === parseInt(value));
                                                 setCuentaUpdated({
                                                     ...cuentaUpdated,
-                                                    pucId: parseInt(value) || '',
+                                                    puc_id: parseInt(value) || '',
                                                     pucCode: selectedPuc?.code || ''
                                                 });
                                             }}
-                                            error={errors.pucId}
+                                            error={errors.puc_id}
                                             placeholder="Seleccionar cuenta PUC"
                                             options={pucs.map(puc => ({
                                                 id: puc.id,
                                                 label: `${puc.code} - ${puc.name}`
                                             }))}
                                             required={true}
+                                            disabled={readOnlyFields.puc_id}
                                         />
                                     )}
                                 </div>
@@ -243,19 +238,20 @@ const UpdatedCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
-                                        readOnlyFields.customName,
+                                        readOnlyFields.custom_name,
                                         <InputModal
                                             type="text"
                                             id="customName_updated"
                                             label="Nombre Personalizado"
-                                            value={cuentaUpdated.customName}
+                                            value={cuentaUpdated.custom_name}
                                             onChange={(e) => setCuentaUpdated({ 
                                                 ...cuentaUpdated, 
-                                                customName: e.target.value 
+                                                custom_name: e.target.value 
                                             })}
-                                            error={errors.customName}
+                                            error={errors.custom_name}
                                             placeholder="Ej: Caja general"
-                                            disabled={readOnlyFields.customName}
+                                            maxLength={50}
+                                            disabled={readOnlyFields.custom_name}
                                             required={true}
                                         />
                                     )}
@@ -268,16 +264,16 @@ const UpdatedCuentaContable = ({
                                     <InputSelectModal
                                         id="baseCurrency_updated"
                                         label="Moneda Base"
-                                        value={cuentaUpdated.baseCurrency}
+                                        value={cuentaUpdated.base_currency}
                                         onChange={(value) => setCuentaUpdated({ 
                                             ...cuentaUpdated, 
-                                            baseCurrency: value 
+                                            base_currency: value 
                                         })}
-                                        error={errors.baseCurrency}
+                                        error={errors.base_currency}
                                         placeholder="Seleccionar moneda"
                                         options={currencies.map(currency => ({
-                                            id: currency.code,
-                                            label: `${currency.name} (${currency.code})`
+                                            id: currency.isoCode,
+                                            label: `${currency.name} (${currency.isoCode})`
                                         }))}
                                         required={true}
                                     />
@@ -288,22 +284,23 @@ const UpdatedCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
-                                        readOnlyFields.costCenterId,
+                                        readOnlyFields.cost_center_id,
                                         <InputSelectModal
                                             id="costCenterId_updated"
                                             label="Centro de Costos"
-                                            value={cuentaUpdated.costCenterId}
+                                            value={cuentaUpdated.cost_center_id}
                                             onChange={(value) => setCuentaUpdated({ 
                                                 ...cuentaUpdated, 
-                                                costCenterId: value 
+                                                cost_center_id: parseInt(value) || null
                                             })}
-                                            error={errors.costCenterId}
-                                            placeholder="Seleccionar centro de costos"
+                                            error={errors.cost_center_id}
+                                            placeholder="Seleccionar centro de costos (opcional)"
                                             options={costCenters.map(center => ({
                                                 id: center.id,
-                                                name: center.name
+                                                label: `${center.code} - ${center.name}`
                                             }))}
                                             clearable={true}
+                                            disabled={readOnlyFields.cost_center_id}
                                         />
                                     )}
                                 </div>
@@ -313,22 +310,23 @@ const UpdatedCuentaContable = ({
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
-                                        readOnlyFields.depreciationRuleId,
+                                        readOnlyFields.depreciation_rule_id,
                                         <InputSelectModal
                                             id="depreciationRuleId_updated"
                                             label="Regla de Depreciación"
-                                            value={cuentaUpdated.depreciationRuleId}
+                                            value={cuentaUpdated.depreciation_rule_id}
                                             onChange={(value) => setCuentaUpdated({ 
                                                 ...cuentaUpdated, 
-                                                depreciationRuleId: value 
+                                                depreciation_rule_id: parseInt(value) || null
                                             })}
-                                            error={errors.depreciationRuleId}
-                                            placeholder="Seleccionar regla de depreciación"
+                                            error={errors.depreciation_rule_id}
+                                            placeholder="Seleccionar regla de depreciación (opcional)"
                                             options={depreciationRules.map(rule => ({
                                                 id: rule.id,
-                                                name: rule.name
+                                                label: rule.name
                                             }))}
                                             clearable={true}
+                                            disabled={readOnlyFields.depreciation_rule_id}
                                         />
                                     )}
                                 </div>
@@ -348,8 +346,8 @@ const UpdatedCuentaContable = ({
                                         error={errors.nature}
                                         placeholder="Seleccionar naturaleza"
                                         options={[
-                                            { id: 'DEUDORA', label: 'Deudora' },
-                                            { id: 'ACREEDORA', label: 'Acreedora' }
+                                            { id: 'DEBIT', label: 'Deudora' },
+                                            { id: 'CREDIT', label: 'Acreedora' }
                                         ]}
                                         required={true}
                                     />

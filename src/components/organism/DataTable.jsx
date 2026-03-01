@@ -13,9 +13,11 @@ import { fetchHelper } from '../../utils/fetch';
 const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTableRef, buttons, title, setData, filtered = false, search = {
     value: '',
     checked: true,
-}, setSearch = () => {}, data = [], lengthMenu = [10, 25, 50, 75, 100]}) => {
+}, setSearch = () => {}, data = [], lengthMenu = [10, 25, 50, 75, 100], requestWrapper = null}) => {
     
     const token = useSelector(state => state.user.token);
+    const requestWrapperRef = useRef(requestWrapper);
+    useEffect(() => { requestWrapperRef.current = requestWrapper; }, [requestWrapper]);
 
     useEffect(() => {
         if (!tableRef?.current || !dataTableRef) return;
@@ -93,8 +95,8 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
         }else{
             config.ajax = async function(data, callback, settings) {
                 try {
-
-                    const response = await fetchHelper.post(base_url(url_api), data, {}, 0);
+                    const requestData = requestWrapperRef.current ? requestWrapperRef.current(data) : data;
+                    const response = await fetchHelper.post(base_url(url_api), requestData, {}, 0);
                     callback(response);
 
                 }catch(error){
