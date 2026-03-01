@@ -6,27 +6,20 @@ import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import TextareaModal from '../../../components/molecules/TextareaModal';
 
 
+
 const COMPANY_ID_HARDCODED = 79;
 
-const STATUS_LABELS = { ACTIVE: 'Activo', INACTIVE: 'Inactivo' };
-
-const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCosto, dataTableRef, setCentroCostoEdit, setCentroCostoUpdateError, mode = 'edit' }) => {
-    const isViewOnly = mode === 'view';
+const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCosto, dataTableRef, setCentroCostoEdit }) => {
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const id = centroCosto?.id;
-        if (!id) {
-            setErrorMessage('No se puede actualizar: falta el ID del centro de costo.');
-            return;
-        }
         const payload = {
             ...centroCosto,
             companyId: centroCosto.companyId ?? COMPANY_ID_HARDCODED,
         };
-        const url = base_url(['api', 'v1', 'cost-centers', id]);
+        const url = base_url(['api', 'v1', 'cost-centers', centroCosto.id]);
         try {
             await fetchHelper.put(url, payload, {}, 500, false);
             setCentroCosto({
@@ -43,7 +36,6 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
             setErrors({});
             setErrorMessage('');
         } catch (error) {
-            setCentroCostoUpdateError?.(true);
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
@@ -78,16 +70,14 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
             <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
                 <div className="modal-content">
                     <div className="modal-header">
-                        <h4 className="modal-title fw-bold">{isViewOnly ? 'Ver Centro de Costos' : 'Editar Centro de Costos'}</h4>
+                        <h4 className="modal-title fw-bold">Editar Centro de Costos</h4>
                         <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div className="modal-body">
-                        {!isViewOnly && (
-                            <div className={`alert alert-danger alert-dismissible ${errorMessage ? '' : 'd-none'}`} role="alert">
-                                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                <span>{errorMessage}</span>
-                            </div>
-                        )}
+                        <div className={`alert alert-danger alert-dismissible ${errorMessage ? '' : 'd-none'}`} role="alert">
+                            <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <span>{errorMessage}</span>
+                        </div>
 
                         <div className="row">
                             <div className="col-md-6 mb-3">
@@ -96,11 +86,10 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
                                     id="name_updated"
                                     label="Nombre del Centro de Costo"
                                     value={centroCosto.name ?? ''}
-                                    onChange={isViewOnly ? () => {} : (e) => setCentroCosto({ ...centroCosto, name: e.target.value })}
+                                    onChange={(e) => setCentroCosto({ ...centroCosto, name: e.target.value })}
                                     error={errors.name}
                                     placeholder="Nombre"
-                                    required={!isViewOnly}
-                                    readOnly={isViewOnly}
+                                    required
                                 />
                             </div>
                             <div className="col-md-6 mb-3">
@@ -122,79 +111,52 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
                                     id="code_updated"
                                     label="Código del Centro de Costo"
                                     value={centroCosto.code ?? ''}
-                                    onChange={isViewOnly ? () => {} : (e) => setCentroCosto({ ...centroCosto, code: e.target.value })}
+                                    onChange={(e) => setCentroCosto({ ...centroCosto, code: e.target.value })}
                                     error={errors.code}
                                     placeholder="EJ: CC001"
-                                    required={!isViewOnly}
-                                    readOnly={isViewOnly}
+                                    required
                                 />
                             </div>
                             <div className="col-md-6 mb-3">
-                                {isViewOnly ? (
-                                    <InputModal
-                                        type="text"
-                                        id="status_updated_view"
-                                        label="Estado"
-                                        value={STATUS_LABELS[centroCosto.status] ?? centroCosto.status ?? ''}
-                                        readOnly
-                                        placeholder="—"
-                                    />
-                                ) : (
-                                    <InputSelectModal
-                                        id="status_updated"
-                                        label="Estado"
-                                        value={centroCosto.status ?? ''}
-                                        onChange={(value) => setCentroCosto({ ...centroCosto, status: value })}
-                                        error={errors.status}
-                                        placeholder="Seleccione un estado"
-                                        options={[
-                                            { name: 'Activo', id: 'ACTIVE' },
-                                            { name: 'Inactivo', id: 'INACTIVE' },
-                                        ]}
-                                        required
-                                    />
-                                )}
+                                <InputSelectModal
+                                    id="status_updated"
+                                    label="Estado"
+                                    value={centroCosto.status ?? ''}
+                                    onChange={(value) => setCentroCosto({ ...centroCosto, status: value })}
+                                    error={errors.status}
+                                    placeholder="Seleccione un estado"
+                                    options={[
+                                        { name: 'Activo', id: 'ACTIVE' },
+                                        { name: 'Inactivo', id: 'INACTIVE' },
+                                    ]}
+                                    required
+                                />
                             </div>
                         </div>
 
                         <div className="row">
                             <div className="col-12 mb-3">
-                                {isViewOnly ? (
-                                    <div className="form-floating form-floating-outline">
-                                        <div className="form-control bg-light" style={{ minHeight: 80, whiteSpace: 'pre-wrap' }}>{centroCosto.description ?? '—'}</div>
-                                        <label>Descripción</label>
-                                    </div>
-                                ) : (
-                                    <TextareaModal
-                                        id="description_updated"
-                                        label="Descripción"
-                                        value={centroCosto.description ?? ''}
-                                        onChange={(e) => setCentroCosto({ ...centroCosto, description: e.target.value })}
-                                        error={errors.description}
-                                        placeholder="Descripcion opcional del centro de costo"
-                                    />
-                                )}
+                                <TextareaModal
+                                    id="description_updated"
+                                    label="Descripción"
+                                    value={centroCosto.description ?? ''}
+                                    onChange={(e) => setCentroCosto({ ...centroCosto, description: e.target.value })}
+                                    error={errors.description}
+                                    placeholder="Descripcion opcional del centro de costo"
+                                />
                             </div>
                         </div>
                     </div>
                     <div className="modal-footer justify-content-start">
-                        {isViewOnly ? (
-                            <button type="button" className="btn btn-secondary ms-auto" data-bs-dismiss="modal">
-                                Cerrar
-                            </button>
-                        ) : (
-                            <>
-                                <button type="button" className="btn btn-primary" onClick={handleSubmit}>
-                                    Guardar Cambios
-                                </button>
-                                <button type="button" className="btn btn-outline-secondary" onClick={handleClear}>
-                                    Limpiar
-                                </button>
-                                <button type="button" className="btn btn-danger ms-auto" data-bs-dismiss="modal">
-                                    Volver
-                                </button>
-                            </>
-                        )}
+                        <button type="button" className="btn btn-primary" onClick={handleSubmit}>
+                            Guardar Cambios
+                        </button>
+                        <button type="button" className="btn btn-outline-secondary" onClick={handleClear}>
+                            Limpiar
+                        </button>
+                        <button type="button" className="btn btn-danger ms-auto" data-bs-dismiss="modal">
+                            Volver
+                        </button>
                     </div>
                 </div>
             </div>
