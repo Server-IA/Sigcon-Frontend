@@ -283,7 +283,7 @@ const IndexPUC = () => {
             <div className="card">
                 <h5 className="card-header text-md-start text-center">Catálogo Único de Cuentas (PUC)</h5>
 
-                <AlertPage type={message.type} message={message.message} show={message.show} />
+                <AlertPage type={message.type} message={message.message} show={message.show} onChange={() => setMessage({ message: '', type: '', show: false })} />
 
                 <div className="card-datatable text-nowrap">
                     <DataTableReference

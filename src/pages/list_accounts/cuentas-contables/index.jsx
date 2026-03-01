@@ -31,29 +31,8 @@ const IndexCuentasContables = () => {
     const [data, setData] = useState([]);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
 
-    // AccountFilterRequest — swagger POST /api/v1/accounting-accounts
-    const initialFilters = {
-        custom_name: '',
-        base_currency: '',
-        cost_center_id: null,
-        depreciation_rule_id: null,
-        nature: '',
-        status: '',
-        puc_id: null,
-    };
-    const [activeFilters, setActiveFilters] = useState(initialFilters);
-
     // Swagger: POST /api/v1/accounting-accounts → { dtRequest: DataTableRequest, filters: AccountFilterRequest }
     const url = ['api', 'v1', 'accounting-accounts'];
-
-    // Keep a ref so the requestWrapper closure always reads the latest filters
-    const activeFiltersRef = useRef(activeFilters);
-    useEffect(() => { activeFiltersRef.current = activeFilters; }, [activeFilters]);
-
-    const requestWrapper = useCallback(
-        (dtData) => ({ dtRequest: dtData, filters: activeFiltersRef.current }),
-        []
-    );
 
     const actions = [
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
@@ -62,14 +41,13 @@ const IndexCuentasContables = () => {
 
     // Snake_case field names matching swagger UpdateAccountingAccountRequest / CreateAccountingAccountRequest
     const initialCuentaContable = {
-        id: '',
-        puc_id: '',
-        pucCode: '',
-        custom_name: '',
-        base_currency: '',
-        cost_center_id: '',
-        depreciation_rule_id: '',
-        nature: '',
+        id: null,
+        puc_id: null,
+        custom_name: null,
+        currency_type_id: null,
+        cost_center_id: null,
+        tax_rule_id: null,
+        nature: null,
         status: 'ACTIVE',
     };
 
@@ -77,11 +55,11 @@ const IndexCuentasContables = () => {
 
     // Column `data` keys must match backend response field names
     const [columns] = useState([
-        { title: 'Código PUC',          data: 'pucCode',              name: 'pucCode' },
-        { title: 'Nombre Personalizado', data: 'custom_name',          name: 'customName' },
-        { title: 'Moneda Base',          data: 'base_currency',        name: 'baseCurrency' },
-        { title: 'Centro de Costos',     data: 'costCenterName',       name: 'costCenterName', defaultContent: '—' },
-        { title: 'Regla de Depreciación', data: 'depreciationRuleName', name: 'depreciationRuleName', defaultContent: '—' },
+        { title: 'Nombre Personalizado', data: 'customName',          name: 'customName' },
+        { title: 'Código PUC',          data: 'pucAccount.code',       name: 'pucAccountCode' },
+        { title: 'Moneda Base',          data: 'currencyType.name',        name: 'baseCurrency' },
+        { title: 'Centro de Costos',     data: 'costCenter.name',       name: 'costCenterName', defaultContent: '—' },
+        { title: 'Regla tributaria', data: 'taxRuleId', name: 'taxRuleId', defaultContent: '—' },
         {
             title: 'Naturaleza', data: 'nature', name: 'nature',
             render: (nature) => NATURE_LABELS[nature] ?? nature,
@@ -110,6 +88,14 @@ const IndexCuentasContables = () => {
         }
         modalCreateInstance.current.show();
         setCuentaContable(initialCuentaContable);
+        setMessage({ message: '', type: '', show: false });
+    };
+
+    const openModalUpdate = () => {
+        if (!modalUpdateInstance.current) {
+            modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
+        }
+        modalUpdateInstance.current.show();
         setMessage({ message: '', type: '', show: false });
     };
 
@@ -149,24 +135,19 @@ const IndexCuentasContables = () => {
             // Snake_case fields matching swagger response
             const cuentaData = {
                 id: cuentaRef.id,
-                puc_id: cuentaRef.puc_id ?? '',
-                pucCode: cuentaRef.pucCode ?? '',
-                custom_name: cuentaRef.custom_name ?? '',
-                base_currency: cuentaRef.base_currency ?? '',
-                cost_center_id: cuentaRef.cost_center_id ?? '',
-                depreciation_rule_id: cuentaRef.depreciation_rule_id ?? '',
-                nature: cuentaRef.nature ?? '',
+                puc_id: cuentaRef.puc_id ?? null,
+                custom_name: cuentaRef.customName ?? null,
+                currency_type_id: cuentaRef.currencyType?.id ?? null,
+                cost_center_id: cuentaRef.costCenter?.id ?? null,
+                tax_rule_id: cuentaRef.taxRuleId ?? null,
+                nature: cuentaRef.nature ?? null,
                 status: cuentaRef.status ?? 'ACTIVE',
             };
 
             switch (action) {
                 case 'edit':
                     setCuentaContable(cuentaData);
-                    setMessage({ message: '', type: '', show: false });
-                    if (!modalUpdateInstance.current) {
-                        modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
-                    }
-                    modalUpdateInstance.current.show();
+                    openModalUpdate();
                     break;
 
                 case 'delete':
@@ -252,7 +233,7 @@ const IndexCuentasContables = () => {
                     search={search}
                     setSearch={setSearch}
                     filtered={true}
-                    requestWrapper={requestWrapper}
+                    // requestWrapper={requestWrapper}
                 />
             </div>
 
@@ -260,9 +241,9 @@ const IndexCuentasContables = () => {
                 filterRef={filterRef}
                 filterInstance={filterInstance}
                 dataTableRef={dataTableRef}
-                activeFilters={activeFilters}
-                setActiveFilters={setActiveFilters}
-                initialFilters={initialFilters}
+                // activeFilters={activeFilters}
+                // setActiveFilters={setActiveFilters}
+                // initialFilters={initialFilters}
             />
         </div>
 

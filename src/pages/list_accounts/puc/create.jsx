@@ -117,6 +117,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                             message={errorMessage}
                             type="danger"
                             show={errorMessage !== ''}
+                            onChange={() => setErrorMessage('')}
                         />
 
                         <div className="row">

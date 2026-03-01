@@ -4,6 +4,7 @@ import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import { useState, useEffect } from "react";
 import { fetchHelper } from "../../../utils/fetch";
 import { base_url } from "../../../utils/functions";
+import InputDate from "../../../components/molecules/InputDate";
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const DEPRECIATION_TYPES = [
@@ -28,10 +29,11 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
     const [ruleUpdated, setRuleUpdated] = useState({
         id: '',
         name: '',
-        depreciationType: '',
-        depreciationRate: '',
-        usefulLife: '',
+        depretationType: '',
+        depretationRate: '',
+        usefulLifeYears: '',
         residualValue: '',
+        effectiveDate: '',
         status: 'ACTIVE',
     });
 
@@ -40,10 +42,11 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
         setRuleUpdated({
             id: rule.id ?? '',
             name: rule.name ?? '',
-            depreciationType: rule.depreciationType ?? '',
-            depreciationRate: rule.depreciationRate ?? '',
-            usefulLife: rule.usefulLife ?? '',
+            depretationType: rule.depretationType ?? '',
+            depretationRate: rule.depretationRate ?? '',
+            usefulLifeYears: rule.usefulLifeYears ?? '',
             residualValue: rule.residualValue ?? '',
+            effectiveDate: rule.effectiveDate ?? '',
             status: rule.status ?? 'ACTIVE',
         });
         setErrors({});
@@ -53,14 +56,15 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
     // ── Enviar actualización ──
     const handleUpdate = async () => {
         try {
-            const url = base_url(['depreciationRules', 'update']);
+            const url = base_url(['api', 'v1', 'depreciation-rules', 'update']);
             const payload = {
                 id: Number(ruleUpdated.id),
                 name: ruleUpdated.name,
-                depretationType: ruleUpdated.depreciationType,
-                depretationRate: Number(ruleUpdated.depreciationRate),
-                usefulLifeYears: Number(ruleUpdated.usefulLife),
+                depretationType: ruleUpdated.depretationType,
+                depretationRate: Number(ruleUpdated.depretationRate),
+                usefulLifeYears: Number(ruleUpdated.usefulLifeYears),
                 residualValue: Number(ruleUpdated.residualValue),
+                effectiveDate: ruleUpdated.effectiveDate,
                 status: ruleUpdated.status,
             };
             await fetchHelper.put(url, payload, {}, 1000);
@@ -68,17 +72,11 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
             setRule({
                 id: '',
                 name: '',
-                depreciationType: '',
-                accountId: '',
-                accountName: '',
-                depreciationRate: '',
-                usefulLife: '',
+                depretationType: '',
+                depretationRate: '',
+                usefulLifeYears: '',
                 residualValue: '',
                 effectiveDate: '',
-                calculationBase: '',
-                parameters: '',
-                exception: '',
-                applicableNorm: '',
                 status: 'ACTIVE',
             });
 
@@ -119,7 +117,7 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
 
                         {/* ID (solo lectura) + Nombre */}
                         <div className="row">
-                            <div className="col-md-4 mb-4 mt-2">
+                            {/* <div className="col-md-4 mb-4 mt-2">
                                 <div style={{ cursor: 'not-allowed' }}>
                                     <InputModal
                                         type="text"
@@ -133,8 +131,8 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                                         readOnly={true}
                                     />
                                 </div>
-                            </div>
-                            <div className="col-md-8 mb-4 mt-2">
+                            </div> */}
+                            <div className="col mb-4 mt-2">
                                 <InputModal
                                     type="text"
                                     id="dr_name_update"
@@ -154,7 +152,7 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                                 <InputSelectModal
                                     id="dr_depreciationType_update"
                                     label="Tipo de depreciación"
-                                    value={ruleUpdated.depreciationType}
+                                    value={ruleUpdated.depretationType}
                                     onChange={(value) => setRuleUpdated({ ...ruleUpdated, depreciationType: value })}
                                     error={errors.depretationType}
                                     placeholder="Seleccione el tipo"
@@ -178,31 +176,31 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
 
                         {/* Tasa + Vida útil + Valor residual */}
                         <div className="row">
-                            <div className="col-md-4 mb-4 mt-2">
+                            <div className="col-lg-4 col-md-12 col-sm-12 mb-4 mt-2">
                                 <InputModal
                                     type="number"
                                     id="dr_depreciationRate_update"
                                     label="Tasa de depreciación (%)"
-                                    value={ruleUpdated.depreciationRate}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, depreciationRate: e.target.value })}
+                                    value={ruleUpdated.depretationRate}
+                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, depretationRate: e.target.value })}
                                     error={errors.depretationRate}
                                     placeholder="Ej. 20.00"
                                     required={true}
                                 />
                             </div>
-                            <div className="col-md-4 mb-4 mt-2">
+                            <div className="col-lg-4 col-md-12 col-sm-12 mb-4 mt-2">
                                 <InputModal
                                     type="number"
                                     id="dr_usefulLife_update"
                                     label="Vida útil (años)"
-                                    value={ruleUpdated.usefulLife}
-                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, usefulLife: e.target.value })}
+                                    value={ruleUpdated.usefulLifeYears}
+                                    onChange={(e) => setRuleUpdated({ ...ruleUpdated, usefulLifeYears: e.target.value })}
                                     error={errors.usefulLifeYears}
                                     placeholder="Ej. 5"
                                     required={true}
                                 />
                             </div>
-                            <div className="col-md-4 mb-4 mt-2">
+                            <div className="col-lg-4 col-md-12 col-sm-12 mb-4 mt-2">
                                 <InputModal
                                     type="number"
                                     id="dr_residualValue_update"
