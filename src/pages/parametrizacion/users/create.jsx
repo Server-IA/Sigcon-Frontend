@@ -21,6 +21,7 @@ const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setU
                 name: user.name,
                 lastname: user.lastname,
                 email: user.email,
+                username: user.username,
                 password: user.password,
                 roles: [user.roles]
             };
@@ -32,6 +33,7 @@ const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setU
                 name: '',
                 lastname: '',
                 email: '',
+                username: '',
                 password: '',
                 status: 'ACTIVE',
                 roleId: null
@@ -117,6 +119,18 @@ const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setU
                                     onChange={(e) => setUser({ ...user, email: e.target.value })}
                                     error={errors.email}
                                     placeholder="correo@ejemplo.com"
+                                />
+                            </div>
+
+                            <div className="col mb-6 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="username"
+                                    label="Nombre de usuario"
+                                    value={user.username}
+                                    onChange={(e) => setUser({ ...user, username: e.target.value })}
+                                    error={errors.username}
+                                    placeholder="Nombre de usuario"
                                 />
                             </div>
                         </div>
