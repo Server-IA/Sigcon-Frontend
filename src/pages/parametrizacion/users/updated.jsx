@@ -3,6 +3,7 @@ import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import AlertPage from '../../../components/molecules/AlertPage';
 
 const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setUserUpdate, roles }) => {
 
@@ -25,7 +26,8 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
                 lastname: user.lastname,
                 email: user.email,
                 status: user.status,
-                roles: [user.roles]
+                roles: [user.roles],
+                username: user.username
             };
 
             // Solo incluir password si se está cambiando
@@ -42,7 +44,8 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
                 email: '',
                 password: '',
                 status: 'ACTIVE',
-                roles: ''
+                roles: '',
+                username: ''
             });
             
             dataTableRef?.current?.ajax.reload();
@@ -80,10 +83,7 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
                         </button>
                     </div>
                     <div className="modal-body">
-                        <div className={`alert alert-danger alert-dismissible ${errorMessage === '' ? 'd-none' : ''}`} role="alert">
-                            <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            <span>{errorMessage}</span>
-                        </div>
+                        <AlertPage message={errorMessage} type='danger' show={errorMessage !== ''} onChange={() => setErrorMessage('')} />
 
                         <div className="row">
                             <div className="col mb-6 mt-2">
@@ -107,6 +107,18 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
                                     onChange={(e) => setUser({ ...user, lastname: e.target.value })}
                                     error={errors.lastname}
                                     placeholder="Apellido del usuario"
+                                />
+                            </div>
+
+                            <div className="col mb-6 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="username_updated"
+                                    label="Nombre de usuario"
+                                    value={user.username}
+                                    onChange={(e) => setUser({ ...user, username: e.target.value })}
+                                    error={errors.username}
+                                    placeholder="Nombre de usuario"
                                 />
                             </div>
                         </div>
