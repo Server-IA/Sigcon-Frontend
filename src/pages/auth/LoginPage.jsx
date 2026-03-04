@@ -10,7 +10,7 @@ import { base_redirect_path } from '../../utils/functions';
 const LoginPage = () => {
   const dispatch = useDispatch();
   const [formData, setFormData] = useState({
-    email: 'superadmin@gmail.com',
+    usernameOrEmail: 'superadmin',
     password: '123456',
     rememberMe: false
   });
@@ -31,7 +31,7 @@ const LoginPage = () => {
     e.preventDefault();
     
     // Validación básica
-    if (!formData.email || !formData.password) {
+    if (!formData.usernameOrEmail || !formData.password) {
       setError('Por favor completa todos los campos');
       return;
     }
