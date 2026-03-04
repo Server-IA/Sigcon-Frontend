@@ -88,14 +88,22 @@ const IndexPUC = () => {
         { title: 'ID',         data: 'id',           searchable: false },
         { title: 'Código',     data: 'code',         name: 'code' },
         { title: 'Nombre',     data: 'name',         name: 'name' },
-        { title: 'Clase',      data: 'accountClass', name: 'accountClass', render: (val) => val ?? '-' },
-        { title: 'Nivel',      data: 'level',        name: 'level',        render: (val) => val ?? '-' },
-        { title: 'Naturaleza', data: 'nature',       name: 'nature',       render: (val) => val ?? '-' },
+        { title: 'Clase',      data: 'accountClass', name: 'accountClass', render: (val) => {
+            
+            return ACCOUNT_CLASSES.find(a => a.id === val)?.name ?? '-';
+            
+        } },
+        { title: 'Nivel',      data: 'level',        name: 'level',        render: (val) => {
+            return LEVELS.find(l => l.id === val)?.name ?? '-';
+        } },
+        { title: 'Naturaleza', data: 'nature',       name: 'nature',       render: (val) => {
+            return ACCOUNT_NATURES.find(n => n.id === val)?.name ?? '-';
+        } },
         {
             title: 'Estado', data: 'status', name: 'status',
-            render: (status) => status === 'ACTIVE'
-                ? `<span class="badge bg-label-success">Activa</span>`
-                : `<span class="badge bg-label-danger">Inactiva</span>`
+            render: (status) => {
+                return `<span class="badge bg-label-${status === 'ACTIVE' ? 'success' : 'danger'}">${ACCOUNT_STATUSES.find(s => s.id === status)?.name ?? '-'}</span>`;
+            }
         },
         {
             title: 'Acciones', data: 'id', searchable: false,

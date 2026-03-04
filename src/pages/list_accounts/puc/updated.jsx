@@ -142,9 +142,10 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                             message={errorMessage}
                             type="danger"
                             show={errorMessage !== ''}
+                            onClose={() => setErrorMessage('')}
                         />
 
-                        <div className="row">
+                        {/* <div className="row">
                             <div className="col mb-6 mt-2">
                                 <InputModal
                                     type="text"
@@ -157,10 +158,10 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                                     readOnly
                                 />
                             </div>
-                        </div>
+                        </div> */}
 
                         <div className="row">
-                            <div className="col mb-6 mt-2">
+                            <div className="col-lg-6 col-md-6 col-sm-12 mb-6 mt-2">
                                 <InputModal
                                     type="text"
                                     id="puc_code_update"
@@ -180,10 +181,8 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                                     </small>
                                 )}
                             </div>
-                        </div>
-
-                        <div className="row">
-                            <div className="col mb-6 mt-2">
+                            
+                            <div className="col-lg-6 col-md-6 col-sm-12 mb-6 mt-2">
                                 <InputModal
                                     type="text"
                                     id="puc_name_update"
@@ -240,7 +239,7 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                         </div>
 
                         <div className="row">
-                            <div className="col-md-6 mb-6 mt-2">
+                            <div className="col mb-6 mt-2">
                                 <InputSelectModal
                                     id="puc_status_update"
                                     label="Estado"
