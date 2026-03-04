@@ -10,7 +10,7 @@ import { base_redirect_path } from '../../utils/functions';
 const LoginPage = () => {
   const dispatch = useDispatch();
   const [formData, setFormData] = useState({
-    usernameOrEmail: 'superadmin',
+    usernameOrEmail: 'superadmin@gmail.com',
     password: '123456',
     rememberMe: false
   });
