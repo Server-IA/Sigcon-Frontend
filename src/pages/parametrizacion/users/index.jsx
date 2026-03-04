@@ -18,6 +18,7 @@ const IndexUsers = () => {
         name: '',
         lastname: '',
         email: '',
+        username: '',
         password: '',
         status: 'ACTIVE',
         roles: ''
@@ -117,7 +118,7 @@ const IndexUsers = () => {
         if (!modalCreateInstance.current) {
             modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
-        setUser({ id: '', name: '', lastname: '', email: '', password: '', status: 'ACTIVE', roles: '' });
+        setUser({ id: '', name: '', lastname: '', email: '', username: '', password: '', status: 'ACTIVE', roles: '' });
         modalCreateInstance.current.show();
     };
 
@@ -206,6 +207,7 @@ const IndexUsers = () => {
                         name: userRef.name,
                         lastname: userRef.lastname,
                         email: userRef.email,
+                        username: userRef.username,
                         password: '',
                         status: userRef.status,
                         roles: userRef.roles.join(', ') || []
