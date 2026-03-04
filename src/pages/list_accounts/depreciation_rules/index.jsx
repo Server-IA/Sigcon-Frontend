@@ -216,7 +216,7 @@ const IndexDepreciationRules = () => {
                             if (!motivo.isConfirmed) return;
 
                             try {
-                                const deleteUrl = base_url(['depreciationRules', 'delete', id], { reason: motivo.value });
+                                const deleteUrl = base_url(['api/v1/depreciation-rules', 'delete', id], { reason: motivo.value });
                                 await fetchHelper.delete(deleteUrl, {}, {}, 500, false);
                                 dataTableRef?.current?.ajax.reload();
                                 setRuleDelete(true);
@@ -250,9 +250,9 @@ const IndexDepreciationRules = () => {
             <div className="card">
                 <h5 className="card-header text-md-start text-center">Reglas de Depreciación</h5>
 
-                <AlertPage type="success" message="La regla de depreciación ha sido creada exitosamente." show={ruleCreate} />
-                <AlertPage type="success" message="La regla de depreciación fue actualizada exitosamente." show={ruleEdit} />
-                <AlertPage type="success" message="La regla de depreciación ha sido eliminada exitosamente." show={ruleDelete} />
+                <AlertPage type="success" message="La regla de depreciación ha sido creada exitosamente." show={ruleCreate} onChange={() => setRuleCreate(false)} />
+                <AlertPage type="success" message="La regla de depreciación fue actualizada exitosamente." show={ruleEdit} onChange={() => setRuleEdit(false)} />
+                <AlertPage type="success" message="La regla de depreciación ha sido eliminada exitosamente." show={ruleDelete} onChange={() => setRuleDelete(false)} />
 
                 <div className="card-datatable text-nowrap">
                     <DataTableReference

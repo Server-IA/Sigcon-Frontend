@@ -6,6 +6,7 @@ const initialState = {
 export default function userReducer(state = initialState, action) {
     switch (action.type) {
         case "SET_USER":
+            action.payload.isAdmin = action.payload.roles?.some(r => r === 'SUPERADMIN') || false;
             localStorage.setItem('user', JSON.stringify(action.payload));
             return {
                 ...state,
