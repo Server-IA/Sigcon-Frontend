@@ -59,11 +59,12 @@ const IndexCuentasContables = () => {
 
     // Column `data` keys must match backend response field names
     const [columns] = useState([
+        { title: 'PUC', data: 'pucAccount.name', name: 'pucAccountName' },
         { title: 'Nombre Personalizado', data: 'customName',          name: 'customName' },
         { title: 'Código PUC',          data: 'pucAccount.code',       name: 'pucAccountCode' },
         { title: 'Moneda Base',          data: 'currencyType.name',        name: 'baseCurrency' },
         { title: 'Centro de Costos',     data: 'costCenter.name',       name: 'costCenterName', defaultContent: '—' },
-        { title: 'Regla tributaria', data: 'taxRuleId', name: 'taxRuleId', defaultContent: '—' },
+        // { title: 'Regla tributaria', data: 'taxRuleId', name: 'taxRuleId', defaultContent: '—' },
         {
             title: 'Naturaleza', data: 'nature', name: 'nature',
             render: (nature) => NATURE_LABELS[nature] ?? nature,
