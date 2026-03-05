@@ -248,7 +248,7 @@ const ExchangeRateIndex = () => {
                 />
             </div>
 
-            {userPermissions.some(p => p.code === 'CREATE_EXCHANGE_RATES' && p.type === 'CREATE') || isAdmin && <CreateExchangeRate
+            <CreateExchangeRate
                 dataTableRef={dataTableRef}
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
@@ -256,9 +256,9 @@ const ExchangeRateIndex = () => {
                 setExchangeRate={setExchangeRate}
                 setExchangeRateMessage={setExchangeRateMessage}
                 currencies={currencies}
-            />}
+            />
 
-            {userPermissions.some(p => p.code === 'UPDATE_EXCHANGE_RATES' && p.type === 'UPDATE') || isAdmin && <UpdateExchangeRate
+            <UpdateExchangeRate
                 dataTableRef={dataTableRef}
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
@@ -266,7 +266,7 @@ const ExchangeRateIndex = () => {
                 setExchangeRate={setExchangeRate}
                 setExchangeRateMessage={setExchangeRateMessage}
                 currencies={currencies}
-            />}
+            />
 
         </div>
     )

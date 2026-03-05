@@ -247,23 +247,23 @@ const IndexCentrosCosto = () => {
                 <FilterCentroCosto filterRef={filterRef} filterInstance={filterInstance} dataTableRef={dataTableRef} />
             </div>
 
-            {userPermissions.some(p => p.code === 'CREATE_COST_CENTERS' && p.type === 'CREATE') || isAdmin ? <CreateCentroCosto
+             <CreateCentroCosto
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 centroCosto={centroCosto}
                 setCentroCosto={setCentroCosto}
                 dataTableRef={dataTableRef}
                 setCentroCostoCreate={setCentroCostoCreate}
-            /> : null}
+            />
 
-            {userPermissions.some(p => p.code === 'UPDATE_COST_CENTERS' && p.type === 'UPDATE') || isAdmin ? <UpdatedCentroCosto
+            <UpdatedCentroCosto
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
                 centroCosto={centroCosto}
                 setCentroCosto={setCentroCosto}
                 dataTableRef={dataTableRef}
                 setCentroCostoEdit={setCentroCostoEdit}
-            /> : null}
+            />
 
             <div className="modal fade" ref={modalConfirmDeleteRef} tabIndex={-1} aria-hidden="true">
                 <div className="modal-dialog modal-dialog-centered" role="document">
