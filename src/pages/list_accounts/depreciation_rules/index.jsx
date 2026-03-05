@@ -281,23 +281,23 @@ const IndexDepreciationRules = () => {
                 />
             </div>
 
-            {userPermissions.some(p => p.code === 'CREATE_DEPRECIATION_RULE' && p.type === 'CREATE') || isAdmin ? <CreateDepreciationRule
+            <CreateDepreciationRule
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 rule={rule}
                 setRule={setRule}
                 dataTableRef={dataTableRef}
                 setRuleCreate={setRuleCreate}
-            /> : null}
+            />
 
-            {userPermissions.some(p => p.code === 'UPDATE_DEPRECIATION_RULE' && p.type === 'UPDATE') || isAdmin ? <UpdatedDepreciationRule
+            <UpdatedDepreciationRule
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
                 rule={rule}
                 setRule={setRule}
                 dataTableRef={dataTableRef}
                 setRuleEdit={setRuleEdit}
-            /> : null}
+            />
         </>
     );
 };

@@ -252,23 +252,23 @@ const IndexCuentasContables = () => {
             />
         </div>
 
-        {userPermissions.some(p => p.code === 'CREATE_ACCOUNTING_ACCOUNT' && p.type === 'CREATE') || isAdmin ? <CreateCuentaContable
+         <CreateCuentaContable
             modalRef={modalCreateRef}
             modalInstance={modalCreateInstance}
             cuentaContable={cuentaContable}
             setCuentaContable={setCuentaContable}
             dataTableRef={dataTableRef}
             setMessage={setMessage}
-        /> : null}
+        />
 
-        {userPermissions.some(p => p.code === 'UPDATE_ACCOUNTING_ACCOUNT' && p.type === 'UPDATE') || isAdmin ? <UpdatedCuentaContable
+        <UpdatedCuentaContable
             modalRef={modalUpdateRef}
             modalInstance={modalUpdateInstance}
             cuentaContable={cuentaContable}
             setCuentaContable={setCuentaContable}
             dataTableRef={dataTableRef}
             setMessage={setMessage}
-        /> : null}
+        />
     </>;
 };
 

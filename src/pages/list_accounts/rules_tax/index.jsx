@@ -312,8 +312,8 @@ const RulesTaxIndex = () => {
                     setData={setData}
                 />
             </div>
-            {
-              userPermissions.some(p => p.code === 'CREATE_RULER_TAX' && p.type === 'CREATE') || isAdmin && <CreateRulesTax
+            
+              <CreateRulesTax
                 rulesTax={rulesTax}
                 setRulesTax={setRulesTax}
                 typeRulerTaxOptions={typeRulerTaxOptions}
@@ -322,10 +322,9 @@ const RulesTaxIndex = () => {
                 dataTableRef={dataTableRef}
                 setRulesTaxMessage={setRulesTaxMessage}
               />  
-            }
+            
 
-            {
-                userPermissions.some(p => p.code === 'UPDATE_RULER_TAX' && p.type === 'UPDATE') || isAdmin && <UpdateRulesTax
+            <UpdateRulesTax
                     rulesTax={rulesTax}
                     setRulesTax={setRulesTax}
                     typeRulerTaxOptions={typeRulerTaxOptions}
@@ -335,10 +334,8 @@ const RulesTaxIndex = () => {
                     dataTableRef={dataTableRef}
                     setRulesTaxMessage={setRulesTaxMessage}
                 />
-            }
 
-            {
-                userPermissions.some(p => p.code === 'ASSIGN_ACCOUNTING_ACCOUNT_TO_RULER_TAX' && p.type === 'ASSIGN') || isAdmin && <AssignAccount
+            <AssignAccount
                     ruler={rulesTax}
                     accountingAccounts={accountingAccounts}
                     modalRef={modalAssignAccountRef}
@@ -346,7 +343,6 @@ const RulesTaxIndex = () => {
                     dataTableRef={dataTableRef}
                     setRulesTaxMessage={setRulesTaxMessage}
                 />
-            }
         </div>
 
     )
