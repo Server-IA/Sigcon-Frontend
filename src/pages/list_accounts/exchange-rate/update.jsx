@@ -18,27 +18,27 @@ const UpdateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
 
     const handleSave = async () => {
         let valid = true;
-        let errors = [];
+        let errorsData = {};
         if (!exchangeRate.currencyId) {
-            errors.push({ field: 'currencyId', message: 'La moneda a cambiar es requerida' });
+            errorsData.currencyId = 'La moneda a cambiar es requerida';
         }
         if (!exchangeRate.currencyIso) {
-            errors.push({ field: 'currencyIso', message: 'La moneda de cambio es requerida' });
+            errorsData.currencyIso = 'La moneda de cambio es requerida';
         }
         if (!exchangeRate.exchangeType) {
-            errors.push({ field: 'exchangeType', message: 'El tipo de cambio es requerido' });
+            errorsData.exchangeType = 'El tipo de cambio es requerido';
         }
         if (!exchangeRate.value) {
-            errors.push({ field: 'value', message: 'La tasa de cambio es requerida' });
+            errorsData.value = 'La tasa de cambio es requerida';
         }
         if (!exchangeRate.startDate) {
-            errors.push({ field: 'startDate', message: 'La fecha de inicio es requerida' });
+            errorsData.startDate = 'La fecha de inicio es requerida';
         }
         if (!exchangeRate.endDate) {
-            errors.push({ field: 'endDate', message: 'La fecha de fin es requerida' });
+            errorsData.endDate = 'La fecha de fin es requerida';
         }
-        if (errors.length > 0) {
-            setErrors(errors);
+        if (Object.keys(errorsData).length > 0) {
+            setErrors(errorsData);
             return;
         }
 
