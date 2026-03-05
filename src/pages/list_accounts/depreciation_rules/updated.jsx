@@ -53,6 +53,10 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
         setErrorMessage('');
     }, [rule]);
 
+    useEffect(() => {
+        console.log(ruleUpdated, 'ruleUpdated');
+    }, [ruleUpdated]);
+
     // ── Enviar actualización ──
     const handleUpdate = async () => {
         try {
@@ -153,7 +157,7 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                                     id="dr_depreciationType_update"
                                     label="Tipo de depreciación"
                                     value={ruleUpdated.depretationType}
-                                    onChange={(value) => setRuleUpdated({ ...ruleUpdated, depreciationType: value })}
+                                    onChange={(value) => setRuleUpdated({ ...ruleUpdated, depretationType: value })}
                                     error={errors.depretationType}
                                     placeholder="Seleccione el tipo"
                                     options={DEPRECIATION_TYPES}
