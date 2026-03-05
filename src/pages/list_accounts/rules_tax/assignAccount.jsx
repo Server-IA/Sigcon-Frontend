@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import AlertPage from "../../../components/molecules/AlertPage";
 import { fetchHelper } from "../../../utils/fetch";
 import { base_url } from "../../../utils/functions";
-import InputSelectModal from "../../../components/molecules/InputSelectModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
 const AssignAccount = ({ ruler, accountingAccounts, modalRef, modalInstance, dataTableRef, setRulesTaxMessage}) => {
 
