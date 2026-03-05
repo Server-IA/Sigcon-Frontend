@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const InputDateRange = ({ id, label, dateInit, dateEnd, onChange, error, placeholder, required}) => {
+const InputDateRange = ({ id, label, dateInit, dateEnd, onChange, error, placeholder, required = false}) => {
 
     const dateRangeRef = useRef(null);
 
@@ -49,7 +49,7 @@ const InputDateRange = ({ id, label, dateInit, dateEnd, onChange, error, placeho
                 required={required}
                 ref={dateRangeRef}
             />
-            <label htmlFor={id}>{label}</label>
+            <label htmlFor={id}>{label} {required ? <span className="text-danger">*</span> : null}</label>
             {error && <div className="invalid-feedback">{error}</div>}
         </div>
     )
