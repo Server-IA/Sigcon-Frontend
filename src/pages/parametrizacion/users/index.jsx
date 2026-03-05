@@ -6,8 +6,12 @@ import FilterUser from "./filter";
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
+import { useSelector } from "react-redux";
 
 const IndexUsers = () => {
+
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('USER')})|| []; // Permisos del usuario
+    const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
 
     const [data, setData] = useState([]);
     const tableRefUser = useRef(null);
@@ -60,18 +64,18 @@ const IndexUsers = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(userPermissions.some(p => p.code === 'CREATE_USER' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Usuario</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: function () {
                 openModalCreate();
             }
-        }
+        }] : []),
     ];
 
     const actions = [
-        { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        ...(userPermissions.some(p => p.code === 'UPDATE_USER' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
+        ...(userPermissions.some(p => p.code === 'DELETE_USER' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' }] : []),
     ];
 
     const columns = [
@@ -288,7 +292,7 @@ const IndexUsers = () => {
                 roles={roles}
             />
 
-            <CreateUser
+            {userPermissions.some(p => p.code === 'CREATE_USER' && p.type === 'CREATE') || isAdmin ? <CreateUser
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 user={user}
@@ -296,9 +300,9 @@ const IndexUsers = () => {
                 dataTableRef={dataTableRefUser}
                 setUserCreate={setUserCreate}
                 roles={roles}
-            />
+            /> : null}
 
-            <UpdatedUser
+            {userPermissions.some(p => p.code === 'UPDATE_USER' && p.type === 'UPDATE') || isAdmin ? <UpdatedUser
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
                 user={user}
@@ -306,7 +310,7 @@ const IndexUsers = () => {
                 dataTableRef={dataTableRefUser}
                 setUserUpdate={setUserUpdate}
                 roles={roles}
-            />
+            /> : null}
         </div>
     );
 };
