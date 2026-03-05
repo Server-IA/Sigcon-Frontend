@@ -10,6 +10,7 @@ import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 import DropzoneModal from '../../../components/molecules/DropzoneModal';
+import { useSelector } from 'react-redux';
 
 const ACCOUNT_CLASSES = [
     { id: 'ASSET',             name: 'Activo' },
@@ -41,6 +42,10 @@ const ACCOUNT_STATUSES = [
 ];
 
 const IndexPUC = () => {
+
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('CHART_OF_ACCOUNT')})|| []; // Permisos del usuario
+    const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
+
 
     const tableRef    = useRef(null);
     const dataTableRef = useRef(null);
@@ -80,8 +85,8 @@ const IndexPUC = () => {
     const url = ['api', 'v1', 'chart-of-accounts', 'search'];
 
     const actions = [
-        { key: 'edit',   icon: 'ri-edit-line',       class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger',  title: 'Eliminar' },
+        ...(userPermissions.some(p => p.code === 'UPDATE_CHART_OF_ACCOUNT' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit',   icon: 'ri-edit-line',       class: 'btn-label-primary', title: 'Editar' }] : []),
+        ...(userPermissions.some(p => p.code === 'DELETE_CHART_OF_ACCOUNT' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger',  title: 'Eliminar' }] : []),
     ];
 
     const columns = [
@@ -164,16 +169,16 @@ const IndexPUC = () => {
                 filterInstance.current.show();
             }
         },
-        {
-            text: '<i class="ri-upload-2-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Cargue Masivo</span>',
-            className: 'btn rounded-pill btn-label-success waves-effect mx-1 my-2',
-            action: function () { openModalBulk(); }
-        },
-        {
+        // {
+        //     text: '<i class="ri-upload-2-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Cargue Masivo</span>',
+        //     className: 'btn rounded-pill btn-label-success waves-effect mx-1 my-2',
+        //     action: function () { openModalBulk(); }
+        // },
+        ...(userPermissions.some(p => p.code === 'CREATE_CHART_OF_ACCOUNT' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Cuenta PUC</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-1 my-2',
             action: function () { openModalCreate(); }
-        },
+        }] : []),
     ];
 
     useEffect(() => {
@@ -320,7 +325,7 @@ const IndexPUC = () => {
                 />
             </div>
 
-            <CreatePUC
+            {userPermissions.some(p => p.code === 'CREATE_CHART_OF_ACCOUNT' && p.type === 'CREATE') || isAdmin ? <CreatePUC
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 account={account}
@@ -330,9 +335,9 @@ const IndexPUC = () => {
                 accountClasses={ACCOUNT_CLASSES}
                 levels={LEVELS}
                 accountNatures={ACCOUNT_NATURES}
-            />
+            /> : null}
 
-            <UpdatedPUC
+            {userPermissions.some(p => p.code === 'UPDATE_CHART_OF_ACCOUNT' && p.type === 'UPDATE') || isAdmin ? <UpdatedPUC
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
                 account={account}
@@ -343,7 +348,7 @@ const IndexPUC = () => {
                 levels={LEVELS}
                 accountNatures={ACCOUNT_NATURES}
                 accountStatuses={ACCOUNT_STATUSES}
-            />
+            /> : null}
 
             <DropzoneModal
                 modalRef={modalBulkRef}

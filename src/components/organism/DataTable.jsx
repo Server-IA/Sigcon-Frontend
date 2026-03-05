@@ -103,7 +103,7 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
                         recordsTotal: 0,
                         recordsFiltered: 0
                     })
-                    if(error.status === 403){
+                    if(error.status === 403 || error.msg === 'Access Denied'){
                         
                         // console.log("Error 403");
                         
@@ -112,7 +112,7 @@ const DataTableReference = ({ url_api, columns, method = 'GET', tableRef, dataTa
                                 <tr>
                                     <td colspan="${columns.length}" class="text-center text-danger py-5">
                                         <i class="ri-lock-line fs-2 d-block mb-2"></i>
-                                        ${error.message || error.msg || 'No tiene permisos para ver esta información'}
+                                        No tiene permisos para ver esta información
                                     </td>
                                 </tr>
                             </tbody>

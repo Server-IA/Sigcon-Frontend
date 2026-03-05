@@ -88,7 +88,8 @@ const IndexRoles = () => {
         { title: 'Nombre', data: 'name', name: 'name' },
         { title: 'Estado', data: 'status', name: 'status' },
         {
-            title: 'Acciones', data: 'id', searchable: false, render: (id) => {
+            title: 'Acciones', data: 'id', width: '100px', searchable: false, render: (id) => {
+                if (id == 1) return null;
                 return `
                 <div class="d-flex gap-1">
                     ${actions.map(a => `
