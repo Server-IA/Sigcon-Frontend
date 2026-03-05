@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 import InputModal from "../../../components/molecules/InputModal";
-import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import InputSelectModal from "../../../components/molecules/InputSelectModal";
 import TextareaModal from "../../../components/molecules/TextareaModal";
 
 import { base_url } from '../../../utils/functions';
