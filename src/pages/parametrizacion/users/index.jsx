@@ -6,8 +6,12 @@ import FilterUser from "./filter";
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
+import { useSelector } from "react-redux";
 
 const IndexUsers = () => {
+
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('USER')})|| []; // Permisos del usuario
+    const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
 
     const [data, setData] = useState([]);
     const tableRefUser = useRef(null);
@@ -32,6 +36,12 @@ const IndexUsers = () => {
     const [userUpdate, setUserUpdate] = useState(false);
     const [userDelete, setUserDelete] = useState(false);
 
+    const [errorDelete, setErrorDelete] = useState({
+        show: false,
+        message: '',
+        type: '',
+    });
+
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
 
@@ -54,18 +64,18 @@ const IndexUsers = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(userPermissions.some(p => p.code === 'CREATE_USER' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Usuario</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: function () {
                 openModalCreate();
             }
-        }
+        }] : []),
     ];
 
     const actions = [
-        { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        ...(userPermissions.some(p => p.code === 'UPDATE_USER' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
+        ...(userPermissions.some(p => p.code === 'DELETE_USER' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' }] : []),
     ];
 
     const columns = [
@@ -161,13 +171,22 @@ const IndexUsers = () => {
                 setUserDelete(true);
             } catch (error) {
                 console.error('Error al eliminar usuario:', error);
-                setTimeout(() => {
-                    window.Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: error.msg || 'No se pudo eliminar el usuario'
-                    });
-                }, 100);
+                setErrorDelete({
+                    show: true,
+                    message: error.msg || 'No se pudo eliminar el usuario',
+                    type: 'warning',
+                });
+
+                // setTimeout(() => {
+                //     window.Swal.fire({
+                //         icon: 'error',
+                //         title: 'Error',
+                //         text: error.msg || 'No se pudo eliminar el usuario',
+                //         customClass: {
+                //             confirmButton: 'btn btn-primary waves-effect'
+                //         }
+                //     });
+                // }, 500);
             } finally {
                 dataTableRefUser?.current?.ajax.reload();
             }
@@ -245,6 +264,7 @@ const IndexUsers = () => {
                 Gestión de Usuarios
             </h5>
 
+            <AlertPage message={errorDelete.message} type={errorDelete.type} show={errorDelete.show} onChange={() => setErrorDelete({show: false, message: '', type: ''})} />
             <AlertPage message='Usuario creado exitosamente' type='success' show={userCreate} onChange={() => setUserCreate(false)} />
             <AlertPage message='Usuario editado exitosamente' type='success' show={userUpdate} onChange={() => setUserUpdate(false)} />
             <AlertPage message='Usuario eliminado exitosamente' type='success' show={userDelete} onChange={() => setUserDelete(false)} />
@@ -272,7 +292,7 @@ const IndexUsers = () => {
                 roles={roles}
             />
 
-            <CreateUser
+            {userPermissions.some(p => p.code === 'CREATE_USER' && p.type === 'CREATE') || isAdmin ? <CreateUser
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 user={user}
@@ -280,9 +300,9 @@ const IndexUsers = () => {
                 dataTableRef={dataTableRefUser}
                 setUserCreate={setUserCreate}
                 roles={roles}
-            />
+            /> : null}
 
-            <UpdatedUser
+            {userPermissions.some(p => p.code === 'UPDATE_USER' && p.type === 'UPDATE') || isAdmin ? <UpdatedUser
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
                 user={user}
@@ -290,7 +310,7 @@ const IndexUsers = () => {
                 dataTableRef={dataTableRefUser}
                 setUserUpdate={setUserUpdate}
                 roles={roles}
-            />
+            /> : null}
         </div>
     );
 };

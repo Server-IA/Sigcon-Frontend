@@ -8,7 +8,11 @@ import { useEffect, useState } from 'react';
 const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage, accountClasses, levels, accountNatures, accountStatuses }) => {
 
     const [errors, setErrors]             = useState({});
-    const [errorMessage, setErrorMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState({
+        message: '',
+        type: '',
+        show: false
+    });
     const [loading, setLoading]           = useState(false);
     const [accountUpdated, setAccountUpdated] = useState({
         id: '',
@@ -33,42 +37,46 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
             hasTransactions: account.hasTransactions ?? false,
         });
         setErrors({});
-        setErrorMessage('');
+        setErrorMessage({
+            message: '',
+            type: '',
+            show: false
+        });
     }, [account]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!accountUpdated.code || accountUpdated.code.trim() === '') {
-            setErrorMessage('El código de la cuenta es obligatorio');
+            setErrorsMessage({field: 'code', message: 'El código de la cuenta es obligatorio'});
             return;
         }
         if (!/^[0-9]{1,10}$/.test(accountUpdated.code)) {
-            setErrorMessage('El código solo debe contener números y tener máximo 10 dígitos');
+            setErrorsMessage({field: 'code', message: 'El código solo debe contener números y tener máximo 10 dígitos'});
             return;
         }
         if (!accountUpdated.name || accountUpdated.name.trim() === '') {
-            setErrorMessage('El nombre de la cuenta es obligatorio');
+            setErrorsMessage({field: 'name', message: 'El nombre de la cuenta es obligatorio'});
             return;
         }
         if (!/^[A-Za-z0-9_\-\s]{1,100}$/.test(accountUpdated.name)) {
-            setErrorMessage('El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)');
+            setErrorsMessage({field: 'name', message: 'El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)'});
             return;
         }
         if (!accountUpdated.accountClass) {
-            setErrorMessage('Por favor seleccione la clase de la cuenta');
+            setErrorsMessage({field: 'accountClass', message: 'Por favor seleccione la clase de la cuenta'});
             return;
         }
         if (!accountUpdated.level) {
-            setErrorMessage('Por favor seleccione el nivel jerárquico');
+            setErrorsMessage({field: 'level', message: 'Por favor seleccione el nivel jerárquico'});
             return;
         }
         if (!accountUpdated.nature) {
-            setErrorMessage('Por favor seleccione la naturaleza de la cuenta');
+            setErrorsMessage({field: 'nature', message: 'Por favor seleccione la naturaleza de la cuenta'});
             return;
         }
         if (!accountUpdated.status) {
-            setErrorMessage('Por favor seleccione el estado de la cuenta');
+            setErrorsMessage({field: 'status', message: 'Por favor seleccione el estado de la cuenta'});
             return;
         }
 
@@ -107,7 +115,11 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
             });
 
             setErrors({});
-            setErrorMessage('');
+            setErrorMessage({
+                message: '',
+                type: '',
+                show: false
+            });
         } catch (error) {
             console.log(error);
             const errores = error?.errors;
@@ -116,7 +128,11 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
                 errores.forEach(err => { fieldErrors[err.field] = err.message; });
                 setErrors(fieldErrors);
             } else if (error?.msg) {
-                setErrorMessage(error.msg);
+                setErrorMessage({
+                    message: error.msg,
+                    type: 'danger',
+                    show: true
+                });
             }
         } finally {
             setLoading(false);
@@ -139,10 +155,10 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
 
                     <div className="modal-body">
                         <AlertPage
-                            message={errorMessage}
-                            type="danger"
-                            show={errorMessage !== ''}
-                            onClose={() => setErrorMessage('')}
+                            message={errorMessage.message}
+                            type={errorMessage.type}
+                            show={errorMessage.show}
+                            onChange={() => setErrorMessage({message: '', type: '', show: false})}
                         />
 
                         {/* <div className="row">

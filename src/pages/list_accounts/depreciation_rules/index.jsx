@@ -8,8 +8,12 @@ import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 import AlertPage from '../../../components/molecules/AlertPage';
 import FilterDepreciationRule from "./filter";
+import { useSelector } from 'react-redux';
 
 const IndexDepreciationRules = () => {
+
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('DEPRECIATION_RULE')})|| []; // Permisos del usuario
+    const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -65,8 +69,8 @@ const IndexDepreciationRules = () => {
     };
 
     const actions = [
-        { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        ...(userPermissions.some(p => p.code === 'UPDATE_DEPRECIATION_RULE' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
+        ...(userPermissions.some(p => p.code === 'DELETE_DEPRECIATION_RULE' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' }] : []),
     ];
 
     const columns = [
@@ -136,11 +140,11 @@ const IndexDepreciationRules = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(userPermissions.some(p => p.code === 'CREATE_DEPRECIATION_RULE' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Regla de Depreciación</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: function () { openModalCreate(); }
-        },
+        }] : []),
     ];
 
     useEffect(() => {
@@ -277,23 +281,23 @@ const IndexDepreciationRules = () => {
                 />
             </div>
 
-            <CreateDepreciationRule
+            {userPermissions.some(p => p.code === 'CREATE_DEPRECIATION_RULE' && p.type === 'CREATE') || isAdmin ? <CreateDepreciationRule
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 rule={rule}
                 setRule={setRule}
                 dataTableRef={dataTableRef}
                 setRuleCreate={setRuleCreate}
-            />
+            /> : null}
 
-            <UpdatedDepreciationRule
+            {userPermissions.some(p => p.code === 'UPDATE_DEPRECIATION_RULE' && p.type === 'UPDATE') || isAdmin ? <UpdatedDepreciationRule
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
                 rule={rule}
                 setRule={setRule}
                 dataTableRef={dataTableRef}
                 setRuleEdit={setRuleEdit}
-            />
+            /> : null}
         </>
     );
 };
