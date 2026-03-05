@@ -325,7 +325,7 @@ const IndexPUC = () => {
                 />
             </div>
 
-            {userPermissions.some(p => p.code === 'CREATE_CHART_OF_ACCOUNT' && p.type === 'CREATE') || isAdmin ? <CreatePUC
+            <CreatePUC
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 account={account}
@@ -335,9 +335,9 @@ const IndexPUC = () => {
                 accountClasses={ACCOUNT_CLASSES}
                 levels={LEVELS}
                 accountNatures={ACCOUNT_NATURES}
-            /> : null}
+            />
 
-            {userPermissions.some(p => p.code === 'UPDATE_CHART_OF_ACCOUNT' && p.type === 'UPDATE') || isAdmin ? <UpdatedPUC
+            <UpdatedPUC
                 modalRef={modalUpdateRef}
                 modalInstance={modalUpdateInstance}
                 account={account}
@@ -348,7 +348,7 @@ const IndexPUC = () => {
                 levels={LEVELS}
                 accountNatures={ACCOUNT_NATURES}
                 accountStatuses={ACCOUNT_STATUSES}
-            /> : null}
+            />
 
             <DropzoneModal
                 modalRef={modalBulkRef}

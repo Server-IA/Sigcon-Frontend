@@ -184,10 +184,7 @@ const CurrencyIndex = () => {
                     />
                 </div>
             </div>
-
-            {
-                userPermissions.some(p => p.code === 'CREATE_CURRENCY_TYPE' && p.type === 'CREATE') || isAdmin && (
-                    <CurrencyCreated
+<CurrencyCreated
                         dataTableRef={dataTableRef}
                         modalRef={modalCreateRef}
                         modalInstance={modalCreateInstance}
@@ -195,11 +192,6 @@ const CurrencyIndex = () => {
                         setCurrency={setCurrency}
                         setMessage={setMessage}
                     />
-                )
-            }
-
-            {
-                userPermissions.some(p => p.code === 'UPDATE_CURRENCY_TYPE' && p.type === 'UPDATE') || isAdmin && (
                     <CurrencyEdit
                         dataTableRef={dataTableRef}
                         modalRef={modalEditRef}
@@ -208,8 +200,6 @@ const CurrencyIndex = () => {
                         setCurrency={setCurrency}
                         setMessage={setMessage}
                     />
-                )
-            }
         </>
     )
 };
