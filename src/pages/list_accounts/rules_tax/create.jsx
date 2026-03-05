@@ -1,6 +1,6 @@
 import TextareaModal from "../../../components/molecules/TextareaModal";
 import InputDateRange from "../../../components/molecules/InputDateRange";
-import InputSelectModal from "../../../components/molecules/InputSelectModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import InputModal from "../../../components/molecules/InputModal";
 import AlertPage from "../../../components/molecules/AlertPage";
 import { useState } from "react";
