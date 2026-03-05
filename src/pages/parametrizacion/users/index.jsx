@@ -32,6 +32,12 @@ const IndexUsers = () => {
     const [userUpdate, setUserUpdate] = useState(false);
     const [userDelete, setUserDelete] = useState(false);
 
+    const [errorDelete, setErrorDelete] = useState({
+        show: false,
+        message: '',
+        type: '',
+    });
+
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
 
@@ -161,13 +167,22 @@ const IndexUsers = () => {
                 setUserDelete(true);
             } catch (error) {
                 console.error('Error al eliminar usuario:', error);
-                setTimeout(() => {
-                    window.Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: error.msg || 'No se pudo eliminar el usuario'
-                    });
-                }, 100);
+                setErrorDelete({
+                    show: true,
+                    message: error.msg || 'No se pudo eliminar el usuario',
+                    type: 'warning',
+                });
+
+                // setTimeout(() => {
+                //     window.Swal.fire({
+                //         icon: 'error',
+                //         title: 'Error',
+                //         text: error.msg || 'No se pudo eliminar el usuario',
+                //         customClass: {
+                //             confirmButton: 'btn btn-primary waves-effect'
+                //         }
+                //     });
+                // }, 500);
             } finally {
                 dataTableRefUser?.current?.ajax.reload();
             }
@@ -245,6 +260,7 @@ const IndexUsers = () => {
                 Gestión de Usuarios
             </h5>
 
+            <AlertPage message={errorDelete.message} type={errorDelete.type} show={errorDelete.show} onChange={() => setErrorDelete({show: false, message: '', type: ''})} />
             <AlertPage message='Usuario creado exitosamente' type='success' show={userCreate} onChange={() => setUserCreate(false)} />
             <AlertPage message='Usuario editado exitosamente' type='success' show={userUpdate} onChange={() => setUserUpdate(false)} />
             <AlertPage message='Usuario eliminado exitosamente' type='success' show={userDelete} onChange={() => setUserDelete(false)} />
