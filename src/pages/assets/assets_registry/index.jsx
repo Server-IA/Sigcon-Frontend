@@ -17,6 +17,7 @@ import { fetchHelper } from "../../../utils/fetch";
 import { COMPONENT_MAP } from "../../../utils/map_menu";
 
 const IndexAssets = () => {
+  const isAdmin = useSelector((state) => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
   const dispatch = useDispatch();
   const [data, setData] = useState([]);
   const tableRef = useRef(null);
@@ -91,21 +92,21 @@ const IndexAssets = () => {
       text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
       className: "btn rounded-pill btn-secondary waves-effect mx-2 my-2 ",
       action: async function (e, dt, button, config) {
-        if (!filterInstance.current) {
-          filterInstance.current = new window.bootstrap.Modal(
-            filterRef.current,
-          );
-        }
-        filterInstance.current.show();
+        // if (!filterInstance.current) {
+        //   filterInstance.current = new window.bootstrap.Modal(
+        //     filterRef.current,
+        //   );
+        // }
+        // filterInstance.current.show();
       },
     },
 
-    user.permissions.find((p) => p.code === "CREATE_ASSETS")
+    user.permissions.find((p) => p.code === "CREATE_ASSETS") || isAdmin
       ? {
           text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Activo</span>',
           className: "btn rounded-pill btn-primary waves-effect mx-2 my-2 ",
           action: async function (e, dt, button, config) {
-            openModalCreate();
+            // openModalCreate();
           },
         }
       : null,
@@ -125,7 +126,6 @@ const IndexAssets = () => {
       title: "Eliminar",
     },
   ];
-
   const columns = [
     { title: "Código", data: "code", name: "code" },
     // { title: "Nombre", data: "name", name: "name" },
@@ -156,23 +156,23 @@ const IndexAssets = () => {
     //   name: "statesAsset",
     //   render: (v) => v ?? "-",
     // },
-    // {
-    //   title: "Acciones",
-    //   data: "id",
-    //   searchable: false,
-    //   render: (id) => `
-    //     <div class="d-flex gap-1">
-    //       ${actions
-    //         .map(
-    //           (a) => `
-    //         <button class="btn btn-sm ${a.class} action-btn"
-    //           data-action="${a.key}" data-id="${id}">
-    //           <i class="${a.icon}"></i>
-    //         </button>`,
-    //         )
-    //         .join("")}
-    //     </div>`,
-    // },
+    {
+      title: "Acciones",
+      data: "id",
+      searchable: false,
+      render: (id) => `
+         <div class="d-flex gap-1">
+          ${actions
+            .map(
+              (a) => `
+             <button class="btn btn-sm ${a.class} action-btn"
+               data-action="${a.key}" data-id="${id}">
+               <i class="${a.icon}"></i>
+             </button>`,
+            )
+            .join("")}
+         </div>`,
+    },
   ];
 
   const openModalCreate = () => {
@@ -311,7 +311,28 @@ const IndexAssets = () => {
             method="POST"
             buttons={buttons}
             title="Activos"
-            data={data}
+            data={[
+              {
+                id: "",
+                code: "aaaa",
+                name: "",
+                description: "",
+                classification: "",
+                acquisition_date: "",
+                acquisition_cost: "",
+                useful_life_months: "",
+                accumulated_depreciation: "",
+                book_value: "",
+                revaluation_value: "",
+                is_depreciable: true,
+                depreciation_rule_id: null,
+                companies_id: null,
+                accounting_accounts_id: null,
+                company_locations_id: null,
+                third_parties_id: null,
+                states_assets_id: null,
+              },
+            ]}
             setData={setData}
             search={search}
             setSearch={setSearch}
