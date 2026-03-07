@@ -22,6 +22,9 @@ import RulesTaxIndex from "../pages/list_accounts/rules_tax/index";
 // Reportes
 import BalanceComprobacion from "../pages/list_accounts/reportes/BalanceComprobacion";
 
+// Activos
+import CalculoDepreciacionActivos from "../pages/activos/calculo-depreciacion/index";
+
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 // List Accounts
@@ -129,5 +132,6 @@ export const COMPONENT_MAP = [
     { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion },
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
-    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex }
+    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
+    { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: CalculoDepreciacionActivos },
 ];
