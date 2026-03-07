@@ -27,6 +27,8 @@ import PageMaintenance from "../pages/errors/page_maintenance";
 // List Accounts
 import IndexPUC from "../pages/list_accounts/puc/index";
 
+import IndexSegmentation from "../pages/third-party/segmentation/index"
+
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
 
@@ -55,14 +57,14 @@ export const getMenu = async () => {
     try {
         const { data, error } = await fetchHelper.get(url, {}, 0);
         if (!error) {
-    
+
             modules.push(...data?.map(mod => {
                 // Construir el árbol de menús normalmente
                 const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
                     ...menu,
                     componentName: menu?.component,
                 })));
-    
+
                 return {
                     ...mod,
                     menus: menuTree
@@ -72,7 +74,7 @@ export const getMenu = async () => {
 
     } catch (error) {
         console.log(error);
-    }finally {
+    } finally {
         return modules;
     }
 
@@ -129,5 +131,6 @@ export const COMPONENT_MAP = [
     { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion },
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
-    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex }
+    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
+    { id: "SEGMENTATION", name: "Segmentacion Terceros", component: IndexSegmentation }
 ];
