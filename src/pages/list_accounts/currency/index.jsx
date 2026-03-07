@@ -10,6 +10,7 @@ import { fetchHelper } from "../../../utils/fetch";
 const CurrencyIndex = () => {
 
     const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('CURRENCY_TYPE')})|| []; // Permisos del usuario
+    const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
 
     const [message, setMessage] = useState({ message: '', type: '', show: false });
     const [search, setSearch] = useState({
@@ -52,7 +53,7 @@ const CurrencyIndex = () => {
 
     // Datos DataTable
     const buttons = [
-            ...(userPermissions.some(p => p.code === 'CREATE_CURRENCY_TYPE' && p.type === 'CREATE') ?  [{
+            ...(userPermissions.some(p => p.code === 'CREATE_CURRENCY_TYPE' && p.type === 'CREATE') || isAdmin ?  [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear tipo de moneda</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
             action: async function (e, dt, button, config) {
@@ -61,10 +62,10 @@ const CurrencyIndex = () => {
         }] : [])
     ];
     const actions = [
-        ...(userPermissions.some(p => p.code === 'UPDATE_CURRENCY_TYPE' && p.type === 'UPDATE') ? [
+        ...(userPermissions.some(p => p.code === 'UPDATE_CURRENCY_TYPE' && p.type === 'UPDATE') || isAdmin ? [
             { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }
         ] : []),
-        ...(userPermissions.some(p => p.code === 'DELETE_CURRENCY_TYPE' && p.type === 'DELETE') ? [
+        ...(userPermissions.some(p => p.code === 'DELETE_CURRENCY_TYPE' && p.type === 'DELETE') || isAdmin ? [
             { key: 'delete', icon: 'ri-delete-bin-line', class: 'btn-label-danger', title: 'Eliminar' }
         ] : [])
     ];
@@ -183,10 +184,7 @@ const CurrencyIndex = () => {
                     />
                 </div>
             </div>
-
-            {
-                userPermissions.some(p => p.code === 'CREATE_CURRENCY_TYPE' && p.type === 'CREATE') && (
-                    <CurrencyCreated
+<CurrencyCreated
                         dataTableRef={dataTableRef}
                         modalRef={modalCreateRef}
                         modalInstance={modalCreateInstance}
@@ -194,11 +192,6 @@ const CurrencyIndex = () => {
                         setCurrency={setCurrency}
                         setMessage={setMessage}
                     />
-                )
-            }
-
-            {
-                userPermissions.some(p => p.code === 'UPDATE_CURRENCY_TYPE' && p.type === 'UPDATE') && (
                     <CurrencyEdit
                         dataTableRef={dataTableRef}
                         modalRef={modalEditRef}
@@ -207,8 +200,6 @@ const CurrencyIndex = () => {
                         setCurrency={setCurrency}
                         setMessage={setMessage}
                     />
-                )
-            }
         </>
     )
 };

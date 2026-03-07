@@ -102,6 +102,9 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 showConfirmButton: true,
                 showCancelButton: false,
                 showCloseButton: false,
+                customClass: {
+                    confirmButton: 'btn btn-primary waves-effect'
+                }
             });
 
             window.location.href = base_redirect_path(true);
@@ -153,6 +156,9 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 allowOutsideClick: false,
                 willOpen: function () {
                     Swal.showLoading();
+                },
+                customClass: {
+                    confirmButton: 'btn btn-primary waves-effect'
                 }
             });
 

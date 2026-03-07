@@ -6,10 +6,15 @@ import CreateCentroCosto from './create';
 import UpdatedCentroCosto from './updated';
 import FilterCentroCosto from './filter';
 import AlertPage from '../../../components/molecules/AlertPage';
+import { useSelector } from 'react-redux';
 
 const API_SEARCH = ['api', 'v1', 'cost-centers', 'search'];
 
 const IndexCentrosCosto = () => {
+
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('COST_CENTERS')})|| []; // Permisos del usuario
+    const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
+
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
     const filterRef = useRef(null);
@@ -44,9 +49,9 @@ const IndexCentrosCosto = () => {
     const [deletionReason, setDeletionReason] = useState('');
 
     const actions = [
-        { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
-        { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        ...(userPermissions.some(p => p.code === 'VIEW_COST_CENTERS' && p.type === 'VIEW') || isAdmin ? [{ key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' }] : []),
+        ...(userPermissions.some(p => p.code === 'UPDATE_COST_CENTERS' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
+        ...(userPermissions.some(p => p.code === 'DELETE_COST_CENTERS' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' }] : []),
     ];
 
     const [columns, setColumns] = useState([
@@ -151,11 +156,11 @@ const IndexCentrosCosto = () => {
                 filterInstance.current.show();
             },
         },
-        {
+        ...(userPermissions.some(p => p.code === 'CREATE_COST_CENTERS' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Agregar</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: openModalCreate,
-        },
+        }] : []),
     ];
 
     useEffect(() => {
@@ -242,7 +247,7 @@ const IndexCentrosCosto = () => {
                 <FilterCentroCosto filterRef={filterRef} filterInstance={filterInstance} dataTableRef={dataTableRef} />
             </div>
 
-            <CreateCentroCosto
+             <CreateCentroCosto
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 centroCosto={centroCosto}

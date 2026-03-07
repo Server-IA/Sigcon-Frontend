@@ -10,6 +10,7 @@ import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 import DropzoneModal from '../../../components/molecules/DropzoneModal';
+import { useSelector } from 'react-redux';
 
 const ACCOUNT_CLASSES = [
     { id: 'ASSET', name: 'Activo' },
@@ -41,6 +42,10 @@ const ACCOUNT_STATUSES = [
 ];
 
 const IndexPUC = () => {
+
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => { return p.code.includes('CHART_OF_ACCOUNT') }) || []; // Permisos del usuario
+    const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
+
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -80,21 +85,36 @@ const IndexPUC = () => {
     const url = ['api', 'v1', 'chart-of-accounts', 'search'];
 
     const actions = [
-        { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        ...(userPermissions.some(p => p.code === 'UPDATE_CHART_OF_ACCOUNT' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
+        ...(userPermissions.some(p => p.code === 'DELETE_CHART_OF_ACCOUNT' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' }] : []),
     ];
 
     const columns = [
+        { title: 'ID', data: 'id', searchable: false },
         { title: 'Código', data: 'code', name: 'code' },
         { title: 'Nombre', data: 'name', name: 'name' },
-        { title: 'Clase', data: 'accountClass', name: 'accountClass', render: (val) => ACCOUNT_CLASSES.find(c => c.id === val)?.name ?? val ?? '-' },
-        { title: 'Nivel', data: 'level', name: 'level', render: (val) => LEVELS.find(l => l.id === val)?.name ?? val ?? '-' },
-        { title: 'Naturaleza', data: 'nature', name: 'nature', render: (val) => ACCOUNT_NATURES.find(n => n.id === val)?.name ?? val ?? '-' },
+        {
+            title: 'Clase', data: 'accountClass', name: 'accountClass', render: (val) => {
+
+                return ACCOUNT_CLASSES.find(a => a.id === val)?.name ?? '-';
+
+            }
+        },
+        {
+            title: 'Nivel', data: 'level', name: 'level', render: (val) => {
+                return LEVELS.find(l => l.id === val)?.name ?? '-';
+            }
+        },
+        {
+            title: 'Naturaleza', data: 'nature', name: 'nature', render: (val) => {
+                return ACCOUNT_NATURES.find(n => n.id === val)?.name ?? '-';
+            }
+        },
         {
             title: 'Estado', data: 'status', name: 'status',
-            render: (status) => status === 'ACTIVE'
-                ? `<span class="badge bg-label-success">Activa</span>`
-                : `<span class="badge bg-label-danger">Inactiva</span>`
+            render: (status) => {
+                return `<span class="badge bg-label-${status === 'ACTIVE' ? 'success' : 'danger'}">${ACCOUNT_STATUSES.find(s => s.id === status)?.name ?? '-'}</span>`;
+            }
         },
         {
             title: 'Acciones', data: 'id', searchable: false,
@@ -155,16 +175,16 @@ const IndexPUC = () => {
                 filterInstance.current.show();
             }
         },
-        {
-            text: '<i class="ri-upload-2-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Cargue Masivo</span>',
-            className: 'btn rounded-pill btn-label-success waves-effect mx-1 my-2',
-            action: function () { openModalBulk(); }
-        },
-        {
+        // {
+        //     text: '<i class="ri-upload-2-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Cargue Masivo</span>',
+        //     className: 'btn rounded-pill btn-label-success waves-effect mx-1 my-2',
+        //     action: function () { openModalBulk(); }
+        // },
+        ...(userPermissions.some(p => p.code === 'CREATE_CHART_OF_ACCOUNT' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Cuenta PUC</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-1 my-2',
             action: function () { openModalCreate(); }
-        },
+        }] : []),
     ];
 
     useEffect(() => {

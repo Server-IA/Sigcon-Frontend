@@ -17,6 +17,7 @@ import IndexCuentasContables from "../pages/list_accounts/cuentas-contables/inde
 import IndexDepreciationRules from "../pages/list_accounts/depreciation_rules/index";
 import ExchangeRateIndex from "../pages/list_accounts/exchange-rate/index";
 import CurrencyIndex from "../pages/list_accounts/currency/index";
+import RulesTaxIndex from "../pages/list_accounts/rules_tax/index";
 
 // Reportes
 import BalanceComprobacion from "../pages/list_accounts/reportes/BalanceComprobacion";
@@ -127,5 +128,6 @@ export const COMPONENT_MAP = [
     { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
     { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion },
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
-    { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex }
+    { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
+    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex }
 ];

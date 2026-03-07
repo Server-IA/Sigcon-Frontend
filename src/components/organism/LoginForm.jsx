@@ -30,11 +30,11 @@ const LoginForm = ({
       <p className="login-form-subtitle">Bienvenido a SIGCON 👋<br />Accede a tu cuenta para continuar</p>
 
       <InputField
-        id="email"
-        name="email"
+        id="usernameOrEmail"
+        name="usernameOrEmail"
         label="Usuario (username o email)"
-        placeholder="usuario@email.com"
-        value={formData.email}
+        placeholder="username o email"
+        value={formData.usernameOrEmail}
         onChange={onInputChange}
       />
 

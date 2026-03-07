@@ -12,7 +12,7 @@ const DEPRECIATION_TYPES = [
     { id: 'DECLINING_BALANCE', label: 'Decreciente' },
     { id: 'ACCELERATED', label: 'Acelerada' },
     { id: 'PRODUCTION_UNITS', label: 'Unidades de producción' },
-    { id: 'MINIMUM_USEFUL_LIFE', label: 'Vida útil mínima' },
+    { id: 'MINIMUN_USEFUL_LIFE', label: 'Vida útil mínima' },
 ];
 
 const RULE_STATUSES = [
@@ -52,6 +52,10 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
         setErrors({});
         setErrorMessage('');
     }, [rule]);
+
+    useEffect(() => {
+        console.log(ruleUpdated, 'ruleUpdated');
+    }, [ruleUpdated]);
 
     // ── Enviar actualización ──
     const handleUpdate = async () => {
@@ -153,7 +157,7 @@ const UpdatedDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataT
                                     id="dr_depreciationType_update"
                                     label="Tipo de depreciación"
                                     value={ruleUpdated.depretationType}
-                                    onChange={(value) => setRuleUpdated({ ...ruleUpdated, depreciationType: value })}
+                                    onChange={(value) => setRuleUpdated({ ...ruleUpdated, depretationType: value })}
                                     error={errors.depretationType}
                                     placeholder="Seleccione el tipo"
                                     options={DEPRECIATION_TYPES}

@@ -8,11 +8,15 @@ import { base_url } from '../../../utils/functions';
 import CreateCuentaContable from './create';
 import UpdatedCuentaContable from './updated';
 import FilterCuentaContable from './filter';
+import { useSelector } from 'react-redux';
 
 // Swagger: nature enum DEBIT / CREDIT  (AccountFilterRequest, CreateAccountingAccountRequest)
 const NATURE_LABELS = { DEBIT: 'Deudora', CREDIT: 'Acreedora' };
 
 const IndexCuentasContables = () => {
+
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('ACCOUNTING_ACCOUNT')})|| []; // Permisos del usuario
+    const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -35,8 +39,8 @@ const IndexCuentasContables = () => {
     const url = ['api', 'v1', 'accounting-accounts'];
 
     const actions = [
-        { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Inactivar' },
+        ...(userPermissions.some(p => p.code === 'UPDATE_ACCOUNTING_ACCOUNT' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
+        ...(userPermissions.some(p => p.code === 'DELETE_ACCOUNTING_ACCOUNT' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Inactivar' }] : []),
     ];
 
     // Snake_case field names matching swagger UpdateAccountingAccountRequest / CreateAccountingAccountRequest
@@ -55,11 +59,12 @@ const IndexCuentasContables = () => {
 
     // Column `data` keys must match backend response field names
     const [columns] = useState([
+        { title: 'PUC', data: 'pucAccount.name', name: 'pucAccountName' },
         { title: 'Nombre Personalizado', data: 'customName',          name: 'customName' },
         { title: 'Código PUC',          data: 'pucAccount.code',       name: 'pucAccountCode' },
         { title: 'Moneda Base',          data: 'currencyType.name',        name: 'baseCurrency' },
         { title: 'Centro de Costos',     data: 'costCenter.name',       name: 'costCenterName', defaultContent: '—' },
-        { title: 'Regla tributaria', data: 'taxRuleId', name: 'taxRuleId', defaultContent: '—' },
+        // { title: 'Regla tributaria', data: 'taxRuleId', name: 'taxRuleId', defaultContent: '—' },
         {
             title: 'Naturaleza', data: 'nature', name: 'nature',
             render: (nature) => NATURE_LABELS[nature] ?? nature,
@@ -110,11 +115,11 @@ const IndexCuentasContables = () => {
                 filterInstance.current.show();
             },
         },
-        {
+        ...(userPermissions.some(p => p.code === 'CREATE_ACCOUNTING_ACCOUNT' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Cuenta</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: function () { openModalCreate(); },
-        },
+        }] : []),
     ];
 
     useEffect(() => {
@@ -247,7 +252,7 @@ const IndexCuentasContables = () => {
             />
         </div>
 
-        <CreateCuentaContable
+         <CreateCuentaContable
             modalRef={modalCreateRef}
             modalInstance={modalCreateInstance}
             cuentaContable={cuentaContable}

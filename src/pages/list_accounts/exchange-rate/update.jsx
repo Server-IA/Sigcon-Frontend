@@ -6,7 +6,7 @@ import InputDateRange from "../../../components/molecules/InputDateRange";
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 
-const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRate, setExchangeRate, setExchangeRateMessage, currencies }) => {
+const UpdateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRate, setExchangeRate, setExchangeRateMessage, currencies }) => {
 
     const [error, setError] = useState({
         message: '',
@@ -19,7 +19,6 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
     const handleSave = async () => {
         let valid = true;
         let errorsData = {};
-
         if (!exchangeRate.currencyId) {
             errorsData.currencyId = 'La moneda a cambiar es requerida';
         }
@@ -38,7 +37,6 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
         if (!exchangeRate.endDate) {
             errorsData.endDate = 'La fecha de fin es requerida';
         }
-
         if (Object.keys(errorsData).length > 0) {
             setErrors(errorsData);
             return;
@@ -46,10 +44,10 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
 
         try{
 
-            const url = base_url(['api/v1/exchange-rates']);
+            const url = base_url(['api/v1/exchange-rates', exchangeRate.id]);
 
             console.log("exchangeRate", exchangeRate);
-            const responde = await fetchHelper.post(url, exchangeRate, {}, 1000);
+            const responde = await fetchHelper.put(url, exchangeRate, {}, 1000);
 
             setExchangeRateMessage({ message: responde.message, type: "success", show: true });
 
@@ -60,7 +58,7 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
         }catch(error){
             console.log(error);
             setError({
-                message: error.message || error.msg || "Ocurrió un error al guardar la tasa de cambio",
+                message: error.message || error.msg || "Ocurrió un error al actualizar la tasa de cambio",
                 type: 'danger',
                 show: true
             });
@@ -73,7 +71,7 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
             <div className="modal-dialog modal-dialog-centered" role="document">
                 <div className="modal-content">
                     <div className="modal-header">
-                        <h4 className="modal-title" id="modalCenterTitle">Agregar Tasa de Cambio</h4>
+                        <h4 className="modal-title" id="modalCenterTitle">Actualizar Tasa de Cambio</h4>
                         <button
                             type="button"
                             className="btn-close"
@@ -92,7 +90,7 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
                         <div className="row">
                             <div className="col-lg-6 col-md-12 col-sm-12 mb-6 mt-2">
                                 <InputSelectModal
-                                    id="currencyId"
+                                    id="currencyId_update"
                                     label="Moneda a Cambiar"
                                     value={exchangeRate.currencyId}
                                     onChange={(value) => {
@@ -114,7 +112,7 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
 
                             <div className="col-lg-6 col-md-12 col-sm-12 mb-6 mt-2">
                                 <InputSelectModal
-                                    id="currencyIso"
+                                    id="currencyIso_update"
                                     label="Moneda de Cambio"
                                     value={exchangeRate.currencyIso}
                                     onChange={(value) => {
@@ -140,7 +138,7 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
                         <div className="row">
                             <div className="col-lg-6 col-md-6 col-sm-12 mb-6 mt-2">
                                 <InputSelectModal
-                                    id="exchangeType"
+                                    id="exchangeType_update"
                                     label="Tipo de cambio"
                                     value={exchangeRate.exchangeType}
                                     onChange={(value) => {
@@ -165,7 +163,7 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
 
                             <div className="col-lg-6 col-md-6 col-sm-12 mb-6 mt-2">
                                 <InputModal
-                                    id="exchangeRate"
+                                    id="exchangeRate_update"
                                     label="Tasa de cambio"
                                     value={exchangeRate.value}
                                     onChange={(e) => {
@@ -186,7 +184,7 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
                         <div className="row">
                             <div className="col mb-6 mt-2">
                                 <InputDateRange
-                                    id="dateRange"
+                                    id="dateRange_update"
                                     label="Fecha de vigencia"
                                     placeholder="Fecha de inicio y fin"
                                     dateInit={exchangeRate.startDate}
@@ -224,4 +222,4 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
     )
 }
 
-export default CreateExchangeRate;
+export default UpdateExchangeRate;

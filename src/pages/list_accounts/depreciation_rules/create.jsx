@@ -14,7 +14,7 @@ const DEPRECIATION_TYPES = [
     { id: 'DECLINING_BALANCE', label: 'Decreciente' },
     { id: 'ACCELERATED', label: 'Acelerada' },
     { id: 'PRODUCTION_UNITS', label: 'Unidades de producción' },
-    { id: 'MINIMUM_USEFUL_LIFE', label: 'Vida útil mínima' },
+    { id: 'MINIMUN_USEFUL_LIFE', label: 'Vida útil mínima' },
 ];
 
 // ─── Componente principal ───────────────────────────────────────────────────────

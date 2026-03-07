@@ -8,8 +8,12 @@ import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 import AlertPage from '../../../components/molecules/AlertPage';
 import FilterDepreciationRule from "./filter";
+import { useSelector } from 'react-redux';
 
 const IndexDepreciationRules = () => {
+
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('DEPRECIATION_RULE')})|| []; // Permisos del usuario
+    const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -65,8 +69,8 @@ const IndexDepreciationRules = () => {
     };
 
     const actions = [
-        { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
-        { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
+        ...(userPermissions.some(p => p.code === 'UPDATE_DEPRECIATION_RULE' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
+        ...(userPermissions.some(p => p.code === 'DELETE_DEPRECIATION_RULE' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' }] : []),
     ];
 
     const columns = [
@@ -136,11 +140,11 @@ const IndexDepreciationRules = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(userPermissions.some(p => p.code === 'CREATE_DEPRECIATION_RULE' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Regla de Depreciación</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: function () { openModalCreate(); }
-        },
+        }] : []),
     ];
 
     useEffect(() => {
@@ -216,7 +220,7 @@ const IndexDepreciationRules = () => {
                             if (!motivo.isConfirmed) return;
 
                             try {
-                                const deleteUrl = base_url(['depreciationRules', 'delete', id], { reason: motivo.value });
+                                const deleteUrl = base_url(['api/v1/depreciation-rules', 'delete', id], { reason: motivo.value });
                                 await fetchHelper.delete(deleteUrl, {}, {}, 500, false);
                                 dataTableRef?.current?.ajax.reload();
                                 setRuleDelete(true);
@@ -250,9 +254,9 @@ const IndexDepreciationRules = () => {
             <div className="card">
                 <h5 className="card-header text-md-start text-center">Reglas de Depreciación</h5>
 
-                <AlertPage type="success" message="La regla de depreciación ha sido creada exitosamente." show={ruleCreate} />
-                <AlertPage type="success" message="La regla de depreciación fue actualizada exitosamente." show={ruleEdit} />
-                <AlertPage type="success" message="La regla de depreciación ha sido eliminada exitosamente." show={ruleDelete} />
+                <AlertPage type="success" message="La regla de depreciación ha sido creada exitosamente." show={ruleCreate} onChange={() => setRuleCreate(false)} />
+                <AlertPage type="success" message="La regla de depreciación fue actualizada exitosamente." show={ruleEdit} onChange={() => setRuleEdit(false)} />
+                <AlertPage type="success" message="La regla de depreciación ha sido eliminada exitosamente." show={ruleDelete} onChange={() => setRuleDelete(false)} />
 
                 <div className="card-datatable text-nowrap">
                     <DataTableReference
