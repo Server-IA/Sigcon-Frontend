@@ -20,7 +20,11 @@ import CurrencyIndex from "../pages/list_accounts/currency/index";
 import RulesTaxIndex from "../pages/list_accounts/rules_tax/index";
 
 // Reportes
-import BalanceComprobacion from "../pages/list_accounts/reportes/BalanceComprobacion";
+import RepBalanceComprobacion from "../pages/list_accounts/rep-balance-comprobacion/BalanceComprobacion";
+import RepLibroDiario from "../pages/list_accounts/rep-libro-diario/LibroDiario";
+import RepLibroMayor from "../pages/list_accounts/rep-libro-mayor/LibroMayor";
+import RepAuxiliaresCuentas from "../pages/list_accounts/rep-auxiliares-cuenta/AuxiliaresCuentas";
+import RepEstadosFinancieros from "../pages/list_accounts/rep-estados-financieros/EstadosFinancieros";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -126,7 +130,11 @@ export const COMPONENT_MAP = [
     { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
     { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
     { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
-    { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion },
+    { id: "REP_BALANCE_COMPROBACION", name: "Reporte Balance de Comprobación", component: RepBalanceComprobacion },
+    { id: "REP_LIBRO_DIARIO", name: "Reporte Libro Diario", component: RepLibroDiario },
+    { id: "REP_LIBRO_MAYOR", name: "Reporte Libro Mayor", component: RepLibroMayor },
+    { id: "REP_AUXILIARES_CUENTAS", name: "Reporte Auxiliares de cuentas", component: RepAuxiliaresCuentas },
+    { id: "REP_ESTADOS_FINANCIEROS", name: "Reporte Estados Financieros", component: RepEstadosFinancieros },
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
     { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex }
