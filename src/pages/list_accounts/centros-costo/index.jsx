@@ -12,7 +12,7 @@ const API_SEARCH = ['api', 'v1', 'cost-centers', 'search'];
 
 const IndexCentrosCosto = () => {
 
-    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('COST_CENTERS')})|| []; // Permisos del usuario
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => { return p.code.includes('COST_CENTERS') }) || []; // Permisos del usuario
     const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
 
     const tableRef = useRef(null);
@@ -23,6 +23,8 @@ const IndexCentrosCosto = () => {
     const modalCreateInstance = useRef(null);
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
+    const modalViewRef = useRef(null);
+    const modalViewInstance = useRef(null);
     const modalConfirmDeleteRef = useRef(null);
     const modalConfirmDeleteInstance = useRef(null);
     const modalReasonDeleteRef = useRef(null);
@@ -185,10 +187,10 @@ const IndexCentrosCosto = () => {
                         status: row.status ?? '',
                         companyId: row.companyId ?? 79,
                     });
-                    if (!modalUpdateInstance.current) {
-                        modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
+                    if (!modalViewInstance.current) {
+                        modalViewInstance.current = new window.bootstrap.Modal(modalViewRef.current);
                     }
-                    modalUpdateInstance.current.show();
+                    modalViewInstance.current.show();
                     break;
                 }
                 case 'edit': {
@@ -247,13 +249,23 @@ const IndexCentrosCosto = () => {
                 <FilterCentroCosto filterRef={filterRef} filterInstance={filterInstance} dataTableRef={dataTableRef} />
             </div>
 
-             <CreateCentroCosto
+            <CreateCentroCosto
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 centroCosto={centroCosto}
                 setCentroCosto={setCentroCosto}
                 dataTableRef={dataTableRef}
                 setCentroCostoCreate={setCentroCostoCreate}
+            />
+
+            <UpdatedCentroCosto
+                modalRef={modalViewRef}
+                modalInstance={modalViewInstance}
+                centroCosto={centroCosto}
+                setCentroCosto={setCentroCosto}
+                dataTableRef={dataTableRef}
+                setCentroCostoEdit={setCentroCostoEdit}
+                readOnly
             />
 
             <UpdatedCentroCosto
