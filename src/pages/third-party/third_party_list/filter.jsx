@@ -1,0 +1,316 @@
+import { useEffect, useState } from "react";
+import InputModal from "../../../components/molecules/InputModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
+
+// ─── Constantes ────────────────────────────────────────────────────────────────
+const THIRD_PARTY_STATUSES = [
+    { id: 'ACTIVE', name: 'Activo' },
+    { id: 'INACTIVE', name: 'Inactivo' },
+    { id: 'BLOCKED', name: 'Bloqueado' },
+];
+
+const THIRD_PARTY_ROLES = [
+    { id: 'CLIENT', name: 'Cliente' },
+    { id: 'SUPPLIER', name: 'Proveedor' },
+    { id: 'EMPLOYEE', name: 'Empleado' },
+    { id: 'CREDITOR', name: 'Acreedor' },
+    { id: 'DEBTOR', name: 'Deudor' },
+    { id: 'OTHER', name: 'Otro' },
+];
+
+const PERSON_TYPES = [
+    { id: 'NATURAL', name: 'Natural' },
+    { id: 'LEGAL', name: 'Jurídica' },
+];
+
+// ─── Componente ─────────────────────────────────────────────────────────────────
+const FilterThirdParty = ({ filterRef, filterInstance, dataTableRef }) => {
+
+    const getTable = () => dataTableRef?.current?.table();
+
+    const [filters, setFilters] = useState([
+        { regex: true, value: '', column: 'nit:name' },
+        { regex: true, value: '', column: 'businessName:name' },
+        { regex: true, value: '', column: 'personType:name' },
+        { regex: true, value: '', column: 'roles:name' },
+        { regex: true, value: '', column: 'status:name' },
+        { regex: true, value: '', column: 'city:name' },
+        { regex: true, value: '', column: 'department:name' },
+    ]);
+
+    useEffect(() => {
+        const table = getTable();
+        if (!table) return;
+        filters.forEach(filter => {
+            table.column(filter.column).search(filter.value, filter.regex, false);
+        });
+    }, [filters]);
+
+    const getFilter = (column) => filters.find(f => f.column === column);
+
+    const updateFilter = (column, key, value) => {
+        setFilters(prev => prev.map(f =>
+            f.column === column ? { ...f, [key]: value } : f
+        ));
+    };
+
+    const selectValue = (column) => {
+        const val = getFilter(column)?.value;
+        return val === '' ? [] : val.split(',');
+    };
+
+    return (
+        <>
+            <div className="modal fade" ref={filterRef} id="modalFilterThirdParty" tabIndex={-1} aria-hidden="true">
+                <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h4 className="modal-title">Filtrar Terceros</h4>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+                        </div>
+
+                        <div className="modal-body">
+
+                            {/* NIT */}
+                            <div className="row">
+                                <div className="col-md-12 mb-4 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                checked={getFilter('nit:name')?.regex || false}
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
+                                                data-bs-original-title="Búsqueda por coincidencia"
+                                                onChange={(e) => updateFilter('nit:name', 'regex', e.target.checked)}
+                                                disabled={!dataTableRef?.current}
+                                                aria-label="Buscar"
+                                            />
+                                        </div>
+                                        <InputModal
+                                            type="text"
+                                            id="tp_filter_nit"
+                                            label="NIT"
+                                            value={getFilter('nit:name')?.value || ''}
+                                            onChange={(e) => updateFilter('nit:name', 'value', e.target.value)}
+                                            placeholder="Buscar por NIT"
+                                            error=""
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Razón social */}
+                            <div className="row">
+                                <div className="col-md-12 mb-4 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                checked={getFilter('businessName:name')?.regex || false}
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
+                                                data-bs-original-title="Búsqueda por coincidencia"
+                                                onChange={(e) => updateFilter('businessName:name', 'regex', e.target.checked)}
+                                                disabled={!dataTableRef?.current}
+                                                aria-label="Buscar"
+                                            />
+                                        </div>
+                                        <InputModal
+                                            type="text"
+                                            id="tp_filter_businessName"
+                                            label="Razón Social"
+                                            value={getFilter('businessName:name')?.value || ''}
+                                            onChange={(e) => updateFilter('businessName:name', 'value', e.target.value)}
+                                            placeholder="Buscar por razón social"
+                                            error=""
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tipo de persona + Estado */}
+                            <div className="row">
+                                <div className="col-md-6 mb-4 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                checked={getFilter('personType:name')?.regex || false}
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
+                                                data-bs-original-title="Búsqueda por coincidencia"
+                                                onChange={(e) => updateFilter('personType:name', 'regex', e.target.checked)}
+                                                disabled={!dataTableRef?.current}
+                                                aria-label="Buscar"
+                                            />
+                                        </div>
+                                        <InputSelectModal
+                                            id="tp_filter_personType"
+                                            label="Tipo de persona"
+                                            options={PERSON_TYPES}
+                                            value={selectValue('personType:name')}
+                                            onChange={(value) => updateFilter('personType:name', 'value', value.join(','))}
+                                            multiple={true}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="col-md-6 mb-4 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                checked={getFilter('status:name')?.regex || false}
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
+                                                data-bs-original-title="Búsqueda por coincidencia"
+                                                onChange={(e) => updateFilter('status:name', 'regex', e.target.checked)}
+                                                disabled={!dataTableRef?.current}
+                                                aria-label="Buscar"
+                                            />
+                                        </div>
+                                        <InputSelectModal
+                                            id="tp_filter_status"
+                                            label="Estado"
+                                            options={THIRD_PARTY_STATUSES}
+                                            value={selectValue('status:name')}
+                                            onChange={(value) => updateFilter('status:name', 'value', value.join(','))}
+                                            multiple={true}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Roles */}
+                            <div className="row">
+                                <div className="col-md-12 mb-4 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                checked={getFilter('roles:name')?.regex || false}
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
+                                                data-bs-original-title="Búsqueda por coincidencia"
+                                                onChange={(e) => updateFilter('roles:name', 'regex', e.target.checked)}
+                                                disabled={!dataTableRef?.current}
+                                                aria-label="Buscar"
+                                            />
+                                        </div>
+                                        <InputSelectModal
+                                            id="tp_filter_roles"
+                                            label="Rol"
+                                            options={THIRD_PARTY_ROLES}
+                                            value={selectValue('roles:name')}
+                                            onChange={(value) => updateFilter('roles:name', 'value', value.join(','))}
+                                            multiple={true}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Ciudad + Departamento */}
+                            <div className="row">
+                                <div className="col-md-6 mb-4 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                checked={getFilter('city:name')?.regex || false}
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
+                                                data-bs-original-title="Búsqueda por coincidencia"
+                                                onChange={(e) => updateFilter('city:name', 'regex', e.target.checked)}
+                                                disabled={!dataTableRef?.current}
+                                                aria-label="Buscar"
+                                            />
+                                        </div>
+                                        <InputModal
+                                            type="text"
+                                            id="tp_filter_city"
+                                            label="Ciudad"
+                                            value={getFilter('city:name')?.value || ''}
+                                            onChange={(e) => updateFilter('city:name', 'value', e.target.value)}
+                                            placeholder="Buscar por ciudad"
+                                            error=""
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="col-md-6 mb-4 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                checked={getFilter('department:name')?.regex || false}
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-placement="top"
+                                                data-bs-original-title="Búsqueda por coincidencia"
+                                                onChange={(e) => updateFilter('department:name', 'regex', e.target.checked)}
+                                                disabled={!dataTableRef?.current}
+                                                aria-label="Buscar"
+                                            />
+                                        </div>
+                                        <InputModal
+                                            type="text"
+                                            id="tp_filter_department"
+                                            label="Departamento"
+                                            value={getFilter('department:name')?.value || ''}
+                                            onChange={(e) => updateFilter('department:name', 'value', e.target.value)}
+                                            placeholder="Buscar por departamento"
+                                            error=""
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>{/* /modal-body */}
+
+                        <div className="modal-footer">
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => {
+                                    getTable().draw();
+                                    filterInstance?.current?.hide();
+                                }}
+                            >
+                                Filtrar
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={() => {
+                                    getTable().columns().search('');
+                                    getTable().search('');
+                                    getTable().draw();
+                                    setFilters(prev => prev.map(f => ({ ...f, value: '' })));
+                                    filterInstance?.current?.hide();
+                                }}
+                            >
+                                Limpiar
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-outline-secondary"
+                                data-bs-dismiss="modal"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+};
+
+export default FilterThirdParty;
