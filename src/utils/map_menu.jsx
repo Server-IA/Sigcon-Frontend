@@ -31,6 +31,10 @@ import AssetReportGeneration from "../pages/assets/asset-report-generation";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
+// NIIF
+import NiifVerificationIndex from "../pages/list_accounts/niif_verification/index";
+import NiifCorrectionIndex from "../pages/list_accounts/niif_correction/index";
+
 // List Accounts
 import IndexPUC from "../pages/list_accounts/puc/index";
 
@@ -62,14 +66,14 @@ export const getMenu = async () => {
     try {
         const { data, error } = await fetchHelper.get(url, {}, 0);
         if (!error) {
-    
+
             modules.push(...data?.map(mod => {
                 // Construir el árbol de menús normalmente
                 const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
                     ...menu,
                     componentName: menu?.component,
                 })));
-    
+
                 return {
                     ...mod,
                     menus: menuTree
@@ -79,7 +83,7 @@ export const getMenu = async () => {
 
     } catch (error) {
         console.log(error);
-    }finally {
+    } finally {
         return modules;
     }
 
@@ -141,5 +145,7 @@ export const COMPONENT_MAP = [
     { id: "ACT_GENERACION_INFORMES", name: "Activos Generación de Informes", component: AssetReportGeneration },
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
-    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex }
+    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
+    { id: "NIIF_VERIFICATION", name: "Verificación NIIF", component: NiifVerificationIndex },
+    { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
 ];
