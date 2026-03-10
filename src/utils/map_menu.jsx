@@ -26,6 +26,9 @@ import RepLibroMayor from "../pages/list_accounts/rep-libro-mayor/LibroMayor";
 import RepAuxiliaresCuentas from "../pages/list_accounts/rep-auxiliares-cuenta/AuxiliaresCuentas";
 import RepEstadosFinancieros from "../pages/list_accounts/rep-estados-financieros/EstadosFinancieros";
 
+//Activos (Assets)
+import AssetReportGeneration from "../pages/assets/asset-report-generation";
+
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 // List Accounts
@@ -135,6 +138,7 @@ export const COMPONENT_MAP = [
     { id: "REP_LIBRO_MAYOR", name: "Reporte Libro Mayor", component: RepLibroMayor },
     { id: "REP_AUXILIARES_CUENTAS", name: "Reporte Auxiliares de cuentas", component: RepAuxiliaresCuentas },
     { id: "REP_ESTADOS_FINANCIEROS", name: "Reporte Estados Financieros", component: RepEstadosFinancieros },
+    { id: "ACT_GENERACION_INFORMES", name: "Activos Generación de Informes", component: AssetReportGeneration },
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
     { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex }
