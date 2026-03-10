@@ -7,13 +7,13 @@ import { useEffect, useState } from 'react';
 
 const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage, accountClasses, levels, accountNatures }) => {
 
-    const [errors, setErrors]             = useState({});
+    const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState({
         message: '',
         type: '',
         show: false
     });
-    const [loading, setLoading]           = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         setErrors({});
@@ -28,23 +28,23 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
         e.preventDefault();
 
         if (!account.code || account.code.trim() === '') {
-            setErrorsMessage({field: 'code', message: 'El código de la cuenta es obligatorio'});
+            setErrorsMessage({ field: 'code', message: 'El código de la cuenta es obligatorio' });
             return;
         }
         if (!/^[0-9]{1,10}$/.test(account.code)) {
-            setErrorsMessage({field: 'code', message: 'El código solo debe contener números y tener máximo 10 dígitos'});
+            setErrorsMessage({ field: 'code', message: 'El código solo debe contener números y tener máximo 10 dígitos' });
             return;
         }
         if (!account.name || account.name.trim() === '') {
-            setErrorsMessage({field: 'name', message: 'El nombre de la cuenta es obligatorio'});
+            setErrorsMessage({ field: 'name', message: 'El nombre de la cuenta es obligatorio' });
             return;
         }
         if (!/^[A-Za-z0-9_\-\s]{1,100}$/.test(account.name)) {
-            setErrorsMessage({field: 'name', message: 'El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)'});
+            setErrorsMessage({ field: 'name', message: 'El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)' });
             return;
         }
         if (!account.accountClass) {
-            setErrorsMessage({field: 'accountClass', message: 'Por favor seleccione la clase de la cuenta'});
+            setErrorsMessage({ field: 'accountClass', message: 'Por favor seleccione la clase de la cuenta' });
             return;
         }
         if (!account.level) {
@@ -52,17 +52,17 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
             return;
         }
         if (!account.nature) {
-            setErrorsMessage({field: 'nature', message: 'Por favor seleccione la naturaleza de la cuenta'});
+            setErrorsMessage({ field: 'nature', message: 'Por favor seleccione la naturaleza de la cuenta' });
             return;
         }
 
         const url = base_url(['api', 'v1', 'chart-of-accounts']);
         const payload = {
-            code:         account.code,
-            name:         account.name,
+            code: account.code,
+            name: account.name,
             accountClass: account.accountClass,
-            level:        account.level,
-            nature:       account.nature,
+            level: account.level,
+            nature: account.nature,
         };
         console.log('DEBUG create payload:', payload);
         try {
@@ -103,7 +103,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                 errores.forEach(err => { fieldErrors[err.field] = err.message; });
                 setErrors(fieldErrors);
             } else if (error?.msg) {
-                setErrorMessage({meesage: error.msg, type: 'danger', show: true});
+                setErrorMessage({ message: error.msg, type: 'danger', show: true });
             }
         } finally {
             setLoading(false);
@@ -129,7 +129,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                             type={errorMessage.type}
                             message={errorMessage.message}
                             show={errorMessage.show}
-                            onChange={() => setErrorMessage({message: '', type: '', show: false})}
+                            onChange={() => setErrorMessage({ message: '', type: '', show: false })}
                             duration={60000}
                         />
 

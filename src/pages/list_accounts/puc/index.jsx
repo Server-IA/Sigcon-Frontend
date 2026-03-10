@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSelector } from 'react-redux';
 
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
@@ -10,7 +11,7 @@ import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 import DropzoneModal from '../../../components/molecules/DropzoneModal';
-import { useSelector } from 'react-redux';
+
 
 const ACCOUNT_CLASSES = [
     { id: 'ASSET', name: 'Activo' },

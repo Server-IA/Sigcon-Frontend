@@ -53,7 +53,7 @@ export const getMenu = async () => {
                 componentName: "HOME"
             }
         ]
-    })
+    });
     try {
         const { data, error } = await fetchHelper.get(url, {}, 0);
         if (!error) {

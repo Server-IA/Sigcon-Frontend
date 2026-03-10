@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useId } from 'react';
 
 import AlertPage from '../../../components/molecules/AlertPage';
 import InputModal from '../../../components/molecules/InputModal';
@@ -10,15 +10,23 @@ import { base_url } from '../../../utils/functions';
 
 const JUSTIFICATION_MIN_LENGTH = 50;
 
+/**
+ * Modos de uso:
+ *  - Standalone (desde la tabla): NO pasar `onAdjustSave` → hace PUT a la API.
+ *  - Inline (dentro de create/updated): Pasar `onAdjustSave` → solo llama al callback.
+ */
 const AdjustSegmentation = ({
     modalRef,
     modalInstance,
     client,
-    setClient,
     dataTableRef,
     setMessage,
     segments,
+    onAdjustSave,
+    onBack,
 }) => {
+
+    const uid = useId();
 
     const [errorMessage, setErrorMessage] = useState('');
     const [errors, setErrors]             = useState({});
@@ -44,43 +52,51 @@ const AdjustSegmentation = ({
         return () => el.removeEventListener('show.bs.modal', onShow);
     }, [modalRef]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleClear = () => {
+        setAdjustment({ segment: '', justification: '' });
+        setErrors({});
+        setErrorMessage('');
+    };
+
+    const handleSubmit = async () => {
         setErrorMessage('');
         setErrors({});
 
-        // Validaciones frontend (RF08)
         if (!adjustment.segment) {
             setErrors(prev => ({ ...prev, segment: 'Debe seleccionar el nuevo segmento' }));
             setErrorMessage('Por favor complete todos los campos requeridos');
             return;
         }
 
+        // ECL_002
         if (!adjustment.justification || adjustment.justification.trim().length < JUSTIFICATION_MIN_LENGTH) {
-            setErrors(prev => ({ ...prev, justification: `La justificación debe tener al menos ${JUSTIFICATION_MIN_LENGTH} caracteres` }));
+            setErrors(prev => ({
+                ...prev,
+                justification: `La justificación debe tener al menos ${JUSTIFICATION_MIN_LENGTH} caracteres`,
+            }));
             setErrorMessage(`ECL_002: Justificación insuficiente (mínimo ${JUSTIFICATION_MIN_LENGTH} caracteres).`);
             return;
         }
 
+        const payload = {
+            segment:       adjustment.segment,
+            justification: adjustment.justification.trim(),
+        };
+
+        // Modo inline: devolver al padre sin llamada API
+        if (typeof onAdjustSave === 'function') {
+            onAdjustSave(payload);
+            return;
+        }
+
+        // Modo standalone: llamada API directa
         try {
             setLoading(true);
-
-            const url     = base_url(['api', 'v1', 'ecl', 'segmentation', client.id, 'adjust']);
-            const payload = {
-                segment:       adjustment.segment,
-                justification: adjustment.justification.trim(),
-            };
-
+            const url = base_url(['api', 'v1', 'third-parties', client.id, 'roles-status']);
             await fetchHelper.put(url, payload, {}, 1000);
-
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
-            setMessage({
-                message: 'Segmento actualizado exitosamente',
-                type:    'success',
-                show:    true,
-            });
-
+            setMessage({ message: 'Segmento actualizado exitosamente', type: 'success', show: true });
         } catch (error) {
             const fieldErrors = {};
             error?.errors?.forEach(err => { fieldErrors[err.field] = err.message; });
@@ -93,11 +109,13 @@ const AdjustSegmentation = ({
 
     const segmentLabel = (id) => segments.find(s => s.id === id)?.name ?? id ?? '-';
 
+    const segmentOptions = useMemo(() => segments.filter(s => s.id !== 'PENDING'), [segments]);
+
     return (
         <div
             className="modal fade"
             ref={modalRef}
-            id="modalAdjustSegmentation"
+            id={`modalAdjustSegmentation${uid}`}
             tabIndex="-1"
             aria-hidden="true"
         >
@@ -105,8 +123,7 @@ const AdjustSegmentation = ({
                 <div className="modal-content">
 
                     <div className="modal-header">
-                        <h4 className="modal-title">Ajuste Manual de Segmento ECL</h4>
-                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Cerrar" />
+                        <h4 className="modal-title">Ajuste manual</h4>
                     </div>
 
                     <div className="modal-body">
@@ -118,61 +135,41 @@ const AdjustSegmentation = ({
                             onChange={() => setErrorMessage('')}
                         />
 
-                        {/* Información del cliente (solo lectura) */}
-                        <div className="row g-3 mb-4">
+                        <div className="row g-3">
+
+                            {/* Segmento actual (solo lectura) */}
                             <div className="col-md-6">
                                 <InputModal
                                     type="text"
-                                    id="ecl_clientName"
-                                    label="Cliente"
-                                    value={client.clientName}
+                                    id={`adj_autoSegment${uid}`}
+                                    label="Segmento actual (automatico)"
+                                    value={segmentLabel(client?.autoSegment)}
                                     readOnly
+                                    required
                                 />
                             </div>
-                            <div className="col-md-3">
-                                <InputModal
-                                    type="text"
-                                    id="ecl_daysPastDue"
-                                    label="Días mora"
-                                    value={String(client.daysPastDue ?? '-')}
-                                    readOnly
-                                />
-                            </div>
-                            <div className="col-md-3">
-                                <InputModal
-                                    type="text"
-                                    id="ecl_autoSegment"
-                                    label="Segmento automático"
-                                    value={segmentLabel(client.autoSegment)}
-                                    readOnly
-                                />
-                            </div>
-                        </div>
 
-                        {/* Nuevo segmento */}
-                        <div className="row g-3 mb-3">
+                            {/* Nuevo segmento (manual) */}
                             <div className="col-md-6">
                                 <InputSelectModal
-                                    id="ecl_newSegment"
-                                    label="Nuevo segmento"
+                                    id={`adj_newSegment${uid}`}
+                                    label="Nuevo segmento (manual)"
                                     value={adjustment.segment}
                                     onChange={(val) => setAdjustment(prev => ({ ...prev, segment: val }))}
-                                    options={segments.filter(s => s.id !== 'PENDING')}
+                                    options={segmentOptions}
                                     error={errors.segment}
                                     required
                                 />
                             </div>
-                        </div>
 
-                        {/* Justificación */}
-                        <div className="row g-3">
+                            {/* Justificación */}
                             <div className="col-12">
                                 <TextareaModal
-                                    id="ecl_justification"
-                                    label={`Justificación (mínimo ${JUSTIFICATION_MIN_LENGTH} caracteres)`}
+                                    id={`adj_justification${uid}`}
+                                    label={`Justificación (min ${JUSTIFICATION_MIN_LENGTH} caracteres)`}
                                     value={adjustment.justification}
                                     onChange={(e) => setAdjustment(prev => ({ ...prev, justification: e.target.value }))}
-                                    placeholder="Describa el motivo del ajuste manual..."
+                                    placeholder="Justifica"
                                     error={errors.justification}
                                     required
                                 />
@@ -180,29 +177,45 @@ const AdjustSegmentation = ({
                                     {adjustment.justification.trim().length} / {JUSTIFICATION_MIN_LENGTH} caracteres mínimos
                                 </small>
                             </div>
+
                         </div>
 
                     </div>
 
-                    <div className="modal-footer">
+                    <div className="modal-footer d-flex justify-content-between">
+                        <div className="d-flex gap-2">
+                            <button
+                                type="button"
+                                className="btn btn-primary waves-effect waves-light"
+                                onClick={handleSubmit}
+                                disabled={loading}
+                            >
+                                {loading
+                                    ? <><span className="spinner-border spinner-border-sm me-1" role="status" /> Guardando...</>
+                                    : 'Guardar'
+                                }
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-secondary waves-effect"
+                                onClick={handleClear}
+                                disabled={loading}
+                            >
+                                Limpiar
+                            </button>
+                        </div>
                         <button
                             type="button"
-                            className="btn btn-secondary waves-effect"
-                            data-bs-dismiss="modal"
+                            className="btn btn-danger waves-effect"
                             disabled={loading}
+                            onClick={() => {
+                                modalInstance?.current?.hide();
+                                if (typeof onBack === 'function') {
+                                    setTimeout(() => onBack(), 350);
+                                }
+                            }}
                         >
-                            Cancelar
-                        </button>
-                        <button
-                            type="button"
-                            className="btn btn-primary waves-effect waves-light"
-                            onClick={handleSubmit}
-                            disabled={loading}
-                        >
-                            {loading
-                                ? <><span className="spinner-border spinner-border-sm me-1" role="status" /> Guardando...</>
-                                : <><i className="ri-save-line me-1" /> Guardar ajuste</>
-                            }
+                            Volver
                         </button>
                     </div>
 

@@ -99,7 +99,6 @@ const FilterSegmentation = ({
                                     onChange={(val) => updateFilter('autoSegment:name', 'value', Array.isArray(val) ? val.join(',') : val)}
                                     options={segments}
                                     multiple={true}
-                                    clearable={true}
                                 />
                             </div>
 
@@ -112,7 +111,6 @@ const FilterSegmentation = ({
                                     onChange={(val) => updateFilter('finalSegment:name', 'value', Array.isArray(val) ? val.join(',') : val)}
                                     options={segments}
                                     multiple={true}
-                                    clearable={true}
                                 />
                             </div>
 
@@ -125,7 +123,6 @@ const FilterSegmentation = ({
                                     onChange={(val) => updateFilter('adjustmentType:name', 'value', Array.isArray(val) ? val.join(',') : val)}
                                     options={adjustmentTypes}
                                     multiple={true}
-                                    clearable={true}
                                 />
                             </div>
 
