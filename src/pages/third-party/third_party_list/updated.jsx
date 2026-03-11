@@ -69,7 +69,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
     const [thirdPartyUpdated, setThirdPartyUpdated] = useState({
         id: '', nit: '', dv: '', businessName: '', personType: '',
         roles: [], taxRegime: '', fiscalResponsibilities: '', retentions: '',
-        address: '', phone: '', email: '', city: '', department: '', country: '',
+        address: '', phone: '', email: '', municipalityId: '',
         creditLimit: '', paymentConditions: '', marketSegment: '',
         status: 'ACTIVE', blockReason: '',
     });
@@ -88,9 +88,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             address:                thirdParty.address               ?? '',
             phone:                  thirdParty.phone                 ?? '',
             email:                  thirdParty.email                 ?? '',
-            city:                   thirdParty.city                  ?? '',
-            department:             thirdParty.department            ?? '',
-            country:                thirdParty.country               ?? '',
+            municipalityId:         thirdParty.municipalityId        ?? '',
             creditLimit:            thirdParty.creditLimit           ?? '',
             paymentConditions:      thirdParty.paymentConditions     ?? '',
             marketSegment:          thirdParty.marketSegment         ?? '',
@@ -125,9 +123,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                 address:                thirdPartyUpdated.address,
                 phone:                  thirdPartyUpdated.phone,
                 email:                  thirdPartyUpdated.email,
-                city:                   thirdPartyUpdated.city,
-                department:             thirdPartyUpdated.department,
-                country:                thirdPartyUpdated.country,
+                municipalityId:         thirdPartyUpdated.municipalityId ? Number(thirdPartyUpdated.municipalityId) : null,
                 creditLimit:            thirdPartyUpdated.creditLimit ? Number(thirdPartyUpdated.creditLimit) : null,
                 paymentTerms:           thirdPartyUpdated.paymentConditions,
                 marketSegment:          thirdPartyUpdated.marketSegment,
@@ -149,7 +145,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             setThirdParty({
                 id: '', nit: '', dv: '', businessName: '', personType: '',
                 roles: [], taxRegime: '', fiscalResponsibilities: '', retentions: '',
-                address: '', phone: '', email: '', city: '', department: '', country: '',
+                address: '', phone: '', email: '', municipalityId: '',
                 creditLimit: '', paymentConditions: '', marketSegment: '',
                 status: 'ACTIVE', blockReason: '',
             });
@@ -252,7 +248,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                         <InputSelectModal
                                             id="tp_status_update" label="Estado"
                                             value={thirdPartyUpdated.status}
-                                            onChange={(value) => setThirdPartyUpdated({ ...thirdPartyUpdated, status: value })}
+                                            onChange={(value) => setThirdPartyUpdated({ ...thirdPartyUpdated, status: value, blockReason: '' })}
                                             error={errors.status} placeholder="Seleccione estado"
                                             options={STATUSES} required={true}
                                         />
@@ -361,23 +357,11 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                     </div>
                                 </div>
                                 <div className="row">
-                                    <div className="col-md-4 mb-4 mt-2">
-                                        <InputModal type="text" id="tp_city_update" label="Ciudad"
-                                            value={thirdPartyUpdated.city}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, city: e.target.value })}
-                                            error={errors.city} placeholder="Ej. Bogotá" required={true} />
-                                    </div>
-                                    <div className="col-md-4 mb-4 mt-2">
-                                        <InputModal type="text" id="tp_department_update" label="Departamento"
-                                            value={thirdPartyUpdated.department}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, department: e.target.value })}
-                                            error={errors.department} placeholder="Ej. Cundinamarca" required={true} />
-                                    </div>
-                                    <div className="col-md-4 mb-4 mt-2">
-                                        <InputModal type="text" id="tp_country_update" label="País"
-                                            value={thirdPartyUpdated.country}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, country: e.target.value })}
-                                            error={errors.country} placeholder="Ej. Colombia" required={true} />
+                                    <div className="col-md-6 mb-4 mt-2">
+                                        <InputModal type="number" id="tp_municipalityId_update" label="Municipio ID"
+                                            value={thirdPartyUpdated.municipalityId}
+                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, municipalityId: e.target.value })}
+                                            error={errors.municipalityId} placeholder="Ej. 1" required={true} />
                                     </div>
                                 </div>
                             </div>

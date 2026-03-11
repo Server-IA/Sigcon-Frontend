@@ -34,6 +34,12 @@ const STATUS_ID_MAP = {
     BLOCKED:  3,
 };
 
+const STATUSES = [
+    { id: 'ACTIVE',   label: 'Activo' },
+    { id: 'INACTIVE', label: 'Inactivo' },
+    { id: 'BLOCKED',  label: 'Bloqueado' },
+];
+
 const ROLES = [
     { id: 'CLIENT', label: 'Cliente', icon: 'ri-user-line' },
     { id: 'SUPPLIER', label: 'Proveedor', icon: 'ri-store-line' },
@@ -83,10 +89,8 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                 personType:             thirdParty.personType,
                 roleIds:                (thirdParty.roles ?? []).map(r => ROLE_ID_MAP[r]).filter(Boolean),
                 statusId:               STATUS_ID_MAP[thirdParty.status] ?? 1,
-                city:                   thirdParty.city,
-                department:             thirdParty.department,
+                municipalityId:         thirdParty.municipalityId ? Number(thirdParty.municipalityId) : null,
                 address:                thirdParty.address,
-                country:                thirdParty.country,
                 phone:                  thirdParty.phone,
                 email:                  thirdParty.email,
                 taxRegime:              thirdParty.taxRegime,
@@ -95,13 +99,16 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                 creditLimit:            thirdParty.creditLimit ? Number(thirdParty.creditLimit) : null,
                 paymentTerms:           thirdParty.paymentConditions,
                 marketSegment:          thirdParty.marketSegment,
+                ...(thirdParty.status === 'BLOCKED' && {
+                    blockingReason: thirdParty.blockReason,
+                }),
             };
             await fetchHelper.post(url, payload, {}, 1000);
 
             setThirdParty({
                 id: '', nit: '', dv: '', businessName: '', personType: '',
                 roles: [], taxRegime: '', fiscalResponsibilities: '', retentions: '',
-                address: '', phone: '', email: '', city: '', department: '', country: '',
+                address: '', phone: '', email: '', municipalityId: '',
                 creditLimit: '', paymentConditions: '', marketSegment: '',
                 status: 'ACTIVE', blockReason: '',
             });
@@ -246,6 +253,40 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                         );
                                     })}
                                 </div>
+
+                                <hr className="my-4" />
+
+                                <p className="text-muted mb-3">Estado del tercero: <span className="text-danger">*</span></p>
+                                <div className="row">
+                                    <div className="col-md-4 mb-2">
+                                        <InputSelectModal
+                                            id="tp_status_create"
+                                            label="Estado"
+                                            value={thirdParty.status}
+                                            onChange={(value) => setThirdParty({ ...thirdParty, status: value, blockReason: '' })}
+                                            error={errors.status}
+                                            placeholder="Seleccione estado"
+                                            options={STATUSES}
+                                            required={true}
+                                        />
+                                    </div>
+                                </div>
+
+                                {thirdParty.status === 'BLOCKED' && (
+                                    <div className="row mt-3">
+                                        <div className="col-md-12 mb-2">
+                                            <TextareaModal
+                                                id="tp_blockReason_create"
+                                                label="Motivo de bloqueo"
+                                                value={thirdParty.blockReason}
+                                                onChange={(e) => setThirdParty({ ...thirdParty, blockReason: e.target.value })}
+                                                error={errors.blockingReason}
+                                                placeholder="Mínimo 20 caracteres"
+                                                required={true}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -335,39 +376,15 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                     </div>
                                 </div>
                                 <div className="row">
-                                    <div className="col-md-4 mb-4 mt-2">
+                                    <div className="col-md-6 mb-4 mt-2">
                                         <InputModal
-                                            type="text"
-                                            id="tp_city_create"
-                                            label="Ciudad"
-                                            value={thirdParty.city}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, city: e.target.value })}
-                                            error={errors.city}
-                                            placeholder="Ej. Bogotá"
-                                            required={true}
-                                        />
-                                    </div>
-                                    <div className="col-md-4 mb-4 mt-2">
-                                        <InputModal
-                                            type="text"
-                                            id="tp_department_create"
-                                            label="Departamento"
-                                            value={thirdParty.department}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, department: e.target.value })}
-                                            error={errors.department}
-                                            placeholder="Ej. Cundinamarca"
-                                            required={true}
-                                        />
-                                    </div>
-                                    <div className="col-md-4 mb-4 mt-2">
-                                        <InputModal
-                                            type="text"
-                                            id="tp_country_create"
-                                            label="País"
-                                            value={thirdParty.country}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, country: e.target.value })}
-                                            error={errors.country}
-                                            placeholder="Ej. COLOMBIA"
+                                            type="number"
+                                            id="tp_municipalityId_create"
+                                            label="Municipio ID"
+                                            value={thirdParty.municipalityId}
+                                            onChange={(e) => setThirdParty({ ...thirdParty, municipalityId: e.target.value })}
+                                            error={errors.municipalityId}
+                                            placeholder="Ej. 1"
                                             required={true}
                                         />
                                     </div>
