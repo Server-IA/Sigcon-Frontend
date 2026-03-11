@@ -5,12 +5,12 @@ import { base_url } from '../../../utils/functions';
 import CreateThirdParty from './create';
 import UpdatedThirdParty from './updated';
 import FilterThirdParty from './filter';
-import BulkUploadThirdParty from './bulk_upload';
+import DropzoneModal from '../../../components/molecules/DropzoneModal';
 import AlertPage from '../../../components/molecules/AlertPage';
 
-// TODO: Actualizar URLs cuando el backend provea los endpoints
-const API_LIST = ['thirdParty', 'search'];
-const API_DELETE = (id) => ['thirdParty', 'delete', id];
+const API_LIST    = ['api', 'v1', 'third-parties', 'search'];
+const API_GET     = (id) => ['api', 'v1', 'third-parties', id];
+const API_DELETE  = (id) => ['api', 'v1', 'third-parties', id];
 
 const ROLE_LABELS = {
     CLIENT: 'Cliente',
@@ -36,6 +36,7 @@ const emptyThirdParty = {
     email: '',
     city: '',
     department: '',
+    country: '',
     creditLimit: '',
     paymentConditions: '',
     marketSegment: '',
@@ -55,8 +56,6 @@ const IndexThirdPartyList = () => {
     const modalUpdateInstance = useRef(null);
     const modalConfirmDeleteRef = useRef(null);
     const modalConfirmDeleteInstance = useRef(null);
-    const modalReasonDeleteRef = useRef(null);
-    const modalReasonDeleteInstance = useRef(null);
     const modalBulkUploadRef = useRef(null);
     const modalBulkUploadInstance = useRef(null);
 
@@ -68,7 +67,6 @@ const IndexThirdPartyList = () => {
     const [thirdPartyBulk, setThirdPartyBulk] = useState(false);
     const [search, setSearch] = useState({ value: '', checked: true });
     const [deleteTarget, setDeleteTarget] = useState(null);
-    const [deletionReason, setDeletionReason] = useState('');
 
     const [thirdParty, setThirdParty] = useState(emptyThirdParty);
 
@@ -136,37 +134,27 @@ const IndexThirdPartyList = () => {
 
     const openConfirmDelete = (id, nit, businessName) => {
         setDeleteTarget({ id, nit, businessName });
-        setDeletionReason('');
         if (!modalConfirmDeleteInstance.current) {
             modalConfirmDeleteInstance.current = new window.bootstrap.Modal(modalConfirmDeleteRef.current);
         }
         modalConfirmDeleteInstance.current.show();
     };
 
-    const onConfirmDeleteContinue = () => {
-        modalConfirmDeleteInstance.current?.hide();
-        if (!modalReasonDeleteInstance.current) {
-            modalReasonDeleteInstance.current = new window.bootstrap.Modal(modalReasonDeleteRef.current);
-        }
-        modalReasonDeleteInstance.current.show();
-    };
-
-    const onReasonDeleteSubmit = async () => {
+    const onConfirmDelete = async () => {
         if (!deleteTarget) return;
-        const url = base_url(API_DELETE(deleteTarget.id), { reason: deletionReason });
+        const url = base_url(API_DELETE(deleteTarget.id));
         try {
             await fetchHelper.delete(url, {}, {}, 500, false);
+            modalConfirmDeleteInstance.current?.hide();
             dataTableRef?.current?.ajax.reload();
-            modalReasonDeleteInstance.current?.hide();
             setThirdPartyDelete(true);
             setThirdPartyError(false);
             setDeleteTarget(null);
-            setDeletionReason('');
         } catch (error) {
             console.error(error);
+            modalConfirmDeleteInstance.current?.hide();
             setThirdPartyError(true);
             setThirdPartyDelete(false);
-            dataTableRef?.current?.ajax.reload();
         }
     };
 
@@ -204,7 +192,7 @@ const IndexThirdPartyList = () => {
         const table = dataTableRef?.current;
         if (!table) return;
 
-        const handler = function () {
+        const handler = async function () {
             const action = $(this).data('action');
             const id = Number($(this).data('id'));
             const row = data.find(m => m.id === id);
@@ -212,30 +200,63 @@ const IndexThirdPartyList = () => {
 
             switch (action) {
                 case 'view':
-                case 'edit':
-                    setThirdParty({
-                        id: row.id ?? '',
-                        nit: row.nit ?? '',
-                        dv: row.dv ?? '',
-                        businessName: row.businessName ?? '',
-                        personType: row.personType ?? '',
-                        roles: row.roles ?? [],
-                        taxRegime: row.taxRegime ?? '',
-                        fiscalResponsibilities: row.fiscalResponsibilities ?? '',
-                        retentions: row.retentions ?? '',
-                        address: row.address ?? '',
-                        phone: row.phone ?? '',
-                        email: row.email ?? '',
-                        city: row.city ?? '',
-                        department: row.department ?? '',
-                        creditLimit: row.creditLimit ?? '',
-                        paymentConditions: row.paymentConditions ?? '',
-                        marketSegment: row.marketSegment ?? '',
-                        status: row.status ?? 'ACTIVE',
-                        blockReason: row.blockReason ?? '',
-                    });
+                case 'edit': {
+                    // Carga la ficha completa del tercero desde el backend (GET /api/v1/third-parties/{id})
+                    try {
+                        const url = base_url(API_GET(id));
+                        const response = await fetchHelper.get(url, {}, 0);
+                        const detail = response?.data ?? response ?? {};
+                        setThirdParty({
+                            id:                    detail.id                    ?? '',
+                            nit:                   detail.nit                   ?? '',
+                            dv:                    detail.dv                    ?? '',
+                            businessName:          detail.businessName          ?? '',
+                            personType:            detail.personType            ?? '',
+                            roles:                 detail.roles                 ?? [],
+                            taxRegime:             detail.taxRegime             ?? '',
+                            fiscalResponsibilities:detail.fiscalResponsibilities?? '',
+                            retentions:            detail.withholdingInfo       ?? '',
+                            address:               detail.address               ?? '',
+                            phone:                 detail.phone                 ?? '',
+                            email:                 detail.email                 ?? '',
+                            city:                  detail.city                  ?? '',
+                            department:            detail.department            ?? '',
+                            country:               detail.country               ?? '',
+                            creditLimit:           detail.creditLimit           ?? '',
+                            paymentConditions:     detail.paymentTerms          ?? '',
+                            marketSegment:         detail.marketSegment         ?? '',
+                            status:                detail.status                ?? 'ACTIVE',
+                            blockReason:           detail.blockReason           ?? '',
+                        });
+                    } catch (err) {
+                        console.error('Error al cargar detalle del tercero:', err);
+                        // Fallback: usar los datos del DataTable si el GET falla
+                        setThirdParty({
+                            id:                    row.id                    ?? '',
+                            nit:                   row.nit                   ?? '',
+                            dv:                    row.dv                    ?? '',
+                            businessName:          row.businessName          ?? '',
+                            personType:            row.personType            ?? '',
+                            roles:                 row.roles                 ?? [],
+                            taxRegime:             row.taxRegime             ?? '',
+                            fiscalResponsibilities:row.fiscalResponsibilities?? '',
+                            retentions:            row.withholdingInfo       ?? '',
+                            address:               row.address               ?? '',
+                            phone:                 row.phone                 ?? '',
+                            email:                 row.email                 ?? '',
+                            city:                  row.city                  ?? '',
+                            department:            row.department            ?? '',
+                            country:               row.country               ?? '',
+                            creditLimit:           row.creditLimit           ?? '',
+                            paymentConditions:     row.paymentTerms          ?? '',
+                            marketSegment:         row.marketSegment         ?? '',
+                            status:                row.status                ?? 'ACTIVE',
+                            blockReason:           row.blockReason           ?? '',
+                        });
+                    }
                     openModalUpdate();
                     break;
+                }
 
                 case 'delete':
                     openConfirmDelete(row.id, row.nit, row.businessName);
@@ -303,14 +324,17 @@ const IndexThirdPartyList = () => {
                 setThirdPartyEdit={setThirdPartyEdit}
             />
 
-            <BulkUploadThirdParty
+            <DropzoneModal
                 modalRef={modalBulkUploadRef}
-                modalInstance={modalBulkUploadInstance}
-                dataTableRef={dataTableRef}
-                onSuccess={() => setThirdPartyBulk(true)}
+                title="Carga Masiva de Terceros"
+                uploadUrl={base_url(['api', 'v1', 'third-parties', 'bulk', 'store'])}
+                onSuccess={() => {
+                    setThirdPartyBulk(true);
+                    dataTableRef?.current?.ajax?.reload?.();
+                }}
             />
 
-            {/* Modal 1: Confirmación de eliminación */}
+            {/* Modal: Confirmación de eliminación */}
             <div className="modal fade" ref={modalConfirmDeleteRef} tabIndex={-1} aria-hidden="true">
                 <div className="modal-dialog modal-dialog-centered" role="document">
                     <div className="modal-content">
@@ -323,42 +347,12 @@ const IndexThirdPartyList = () => {
                             <p className="text-body">
                                 ¿Está seguro de que desea eliminar el tercero{' '}
                                 <strong>{deleteTarget?.businessName ?? ''}</strong> con NIT{' '}
-                                <strong>{deleteTarget?.nit ?? ''}</strong>?
+                                <strong>{deleteTarget?.nit ?? ''}</strong>? Esta acción es irreversible.
                             </p>
-                        </div>
-                        <div className="modal-footer justify-content-end">
-                            <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="button" className="btn btn-danger" onClick={onConfirmDeleteContinue}>Continuar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Modal 2: Motivo de eliminación */}
-            <div className="modal fade" ref={modalReasonDeleteRef} tabIndex={-1} aria-hidden="true">
-                <div className="modal-dialog modal-dialog-centered" role="document">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <span className="text-warning me-2"><i className="ri-error-warning-line fs-2"></i></span>
-                            <h4 className="modal-title fw-bold">Eliminar Tercero</h4>
-                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div className="modal-body">
-                            <p className="text-body text-muted mb-2">
-                                Escriba el motivo de la eliminación del tercero{' '}
-                                <strong>{deleteTarget?.businessName ?? ''}</strong>.
-                            </p>
-                            <textarea
-                                className="form-control"
-                                rows={4}
-                                placeholder="Motivo de eliminación"
-                                value={deletionReason}
-                                onChange={(e) => setDeletionReason(e.target.value)}
-                            />
                         </div>
                         <div className="modal-footer justify-content-end">
                             <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-                            <button type="button" className="btn btn-danger" onClick={onReasonDeleteSubmit}>Eliminar</button>
+                            <button type="button" className="btn btn-danger" onClick={onConfirmDelete}>Eliminar</button>
                         </div>
                     </div>
                 </div>

@@ -5,18 +5,34 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-// TODO: Actualizar URL cuando el backend provea el endpoint
-const API_STORE = ['thirdParty', 'store'];
+const API_STORE = ['api', 'v1', 'third-parties', 'store'];
 
 const PERSON_TYPES = [
-    { id: 'NATURAL', label: 'Natural' },
-    { id: 'JURIDICAL', label: 'Jurídica' },
+    { id: 'NATURAL',  label: 'Natural' },
+    { id: 'JURIDICA', label: 'Jurídica' },
 ];
 
 const TAX_REGIMES = [
     { id: 'SIMPLIFIED', label: 'Simplificado' },
-    { id: 'COMMON', label: 'Común' },
+    { id: 'COMMON',     label: 'Común' },
 ];
+
+// TODO: Confirmar IDs reales de roles con el backend (GET /api/v1/roles o similar)
+const ROLE_ID_MAP = {
+    CLIENT:   1,
+    SUPPLIER: 2,
+    EMPLOYEE: 3,
+    CREDITOR: 4,
+    DEBTOR:   5,
+    OTHER:    6,
+};
+
+// TODO: Confirmar IDs reales de estado con el backend
+const STATUS_ID_MAP = {
+    ACTIVE:   1,
+    INACTIVE: 2,
+    BLOCKED:  3,
+};
 
 const ROLES = [
     { id: 'CLIENT', label: 'Cliente', icon: 'ri-user-line' },
@@ -61,29 +77,31 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
         try {
             const url = base_url(API_STORE);
             const payload = {
-                nit: thirdParty.nit,
-                dv: thirdParty.dv,
-                businessName: thirdParty.businessName,
-                personType: thirdParty.personType,
-                roles: thirdParty.roles,
-                taxRegime: thirdParty.taxRegime,
+                nit:                    thirdParty.nit,
+                dv:                     thirdParty.dv,
+                businessName:           thirdParty.businessName,
+                personType:             thirdParty.personType,
+                roleIds:                (thirdParty.roles ?? []).map(r => ROLE_ID_MAP[r]).filter(Boolean),
+                statusId:               STATUS_ID_MAP[thirdParty.status] ?? 1,
+                city:                   thirdParty.city,
+                department:             thirdParty.department,
+                address:                thirdParty.address,
+                country:                thirdParty.country,
+                phone:                  thirdParty.phone,
+                email:                  thirdParty.email,
+                taxRegime:              thirdParty.taxRegime,
                 fiscalResponsibilities: thirdParty.fiscalResponsibilities,
-                retentions: thirdParty.retentions,
-                address: thirdParty.address,
-                phone: thirdParty.phone,
-                email: thirdParty.email,
-                city: thirdParty.city,
-                department: thirdParty.department,
-                creditLimit: thirdParty.creditLimit ? Number(thirdParty.creditLimit) : null,
-                paymentConditions: thirdParty.paymentConditions,
-                marketSegment: thirdParty.marketSegment,
+                withholdingInfo:        thirdParty.retentions,
+                creditLimit:            thirdParty.creditLimit ? Number(thirdParty.creditLimit) : null,
+                paymentTerms:           thirdParty.paymentConditions,
+                marketSegment:          thirdParty.marketSegment,
             };
             await fetchHelper.post(url, payload, {}, 1000);
 
             setThirdParty({
                 id: '', nit: '', dv: '', businessName: '', personType: '',
                 roles: [], taxRegime: '', fiscalResponsibilities: '', retentions: '',
-                address: '', phone: '', email: '', city: '', department: '',
+                address: '', phone: '', email: '', city: '', department: '', country: '',
                 creditLimit: '', paymentConditions: '', marketSegment: '',
                 status: 'ACTIVE', blockReason: '',
             });
@@ -317,7 +335,7 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                     </div>
                                 </div>
                                 <div className="row">
-                                    <div className="col-md-6 mb-4 mt-2">
+                                    <div className="col-md-4 mb-4 mt-2">
                                         <InputModal
                                             type="text"
                                             id="tp_city_create"
@@ -329,7 +347,7 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                             required={true}
                                         />
                                     </div>
-                                    <div className="col-md-6 mb-4 mt-2">
+                                    <div className="col-md-4 mb-4 mt-2">
                                         <InputModal
                                             type="text"
                                             id="tp_department_create"
@@ -338,6 +356,18 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                             onChange={(e) => setThirdParty({ ...thirdParty, department: e.target.value })}
                                             error={errors.department}
                                             placeholder="Ej. Cundinamarca"
+                                            required={true}
+                                        />
+                                    </div>
+                                    <div className="col-md-4 mb-4 mt-2">
+                                        <InputModal
+                                            type="text"
+                                            id="tp_country_create"
+                                            label="País"
+                                            value={thirdParty.country}
+                                            onChange={(e) => setThirdParty({ ...thirdParty, country: e.target.value })}
+                                            error={errors.country}
+                                            placeholder="Ej. COLOMBIA"
                                             required={true}
                                         />
                                     </div>

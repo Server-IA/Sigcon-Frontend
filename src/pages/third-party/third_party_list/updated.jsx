@@ -5,18 +5,37 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-// TODO: Actualizar URL cuando el backend provea el endpoint
-const API_UPDATE = ['thirdParty', 'update'];
+// id va en el PATH: PUT /api/v1/third-parties/{id}
+const API_UPDATE = (id) => ['api', 'v1', 'third-parties', id];
+// id va en el PATH: PUT /api/v1/third-parties/{id}/roles-status
+const API_UPDATE_ROLES_STATUS = (id) => ['api', 'v1', 'third-parties', id, 'roles-status'];
 
 const PERSON_TYPES = [
-    { id: 'NATURAL', label: 'Natural' },
-    { id: 'JURIDICAL', label: 'Jurídica' },
+    { id: 'NATURAL',  label: 'Natural' },
+    { id: 'JURIDICA', label: 'Jurídica' },
 ];
 
 const TAX_REGIMES = [
     { id: 'SIMPLIFIED', label: 'Simplificado' },
-    { id: 'COMMON', label: 'Común' },
+    { id: 'COMMON',     label: 'Común' },
 ];
+
+// TODO: Confirmar IDs reales de roles con el backend
+const ROLE_ID_MAP = {
+    CLIENT:   1,
+    SUPPLIER: 2,
+    EMPLOYEE: 3,
+    CREDITOR: 4,
+    DEBTOR:   5,
+    OTHER:    6,
+};
+
+// TODO: Confirmar IDs reales de estado con el backend
+const STATUS_ID_MAP = {
+    ACTIVE:   1,
+    INACTIVE: 2,
+    BLOCKED:  3,
+};
 
 const STATUSES = [
     { id: 'ACTIVE', label: 'Activo' },
@@ -50,32 +69,33 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
     const [thirdPartyUpdated, setThirdPartyUpdated] = useState({
         id: '', nit: '', dv: '', businessName: '', personType: '',
         roles: [], taxRegime: '', fiscalResponsibilities: '', retentions: '',
-        address: '', phone: '', email: '', city: '', department: '',
+        address: '', phone: '', email: '', city: '', department: '', country: '',
         creditLimit: '', paymentConditions: '', marketSegment: '',
         status: 'ACTIVE', blockReason: '',
     });
 
     useEffect(() => {
         setThirdPartyUpdated({
-            id: thirdParty.id ?? '',
-            nit: thirdParty.nit ?? '',
-            dv: thirdParty.dv ?? '',
-            businessName: thirdParty.businessName ?? '',
-            personType: thirdParty.personType ?? '',
-            roles: thirdParty.roles ?? [],
-            taxRegime: thirdParty.taxRegime ?? '',
-            fiscalResponsibilities: thirdParty.fiscalResponsibilities ?? '',
-            retentions: thirdParty.retentions ?? '',
-            address: thirdParty.address ?? '',
-            phone: thirdParty.phone ?? '',
-            email: thirdParty.email ?? '',
-            city: thirdParty.city ?? '',
-            department: thirdParty.department ?? '',
-            creditLimit: thirdParty.creditLimit ?? '',
-            paymentConditions: thirdParty.paymentConditions ?? '',
-            marketSegment: thirdParty.marketSegment ?? '',
-            status: thirdParty.status ?? 'ACTIVE',
-            blockReason: thirdParty.blockReason ?? '',
+            id:                     thirdParty.id                    ?? '',
+            nit:                    thirdParty.nit                   ?? '',
+            dv:                     thirdParty.dv                    ?? '',
+            businessName:           thirdParty.businessName          ?? '',
+            personType:             thirdParty.personType            ?? '',
+            roles:                  thirdParty.roles                 ?? [],
+            taxRegime:              thirdParty.taxRegime             ?? '',
+            fiscalResponsibilities: thirdParty.fiscalResponsibilities?? '',
+            retentions:             thirdParty.retentions            ?? '',
+            address:                thirdParty.address               ?? '',
+            phone:                  thirdParty.phone                 ?? '',
+            email:                  thirdParty.email                 ?? '',
+            city:                   thirdParty.city                  ?? '',
+            department:             thirdParty.department            ?? '',
+            country:                thirdParty.country               ?? '',
+            creditLimit:            thirdParty.creditLimit           ?? '',
+            paymentConditions:      thirdParty.paymentConditions     ?? '',
+            marketSegment:          thirdParty.marketSegment         ?? '',
+            status:                 thirdParty.status                ?? 'ACTIVE',
+            blockReason:            thirdParty.blockReason           ?? '',
         });
         setErrors({});
         setErrorMessage('');
@@ -94,32 +114,42 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
 
     const handleUpdate = async () => {
         try {
-            const url = base_url(API_UPDATE);
+            // ── 1. Actualizar información general del tercero ──────────────────
+            const url = base_url(API_UPDATE(thirdPartyUpdated.id));
             const payload = {
-                id: Number(thirdPartyUpdated.id),
-                businessName: thirdPartyUpdated.businessName,
-                personType: thirdPartyUpdated.personType,
-                roles: thirdPartyUpdated.roles,
-                taxRegime: thirdPartyUpdated.taxRegime,
+                businessName:           thirdPartyUpdated.businessName,
+                personType:             thirdPartyUpdated.personType,
+                taxRegime:              thirdPartyUpdated.taxRegime,
                 fiscalResponsibilities: thirdPartyUpdated.fiscalResponsibilities,
-                retentions: thirdPartyUpdated.retentions,
-                address: thirdPartyUpdated.address,
-                phone: thirdPartyUpdated.phone,
-                email: thirdPartyUpdated.email,
-                city: thirdPartyUpdated.city,
-                department: thirdPartyUpdated.department,
-                creditLimit: thirdPartyUpdated.creditLimit ? Number(thirdPartyUpdated.creditLimit) : null,
-                paymentConditions: thirdPartyUpdated.paymentConditions,
-                marketSegment: thirdPartyUpdated.marketSegment,
-                status: thirdPartyUpdated.status,
-                blockReason: thirdPartyUpdated.blockReason,
+                withholdingInfo:        thirdPartyUpdated.retentions,
+                address:                thirdPartyUpdated.address,
+                phone:                  thirdPartyUpdated.phone,
+                email:                  thirdPartyUpdated.email,
+                city:                   thirdPartyUpdated.city,
+                department:             thirdPartyUpdated.department,
+                country:                thirdPartyUpdated.country,
+                creditLimit:            thirdPartyUpdated.creditLimit ? Number(thirdPartyUpdated.creditLimit) : null,
+                paymentTerms:           thirdPartyUpdated.paymentConditions,
+                marketSegment:          thirdPartyUpdated.marketSegment,
             };
             await fetchHelper.put(url, payload, {}, 1000);
+
+            // ── 2. Actualizar roles y estado (endpoint dedicado) ───────────────
+            const urlRolesStatus = base_url(API_UPDATE_ROLES_STATUS(thirdPartyUpdated.id));
+            const rolesStatusPayload = {
+                roleIds:  (thirdPartyUpdated.roles ?? []).map(r => ROLE_ID_MAP[r]).filter(Boolean),
+                statusId: STATUS_ID_MAP[thirdPartyUpdated.status] ?? 1,
+                // blockingReason requerido (>= 20 chars) cuando el estado es BLOQUEADO
+                ...(thirdPartyUpdated.status === 'BLOCKED' && {
+                    blockingReason: thirdPartyUpdated.blockReason,
+                }),
+            };
+            await fetchHelper.put(urlRolesStatus, rolesStatusPayload, {}, 1000);
 
             setThirdParty({
                 id: '', nit: '', dv: '', businessName: '', personType: '',
                 roles: [], taxRegime: '', fiscalResponsibilities: '', retentions: '',
-                address: '', phone: '', email: '', city: '', department: '',
+                address: '', phone: '', email: '', city: '', department: '', country: '',
                 creditLimit: '', paymentConditions: '', marketSegment: '',
                 status: 'ACTIVE', blockReason: '',
             });
@@ -331,17 +361,23 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                     </div>
                                 </div>
                                 <div className="row">
-                                    <div className="col-md-6 mb-4 mt-2">
+                                    <div className="col-md-4 mb-4 mt-2">
                                         <InputModal type="text" id="tp_city_update" label="Ciudad"
                                             value={thirdPartyUpdated.city}
                                             onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, city: e.target.value })}
                                             error={errors.city} placeholder="Ej. Bogotá" required={true} />
                                     </div>
-                                    <div className="col-md-6 mb-4 mt-2">
+                                    <div className="col-md-4 mb-4 mt-2">
                                         <InputModal type="text" id="tp_department_update" label="Departamento"
                                             value={thirdPartyUpdated.department}
                                             onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, department: e.target.value })}
                                             error={errors.department} placeholder="Ej. Cundinamarca" required={true} />
+                                    </div>
+                                    <div className="col-md-4 mb-4 mt-2">
+                                        <InputModal type="text" id="tp_country_update" label="País"
+                                            value={thirdPartyUpdated.country}
+                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, country: e.target.value })}
+                                            error={errors.country} placeholder="Ej. Colombia" required={true} />
                                     </div>
                                 </div>
                             </div>
