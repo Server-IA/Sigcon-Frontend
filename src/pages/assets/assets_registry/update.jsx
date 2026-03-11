@@ -12,14 +12,23 @@ const UpdateAssets = ({
   modalInstance,
   assets = {
     id: "",
-    label: "",
-    icon: "",
-    path: "",
-    menuOrder: "",
-    parentId: null,
-    moduleId: null,
-    status: "ACTIVE",
-    component: "",
+    code: "",
+    name: "",
+    description: "",
+    classification: "",
+    acquisition_date: "",
+    acquisition_cost: "",
+    useful_life_months: "",
+    accumulated_depreciation: "",
+    book_value: "",
+    revaluation_value: "",
+    is_depreciable: true,
+    depreciation_rule_id: null,
+    companies_id: null,
+    accounting_accounts_id: null,
+    company_locations_id: null,
+    third_parties_id: null,
+    states_assets_id: null,
   },
   setAssets,
   dataTableRef,
@@ -87,17 +96,6 @@ const UpdateAssets = ({
           </div>
 
           <div className="modal-body">
-            <p className="text-muted m-0">
-              <a
-                href="https://remixicon.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <i className="ri-information-line" /> Iconos de Remix Icon{" "}
-                <small>(Abrir en nueva pestaña)</small>
-              </a>
-            </p>
-
             <AlertPage
               message={error.message}
               type={error.type}

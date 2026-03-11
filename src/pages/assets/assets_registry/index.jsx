@@ -24,9 +24,8 @@ const IndexAssets = () => {
   const dataTableRef = useRef(null);
   const filterRef = useRef(null);
   const filterInstance = useRef(null);
-  const [modules, setModules] = useState([]);
-  const [parents, setParents] = useState([]);
-  const [components, setComponents] = useState([]);
+  const [thirds, setThirds] = useState([]);
+  const [puc, setPuc] = useState([]);
   const user = useSelector((state) => state.user).user;
   const [assetsCreate, setAssetsCreate] = useState(false);
   const [assetsUpdate, setAssetsUpdate] = useState(false);
@@ -38,41 +37,64 @@ const IndexAssets = () => {
 
   const loadData = async () => {
     try {
-      const [modulesRes, parentsRes] = await Promise.all([
-        fetchHelper.get(base_url(["api", "modules"])),
-        fetchHelper.get(base_url(["api", "assets"])),
+      const [thirdsRes] = await Promise.all([
+        fetchHelper.post(
+          base_url(["api", "v1", "third-parties", "search"]),
+          {
+            length: -1,
+          },
+          {},
+          1,
+        ),
       ]);
-      setModules(modulesRes?.data ?? []);
-      setParents(parentsRes?.data ?? []);
+      const thirdsOptions = thirdsRes.data.map((item) => ({
+        id: item.id,
+        label: `${item.thirdPartyCode} - ${item.nit}`,
+      }));
+      setThirds(thirdsOptions);
+
+      const [pucRes] = await Promise.all([
+        fetchHelper.post(
+          base_url(["api", "v1", "chart-of-accounts", "search"]),
+          {
+            length: -1,
+          },
+          {},
+          1,
+        ),
+      ]);
+      const pucOptions = (pucRes.data || []).map((item) => ({
+        id: item.code,
+        label: `${item.code} - ${item.name}`,
+      }));
+
+      setPuc(pucOptions);
     } catch (error) {
       console.error("Error cargando datos:", error);
     }
   };
 
   useEffect(() => {
-    // loadData();
-    setData([assets]);
+    loadData();
   }, []);
 
   const [assets, setAssets] = useState({
-    id: "",
-    code: "kajnskasj",
     name: "",
     description: "",
     classification: "",
-    acquisition_date: "",
-    acquisition_cost: "",
-    useful_life_months: "",
-    accumulated_depreciation: "",
-    book_value: "",
-    revaluation_value: "",
-    is_depreciable: true,
-    depreciation_rule_id: null,
-    companies_id: null,
-    accounting_accounts_id: null,
-    company_locations_id: null,
-    third_parties_id: null,
-    states_assets_id: null,
+    type: "",
+    accountingCode: "",
+    acquisitionValue: "",
+    acquisitionDate: "",
+    usefulLifeMonths: "",
+    depreciationMethod: "",
+    supplierId: "",
+    paymentTerms: "",
+    accountsPayableReferenceId: "",
+    bankCashReferenceId: "",
+    costCenterOrAccountingLocation: "",
+    status: "",
+    observations: "",
   });
 
   const [messageAssets, setMessageAssets] = useState({
@@ -86,7 +108,7 @@ const IndexAssets = () => {
   const modalUpdateRef = useRef(null);
   const modalUpdateInstance = useRef(null);
 
-  const [url, setUrl] = useState(base_url(["api", "assets", "datatable"]));
+  const [url, setUrl] = useState(base_url(["api", "v1", "assets", "search"]));
   const buttons = [
     {
       text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
@@ -106,7 +128,7 @@ const IndexAssets = () => {
           text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Activo</span>',
           className: "btn rounded-pill btn-primary waves-effect mx-2 my-2 ",
           action: async function (e, dt, button, config) {
-            // openModalCreate();
+            openModalCreate();
           },
         }
       : null,
@@ -304,35 +326,13 @@ const IndexAssets = () => {
 
         <div className="card-datatable text-nowrap">
           <DataTableReference
-            url_api={url}
+            url_api={["api", "v1", "assets", "search"]}
             columns={columns}
-            tableRef={dataTableRef}
+            tableRef={tableRef}
             dataTableRef={dataTableRef}
             method="POST"
             buttons={buttons}
             title="Activos"
-            data={[
-              {
-                id: "",
-                code: "aaaa",
-                name: "",
-                description: "",
-                classification: "",
-                acquisition_date: "",
-                acquisition_cost: "",
-                useful_life_months: "",
-                accumulated_depreciation: "",
-                book_value: "",
-                revaluation_value: "",
-                is_depreciable: true,
-                depreciation_rule_id: null,
-                companies_id: null,
-                accounting_accounts_id: null,
-                company_locations_id: null,
-                third_parties_id: null,
-                states_assets_id: null,
-              },
-            ]}
             setData={setData}
             search={search}
             setSearch={setSearch}
@@ -340,17 +340,16 @@ const IndexAssets = () => {
           />
         </div>
 
-        <FilterAssets
+        {/* <FilterAssets
           filterRef={filterRef}
           filterInstance={filterInstance}
           dataTableRef={dataTableRef}
-          modules={modules}
           parents={parents}
           components={COMPONENT_MAP.map((component) => ({
             id: component.id,
             name: component.name,
           }))}
-        />
+        /> */}
 
         <CreateAssets
           modalRef={modalCreateRef}
@@ -359,22 +358,20 @@ const IndexAssets = () => {
           setAssets={setAssets}
           dataTableRef={dataTableRef}
           setAssetsCreate={setAssetsCreate}
-          modules={modules}
-          parents={parents}
-          components={components}
+          thirds={thirds}
+          puc={puc}
         />
 
-        <UpdateAssets
+        {/* <UpdateAssets
           modalRef={modalUpdateRef}
           modalInstance={modalUpdateInstance}
           assets={assets}
           setAssets={setAssets}
           dataTableRef={dataTableRef}
           setAssetsUpdate={setAssetsUpdate}
-          modules={modules}
           parents={parents}
           components={components}
-        />
+        /> */}
       </div>
     </>
   );
