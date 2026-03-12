@@ -113,6 +113,28 @@ const CalculoDepreciacionActivos = () => {
                 <h4 className="fw-bold mb-0">Activos</h4>
             </div>
 
+            {/* Alert de resultado */}
+            {alert.show && (
+                <div className="col-12">
+                    <div
+                        className={`alert alert-${alert.type} alert-dismissible d-flex align-items-center mb-0`}
+                        role="alert"
+                    >
+                        <i
+                            className={`ri-${alert.type === 'success' ? 'checkbox-circle' : 'error-warning'}-line me-2`}
+                            style={{ fontSize: '1.1rem' }}
+                        />
+                        <span style={{ fontSize: '0.875rem' }}>{alert.message}</span>
+                        <button
+                            type="button"
+                            className="btn-close"
+                            onClick={dismissAlert}
+                            aria-label="Cerrar"
+                        />
+                    </div>
+                </div>
+            )}
+
             {/* Ejecución */}
             <div className="col-12">
                 <div className="card">
@@ -295,27 +317,6 @@ const CalculoDepreciacionActivos = () => {
                 </div>
             </div>
 
-            {/* Alert de resultado */}
-            {alert.show && (
-                <div className="col-12">
-                    <div
-                        className={`alert alert-${alert.type} alert-dismissible d-flex align-items-center mb-0`}
-                        role="alert"
-                    >
-                        <i
-                            className={`ri-${alert.type === 'success' ? 'checkbox-circle' : 'error-warning'}-line me-2`}
-                            style={{ fontSize: '1.1rem' }}
-                        />
-                        <span style={{ fontSize: '0.875rem' }}>{alert.message}</span>
-                        <button
-                            type="button"
-                            className="btn-close"
-                            onClick={dismissAlert}
-                            aria-label="Cerrar"
-                        />
-                    </div>
-                </div>
-            )}
         </>
     );
 };
