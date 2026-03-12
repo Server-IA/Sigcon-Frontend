@@ -18,6 +18,7 @@ import IndexDepreciationRules from "../pages/list_accounts/depreciation_rules/in
 import ExchangeRateIndex from "../pages/list_accounts/exchange-rate/index";
 import CurrencyIndex from "../pages/list_accounts/currency/index";
 import RulesTaxIndex from "../pages/list_accounts/rules_tax/index";
+import IndexPUC from "../pages/list_accounts/puc/index";
 
 // Reportes
 import RepBalanceComprobacion from "../pages/list_accounts/rep-balance-comprobacion/BalanceComprobacion";
@@ -29,10 +30,11 @@ import RepEstadosFinancieros from "../pages/list_accounts/rep-estados-financiero
 //Activos (Assets)
 import AssetReportGeneration from "../pages/assets/asset-report-generation";
 
+// Third Party
+import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
+
 import PageMaintenance from "../pages/errors/page_maintenance";
 
-// List Accounts
-import IndexPUC from "../pages/list_accounts/puc/index";
 
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
@@ -62,14 +64,14 @@ export const getMenu = async () => {
     try {
         const { data, error } = await fetchHelper.get(url, {}, 0);
         if (!error) {
-    
+
             modules.push(...data?.map(mod => {
                 // Construir el árbol de menús normalmente
                 const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
                     ...menu,
                     componentName: menu?.component,
                 })));
-    
+
                 return {
                     ...mod,
                     menus: menuTree
@@ -79,7 +81,7 @@ export const getMenu = async () => {
 
     } catch (error) {
         console.log(error);
-    }finally {
+    } finally {
         return modules;
     }
 
@@ -141,5 +143,6 @@ export const COMPONENT_MAP = [
     { id: "ACT_GENERACION_INFORMES", name: "Activos Generación de Informes", component: AssetReportGeneration },
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
-    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex }
+    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
+    { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
 ];
