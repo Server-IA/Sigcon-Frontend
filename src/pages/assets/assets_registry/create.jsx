@@ -20,10 +20,13 @@ const CreateAssets = ({
   setAssetsCreate,
   thirds,
   accountingAccount,
-  depretationRules,
+  depreciationRules,
 }) => {
   const dispatch = useDispatch();
 
+  const filteredDepreciationRules = depreciationRules.filter(
+    (d) => d.accountingAccountId == assets.accountingAccountId,
+  );
   const [errors, setErrors] = useState({});
 
   const [error, setError] = useState({
@@ -53,7 +56,7 @@ const CreateAssets = ({
 
   useEffect(() => {
     console.log("Assets: ", assets);
-    console.log("Depretation Rules: ", depretationRules);
+    console.log("Depreciation Rules: ", depreciationRules);
   }, [assets]);
 
   const handleSubmit = async (e) => {
@@ -236,12 +239,13 @@ const CreateAssets = ({
                   label="Fecha adquisición"
                   date={assets.acquisitionDate}
                   onChange={(date) => {
-
                     const acquisitionDate = date ? new Date(date) : null;
 
                     setAssets({
                       ...assets,
-                      acquisitionDate: acquisitionDate.toISOString().split('T')[0],
+                      acquisitionDate: acquisitionDate
+                        .toISOString()
+                        .split("T")[0],
                     });
                     setErrors((prev) => ({ ...prev, acquisitionDate: "" }));
                   }}
@@ -268,7 +272,7 @@ const CreateAssets = ({
 
               <div className="col mb-6 mt-2">
                 <InputSelectModal
-                  id="depretationRuleId"
+                  id="depreciationRuleId"
                   label="Método depreciación"
                   value={assets.depreciationRuleId}
                   onChange={(value) => {
@@ -278,7 +282,7 @@ const CreateAssets = ({
                     });
                     setErrors((prev) => ({ ...prev, depreciationRuleId: "" }));
                   }}
-                  options={depretationRules.filter(d => d.accountingAccountId == assets.accountingAccount)}
+                  options={filteredDepreciationRules}
                   required
                   error={errors.depreciationRuleId}
                 />
