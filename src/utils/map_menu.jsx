@@ -48,6 +48,8 @@ import NiifCorrectionIndex from "../pages/list_accounts/niif_correction/index";
 // List Accounts
 import IndexPUC from "../pages/list_accounts/puc/index";
 
+import IndexSegmentation from "../pages/third-party/segmentation/index"
+
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
 
@@ -78,7 +80,7 @@ export const getMenu = async () => {
                 componentName: "HOME"
             }
         ]
-    })
+    });
     try {
         const { data, error } = await fetchHelper.get(url, {}, 0);
         if (!error) {
@@ -159,6 +161,7 @@ export const COMPONENT_MAP = [
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
     { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
+    { id: "SEGMENTATION", name: "Segmentacion Terceros", component: IndexSegmentation },
     { id: "NIIF_VERIFICATION", name: "Verificación NIIF", component: NiifVerificationIndex },
     { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
     { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: CalculoDepreciacionActivos },

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSelector } from 'react-redux';
 
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
@@ -10,59 +11,59 @@ import CreatePUC from './create';
 import UpdatedPUC from './updated';
 import FilterPUC from './filter';
 import DropzoneModal from '../../../components/molecules/DropzoneModal';
-import { useSelector } from 'react-redux';
+
 
 const ACCOUNT_CLASSES = [
-    { id: 'ASSET',             name: 'Activo' },
-    { id: 'LIABILITY',         name: 'Pasivo' },
-    { id: 'EQUITY',            name: 'Patrimonio' },
-    { id: 'REVENUE',           name: 'Ingresos' },
-    { id: 'EXPENSE',           name: 'Gastos' },
-    { id: 'COST_OF_SALES',     name: 'Costos de venta' },
-    { id: 'PRODUCTION_COST',   name: 'Costos de producción o de operación' },
-    { id: 'MEMORANDUM_DEBIT',  name: 'Cuentas de orden deudoras' },
+    { id: 'ASSET', name: 'Activo' },
+    { id: 'LIABILITY', name: 'Pasivo' },
+    { id: 'EQUITY', name: 'Patrimonio' },
+    { id: 'REVENUE', name: 'Ingresos' },
+    { id: 'EXPENSE', name: 'Gastos' },
+    { id: 'COST_OF_SALES', name: 'Costos de venta' },
+    { id: 'PRODUCTION_COST', name: 'Costos de producción o de operación' },
+    { id: 'MEMORANDUM_DEBIT', name: 'Cuentas de orden deudoras' },
     { id: 'MEMORANDUM_CREDIT', name: 'Cuentas de orden acreedoras' },
 ];
 
 const LEVELS = [
-    { id: 'CLASS',      name: 'Clase' },
-    { id: 'GROUP',      name: 'Grupo' },
-    { id: 'ACCOUNT',    name: 'Cuenta' },
+    { id: 'CLASS', name: 'Clase' },
+    { id: 'GROUP', name: 'Grupo' },
+    { id: 'ACCOUNT', name: 'Cuenta' },
     { id: 'SUBACCOUNT', name: 'Subcuenta' },
 ];
 
 const ACCOUNT_NATURES = [
-    { id: 'DEBIT',  name: 'Deudora' },
+    { id: 'DEBIT', name: 'Deudora' },
     { id: 'CREDIT', name: 'Acreedora' },
 ];
 
 const ACCOUNT_STATUSES = [
-    { id: 'ACTIVE',   name: 'Activa' },
+    { id: 'ACTIVE', name: 'Activa' },
     { id: 'INACTIVE', name: 'Inactiva' },
 ];
 
 const IndexPUC = () => {
 
-    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('CHART_OF_ACCOUNT')})|| []; // Permisos del usuario
+    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => { return p.code.includes('CHART_OF_ACCOUNT') }) || []; // Permisos del usuario
     const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
 
 
-    const tableRef    = useRef(null);
+    const tableRef = useRef(null);
     const dataTableRef = useRef(null);
 
-    const filterRef      = useRef(null);
+    const filterRef = useRef(null);
     const filterInstance = useRef(null);
 
-    const modalCreateRef      = useRef(null);
+    const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
 
-    const modalUpdateRef      = useRef(null);
+    const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
-    const modalBulkRef      = useRef(null);
+    const modalBulkRef = useRef(null);
     const modalBulkInstance = useRef(null);
 
-    const [data, setData]       = useState([]);
+    const [data, setData] = useState([]);
     const [clickEdit, setClickEdit] = useState(false);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
 
@@ -85,25 +86,31 @@ const IndexPUC = () => {
     const url = ['api', 'v1', 'chart-of-accounts', 'search'];
 
     const actions = [
-        ...(userPermissions.some(p => p.code === 'UPDATE_CHART_OF_ACCOUNT' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit',   icon: 'ri-edit-line',       class: 'btn-label-primary', title: 'Editar' }] : []),
-        ...(userPermissions.some(p => p.code === 'DELETE_CHART_OF_ACCOUNT' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger',  title: 'Eliminar' }] : []),
+        ...(userPermissions.some(p => p.code === 'UPDATE_CHART_OF_ACCOUNT' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
+        ...(userPermissions.some(p => p.code === 'DELETE_CHART_OF_ACCOUNT' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' }] : []),
     ];
 
     const columns = [
-        { title: 'ID',         data: 'id',           searchable: false },
-        { title: 'Código',     data: 'code',         name: 'code' },
-        { title: 'Nombre',     data: 'name',         name: 'name' },
-        { title: 'Clase',      data: 'accountClass', name: 'accountClass', render: (val) => {
-            
-            return ACCOUNT_CLASSES.find(a => a.id === val)?.name ?? '-';
-            
-        } },
-        { title: 'Nivel',      data: 'level',        name: 'level',        render: (val) => {
-            return LEVELS.find(l => l.id === val)?.name ?? '-';
-        } },
-        { title: 'Naturaleza', data: 'nature',       name: 'nature',       render: (val) => {
-            return ACCOUNT_NATURES.find(n => n.id === val)?.name ?? '-';
-        } },
+        { title: 'ID', data: 'id', searchable: false },
+        { title: 'Código', data: 'code', name: 'code' },
+        { title: 'Nombre', data: 'name', name: 'name' },
+        {
+            title: 'Clase', data: 'accountClass', name: 'accountClass', render: (val) => {
+
+                return ACCOUNT_CLASSES.find(a => a.id === val)?.name ?? '-';
+
+            }
+        },
+        {
+            title: 'Nivel', data: 'level', name: 'level', render: (val) => {
+                return LEVELS.find(l => l.id === val)?.name ?? '-';
+            }
+        },
+        {
+            title: 'Naturaleza', data: 'nature', name: 'nature', render: (val) => {
+                return ACCOUNT_NATURES.find(n => n.id === val)?.name ?? '-';
+            }
+        },
         {
             title: 'Estado', data: 'status', name: 'status',
             render: (status) => {
@@ -193,7 +200,7 @@ const IndexPUC = () => {
 
         const handler = function () {
             const action = $(this).data('action');
-            const id     = Number($(this).data('id'));
+            const id = Number($(this).data('id'));
             const accountRef = data.find(m => m.id === id);
 
             if (!accountRef) {
@@ -204,13 +211,13 @@ const IndexPUC = () => {
             switch (action) {
                 case 'edit':
                     setAccount({
-                        id:              accountRef.id              ?? '',
-                        code:            accountRef.code            ?? '',
-                        name:            accountRef.name            ?? '',
-                        accountClass:    accountRef.accountClass    ?? '',
-                        level:           accountRef.level           ?? '',
-                        nature:          accountRef.nature          ?? '',
-                        status:          accountRef.status          ?? 'ACTIVE',
+                        id: accountRef.id ?? '',
+                        code: accountRef.code ?? '',
+                        name: accountRef.name ?? '',
+                        accountClass: accountRef.accountClass ?? '',
+                        level: accountRef.level ?? '',
+                        nature: accountRef.nature ?? '',
+                        status: accountRef.status ?? 'ACTIVE',
                         hasTransactions: accountRef.hasTransactions ?? false,
                     });
                     setClickEdit(true);
@@ -222,8 +229,9 @@ const IndexPUC = () => {
                         text: `¿Está seguro de eliminar la cuenta "${accountRef.name}"?`,
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: 'Sí, continuar',
+                        showDenyButton: false,
                         cancelButtonText: 'Cancelar',
+                        confirmButtonText: 'Siguiente',
                     }).then((result) => {
                         if (!result.isConfirmed) return;
 
@@ -237,8 +245,8 @@ const IndexPUC = () => {
                                 maxlength: '255',
                             },
                             showCancelButton: true,
-                            confirmButtonText: 'Eliminar',
                             cancelButtonText: 'Cancelar',
+                            confirmButtonText: 'Eliminar',
                             preConfirm: (reason) => {
                                 if (!reason || reason.trim() === '') {
                                     window.Swal.showValidationMessage('Debe ingresar el motivo de eliminación');
