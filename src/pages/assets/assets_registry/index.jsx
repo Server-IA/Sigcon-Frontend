@@ -12,7 +12,7 @@ import UpdateAssets from "./update";
 import FilterAssets from "./filter";
 
 //FUNCIONES
-import { base_url } from "../../../utils/functions";
+import { base_url, formatPrice } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 import { COMPONENT_MAP } from "../../../utils/map_menu";
 
@@ -24,8 +24,11 @@ const IndexAssets = () => {
   const dataTableRef = useRef(null);
   const filterRef = useRef(null);
   const filterInstance = useRef(null);
+
   const [thirds, setThirds] = useState([]);
   const [accountingAccount, setAccountingAccount] = useState([]);
+  const [depretationRules, setDepretationRules] = useState([]);
+
   const user = useSelector((state) => state.user).user;
   const [clickEdit, setClickEdit] = useState(false);
   const [assetsCreate, setAssetsCreate] = useState(false);
@@ -38,14 +41,22 @@ const IndexAssets = () => {
 
   const loadData = async () => {
     try {
-      let thirdsOptions = [];
-      let accountingAccountOptions = [];
 
-      // ===== TERCEROS =====
-      try {
-        let thirdsOptions = [];
+      const [depretationRulerRes, accountingAccountRes, thirdsRes] = await Promise.allSettled([
+        fetchHelper.post(base_url(["api", "v1", "depreciation-rules", "search"]), {
+          length: -1,
+        }, {}, 1),
 
-        const thirdsRes = await fetchHelper.post(
+        fetchHelper.post(
+          base_url(["api", "v1", "accounting-accounts"]),
+          {
+            length: -1,
+          },
+          {},
+          1,
+        ),
+
+        fetchHelper.post(
           base_url(["api", "v1", "third-parties", "search"]),
           {
             length: -1,
@@ -54,46 +65,22 @@ const IndexAssets = () => {
 
           {},
           1,
-        );
+        )
+      ])
 
-        thirdsOptions = (thirdsRes.data || []).map((item) => ({
-          id: item.id,
-          label: `${item.thirdPartyCode} - ${item.businessName}`,
-        }));
+      if(depretationRulerRes.status === 'fulfilled') setDepretationRules(depretationRulerRes.value.data.map(d => (
+        { id: d.id, name: d.name, accountingAccountId: d.accountingAccountId }
+      )) || []); 
+      if(accountingAccountRes.status === 'fulfilled') setAccountingAccount(accountingAccountRes.value.data.map(d => ((
+        { id: d.id, name: d.customName }
+      ))) || []);
+      if(thirdsRes.status === 'fulfilled') setThirds(thirdsRes.value.data.map(d => (
+        { id: d.id, name: `${d.thirdPartyCode} - ${d.businessName}` }
+      )) || []);
 
-        setThirds(thirdsOptions);
-      } catch (error) {
-        if (error?.msg?.includes("TERC_001")) {
-          console.warn("No hay terceros registrados");
-          thirdsOptions = [];
-        } else {
-          console.error("Error cargando terceros:", error);
-        }
-      }
-      {
-      }
+      const failed = [depretationRulerRes, accountingAccountRes, thirdsRes].filter(r => r.status === 'rejected');
+      if (failed.length) console.warn('Algunos datos no pudieron cargarse:', failed.map(f => f.reason));
 
-      // ===== CUENTAS CONTABLES=====
-      try {
-        const accountingAccountRes = await fetchHelper.post(
-          base_url(["api", "v1", "accounting-accounts"]),
-          {
-            length: -1,
-          },
-          {},
-          1,
-        );
-
-        accountingAccountOptions = (accountingAccountRes.data || []).map(
-          (item) => ({
-            id: item.id,
-            label: `${item.id} - ${item.customName}`,
-          }),
-        );
-        setAccountingAccount(accountingAccountOptions);
-      } catch (error) {
-        console.error("Error cargando PUC:", error);
-      }
     } catch (error) {
       console.error("Error general cargando datos:", error);
     }
@@ -207,23 +194,24 @@ const IndexAssets = () => {
     },
   ];
   const columns = [
-    { title: "Código", data: "code", name: "code" },
+    { title: "Código", data: "assetCode", name: "assetCode" },
     { title: "Nombre", data: "name", name: "name" },
     { title: "Clasificación", data: "classification", name: "classification" },
     {
       title: "Fecha adquisición",
-      data: "acquisition_date",
+      data: "acquisitionDate",
       name: "acquisition_date",
     },
     {
       title: "Costo adquisición",
-      data: "acquisition_cost",
+      data: "acquisitionValue",
       name: "acquisition_cost",
+      render: (v) => formatPrice(v)
     },
     {
       title: "Vida útil (meses)",
-      data: "useful_life_months",
-      name: "useful_life_months",
+      data: "usefulLifeMonths",
+      name: "usefulLifeMonths",
     },
     {
       title: "Depreciable",
@@ -232,8 +220,8 @@ const IndexAssets = () => {
     },
     {
       title: "Estado",
-      data: "statesAsset.name",
-      name: "statesAsset",
+      data: "status",
+      name: "status",
       render: (v) => v ?? "-",
     },
     {
@@ -419,6 +407,7 @@ const IndexAssets = () => {
           setAssetsCreate={setAssetsCreate}
           thirds={thirds}
           accountingAccount={accountingAccount}
+          depretationRules={depretationRules}
         />
 
         {/* <UpdateAssets

@@ -20,6 +20,7 @@ const CreateAssets = ({
   setAssetsCreate,
   thirds,
   accountingAccount,
+  depretationRules,
 }) => {
   const dispatch = useDispatch();
 
@@ -50,6 +51,11 @@ const CreateAssets = ({
     };
   }, []);
 
+  useEffect(() => {
+    console.log("Assets: ", assets);
+    console.log("Depretation Rules: ", depretationRules);
+  }, [assets]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -57,29 +63,6 @@ const CreateAssets = ({
       const url = base_url(["api", "v1", "assets", "store"]);
 
       await fetchHelper.post(url, assets, {}, 1000);
-
-      dispatch(refreshMenu());
-
-      setAssets({
-        id: assetsRef.id,
-        name: assetsRef.name,
-        description: assetsRef.description,
-        classification: assetsRef.classification,
-        type: assetsRef.type,
-        accountingAccount: assetsRef.accountingAccount,
-        acquisitionValue: assetsRef.acquisitionValue,
-        acquisitionDate: assetsRef.acquisitionDate,
-        usefulLifeMonths: assetsRef.usefulLifeMonths,
-        depreciationMethod: assetsRef.depreciationMethod,
-        supplierId: assetsRef.supplierId,
-        paymentTerms: assetsRef.paymentTerms,
-        accountsPayableReferenceId: assetsRef.accountsPayableReferenceId,
-        bankCashReferenceId: assetsRef.bankCashReferenceId,
-        costCenterOrAccountingLocation:
-          assetsRef.costCenterOrAccountingLocation,
-        status: assetsRef.status,
-        observations: assetsRef.observations,
-      });
 
       dataTableRef?.current?.ajax.reload();
       modalInstance?.current?.hide();
@@ -211,18 +194,19 @@ const CreateAssets = ({
 
               <div className="col mb-6 mt-2">
                 <InputSelectModal
-                  id="accountingAccount"
-                  label="Código contable"
-                  value={assets.accountingAccount}
+                  id="accountingAccountId"
+                  label="Cuenta contable"
+                  value={assets.accountingAccountId}
                   onChange={(value) => {
                     setAssets({
                       ...assets,
-                      accountingAccount: value,
+                      accountingAccountId: value,
                     });
-                    setErrors((prev) => ({ ...prev, accountingAccount: "" }));
+                    setErrors((prev) => ({ ...prev, accountingAccountId: "" }));
                   }}
                   options={accountingAccount}
                   required
+                  error={errors.accountingAccountId}
                 />
               </div>
 
@@ -248,14 +232,16 @@ const CreateAssets = ({
             <div className="row">
               <div className="col mb-6 mt-2">
                 <InputDate
-                  type="date"
                   id="acquisitionDate"
                   label="Fecha adquisición"
-                  value={assets.acquisitionDate}
-                  onChange={(e) => {
+                  date={assets.acquisitionDate}
+                  onChange={(date) => {
+
+                    const acquisitionDate = date ? new Date(date) : null;
+
                     setAssets({
                       ...assets,
-                      acquisitionDate: e.target.value,
+                      acquisitionDate: acquisitionDate.toISOString().split('T')[0],
                     });
                     setErrors((prev) => ({ ...prev, acquisitionDate: "" }));
                   }}
@@ -282,26 +268,19 @@ const CreateAssets = ({
 
               <div className="col mb-6 mt-2">
                 <InputSelectModal
-                  id="depreciationMethod"
+                  id="depretationRuleId"
                   label="Método depreciación"
-                  value={assets.depreciationMethod}
+                  value={assets.depreciationRuleId}
                   onChange={(value) => {
                     setAssets({
                       ...assets,
-                      depreciationMethod: value,
+                      depreciationRuleId: value,
                     });
-                    setErrors((prev) => ({ ...prev, depreciationMethod: "" }));
+                    setErrors((prev) => ({ ...prev, depreciationRuleId: "" }));
                   }}
-                  options={[
-                    { id: "STRAIGHT_LINE", label: "Línea recta" },
-                    { id: "DECLINING_BALANCE", label: "Saldo decreciente" },
-                    {
-                      id: "UNITS_OF_PRODUCTION",
-                      label: "Unidades de producción",
-                    },
-                    { id: "OTHER", label: "Otro" },
-                  ]}
+                  options={depretationRules.filter(d => d.accountingAccountId == assets.accountingAccount)}
                   required
+                  error={errors.depreciationRuleId}
                 />
               </div>
             </div>
