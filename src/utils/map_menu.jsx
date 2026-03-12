@@ -18,17 +18,26 @@ import IndexDepreciationRules from "../pages/list_accounts/depreciation_rules/in
 import ExchangeRateIndex from "../pages/list_accounts/exchange-rate/index";
 import CurrencyIndex from "../pages/list_accounts/currency/index";
 import RulesTaxIndex from "../pages/list_accounts/rules_tax/index";
+import IndexPUC from "../pages/list_accounts/puc/index";
 
 // Reportes
-import BalanceComprobacion from "../pages/list_accounts/reportes/BalanceComprobacion";
+import RepBalanceComprobacion from "../pages/list_accounts/rep-balance-comprobacion/BalanceComprobacion";
+import RepLibroDiario from "../pages/list_accounts/rep-libro-diario/LibroDiario";
+import RepLibroMayor from "../pages/list_accounts/rep-libro-mayor/LibroMayor";
+import RepAuxiliaresCuentas from "../pages/list_accounts/rep-auxiliares-cuenta/AuxiliaresCuentas";
+import RepEstadosFinancieros from "../pages/list_accounts/rep-estados-financieros/EstadosFinancieros";
+
+//Activos (Assets)
+import AssetReportGeneration from "../pages/assets/asset-report-generation";
+
+// Third Party
+import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 
 // Activos
 import CalculoDepreciacionActivos from "../pages/activos/calculo-depreciacion/index";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
-// List Accounts
-import IndexPUC from "../pages/list_accounts/puc/index";
 
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
@@ -58,14 +67,14 @@ export const getMenu = async () => {
     try {
         const { data, error } = await fetchHelper.get(url, {}, 0);
         if (!error) {
-    
+
             modules.push(...data?.map(mod => {
                 // Construir el árbol de menús normalmente
                 const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
                     ...menu,
                     componentName: menu?.component,
                 })));
-    
+
                 return {
                     ...mod,
                     menus: menuTree
@@ -75,7 +84,7 @@ export const getMenu = async () => {
 
     } catch (error) {
         console.log(error);
-    }finally {
+    } finally {
         return modules;
     }
 
@@ -129,9 +138,15 @@ export const COMPONENT_MAP = [
     { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
     { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
     { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
-    { id: "BALANCE_COMPROBACION", name: "Balance de Comprobación", component: BalanceComprobacion },
+    { id: "REP_BALANCE_COMPROBACION", name: "Reporte Balance de Comprobación", component: RepBalanceComprobacion },
+    { id: "REP_LIBRO_DIARIO", name: "Reporte Libro Diario", component: RepLibroDiario },
+    { id: "REP_LIBRO_MAYOR", name: "Reporte Libro Mayor", component: RepLibroMayor },
+    { id: "REP_AUXILIARES_CUENTAS", name: "Reporte Auxiliares de cuentas", component: RepAuxiliaresCuentas },
+    { id: "REP_ESTADOS_FINANCIEROS", name: "Reporte Estados Financieros", component: RepEstadosFinancieros },
+    { id: "ACT_GENERACION_INFORMES", name: "Activos Generación de Informes", component: AssetReportGeneration },
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
     { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
     { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: CalculoDepreciacionActivos },
+    { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
 ];
