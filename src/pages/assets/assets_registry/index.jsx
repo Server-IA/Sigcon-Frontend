@@ -27,7 +27,7 @@ const IndexAssets = () => {
 
   const [thirds, setThirds] = useState([]);
   const [accountingAccount, setAccountingAccount] = useState([]);
-  const [depretationRules, setDepretationRules] = useState([]);
+  const [depreciationRules, setDepreciationRules] = useState([]);
 
   const user = useSelector((state) => state.user).user;
   const [clickEdit, setClickEdit] = useState(false);
@@ -41,46 +41,73 @@ const IndexAssets = () => {
 
   const loadData = async () => {
     try {
+      const [depreciationRulerRes, accountingAccountRes, thirdsRes] =
+        await Promise.allSettled([
+          fetchHelper.post(
+            base_url(["api", "v1", "depreciation-rules", "search"]),
+            {
+              length: -1,
+            },
+            {},
+            1,
+          ),
 
-      const [depretationRulerRes, accountingAccountRes, thirdsRes] = await Promise.allSettled([
-        fetchHelper.post(base_url(["api", "v1", "depreciation-rules", "search"]), {
-          length: -1,
-        }, {}, 1),
+          fetchHelper.post(
+            base_url(["api", "v1", "accounting-accounts"]),
+            {
+              length: -1,
+            },
+            {},
+            1,
+          ),
 
-        fetchHelper.post(
-          base_url(["api", "v1", "accounting-accounts"]),
-          {
-            length: -1,
-          },
-          {},
-          1,
-        ),
+          fetchHelper.post(
+            base_url(["api", "v1", "third-parties", "search"]),
+            {
+              length: -1,
+              columns: [
+                { data: "roles.id", search: { value: 2, regex: false } },
+              ],
+            },
 
-        fetchHelper.post(
-          base_url(["api", "v1", "third-parties", "search"]),
-          {
-            length: -1,
-            columns: [{ data: "roles.id", search: { value: 2, regex: false } }],
-          },
+            {},
+            1,
+          ),
+        ]);
 
-          {},
-          1,
-        )
-      ])
+      if (depreciationRulerRes.status === "fulfilled")
+        setDepreciationRules(
+          depreciationRulerRes.value.data.map((d) => ({
+            id: d.id,
+            label: d.name,
+            accountingAccountId: d.accountingAccountId,
+          })) || [],
+        );
+      if (accountingAccountRes.status === "fulfilled")
+        setAccountingAccount(
+          accountingAccountRes.value.data.map((d) => ({
+            id: d.id,
+            label: d.customName,
+          })) || [],
+        );
+      if (thirdsRes.status === "fulfilled")
+        setThirds(
+          thirdsRes.value.data.map((d) => ({
+            id: d.id,
+            label: `${d.thirdPartyCode} - ${d.businessName}`,
+          })) || [],
+        );
 
-      if(depretationRulerRes.status === 'fulfilled') setDepretationRules(depretationRulerRes.value.data.map(d => (
-        { id: d.id, name: d.name, accountingAccountId: d.accountingAccountId }
-      )) || []); 
-      if(accountingAccountRes.status === 'fulfilled') setAccountingAccount(accountingAccountRes.value.data.map(d => ((
-        { id: d.id, name: d.customName }
-      ))) || []);
-      if(thirdsRes.status === 'fulfilled') setThirds(thirdsRes.value.data.map(d => (
-        { id: d.id, name: `${d.thirdPartyCode} - ${d.businessName}` }
-      )) || []);
-
-      const failed = [depretationRulerRes, accountingAccountRes, thirdsRes].filter(r => r.status === 'rejected');
-      if (failed.length) console.warn('Algunos datos no pudieron cargarse:', failed.map(f => f.reason));
-
+      const failed = [
+        depreciationRulerRes,
+        accountingAccountRes,
+        thirdsRes,
+      ].filter((r) => r.status === "rejected");
+      if (failed.length)
+        console.warn(
+          "Algunos datos no pudieron cargarse:",
+          failed.map((f) => f.reason),
+        );
     } catch (error) {
       console.error("Error general cargando datos:", error);
     }
@@ -95,7 +122,7 @@ const IndexAssets = () => {
     description: "",
     classification: "",
     type: "",
-    accountingCode: "",
+    accountingAccountId: "",
     acquisitionValue: "",
     acquisitionDate: "",
     usefulLifeMonths: "",
@@ -146,7 +173,27 @@ const IndexAssets = () => {
                   return;
                 }
 
-                setAssets(assetsRef);
+                setAssets({
+                  id: assets.id,
+                  name: assets.name || "",
+                  description: assets.description || "",
+                  classification: assets.classification || "",
+                  type: assets.type || "",
+                  accountingAccountId: assets.accountingAccountId || "",
+                  acquisitionValue: assets.acquisitionValue || "",
+                  acquisitionDate: assets.acquisitionDate || "",
+                  usefulLifeMonths: assets.usefulLifeMonths || "",
+                  depreciationRuleId: assets.depreciationRuleId || "",
+                  supplierId: assets.supplierId || "",
+                  paymentTerms: assets.paymentTerms || "",
+                  accountsPayableReferenceId:
+                    assets.accountsPayableReferenceId || "",
+                  bankCashReferenceId: assets.bankCashReferenceId || "",
+                  costCenterOrAccountingLocation:
+                    assets.costCenterOrAccountingLocation || "",
+                  status: assets.status || "",
+                  observations: assets.observations || "",
+                });
                 openModalUpdate();
                 break;
 
@@ -196,7 +243,19 @@ const IndexAssets = () => {
   const columns = [
     { title: "Código", data: "assetCode", name: "assetCode" },
     { title: "Nombre", data: "name", name: "name" },
-    { title: "Clasificación", data: "classification", name: "classification" },
+    {
+      title: "Clasificación",
+      data: "classification",
+      name: "classification",
+      render: (v) => {
+        const map = {
+          NON_CURRENT: "Activo no corriente",
+          CURRENT: "Activo corriente",
+        };
+
+        return map[v] || v;
+      },
+    },
     {
       title: "Fecha adquisición",
       data: "acquisitionDate",
@@ -206,7 +265,7 @@ const IndexAssets = () => {
       title: "Costo adquisición",
       data: "acquisitionValue",
       name: "acquisition_cost",
-      render: (v) => formatPrice(v)
+      render: (v) => formatPrice(v),
     },
     {
       title: "Vida útil (meses)",
@@ -303,20 +362,29 @@ const IndexAssets = () => {
             console.warn("Activo no encontrado", id);
             return;
           }
-
+          console.log("Activo seleccionado:", assetsRef);
           setAssets({
-            id: assetsRef.id || "",
-            label: assetsRef.label || "",
-            icon: assetsRef.icon || "",
-            path: assetsRef.path || "",
-            menuOrder: assetsRef.menuOrder || "",
-            parentId: assetsRef.parent ? String(assetsRef.parent.id) : null,
-            moduleId: assetsRef.module ? String(assetsRef.module.id) : null,
+            id: assetsRef.id,
+            name: assetsRef.name || "",
+            description: assetsRef.description || "",
+            classification: assetsRef.classification || "",
+            type: assetsRef.type || "",
+            accountingAccountId: assetsRef.accountingAccountId || "",
+            acquisitionValue: assetsRef.acquisitionValue || "",
+            acquisitionDate: assetsRef.acquisitionDate || "",
+            usefulLifeMonths: assetsRef.usefulLifeMonths || "",
+            depreciationRuleId: assetsRef.depreciationRuleId || "",
+            supplierId: assetsRef.supplierId || "",
+            paymentTerms: assetsRef.paymentTerms || "",
+            accountsPayableReferenceId:
+              assetsRef.accountsPayableReferenceId || "",
+            bankCashReferenceId: assetsRef.bankCashReferenceId || "",
+            costCenterOrAccountingLocation:
+              assetsRef.costCenterOrAccountingLocation || "",
             status: assetsRef.status || "",
-            component: assetsRef.component || "",
+            observations: assetsRef.observations || "",
           });
-
-          setClickEdit(true);
+          openModalUpdate(); // <-- esto faltaba
           break;
         case "delete":
           window.Swal.fire({
@@ -407,19 +475,20 @@ const IndexAssets = () => {
           setAssetsCreate={setAssetsCreate}
           thirds={thirds}
           accountingAccount={accountingAccount}
-          depretationRules={depretationRules}
+          depreciationRules={depreciationRules}
         />
 
-        {/* <UpdateAssets
+        <UpdateAssets
           modalRef={modalUpdateRef}
           modalInstance={modalUpdateInstance}
           assets={assets}
           setAssets={setAssets}
           dataTableRef={dataTableRef}
           setAssetsUpdate={setAssetsUpdate}
-          parents={parents}
-          components={components}
-        /> */}
+          thirds={thirds}
+          accountingAccount={accountingAccount}
+          depreciationRules={depreciationRules}
+        />
       </div>
     </>
   );
