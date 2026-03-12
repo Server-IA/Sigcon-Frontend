@@ -45,7 +45,7 @@ const DataTableReference = ({
       processing: true,
       serverSide: data.length === 0,
       drawCallback: function (settings) {
-        if (setData && data.length < 0) {
+        if (setData && data.length <= 0) {
           setData(settings.json.data);
         }
       },

@@ -25,8 +25,9 @@ const IndexAssets = () => {
   const filterRef = useRef(null);
   const filterInstance = useRef(null);
   const [thirds, setThirds] = useState([]);
-  const [puc, setPuc] = useState([]);
+  const [accountingAccount, setAccountingAccount] = useState([]);
   const user = useSelector((state) => state.user).user;
+  const [clickEdit, setClickEdit] = useState(false);
   const [assetsCreate, setAssetsCreate] = useState(false);
   const [assetsUpdate, setAssetsUpdate] = useState(false);
 
@@ -37,40 +38,64 @@ const IndexAssets = () => {
 
   const loadData = async () => {
     try {
-      const [thirdsRes] = await Promise.all([
-        fetchHelper.post(
+      let thirdsOptions = [];
+      let accountingAccountOptions = [];
+
+      // ===== TERCEROS =====
+      try {
+        let thirdsOptions = [];
+
+        const thirdsRes = await fetchHelper.post(
           base_url(["api", "v1", "third-parties", "search"]),
           {
             length: -1,
+            columns: [{ data: "roles.id", search: { value: 2, regex: false } }],
           },
+
           {},
           1,
-        ),
-      ]);
-      const thirdsOptions = thirdsRes.data.map((item) => ({
-        id: item.id,
-        label: `${item.thirdPartyCode} - ${item.nit}`,
-      }));
-      setThirds(thirdsOptions);
+        );
 
-      const [pucRes] = await Promise.all([
-        fetchHelper.post(
-          base_url(["api", "v1", "chart-of-accounts", "search"]),
+        thirdsOptions = (thirdsRes.data || []).map((item) => ({
+          id: item.id,
+          label: `${item.thirdPartyCode} - ${item.businessName}`,
+        }));
+
+        setThirds(thirdsOptions);
+      } catch (error) {
+        if (error?.msg?.includes("TERC_001")) {
+          console.warn("No hay terceros registrados");
+          thirdsOptions = [];
+        } else {
+          console.error("Error cargando terceros:", error);
+        }
+      }
+      {
+      }
+
+      // ===== CUENTAS CONTABLES=====
+      try {
+        const accountingAccountRes = await fetchHelper.post(
+          base_url(["api", "v1", "accounting-accounts"]),
           {
             length: -1,
           },
           {},
           1,
-        ),
-      ]);
-      const pucOptions = (pucRes.data || []).map((item) => ({
-        id: item.code,
-        label: `${item.code} - ${item.name}`,
-      }));
+        );
 
-      setPuc(pucOptions);
+        accountingAccountOptions = (accountingAccountRes.data || []).map(
+          (item) => ({
+            id: item.id,
+            label: `${item.id} - ${item.customName}`,
+          }),
+        );
+        setAccountingAccount(accountingAccountOptions);
+      } catch (error) {
+        console.error("Error cargando PUC:", error);
+      }
     } catch (error) {
-      console.error("Error cargando datos:", error);
+      console.error("Error general cargando datos:", error);
     }
   };
 
@@ -114,12 +139,45 @@ const IndexAssets = () => {
       text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
       className: "btn rounded-pill btn-secondary waves-effect mx-2 my-2 ",
       action: async function (e, dt, button, config) {
-        // if (!filterInstance.current) {
-        //   filterInstance.current = new window.bootstrap.Modal(
-        //     filterRef.current,
-        //   );
-        // }
-        // filterInstance.current.show();
+        useEffect(() => {
+          if (!dataTableRef.current) return;
+
+          const table = dataTableRef.current;
+
+          const handler = function () {
+            const action = $(this).data("action");
+            const id = Number($(this).data("id"));
+
+            console.log("CLICK:", action, id);
+
+            switch (action) {
+              case "edit":
+                const assetsRef = data.find((m) => m.id === id);
+
+                if (!assetsRef) {
+                  console.warn("Activo no encontrado", id);
+                  return;
+                }
+
+                setAssets(assetsRef);
+                openModalUpdate();
+                break;
+
+              case "delete":
+                console.log("Eliminar", id);
+                break;
+
+              default:
+                console.warn("Acción no válida", action);
+            }
+          };
+
+          table.on("click", ".action-btn", handler);
+
+          return () => {
+            table.off("click", ".action-btn", handler);
+          };
+        }, [dataTableRef.current]);
       },
     },
 
@@ -150,34 +208,34 @@ const IndexAssets = () => {
   ];
   const columns = [
     { title: "Código", data: "code", name: "code" },
-    // { title: "Nombre", data: "name", name: "name" },
-    // { title: "Clasificación", data: "classification", name: "classification" },
-    // {
-    //   title: "Fecha adquisición",
-    //   data: "acquisition_date",
-    //   name: "acquisition_date",
-    // },
-    // {
-    //   title: "Costo adquisición",
-    //   data: "acquisition_cost",
-    //   name: "acquisition_cost",
-    // },
-    // {
-    //   title: "Vida útil (meses)",
-    //   data: "useful_life_months",
-    //   name: "useful_life_months",
-    // },
-    // {
-    //   title: "Depreciable",
-    //   data: "is_depreciable",
-    //   render: (v) => (v ? "Sí" : "No"),
-    // },
-    // {
-    //   title: "Estado",
-    //   data: "statesAsset.name",
-    //   name: "statesAsset",
-    //   render: (v) => v ?? "-",
-    // },
+    { title: "Nombre", data: "name", name: "name" },
+    { title: "Clasificación", data: "classification", name: "classification" },
+    {
+      title: "Fecha adquisición",
+      data: "acquisition_date",
+      name: "acquisition_date",
+    },
+    {
+      title: "Costo adquisición",
+      data: "acquisition_cost",
+      name: "acquisition_cost",
+    },
+    {
+      title: "Vida útil (meses)",
+      data: "useful_life_months",
+      name: "useful_life_months",
+    },
+    {
+      title: "Depreciable",
+      data: "is_depreciable",
+      render: (v) => (v ? "Sí" : "No"),
+    },
+    {
+      title: "Estado",
+      data: "statesAsset.name",
+      name: "statesAsset",
+      render: (v) => v ?? "-",
+    },
     {
       title: "Acciones",
       data: "id",
@@ -337,6 +395,7 @@ const IndexAssets = () => {
             search={search}
             setSearch={setSearch}
             filtered={true}
+            data={data}
           />
         </div>
 
@@ -359,7 +418,7 @@ const IndexAssets = () => {
           dataTableRef={dataTableRef}
           setAssetsCreate={setAssetsCreate}
           thirds={thirds}
-          puc={puc}
+          accountingAccount={accountingAccount}
         />
 
         {/* <UpdateAssets

@@ -9,6 +9,7 @@ import { fetchHelper } from "../../../utils/fetch";
 
 import { useDispatch } from "react-redux";
 import { refreshMenu } from "../../../routes/routes";
+import InputDate from "../../../components/molecules/InputDate";
 
 const CreateAssets = ({
   modalRef,
@@ -18,7 +19,7 @@ const CreateAssets = ({
   dataTableRef,
   setAssetsCreate,
   thirds,
-  puc,
+  accountingAccount,
 }) => {
   const dispatch = useDispatch();
 
@@ -31,22 +32,23 @@ const CreateAssets = ({
   });
 
   useEffect(() => {
-    if (modalRef.current) {
-      modalRef.current.addEventListener("hidden.bs.modal", () => {
-        setError({ message: "", type: "", show: false });
-        setErrors({});
-      });
+    const handler = () => {
+      setError({ message: "", type: "", show: false });
+      setErrors({});
+    };
+
+    const modal = modalRef.current;
+
+    if (modal) {
+      modal.addEventListener("hidden.bs.modal", handler);
     }
 
     return () => {
-      if (modalRef.current) {
-        modalRef.current.removeEventListener("hidden.bs.modal", () => {
-          setError({ message: "", type: "", show: false });
-          setErrors({});
-        });
+      if (modal) {
+        modal.removeEventListener("hidden.bs.modal", handler);
       }
     };
-  }, [modalRef.current]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,22 +61,24 @@ const CreateAssets = ({
       dispatch(refreshMenu());
 
       setAssets({
-        name: "",
-        description: "",
-        classification: "",
-        type: "",
-        accountingCode: "",
-        acquisitionValue: "",
-        acquisitionDate: "",
-        usefulLifeMonths: "",
-        depreciationMethod: "",
-        supplierId: "",
-        paymentTerms: "",
-        accountsPayableReferenceId: "",
-        bankCashReferenceId: "",
-        costCenterOrAccountingLocation: "",
-        status: "",
-        observations: "",
+        id: assetsRef.id,
+        name: assetsRef.name,
+        description: assetsRef.description,
+        classification: assetsRef.classification,
+        type: assetsRef.type,
+        accountingAccount: assetsRef.accountingAccount,
+        acquisitionValue: assetsRef.acquisitionValue,
+        acquisitionDate: assetsRef.acquisitionDate,
+        usefulLifeMonths: assetsRef.usefulLifeMonths,
+        depreciationMethod: assetsRef.depreciationMethod,
+        supplierId: assetsRef.supplierId,
+        paymentTerms: assetsRef.paymentTerms,
+        accountsPayableReferenceId: assetsRef.accountsPayableReferenceId,
+        bankCashReferenceId: assetsRef.bankCashReferenceId,
+        costCenterOrAccountingLocation:
+          assetsRef.costCenterOrAccountingLocation,
+        status: assetsRef.status,
+        observations: assetsRef.observations,
       });
 
       dataTableRef?.current?.ajax.reload();
@@ -106,7 +110,8 @@ const CreateAssets = ({
       }
     }
   };
-
+  console.log("Thirds:", thirds);
+  console.log("PUC:", accountingAccount);
   return (
     <div
       className="modal fade"
@@ -206,17 +211,17 @@ const CreateAssets = ({
 
               <div className="col mb-6 mt-2">
                 <InputSelectModal
-                  id="accountingCode"
+                  id="accountingAccount"
                   label="Código contable"
-                  value={assets.accountingCode}
+                  value={assets.accountingAccount}
                   onChange={(value) => {
                     setAssets({
                       ...assets,
-                      accountingCode: value,
+                      accountingAccount: value,
                     });
-                    setErrors((prev) => ({ ...prev, accountingCode: "" }));
+                    setErrors((prev) => ({ ...prev, accountingAccount: "" }));
                   }}
-                  options={puc}
+                  options={accountingAccount}
                   required
                 />
               </div>
@@ -242,7 +247,7 @@ const CreateAssets = ({
 
             <div className="row">
               <div className="col mb-6 mt-2">
-                <InputModal
+                <InputDate
                   type="date"
                   id="acquisitionDate"
                   label="Fecha adquisición"
