@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-const InputSelectModal = ({ id, label, value, onChange, error, options, placeholder, clearable = false, multiple = false, required = false }) => {
+const InputSelectModal = ({ id, label, value, onChange, error, options, placeholder, clearable = false, multiple = false, required = false, disabled = false }) => {
 
     const selectRef = useRef(null);
     const onChangeRef = useRef(onChange);
@@ -42,7 +42,9 @@ const InputSelectModal = ({ id, label, value, onChange, error, options, placehol
 
         return () => {
             $select.off('change', handleChange);
-            $select.select2('destroy');
+            if ($select.hasClass('select2-hidden-accessible')) {
+                $select.select2('destroy');
+            }
         };
     }, [options, error]);
 
@@ -58,6 +60,7 @@ const InputSelectModal = ({ id, label, value, onChange, error, options, placehol
                 ref={selectRef}
                 className={`form-select ${error ? 'is-invalid' : ''}`}
                 multiple={multiple}
+                disabled={disabled}
             >
                 <option value="">{placeholder || 'Seleccione una opción'}</option>
                 {options.map(option => (
