@@ -7,17 +7,7 @@ import { fetchHelper } from '../../../utils/fetch';
 
 const API_STORE = ['api', 'v1', 'third-parties', 'store'];
 
-const PERSON_TYPES = [
-    { id: 'NATURAL',  label: 'Natural' },
-    { id: 'JURIDICA', label: 'Jurídica' },
-];
-
-const TAX_REGIMES = [
-    { id: 'SIMPLIFIED', label: 'Simplificado' },
-    { id: 'COMMON',     label: 'Común' },
-];
-
-// TODO: Confirmar IDs reales de roles con el backend (GET /api/v1/roles o similar)
+// TODO: Confirmar IDs reales de roles con el backend
 const ROLE_ID_MAP = {
     CLIENT:   1,
     SUPPLIER: 2,
@@ -27,7 +17,6 @@ const ROLE_ID_MAP = {
     OTHER:    6,
 };
 
-// TODO: Confirmar IDs reales de estado con el backend
 const STATUS_ID_MAP = {
     ACTIVE:   1,
     INACTIVE: 2,
@@ -41,21 +30,23 @@ const STATUSES = [
 ];
 
 const ROLES = [
-    { id: 'CLIENT', label: 'Cliente', icon: 'ri-user-line' },
+    { id: 'CLIENT',   label: 'Cliente',   icon: 'ri-user-line' },
     { id: 'SUPPLIER', label: 'Proveedor', icon: 'ri-store-line' },
-    { id: 'EMPLOYEE', label: 'Empleado', icon: 'ri-briefcase-line' },
-    { id: 'CREDITOR', label: 'Acreedor', icon: 'ri-bank-line' },
-    { id: 'DEBTOR', label: 'Deudor', icon: 'ri-money-dollar-circle-line' },
-    { id: 'OTHER', label: 'Otro', icon: 'ri-more-line' },
+    { id: 'EMPLOYEE', label: 'Empleado',  icon: 'ri-briefcase-line' },
+    { id: 'CREDITOR', label: 'Acreedor',  icon: 'ri-bank-line' },
+    { id: 'DEBTOR',   label: 'Deudor',    icon: 'ri-money-dollar-circle-line' },
+    { id: 'OTHER',    label: 'Otro',      icon: 'ri-more-line' },
 ];
 
 const TABS = [
-    { id: 'general', label: 'Datos Generales', icon: 'ri-user-3-line' },
-    { id: 'roles', label: 'Roles', icon: 'ri-shield-user-line' },
-    { id: 'fiscal', label: 'Datos Fiscales', icon: 'ri-file-text-line' },
-    { id: 'contact', label: 'Contacto', icon: 'ri-phone-line' },
-    { id: 'commercial', label: 'Comercial', icon: 'ri-store-2-line' },
+    { id: 'general',    label: 'Datos Generales', icon: 'ri-user-3-line' },
+    { id: 'roles',      label: 'Roles',           icon: 'ri-shield-user-line' },
+    { id: 'fiscal',     label: 'Datos Fiscales',  icon: 'ri-file-text-line' },
+    { id: 'contact',    label: 'Contacto',        icon: 'ri-phone-line' },
+    { id: 'commercial', label: 'Comercial',       icon: 'ri-store-2-line' },
 ];
+
+const emptyContact = { position: '', phone: '', email: '', contactPerson: '' };
 
 const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, dataTableRef, setThirdPartyCreate }) => {
 
@@ -79,26 +70,41 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
         });
     };
 
+    const addContact = () => setThirdParty({
+        ...thirdParty,
+        contacts: [...(thirdParty.contacts ?? []), { ...emptyContact }],
+    });
+
+    const removeContact = (idx) => setThirdParty({
+        ...thirdParty,
+        contacts: (thirdParty.contacts ?? []).filter((_, i) => i !== idx),
+    });
+
+    const updateContact = (idx, field, value) => {
+        const contacts = [...(thirdParty.contacts ?? [])];
+        contacts[idx] = { ...contacts[idx], [field]: value };
+        setThirdParty({ ...thirdParty, contacts });
+    };
+
     const handleCreate = async () => {
         try {
             const url = base_url(API_STORE);
             const payload = {
-                nit:                    thirdParty.nit,
-                dv:                     thirdParty.dv,
-                businessName:           thirdParty.businessName,
-                personType:             thirdParty.personType,
-                roleIds:                (thirdParty.roles ?? []).map(r => ROLE_ID_MAP[r]).filter(Boolean),
-                statusId:               STATUS_ID_MAP[thirdParty.status] ?? 1,
-                municipalityId:         thirdParty.municipalityId ? Number(thirdParty.municipalityId) : null,
-                address:                thirdParty.address,
-                phone:                  thirdParty.phone,
-                email:                  thirdParty.email,
-                taxRegime:              thirdParty.taxRegime,
-                fiscalResponsibilities: thirdParty.fiscalResponsibilities,
-                withholdingInfo:        thirdParty.retentions,
-                creditLimit:            thirdParty.creditLimit ? Number(thirdParty.creditLimit) : null,
-                paymentTerms:           thirdParty.paymentConditions,
-                marketSegment:          thirdParty.marketSegment,
+                nit:                thirdParty.nit,
+                dv:                 thirdParty.dv,
+                businessName:       thirdParty.businessName,
+                roleIds:            (thirdParty.roles ?? []).map(r => ROLE_ID_MAP[r]).filter(Boolean),
+                statusId:           STATUS_ID_MAP[thirdParty.status] ?? 1,
+                municipalityId:     thirdParty.municipalityId ? Number(thirdParty.municipalityId) : null,
+                typeOrganizationId: thirdParty.typeOrganizationId ? Number(thirdParty.typeOrganizationId) : null,
+                typeRegimenId:      thirdParty.typeRegimenId ? Number(thirdParty.typeRegimenId) : null,
+                withholdingIds:     thirdParty.withholdingIds
+                    ? thirdParty.withholdingIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0)
+                    : [],
+                creditLimit:        thirdParty.creditLimit ? Number(thirdParty.creditLimit) : null,
+                paymentTerms:       thirdParty.paymentConditions,
+                marketSegment:      thirdParty.marketSegment,
+                contacts:           thirdParty.contacts ?? [],
                 ...(thirdParty.status === 'BLOCKED' && {
                     blockingReason: thirdParty.blockReason,
                 }),
@@ -106,10 +112,11 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
             await fetchHelper.post(url, payload, {}, 1000);
 
             setThirdParty({
-                id: '', nit: '', dv: '', businessName: '', personType: '',
-                roles: [], taxRegime: '', fiscalResponsibilities: '', retentions: '',
-                address: '', phone: '', email: '', municipalityId: '',
+                id: '', nit: '', dv: '', businessName: '',
+                typeOrganizationId: '', typeRegimenId: '', withholdingIds: '',
+                roles: [], municipalityId: '',
                 creditLimit: '', paymentConditions: '', marketSegment: '',
+                contacts: [],
                 status: 'ACTIVE', blockReason: '',
             });
             dataTableRef?.current?.ajax.reload();
@@ -192,14 +199,14 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                         />
                                     </div>
                                     <div className="col-md-5 mb-4 mt-2">
-                                        <InputSelectModal
-                                            id="tp_personType_create"
-                                            label="Tipo de Persona"
-                                            value={thirdParty.personType}
-                                            onChange={(value) => setThirdParty({ ...thirdParty, personType: value })}
-                                            error={errors.personType}
-                                            placeholder="Seleccione tipo"
-                                            options={PERSON_TYPES}
+                                        <InputModal
+                                            type="number"
+                                            id="tp_typeOrganizationId_create"
+                                            label="Tipo de Organización ID"
+                                            value={thirdParty.typeOrganizationId}
+                                            onChange={(e) => setThirdParty({ ...thirdParty, typeOrganizationId: e.target.value })}
+                                            error={errors.typeOrganizationId}
+                                            placeholder="Ej. 1"
                                             required={true}
                                         />
                                     </div>
@@ -295,37 +302,26 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                             <div>
                                 <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
-                                        <InputSelectModal
-                                            id="tp_taxRegime_create"
-                                            label="Régimen Fiscal"
-                                            value={thirdParty.taxRegime}
-                                            onChange={(value) => setThirdParty({ ...thirdParty, taxRegime: value })}
-                                            error={errors.taxRegime}
-                                            placeholder="Seleccione el régimen"
-                                            options={TAX_REGIMES}
+                                        <InputModal
+                                            type="number"
+                                            id="tp_typeRegimenId_create"
+                                            label="Tipo de Régimen ID"
+                                            value={thirdParty.typeRegimenId}
+                                            onChange={(e) => setThirdParty({ ...thirdParty, typeRegimenId: e.target.value })}
+                                            error={errors.typeRegimenId}
+                                            placeholder="Ej. 2"
                                             required={true}
                                         />
                                     </div>
-                                </div>
-                                <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
-                                        <TextareaModal
-                                            id="tp_fiscalResponsibilities_create"
-                                            label="Responsabilidades Fiscales"
-                                            value={thirdParty.fiscalResponsibilities}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, fiscalResponsibilities: e.target.value })}
-                                            error={errors.fiscalResponsibilities}
-                                            placeholder="Ej. R-99-PN, 05-IVA, 07-RETE"
-                                        />
-                                    </div>
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <TextareaModal
-                                            id="tp_retentions_create"
-                                            label="Retenciones aplicables"
-                                            value={thirdParty.retentions}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, retentions: e.target.value })}
-                                            error={errors.retentions}
-                                            placeholder="Ej. Retención en la fuente, IVA, ICA"
+                                        <InputModal
+                                            type="text"
+                                            id="tp_withholdingIds_create"
+                                            label="IDs de Retenciones (separados por coma)"
+                                            value={thirdParty.withholdingIds}
+                                            onChange={(e) => setThirdParty({ ...thirdParty, withholdingIds: e.target.value })}
+                                            error={errors.withholdingIds}
+                                            placeholder="Ej. 1,3"
                                         />
                                     </div>
                                 </div>
@@ -335,46 +331,6 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                         {/* ── Tab: Contacto ── */}
                         {activeTab === 'contact' && (
                             <div>
-                                <div className="row">
-                                    <div className="col-md-12 mb-4 mt-2">
-                                        <InputModal
-                                            type="text"
-                                            id="tp_address_create"
-                                            label="Dirección"
-                                            value={thirdParty.address}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, address: e.target.value })}
-                                            error={errors.address}
-                                            placeholder="Ej. Cra 15 # 93-47"
-                                            required={true}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="row">
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal
-                                            type="tel"
-                                            id="tp_phone_create"
-                                            label="Teléfono"
-                                            value={thirdParty.phone}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, phone: e.target.value })}
-                                            error={errors.phone}
-                                            placeholder="Ej. 3001234567"
-                                            required={true}
-                                        />
-                                    </div>
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal
-                                            type="email"
-                                            id="tp_email_create"
-                                            label="Email"
-                                            value={thirdParty.email}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, email: e.target.value })}
-                                            error={errors.email}
-                                            placeholder="Ej. contacto@empresa.com"
-                                            required={true}
-                                        />
-                                    </div>
-                                </div>
                                 <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
                                         <InputModal
@@ -389,6 +345,72 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                         />
                                     </div>
                                 </div>
+
+                                <hr className="my-3" />
+
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <p className="text-muted mb-0">Contactos:</p>
+                                    <button type="button" className="btn btn-sm btn-outline-primary" onClick={addContact}>
+                                        <i className="ri-add-line me-1"></i> Agregar Contacto
+                                    </button>
+                                </div>
+
+                                {(thirdParty.contacts ?? []).length === 0 && (
+                                    <p className="text-muted text-center py-3">No hay contactos. Haga clic en "Agregar Contacto".</p>
+                                )}
+
+                                {(thirdParty.contacts ?? []).map((contact, idx) => (
+                                    <div key={idx} className="border rounded p-3 mb-3">
+                                        <div className="d-flex justify-content-between align-items-center mb-2">
+                                            <span className="fw-semibold text-muted">Contacto #{idx + 1}</span>
+                                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeContact(idx)}>
+                                                <i className="ri-delete-bin-line"></i>
+                                            </button>
+                                        </div>
+                                        <div className="row">
+                                            <div className="col-md-6 mb-2">
+                                                <InputModal
+                                                    type="text"
+                                                    id={`tp_contactPerson_${idx}_create`}
+                                                    label="Persona de Contacto"
+                                                    value={contact.contactPerson}
+                                                    onChange={(e) => updateContact(idx, 'contactPerson', e.target.value)}
+                                                    placeholder="Ej. Pedro Pérez"
+                                                />
+                                            </div>
+                                            <div className="col-md-6 mb-2">
+                                                <InputModal
+                                                    type="text"
+                                                    id={`tp_position_${idx}_create`}
+                                                    label="Cargo"
+                                                    value={contact.position}
+                                                    onChange={(e) => updateContact(idx, 'position', e.target.value)}
+                                                    placeholder="Ej. Contador"
+                                                />
+                                            </div>
+                                            <div className="col-md-6 mb-2">
+                                                <InputModal
+                                                    type="tel"
+                                                    id={`tp_contactPhone_${idx}_create`}
+                                                    label="Teléfono"
+                                                    value={contact.phone}
+                                                    onChange={(e) => updateContact(idx, 'phone', e.target.value)}
+                                                    placeholder="Ej. 3001234567"
+                                                />
+                                            </div>
+                                            <div className="col-md-6 mb-2">
+                                                <InputModal
+                                                    type="email"
+                                                    id={`tp_contactEmail_${idx}_create`}
+                                                    label="Email"
+                                                    value={contact.email}
+                                                    onChange={(e) => updateContact(idx, 'email', e.target.value)}
+                                                    placeholder="Ej. contacto@empresa.com"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
 

@@ -10,16 +10,6 @@ const API_UPDATE = (id) => ['api', 'v1', 'third-parties', id];
 // id va en el PATH: PUT /api/v1/third-parties/{id}/roles-status
 const API_UPDATE_ROLES_STATUS = (id) => ['api', 'v1', 'third-parties', id, 'roles-status'];
 
-const PERSON_TYPES = [
-    { id: 'NATURAL',  label: 'Natural' },
-    { id: 'JURIDICA', label: 'Jurídica' },
-];
-
-const TAX_REGIMES = [
-    { id: 'SIMPLIFIED', label: 'Simplificado' },
-    { id: 'COMMON',     label: 'Común' },
-];
-
 // TODO: Confirmar IDs reales de roles con el backend
 const ROLE_ID_MAP = {
     CLIENT:   1,
@@ -30,7 +20,6 @@ const ROLE_ID_MAP = {
     OTHER:    6,
 };
 
-// TODO: Confirmar IDs reales de estado con el backend
 const STATUS_ID_MAP = {
     ACTIVE:   1,
     INACTIVE: 2,
@@ -38,62 +27,57 @@ const STATUS_ID_MAP = {
 };
 
 const STATUSES = [
-    { id: 'ACTIVE', label: 'Activo' },
-    { id: 'BLOCKED', label: 'Bloqueado' },
+    { id: 'ACTIVE',   label: 'Activo' },
+    { id: 'BLOCKED',  label: 'Bloqueado' },
     { id: 'INACTIVE', label: 'Inactivo' },
 ];
 
 const ROLES = [
-    { id: 'CLIENT', label: 'Cliente', icon: 'ri-user-line' },
+    { id: 'CLIENT',   label: 'Cliente',   icon: 'ri-user-line' },
     { id: 'SUPPLIER', label: 'Proveedor', icon: 'ri-store-line' },
-    { id: 'EMPLOYEE', label: 'Empleado', icon: 'ri-briefcase-line' },
-    { id: 'CREDITOR', label: 'Acreedor', icon: 'ri-bank-line' },
-    { id: 'DEBTOR', label: 'Deudor', icon: 'ri-money-dollar-circle-line' },
-    { id: 'OTHER', label: 'Otro', icon: 'ri-more-line' },
+    { id: 'EMPLOYEE', label: 'Empleado',  icon: 'ri-briefcase-line' },
+    { id: 'CREDITOR', label: 'Acreedor',  icon: 'ri-bank-line' },
+    { id: 'DEBTOR',   label: 'Deudor',    icon: 'ri-money-dollar-circle-line' },
+    { id: 'OTHER',    label: 'Otro',      icon: 'ri-more-line' },
 ];
 
 const TABS = [
     { id: 'general', label: 'Datos Generales', icon: 'ri-user-3-line' },
-    { id: 'roles', label: 'Roles', icon: 'ri-shield-user-line' },
-    { id: 'fiscal', label: 'Datos Fiscales', icon: 'ri-file-text-line' },
-    { id: 'contact', label: 'Contacto', icon: 'ri-phone-line' },
-    { id: 'commercial', label: 'Comercial', icon: 'ri-store-2-line' },
+    { id: 'roles',   label: 'Roles',           icon: 'ri-shield-user-line' },
+    { id: 'fiscal',  label: 'Datos Fiscales',  icon: 'ri-file-text-line' },
+    { id: 'contact', label: 'Contacto',        icon: 'ri-phone-line' },
 ];
 
-const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, dataTableRef, setThirdPartyEdit }) => {
+const emptyContact = { position: '', phone: '', email: '', contactPerson: '' };
+
+const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, dataTableRef, setThirdPartyEdit, readOnly = false }) => {
 
     const [activeTab, setActiveTab] = useState('general');
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
     const [thirdPartyUpdated, setThirdPartyUpdated] = useState({
-        id: '', nit: '', dv: '', businessName: '', personType: '',
-        roles: [], taxRegime: '', fiscalResponsibilities: '', retentions: '',
-        address: '', phone: '', email: '', municipalityId: '',
-        creditLimit: '', paymentConditions: '', marketSegment: '',
+        id: '', nit: '', dv: '', businessName: '',
+        typeOrganizationId: '', typeRegimenId: '', withholdingIds: '',
+        roles: [], municipalityId: '',
+        contacts: [],
         status: 'ACTIVE', blockReason: '',
     });
 
     useEffect(() => {
         setThirdPartyUpdated({
-            id:                     thirdParty.id                    ?? '',
-            nit:                    thirdParty.nit                   ?? '',
-            dv:                     thirdParty.dv                    ?? '',
-            businessName:           thirdParty.businessName          ?? '',
-            personType:             thirdParty.personType            ?? '',
-            roles:                  thirdParty.roles                 ?? [],
-            taxRegime:              thirdParty.taxRegime             ?? '',
-            fiscalResponsibilities: thirdParty.fiscalResponsibilities?? '',
-            retentions:             thirdParty.retentions            ?? '',
-            address:                thirdParty.address               ?? '',
-            phone:                  thirdParty.phone                 ?? '',
-            email:                  thirdParty.email                 ?? '',
-            municipalityId:         thirdParty.municipalityId        ?? '',
-            creditLimit:            thirdParty.creditLimit           ?? '',
-            paymentConditions:      thirdParty.paymentConditions     ?? '',
-            marketSegment:          thirdParty.marketSegment         ?? '',
-            status:                 thirdParty.status                ?? 'ACTIVE',
-            blockReason:            thirdParty.blockReason           ?? '',
+            id:                 thirdParty.id                 ?? '',
+            nit:                thirdParty.nit                ?? '',
+            dv:                 thirdParty.dv                 ?? '',
+            businessName:       thirdParty.businessName       ?? '',
+            typeOrganizationId: thirdParty.typeOrganizationId ?? '',
+            typeRegimenId:      thirdParty.typeRegimenId      ?? '',
+            withholdingIds:     thirdParty.withholdingIds     ?? '',
+            roles:              thirdParty.roles              ?? [],
+            municipalityId:     thirdParty.municipalityId     ?? '',
+            contacts:           thirdParty.contacts           ?? [],
+            status:             thirdParty.status             ?? 'ACTIVE',
+            blockReason:        thirdParty.blockReason        ?? '',
         });
         setErrors({});
         setErrorMessage('');
@@ -110,23 +94,33 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
         });
     };
 
+    const addContact = () => setThirdPartyUpdated({
+        ...thirdPartyUpdated,
+        contacts: [...(thirdPartyUpdated.contacts ?? []), { ...emptyContact }],
+    });
+
+    const removeContact = (idx) => setThirdPartyUpdated({
+        ...thirdPartyUpdated,
+        contacts: (thirdPartyUpdated.contacts ?? []).filter((_, i) => i !== idx),
+    });
+
+    const updateContact = (idx, field, value) => {
+        const contacts = [...(thirdPartyUpdated.contacts ?? [])];
+        contacts[idx] = { ...contacts[idx], [field]: value };
+        setThirdPartyUpdated({ ...thirdPartyUpdated, contacts });
+    };
+
     const handleUpdate = async () => {
         try {
             // ── 1. Actualizar información general del tercero ──────────────────
             const url = base_url(API_UPDATE(thirdPartyUpdated.id));
             const payload = {
-                businessName:           thirdPartyUpdated.businessName,
-                personType:             thirdPartyUpdated.personType,
-                taxRegime:              thirdPartyUpdated.taxRegime,
-                fiscalResponsibilities: thirdPartyUpdated.fiscalResponsibilities,
-                withholdingInfo:        thirdPartyUpdated.retentions,
-                address:                thirdPartyUpdated.address,
-                phone:                  thirdPartyUpdated.phone,
-                email:                  thirdPartyUpdated.email,
-                municipalityId:         thirdPartyUpdated.municipalityId ? Number(thirdPartyUpdated.municipalityId) : null,
-                creditLimit:            thirdPartyUpdated.creditLimit ? Number(thirdPartyUpdated.creditLimit) : null,
-                paymentTerms:           thirdPartyUpdated.paymentConditions,
-                marketSegment:          thirdPartyUpdated.marketSegment,
+                businessName:   thirdPartyUpdated.businessName,
+                municipalityId: thirdPartyUpdated.municipalityId ? Number(thirdPartyUpdated.municipalityId) : null,
+                withholdingId: thirdPartyUpdated.withholdingIds
+                    ? thirdPartyUpdated.withholdingIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0)
+                    : [],
+                contacts: thirdPartyUpdated.contacts ?? [],
             };
             await fetchHelper.put(url, payload, {}, 1000);
 
@@ -143,10 +137,10 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             await fetchHelper.put(urlRolesStatus, rolesStatusPayload, {}, 1000);
 
             setThirdParty({
-                id: '', nit: '', dv: '', businessName: '', personType: '',
-                roles: [], taxRegime: '', fiscalResponsibilities: '', retentions: '',
-                address: '', phone: '', email: '', municipalityId: '',
-                creditLimit: '', paymentConditions: '', marketSegment: '',
+                id: '', nit: '', dv: '', businessName: '',
+                typeOrganizationId: '', typeRegimenId: '', withholdingIds: '',
+                roles: [], municipalityId: '',
+                contacts: [],
                 status: 'ACTIVE', blockReason: '',
             });
             dataTableRef?.current?.ajax.reload();
@@ -172,7 +166,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             <div className="modal-dialog modal-xl modal-dialog-centered" role="document">
                 <div className="modal-content">
                     <div className="modal-header">
-                        <h4 className="modal-title fw-bold">Editar Tercero</h4>
+                        <h4 className="modal-title fw-bold">{readOnly ? 'Ver Tercero' : 'Editar Tercero'}</h4>
                         <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
                     </div>
 
@@ -227,30 +221,23 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                     </div>
                                     <div className="col-md-4 mb-4 mt-2">
                                         <InputSelectModal
-                                            id="tp_personType_update" label="Tipo de Persona"
-                                            value={thirdPartyUpdated.personType}
-                                            onChange={(value) => setThirdPartyUpdated({ ...thirdPartyUpdated, personType: value })}
-                                            error={errors.personType} placeholder="Seleccione tipo"
-                                            options={PERSON_TYPES} required={true}
+                                            id="tp_status_update" label="Estado"
+                                            value={thirdPartyUpdated.status}
+                                            onChange={(value) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, status: value, blockReason: '' })}
+                                            error={errors.status} placeholder="Seleccione estado"
+                                            options={STATUSES} required={!readOnly}
+                                            disabled={readOnly}
                                         />
                                     </div>
                                 </div>
                                 <div className="row">
-                                    <div className="col-md-8 mb-4 mt-2">
+                                    <div className="col-md-12 mb-4 mt-2">
                                         <InputModal
                                             type="text" id="tp_businessName_update" label="Nombre / Razón Social"
                                             value={thirdPartyUpdated.businessName}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, businessName: e.target.value })}
-                                            error={errors.businessName} placeholder="Ej. EMPRESA EJEMPLO S.A.S." required={true}
-                                        />
-                                    </div>
-                                    <div className="col-md-4 mb-4 mt-2">
-                                        <InputSelectModal
-                                            id="tp_status_update" label="Estado"
-                                            value={thirdPartyUpdated.status}
-                                            onChange={(value) => setThirdPartyUpdated({ ...thirdPartyUpdated, status: value, blockReason: '' })}
-                                            error={errors.status} placeholder="Seleccione estado"
-                                            options={STATUSES} required={true}
+                                            onChange={(e) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, businessName: e.target.value })}
+                                            error={errors.businessName} placeholder="Ej. EMPRESA EJEMPLO S.A.S."
+                                            required={!readOnly} disabled={readOnly} readOnly={readOnly}
                                         />
                                     </div>
                                 </div>
@@ -260,8 +247,9 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                             <TextareaModal
                                                 id="tp_blockReason_update" label="Motivo de bloqueo"
                                                 value={thirdPartyUpdated.blockReason}
-                                                onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, blockReason: e.target.value })}
-                                                error={errors.blockReason} placeholder="Mínimo 20 caracteres" required={true}
+                                                onChange={(e) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, blockReason: e.target.value })}
+                                                error={errors.blockReason} placeholder="Mínimo 20 caracteres"
+                                                required={!readOnly} disabled={readOnly} readOnly={readOnly}
                                             />
                                         </div>
                                     </div>
@@ -281,11 +269,12 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                             <div className="col-md-4 col-sm-6" key={role.id}>
                                                 <div
                                                     className={`card border p-3 d-flex flex-row align-items-center gap-3 ${selected ? 'border-primary bg-label-primary' : ''}`}
-                                                    style={{ cursor: 'pointer' }}
-                                                    onClick={() => toggleRole(role.id)}
+                                                    style={{ cursor: readOnly ? 'default' : 'pointer' }}
+                                                    onClick={() => !readOnly && toggleRole(role.id)}
                                                 >
                                                     <input type="checkbox" className="form-check-input mt-0 flex-shrink-0"
-                                                        checked={selected} onChange={() => toggleRole(role.id)} />
+                                                        checked={selected} onChange={() => !readOnly && toggleRole(role.id)}
+                                                        disabled={readOnly} />
                                                     <i className={`${role.icon} fs-5 ${selected ? 'text-primary' : 'text-muted'}`}></i>
                                                     <span className="fw-semibold">{role.label}</span>
                                                 </div>
@@ -301,30 +290,15 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                             <div>
                                 <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
-                                        <InputSelectModal
-                                            id="tp_taxRegime_update" label="Régimen Fiscal"
-                                            value={thirdPartyUpdated.taxRegime}
-                                            onChange={(value) => setThirdPartyUpdated({ ...thirdPartyUpdated, taxRegime: value })}
-                                            error={errors.taxRegime} placeholder="Seleccione el régimen"
-                                            options={TAX_REGIMES} required={true}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="row">
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <TextareaModal
-                                            id="tp_fiscalResponsibilities_update" label="Responsabilidades Fiscales"
-                                            value={thirdPartyUpdated.fiscalResponsibilities}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, fiscalResponsibilities: e.target.value })}
-                                            error={errors.fiscalResponsibilities} placeholder="Ej. R-99-PN, 05-IVA, 07-RETE"
-                                        />
-                                    </div>
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <TextareaModal
-                                            id="tp_retentions_update" label="Retenciones aplicables"
-                                            value={thirdPartyUpdated.retentions}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, retentions: e.target.value })}
-                                            error={errors.retentions} placeholder="Ej. Retención en la fuente, IVA, ICA"
+                                        <InputModal
+                                            type="text"
+                                            id="tp_withholdingIds_update"
+                                            label="IDs de Retenciones (separados por coma)"
+                                            value={thirdPartyUpdated.withholdingIds}
+                                            onChange={(e) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, withholdingIds: e.target.value })}
+                                            error={errors.withholdingIds}
+                                            placeholder="Ej. 1,3"
+                                            disabled={readOnly} readOnly={readOnly}
                                         />
                                     </div>
                                 </div>
@@ -335,72 +309,99 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                         {activeTab === 'contact' && (
                             <div>
                                 <div className="row">
-                                    <div className="col-md-12 mb-4 mt-2">
-                                        <InputModal type="text" id="tp_address_update" label="Dirección"
-                                            value={thirdPartyUpdated.address}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, address: e.target.value })}
-                                            error={errors.address} placeholder="Ej. Cra 15 # 93-47" required={true} />
-                                    </div>
-                                </div>
-                                <div className="row">
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal type="tel" id="tp_phone_update" label="Teléfono"
-                                            value={thirdPartyUpdated.phone}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, phone: e.target.value })}
-                                            error={errors.phone} placeholder="Ej. 3001234567" required={true} />
-                                    </div>
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal type="email" id="tp_email_update" label="Email"
-                                            value={thirdPartyUpdated.email}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, email: e.target.value })}
-                                            error={errors.email} placeholder="Ej. contacto@empresa.com" required={true} />
-                                    </div>
-                                </div>
-                                <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
                                         <InputModal type="number" id="tp_municipalityId_update" label="Municipio ID"
                                             value={thirdPartyUpdated.municipalityId}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, municipalityId: e.target.value })}
-                                            error={errors.municipalityId} placeholder="Ej. 1" required={true} />
+                                            onChange={(e) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, municipalityId: e.target.value })}
+                                            error={errors.municipalityId} placeholder="Ej. 1"
+                                            required={!readOnly} disabled={readOnly} readOnly={readOnly} />
                                     </div>
                                 </div>
-                            </div>
-                        )}
 
-                        {/* ── Tab: Comercial ── */}
-                        {activeTab === 'commercial' && (
-                            <div>
-                                <div className="row">
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal type="number" id="tp_creditLimit_update" label="Límite de crédito"
-                                            value={thirdPartyUpdated.creditLimit}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, creditLimit: e.target.value })}
-                                            error={errors.creditLimit} placeholder="Ej. 5000000" />
-                                    </div>
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal type="text" id="tp_marketSegment_update" label="Segmento de mercado"
-                                            value={thirdPartyUpdated.marketSegment}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, marketSegment: e.target.value })}
-                                            error={errors.marketSegment} placeholder="Ej. Corporativo" />
-                                    </div>
+                                <hr className="my-3" />
+
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <p className="text-muted mb-0">Contactos:</p>
+                                    {!readOnly && (
+                                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={addContact}>
+                                            <i className="ri-add-line me-1"></i> Agregar Contacto
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="row">
-                                    <div className="col-md-12 mb-4 mt-2">
-                                        <TextareaModal id="tp_paymentConditions_update" label="Condiciones de pago"
-                                            value={thirdPartyUpdated.paymentConditions}
-                                            onChange={(e) => setThirdPartyUpdated({ ...thirdPartyUpdated, paymentConditions: e.target.value })}
-                                            error={errors.paymentConditions} placeholder="Ej. Pago a 30 días" />
+
+                                {(thirdPartyUpdated.contacts ?? []).length === 0 && (
+                                    <p className="text-muted text-center py-3">No hay contactos. Haga clic en "Agregar Contacto".</p>
+                                )}
+
+                                {(thirdPartyUpdated.contacts ?? []).map((contact, idx) => (
+                                    <div key={idx} className="border rounded p-3 mb-3">
+                                        <div className="d-flex justify-content-between align-items-center mb-2">
+                                            <span className="fw-semibold text-muted">Contacto #{idx + 1}</span>
+                                            {!readOnly && (
+                                                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeContact(idx)}>
+                                                    <i className="ri-delete-bin-line"></i>
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="row">
+                                            <div className="col-md-6 mb-2">
+                                                <InputModal
+                                                    type="text"
+                                                    id={`tp_contactPerson_${idx}_update`}
+                                                    label="Persona de Contacto"
+                                                    value={contact.contactPerson}
+                                                    onChange={(e) => !readOnly && updateContact(idx, 'contactPerson', e.target.value)}
+                                                    placeholder="Ej. Pedro Pérez"
+                                                    disabled={readOnly} readOnly={readOnly}
+                                                />
+                                            </div>
+                                            <div className="col-md-6 mb-2">
+                                                <InputModal
+                                                    type="text"
+                                                    id={`tp_position_${idx}_update`}
+                                                    label="Cargo"
+                                                    value={contact.position}
+                                                    onChange={(e) => !readOnly && updateContact(idx, 'position', e.target.value)}
+                                                    placeholder="Ej. Contador"
+                                                    disabled={readOnly} readOnly={readOnly}
+                                                />
+                                            </div>
+                                            <div className="col-md-6 mb-2">
+                                                <InputModal
+                                                    type="tel"
+                                                    id={`tp_contactPhone_${idx}_update`}
+                                                    label="Teléfono"
+                                                    value={contact.phone}
+                                                    onChange={(e) => !readOnly && updateContact(idx, 'phone', e.target.value)}
+                                                    placeholder="Ej. 3001234567"
+                                                    disabled={readOnly} readOnly={readOnly}
+                                                />
+                                            </div>
+                                            <div className="col-md-6 mb-2">
+                                                <InputModal
+                                                    type="email"
+                                                    id={`tp_contactEmail_${idx}_update`}
+                                                    label="Email"
+                                                    value={contact.email}
+                                                    onChange={(e) => !readOnly && updateContact(idx, 'email', e.target.value)}
+                                                    placeholder="Ej. contacto@empresa.com"
+                                                    disabled={readOnly} readOnly={readOnly}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
                         )}
 
                     </div>{/* /modal-body */}
 
                     <div className="modal-footer">
-                        <button type="button" className="btn btn-primary" onClick={handleUpdate}>
-                            Guardar cambios
-                        </button>
+                        {!readOnly && (
+                            <button type="button" className="btn btn-primary" onClick={handleUpdate}>
+                                Guardar cambios
+                            </button>
+                        )}
                         <button type="button" className="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">
                             Cerrar
                         </button>

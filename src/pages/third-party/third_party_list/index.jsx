@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import DataTableReference from '../../../components/organism/DataTable';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
@@ -26,18 +27,15 @@ const emptyThirdParty = {
     nit: '',
     dv: '',
     businessName: '',
-    personType: '',
+    typeOrganizationId: '',
+    typeRegimenId: '',
+    withholdingIds: '',
     roles: [],
-    taxRegime: '',
-    fiscalResponsibilities: '',
-    retentions: '',
-    address: '',
-    phone: '',
-    email: '',
     municipalityId: '',
     creditLimit: '',
     paymentConditions: '',
     marketSegment: '',
+    contacts: [],
     status: 'ACTIVE',
     blockReason: '',
 };
@@ -67,6 +65,7 @@ const IndexThirdPartyList = () => {
     const [deleteTarget, setDeleteTarget] = useState(null);
 
     const [thirdParty, setThirdParty] = useState(emptyThirdParty);
+    const [viewMode, setViewMode] = useState(false);
 
     const actions = [
         { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
@@ -196,59 +195,50 @@ const IndexThirdPartyList = () => {
             const row = data.find(m => m.id === id);
             if (!row) return;
 
-            switch (action) {
-                case 'view':
-                case 'edit': {
-                    // Carga la ficha completa del tercero desde el backend (GET /api/v1/third-parties/{id})
+            const mapDetail = (src) => ({
+                    id:                 src.id                 ?? '',
+                    nit:                src.nit                ?? '',
+                    dv:                 src.dv                 ?? '',
+                    businessName:       src.businessName       ?? '',
+                    typeOrganizationId: src.typeOrganizationId ?? '',
+                    typeRegimenId:      src.typeRegimenId      ?? '',
+                    withholdingIds:     (Array.isArray(src.withholdingIds) ? src.withholdingIds : []).join(','),
+                    roles:              src.roles              ?? [],
+                    municipalityId:     src.municipalityId     ?? '',
+                    creditLimit:        src.creditLimit        ?? '',
+                    paymentConditions:  src.paymentTerms       ?? '',
+                    marketSegment:      src.marketSegment      ?? '',
+                    contacts:           src.contacts           ?? [],
+                    status:             src.status             ?? 'ACTIVE',
+                    blockReason:        src.blockReason        ?? '',
+                });
+
+                const loadAndOpen = async (isViewMode) => {
+                    let mapped;
                     try {
                         const url = base_url(API_GET(id));
                         const response = await fetchHelper.get(url, {}, 0);
                         const detail = response?.data ?? response ?? {};
-                        setThirdParty({
-                            id:                    detail.id                    ?? '',
-                            nit:                   detail.nit                   ?? '',
-                            dv:                    detail.dv                    ?? '',
-                            businessName:          detail.businessName          ?? '',
-                            personType:            detail.personType            ?? '',
-                            roles:                 detail.roles                 ?? [],
-                            taxRegime:             detail.taxRegime             ?? '',
-                            fiscalResponsibilities:detail.fiscalResponsibilities?? '',
-                            retentions:            detail.withholdingInfo       ?? '',
-                            address:               detail.address               ?? '',
-                            phone:                 detail.phone                 ?? '',
-                            email:                 detail.email                 ?? '',
-                            municipalityId:        detail.municipalityId        ?? '',
-                            creditLimit:           detail.creditLimit           ?? '',
-                            paymentConditions:     detail.paymentTerms          ?? '',
-                            marketSegment:         detail.marketSegment         ?? '',
-                            status:                detail.status                ?? 'ACTIVE',
-                            blockReason:           detail.blockReason           ?? '',
-                        });
+                        mapped = mapDetail(detail);
                     } catch (err) {
                         console.error('Error al cargar detalle del tercero:', err);
-                        // Fallback: usar los datos del DataTable si el GET falla
-                        setThirdParty({
-                            id:                    row.id                    ?? '',
-                            nit:                   row.nit                   ?? '',
-                            dv:                    row.dv                    ?? '',
-                            businessName:          row.businessName          ?? '',
-                            personType:            row.personType            ?? '',
-                            roles:                 row.roles                 ?? [],
-                            taxRegime:             row.taxRegime             ?? '',
-                            fiscalResponsibilities:row.fiscalResponsibilities?? '',
-                            retentions:            row.withholdingInfo       ?? '',
-                            address:               row.address               ?? '',
-                            phone:                 row.phone                 ?? '',
-                            email:                 row.email                 ?? '',
-                            municipalityId:        row.municipalityId        ?? '',
-                            creditLimit:           row.creditLimit           ?? '',
-                            paymentConditions:     row.paymentTerms          ?? '',
-                            marketSegment:         row.marketSegment         ?? '',
-                            status:                row.status                ?? 'ACTIVE',
-                            blockReason:           row.blockReason           ?? '',
-                        });
+                        mapped = mapDetail(row);
                     }
+                    // flushSync garantiza que React aplica el estado ANTES de abrir el modal
+                    flushSync(() => {
+                        setThirdParty(mapped);
+                        setViewMode(isViewMode);
+                    });
                     openModalUpdate();
+                };
+
+                switch (action) {
+                case 'view': {
+                    await loadAndOpen(true);
+                    break;
+                }
+                case 'edit': {
+                    await loadAndOpen(false);
                     break;
                 }
 
@@ -316,6 +306,7 @@ const IndexThirdPartyList = () => {
                 setThirdParty={setThirdParty}
                 dataTableRef={dataTableRef}
                 setThirdPartyEdit={setThirdPartyEdit}
+                readOnly={viewMode}
             />
 
             <DropzoneModal
