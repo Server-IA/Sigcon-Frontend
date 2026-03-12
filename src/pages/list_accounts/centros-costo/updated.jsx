@@ -9,7 +9,8 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 
 const COMPANY_ID_HARDCODED = 79;
 
-const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCosto, dataTableRef, setCentroCostoEdit }) => {
+const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCosto, dataTableRef, setCentroCostoEdit, readOnly = false }) => {
+    const sfx = readOnly ? 'view' : 'updated'; // sufijo único por instancia para evitar conflicto de IDs con Select2
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
@@ -70,7 +71,7 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
             <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
                 <div className="modal-content">
                     <div className="modal-header">
-                        <h4 className="modal-title fw-bold">Editar Centro de Costos</h4>
+                        <h4 className="modal-title fw-bold">{readOnly ? 'Ver Centro de Costos' : 'Editar Centro de Costos'}</h4>
                         <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div className="modal-body">
@@ -83,13 +84,14 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
                             <div className="col mb-3">
                                 <InputModal
                                     type="text"
-                                    id="name_updated"
+                                    id={`name_${sfx}`}
                                     label="Nombre del Centro de Costo"
                                     value={centroCosto.name ?? ''}
-                                    onChange={(e) => setCentroCosto({ ...centroCosto, name: e.target.value })}
-                                    error={errors.name}
+                                    onChange={(e) => !readOnly && setCentroCosto({ ...centroCosto, name: e.target.value })}
+                                    error={!readOnly ? errors.name : undefined}
                                     placeholder="Nombre"
-                                    required
+                                    required={!readOnly}
+                                    readOnly={readOnly}
                                 />
                             </div>
                             {/* <div className="col-md-6 mb-3">
@@ -108,31 +110,34 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
                             <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                                 <InputModal
                                     type="text"
-                                    id="code_updated"
+                                    id={`code_${sfx}`}
                                     label="Código del Centro de Costo"
                                     value={centroCosto.code ?? ''}
                                     onChange={(e) => {
+                                        if (readOnly) return;
                                         setCentroCosto({ ...centroCosto, code: e.target.value.toUpperCase().trim().replace(/ /g, '') });
                                         setErrors({ ...errors, code: null });
                                     }}
-                                    error={errors.code}
+                                    error={!readOnly ? errors.code : undefined}
                                     placeholder="EJ: CC001"
-                                    required
+                                    required={!readOnly}
+                                    readOnly={readOnly}
                                 />
                             </div>
                             <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                                 <InputSelectModal
-                                    id="status_updated"
+                                    id={`status_${sfx}`}
                                     label="Estado"
                                     value={centroCosto.status ?? ''}
-                                    onChange={(value) => setCentroCosto({ ...centroCosto, status: value })}
-                                    error={errors.status}
+                                    onChange={(value) => !readOnly && setCentroCosto({ ...centroCosto, status: value })}
+                                    error={!readOnly ? errors.status : undefined}
                                     placeholder="Seleccione un estado"
                                     options={[
                                         { name: 'Activo', id: 'ACTIVE' },
                                         { name: 'Inactivo', id: 'INACTIVE' },
                                     ]}
-                                    required
+                                    required={!readOnly}
+                                    disabled={readOnly}
                                 />
                             </div>
                         </div>
@@ -140,25 +145,30 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
                         <div className="row">
                             <div className="col-12 mb-3">
                                 <TextareaModal
-                                    id="description_updated"
+                                    id={`description_${sfx}`}
                                     label="Descripción"
                                     value={centroCosto.description ?? ''}
-                                    onChange={(e) => setCentroCosto({ ...centroCosto, description: e.target.value })}
-                                    error={errors.description}
+                                    onChange={(e) => !readOnly && setCentroCosto({ ...centroCosto, description: e.target.value })}
+                                    error={!readOnly ? errors.description : undefined}
                                     placeholder="Descripcion opcional del centro de costo"
+                                    readOnly={readOnly}
                                 />
                             </div>
                         </div>
                     </div>
                     <div className="modal-footer justify-content-start">
-                        <button type="button" className="btn btn-primary" onClick={handleSubmit}>
-                            Guardar Cambios
-                        </button>
-                        <button type="button" className="btn btn-outline-secondary" onClick={handleClear}>
-                            Limpiar
-                        </button>
-                        <button type="button" className="btn btn-danger ms-auto" data-bs-dismiss="modal">
-                            Volver
+                        {!readOnly && (
+                            <>
+                                <button type="button" className="btn btn-primary" onClick={handleSubmit}>
+                                    Guardar Cambios
+                                </button>
+                                <button type="button" className="btn btn-outline-secondary" onClick={handleClear}>
+                                    Limpiar
+                                </button>
+                            </>
+                        )}
+                        <button type="button" className={`btn btn-danger ${readOnly ? '' : 'ms-auto'}`} data-bs-dismiss="modal">
+                            {readOnly ? 'Cerrar' : 'Volver'}
                         </button>
                     </div>
                 </div>
