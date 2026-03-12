@@ -33,6 +33,9 @@ import AssetReportGeneration from "../pages/assets/asset-report-generation";
 // Third Party
 import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 
+// Activos
+import CalculoDepreciacionActivos from "../pages/activos/calculo-depreciacion/index";
+
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 
@@ -144,5 +147,6 @@ export const COMPONENT_MAP = [
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
     { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
+    { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: CalculoDepreciacionActivos },
     { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
 ];
