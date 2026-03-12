@@ -106,7 +106,7 @@ const CreateCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCost
                                     placeholder="Id empresa"
                                 />
                             </div> */}
-                            
+
                             <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                                 <InputModal
                                     type="text"
