@@ -80,31 +80,31 @@ export const getMenu = async () => {
                 componentName: "HOME"
             }
         ]
-    });
-    try {
-        const { data, error } = await fetchHelper.get(url, {}, 0);
-        if (!error) {
+      }
+    ]
+  });
+  try {
+    const { data, error } = await fetchHelper.get(url, {}, 0);
+    if (!error) {
 
-            modules.push(...data?.map(mod => {
-                // Construir el árbol de menús normalmente
-                const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
-                    ...menu,
-                    componentName: menu?.component,
-                })));
+        modules.push(...data?.map(mod => {
+            // Construir el árbol de menús normalmente
+            const menuTree = buildMenuTree(mod?.menus?.map(menu => ({
+                ...menu,
+                componentName: menu?.component,
+            })));
 
-                return {
-                    ...mod,
-                    menus: menuTree
-                };
-            }));
-        }
+            return {
+                ...mod,
+                menus: menuTree
+            };
+        }));
+    }
   } catch (error) {
     console.log(error);
   } finally {
     return modules;
   }
-
-  return modules;
 };
 
 const buildMenuTree = (menus) => {
