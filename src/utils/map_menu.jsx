@@ -45,9 +45,6 @@ import PageMaintenance from "../pages/errors/page_maintenance";
 import NiifVerificationIndex from "../pages/list_accounts/niif_verification/index";
 import NiifCorrectionIndex from "../pages/list_accounts/niif_correction/index";
 
-// List Accounts
-import IndexPUC from "../pages/list_accounts/puc/index";
-
 import IndexSegmentation from "../pages/third-party/segmentation/index"
 
 import { base_url } from "./functions";
