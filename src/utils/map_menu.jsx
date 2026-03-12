@@ -38,6 +38,12 @@ import CalculoDepreciacionActivos from "../pages/activos/calculo-depreciacion/in
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
+// NIIF
+import NiifVerificationIndex from "../pages/list_accounts/niif_verification/index";
+import NiifCorrectionIndex from "../pages/list_accounts/niif_correction/index";
+
+// List Accounts
+import IndexPUC from "../pages/list_accounts/puc/index";
 
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
@@ -147,6 +153,8 @@ export const COMPONENT_MAP = [
     { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
     { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
     { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
+    { id: "NIIF_VERIFICATION", name: "Verificación NIIF", component: NiifVerificationIndex },
+    { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
     { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: CalculoDepreciacionActivos },
     { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
 ];
