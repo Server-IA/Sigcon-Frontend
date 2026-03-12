@@ -1,96 +1,110 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+
+import { fetchHelper } from '../../utils/fetch';
 
 const DropzoneModal = ({
     modalRef,
     title = 'Cargue Masivo',
     uploadUrl,
     acceptedFiles = '.xlsx,.xls,.csv',
-    maxFiles = 1,
     maxFilesize = 5,
+    fileFieldName = 'fileBase64',
+    fileNameField = 'fileName',
     onSuccess,
     onError,
 }) => {
 
-    const formRef = useRef(null);
-    const dzInstance = useRef(null);
-    const [alert, setAlert] = useState({ text: '', type: '' });
+    const inputRef = useRef(null);
 
+    const [alert, setAlert]           = useState({ text: '', type: '' });
+    const [dragOver, setDragOver]     = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [loading, setLoading]       = useState(false);
+
+    // Limpiar estado al cerrar el modal
     useEffect(() => {
-        const el = modalRef.current;
+        const el = modalRef?.current;
         if (!el) return;
 
-        const initDropzone = () => {
-            if (dzInstance.current) return;
-            const form = formRef.current;
-            if (!form) return;
-
-            // Destruir instancia auto-descubierta si existe
-            if (form.dropzone) form.dropzone.destroy();
-
-            const token = localStorage.getItem('token');
-
-            dzInstance.current = new window.Dropzone(form, {
-                url: uploadUrl,
-                maxFiles,
-                maxFilesize,
-                acceptedFiles,
-                addRemoveLinks: true,
-                parallelUploads: 1,
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
-                dictDefaultMessage: `
-                    <i class="ri-upload-cloud-2-line" style="font-size:2.8rem;display:block;margin-bottom:0.4rem"></i>
-                    Arrastra el archivo aquí o <strong>haz clic para seleccionar</strong>
-                    <span style="display:block;font-size:0.82rem;color:#8592a3;margin-top:0.4rem">
-                        Formatos: Excel (.xlsx, .xls) o CSV &bull; Máx. ${maxFilesize} MB
-                    </span>
-                `,
-                dictRemoveFile: 'Eliminar',
-                dictCancelUpload: 'Cancelar',
-                dictInvalidFileType: 'Tipo de archivo no permitido.',
-                dictFileTooBig: `El archivo supera el límite de ${maxFilesize} MB.`,
-                dictMaxFilesExceeded: 'Solo se puede cargar un archivo a la vez.',
-                dictResponseError: 'El servidor respondió con un error.',
-
-                success: (file, response) => {
-                    let parsed = response;
-                    if (typeof response === 'string') {
-                        try { parsed = JSON.parse(response); } catch (_) { /* noop */ }
-                    }
-                    setAlert({ text: parsed?.msg || 'Archivo procesado exitosamente.', type: 'success' });
-                    onSuccess?.(parsed);
-                },
-
-                error: (file, errorMessage) => {
-
-                    let parsed = errorMessage;
-                    if (typeof errorMessage === 'string') {
-                        try { parsed = JSON.parse(errorMessage); } catch (_) { /* noop */ }
-                    }
-                    const text = parsed?.msg
-                        ?? (typeof parsed === 'string' ? parsed : 'Error al procesar el archivo.');
-                    setAlert({ text, type: 'danger' });
-                    onError?.(parsed);
-                },
-            });
-        };
-
-        const destroyDropzone = () => {
-            if (dzInstance.current) {
-                dzInstance.current.destroy();
-                dzInstance.current = null;
-            }
+        const onHide = () => {
             setAlert({ text: '', type: '' });
+            setSelectedFile(null);
+            setLoading(false);
+            if (inputRef.current) inputRef.current.value = '';
         };
 
-        el.addEventListener('shown.bs.modal', initDropzone);
-        el.addEventListener('hidden.bs.modal', destroyDropzone);
+        el.addEventListener('hidden.bs.modal', onHide);
+        return () => el.removeEventListener('hidden.bs.modal', onHide);
+    }, [modalRef]);
 
-        return () => {
-            el.removeEventListener('shown.bs.modal', initDropzone);
-            el.removeEventListener('hidden.bs.modal', destroyDropzone);
-            destroyDropzone();
-        };
-    }, [uploadUrl]);
+    const isValidFile = (file) => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const allowed = acceptedFiles.split(',').map(e => e.trim().replace('.', '').toLowerCase());
+
+        if (!allowed.includes(ext)) {
+            setAlert({ text: 'Tipo de archivo no permitido.', type: 'danger' });
+            return false;
+        }
+        if (file.size > maxFilesize * 1024 * 1024) {
+            setAlert({ text: `El archivo supera el límite de ${maxFilesize} MB.`, type: 'danger' });
+            return false;
+        }
+        return true;
+    };
+
+    const handleFile = (file) => {
+        if (!file) return;
+        setAlert({ text: '', type: '' });
+        if (!isValidFile(file)) return;
+        setSelectedFile(file);
+    };
+
+    const handleDrop = useCallback((e) => {
+        e.preventDefault();
+        setDragOver(false);
+        handleFile(e.dataTransfer.files?.[0]);
+    }, [acceptedFiles, maxFilesize]);
+
+    const handleInputChange = (e) => handleFile(e.target.files?.[0]);
+
+    const toBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result.split(',')[1]); // solo la parte base64
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+
+    const handleUpload = async () => {
+        if (!selectedFile) {
+            setAlert({ text: 'Seleccione un archivo para continuar.', type: 'warning' });
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setAlert({ text: '', type: '' });
+
+            const base64  = await toBase64(selectedFile);
+            const payload = {
+                [fileFieldName]: base64,
+                [fileNameField]: selectedFile.name,
+            };
+
+            const response = await fetchHelper.post(uploadUrl, payload, {}, 1000);
+
+            setAlert({ text: response?.msg || 'Archivo procesado exitosamente.', type: 'success' });
+            setSelectedFile(null);
+            if (inputRef.current) inputRef.current.value = '';
+            onSuccess?.(response);
+
+        } catch (error) {
+            const text = error?.msg ?? 'Error al procesar el archivo.';
+            setAlert({ text, type: 'danger' });
+            onError?.(error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="modal fade" ref={modalRef} tabIndex={-1} aria-hidden="true">
@@ -108,24 +122,89 @@ const DropzoneModal = ({
                     </div>
 
                     <div className="modal-body">
+
                         {alert.text && (
-                            <div className={`alert alert-${alert.type} mb-3`} role="alert">
+                            <div className={`alert alert-${alert.type} alert-dismissible mb-3`} role="alert">
                                 {alert.text}
+                                <button
+                                    type="button"
+                                    className="btn-close"
+                                    onClick={() => setAlert({ text: '', type: '' })}
+                                />
                             </div>
                         )}
 
-                        <form ref={formRef} className="dropzone needsclick" action={uploadUrl}>
-                            <div className="fallback">
-                                <input name="file" type="file" accept={acceptedFiles} />
-                            </div>
-                        </form>
+                        {/* Zona de arrastre */}
+                        <div
+                            className={`border border-2 rounded p-5 text-center ${dragOver ? 'border-primary bg-primary bg-opacity-10' : 'border-secondary'}`}
+                            style={{
+                                cursor: 'pointer',
+                                minHeight: '180px',
+                                borderStyle: 'dashed',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={handleDrop}
+                            onClick={() => inputRef.current?.click()}
+                        >
+                            <i
+                                className={`ri-upload-cloud-2-line ${dragOver ? 'text-primary' : 'text-muted'}`}
+                                style={{ fontSize: '2.8rem', marginBottom: '0.5rem' }}
+                            />
+
+                            {selectedFile ? (
+                                <>
+                                    <p className="mb-1 fw-semibold text-success">
+                                        <i className="ri-file-excel-2-line me-1" />
+                                        {selectedFile.name}
+                                    </p>
+                                    <small className="text-muted">
+                                        {(selectedFile.size / 1024).toFixed(1)} KB — listo para cargar
+                                    </small>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="mb-1">
+                                        Arrastra el archivo aquí o <strong>haz clic para seleccionar</strong>
+                                    </p>
+                                    <small className="text-muted">
+                                        Formatos: {acceptedFiles} &bull; Máx. {maxFilesize} MB
+                                    </small>
+                                </>
+                            )}
+
+                            <input
+                                ref={inputRef}
+                                type="file"
+                                accept={acceptedFiles}
+                                className="d-none"
+                                onChange={handleInputChange}
+                            />
+                        </div>
+
                     </div>
 
-                    <div className="modal-footer">
+                    <div className="modal-footer d-flex justify-content-between">
+                        <button
+                            type="button"
+                            className="btn btn-primary waves-effect waves-light"
+                            onClick={handleUpload}
+                            disabled={loading || !selectedFile}
+                        >
+                            {loading
+                                ? <><span className="spinner-border spinner-border-sm me-1" role="status" /> Procesando...</>
+                                : <><i className="ri-upload-2-line me-1" /> Cargar archivo</>
+                            }
+                        </button>
                         <button
                             type="button"
                             className="btn btn-outline-secondary"
                             data-bs-dismiss="modal"
+                            disabled={loading}
                         >
                             Cerrar
                         </button>
