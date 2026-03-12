@@ -79,7 +79,7 @@ const IndexSegmentation = () => {
 
     const [selectedRecord, setSelectedRecord] = useState(emptyRecord);
 
-    const url = ['api', 'v1', 'third-parties', 'search'];
+    const url = ['api', 'v1', 'ecl-segmentation', 'search'];
 
     const actions = [
         ...(userPermissions.some(p => p.code === 'UPDATE_SEGMENTATION' && p.type === 'UPDATE') || isAdmin
@@ -144,6 +144,7 @@ const IndexSegmentation = () => {
         if (!modalCreateInstance.current) {
             modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
+        setSelectedRecord(emptyRecord);
         modalCreateInstance.current.show();
     };
 
@@ -315,6 +316,8 @@ const IndexSegmentation = () => {
             <CreateSegmentation
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
+                record={selectedRecord}
+                setRecord={setSelectedRecord}
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 segments={SEGMENTS}

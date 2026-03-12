@@ -79,8 +79,9 @@ const AdjustSegmentation = ({
         }
 
         const payload = {
-            segment:       adjustment.segment,
-            justification: adjustment.justification.trim(),
+            clientId:        client.id,
+            newSegmentation: adjustment.segment,
+            justification:   adjustment.justification.trim(),
         };
 
         // Modo inline: devolver al padre sin llamada API
@@ -92,7 +93,7 @@ const AdjustSegmentation = ({
         // Modo standalone: llamada API directa
         try {
             setLoading(true);
-            const url = base_url(['api', 'v1', 'third-parties', client.id, 'roles-status']);
+            const url = base_url(['api', 'ecl-segmentation', 'adjust']);
             await fetchHelper.put(url, payload, {}, 1000);
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();

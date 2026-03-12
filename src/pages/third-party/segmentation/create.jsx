@@ -1,58 +1,88 @@
 import { useState, useEffect, useMemo } from 'react';
 
-import AlertPage        from '../../../components/molecules/AlertPage';
-import InputModal       from '../../../components/molecules/InputModal';
+import AlertPage from '../../../components/molecules/AlertPage';
+import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 import { fetchHelper } from '../../../utils/fetch';
-import { base_url }    from '../../../utils/functions';
+import { base_url } from '../../../utils/functions';
 
 const CreateSegmentation = ({
     modalRef,
     modalInstance,
+    record,
+    setRecord,
     dataTableRef,
     setMessage,
     segments,
 }) => {
 
+    const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [errors, setErrors]             = useState({});
-    const [loading, setLoading]           = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const initialRecord = {
-        clientName:          '',
-        lastCalculationDate: '',
-        autoSegment:         '',
-        daysPastDue:         '',
-    };
+    const [clientOptions, setClientOptions] = useState([]);
+    const [loadingClients, setLoadingClients] = useState(false);
 
-    const [record, setRecord] = useState(initialRecord);
-
-    // Limpiar al abrir
+    // Cargar clientes al abrir el modal
     useEffect(() => {
         const el = modalRef?.current;
         if (!el) return;
-        const onShow = () => {
-            setRecord(initialRecord);
+
+        const onShow = async () => {
             setErrors({});
             setErrorMessage('');
+            try {
+                setLoadingClients(true);
+                const url = base_url(['api', 'v1', 'third-parties', 'search']);
+                const payload = {
+
+                    length: -1,
+
+                };
+                const response = await fetchHelper.post(url, payload, {}, 1000);
+                const items = response?.data || [];
+                setClientOptions(items.map(item => ({
+                    id: item.id,
+                    name: `${item.nit ?? ''} — ${item.businessName ?? ''}`.trim(),
+                })));
+            } catch {
+                setClientOptions([]);
+            } finally {
+                setLoadingClients(false);
+            }
         };
+
         el.addEventListener('show.bs.modal', onShow);
         return () => el.removeEventListener('show.bs.modal', onShow);
     }, [modalRef]);
 
+    // Limpiar errores cuando cambia el record desde el padre
+    useEffect(() => {
+        setErrors({});
+        setErrorMessage('');
+    }, [record]);
+
     const handleClear = () => {
-        setRecord(initialRecord);
+        setRecord(prev => ({
+            ...prev,
+            clientId: '',
+            clientName: '',
+            lastCalculationDate: '',
+            autoSegment: '',
+            daysPastDue: '',
+        }));
         setErrors({});
         setErrorMessage('');
     };
 
-    const handleSubmit = async () => {
-        setErrorMessage('');
+    const handleSubmit = async (e) => {
+        e.preventDefault();
         setErrors({});
+        setErrorMessage('');
 
-        if (!record.clientName?.trim()) {
-            setErrors(prev => ({ ...prev, clientName: 'El cliente es requerido' }));
+        if (!record.clientId) {
+            setErrors(prev => ({ ...prev, clientId: 'El cliente es requerido' }));
             setErrorMessage('Por favor complete todos los campos requeridos');
             return;
         }
@@ -75,12 +105,11 @@ const CreateSegmentation = ({
         try {
             setLoading(true);
 
-            const url     = base_url(['api', 'v1', 'third-parties', 'store']);
+            const url = base_url(['api', 'v1', 'ecl-segmentation', 'calculate', record.clientId]);
             const payload = {
-                clientName:          record.clientName.trim(),
                 lastCalculationDate: record.lastCalculationDate,
-                autoSegment:         record.autoSegment,
-                daysPastDue:         Number(record.daysPastDue),
+                autoSegment: record.autoSegment,
+                daysPastDue: Number(record.daysPastDue),
             };
 
             await fetchHelper.post(url, payload, {}, 1000);
@@ -88,12 +117,18 @@ const CreateSegmentation = ({
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
             setMessage({ message: 'Segmentación creada exitosamente', type: 'success', show: true });
+            setErrors({});
+            setErrorMessage('');
 
         } catch (error) {
-            const fieldErrors = {};
-            error?.errors?.forEach(err => { fieldErrors[err.field] = err.message; });
-            setErrors(fieldErrors);
-            setErrorMessage(error?.msg || 'Error al crear la segmentación');
+            const errores = error?.errors;
+            if (errores && errores.length > 0) {
+                const fieldErrors = {};
+                errores.forEach(err => { fieldErrors[err.field] = err.message; });
+                setErrors(fieldErrors);
+            } else if (error?.msg) {
+                setErrorMessage(error.msg);
+            }
         } finally {
             setLoading(false);
         }
@@ -114,6 +149,12 @@ const CreateSegmentation = ({
 
                     <div className="modal-header">
                         <h4 className="modal-title">Segmentación de Riesgo ECL</h4>
+                        <button
+                            type="button"
+                            className="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"
+                        />
                     </div>
 
                     <div className="modal-body">
@@ -121,23 +162,30 @@ const CreateSegmentation = ({
                         <AlertPage
                             message={errorMessage}
                             type="danger"
-                            show={errorMessage !== ''}
+                            show={!!errorMessage}
                             onChange={() => setErrorMessage('')}
                         />
 
                         <div className="row g-3">
 
-                            {/* Cliente */}
+                            {/* Cliente — cargado desde terceros */}
                             <div className="col-md-6">
-                                <InputModal
-                                    type="text"
-                                    id="seg_create_clientName"
-                                    label="Cliente"
-                                    value={record.clientName}
-                                    onChange={(e) => setRecord(prev => ({ ...prev, clientName: e.target.value }))}
-                                    placeholder="Ingrese nombre"
-                                    error={errors.clientName}
+                                <InputSelectModal
+                                    id="seg_create_client"
+                                    label={loadingClients ? 'Cargando clientes...' : 'Cliente'}
+                                    value={record.clientId}
+                                    onChange={(val) => {
+                                        const selected = clientOptions.find(c => String(c.id) === String(val));
+                                        setRecord(prev => ({
+                                            ...prev,
+                                            clientId: val,
+                                            clientName: selected?.rawName ?? '',
+                                        }));
+                                    }}
+                                    options={clientOptions}
+                                    error={errors.clientId}
                                     required
+                                    disabled={loadingClients}
                                 />
                             </div>
 
@@ -185,31 +233,29 @@ const CreateSegmentation = ({
 
                     </div>
 
-                    <div className="modal-footer d-flex justify-content-between">
-                        <div className="d-flex gap-2">
-                            <button
-                                type="button"
-                                className="btn btn-primary waves-effect waves-light"
-                                onClick={handleSubmit}
-                                disabled={loading}
-                            >
-                                {loading
-                                    ? <><span className="spinner-border spinner-border-sm me-1" role="status" /> Guardando...</>
-                                    : 'Guardar'
-                                }
-                            </button>
-                            <button
-                                type="button"
-                                className="btn btn-secondary waves-effect"
-                                onClick={handleClear}
-                                disabled={loading}
-                            >
-                                Limpiar
-                            </button>
-                        </div>
+                    <div className="modal-footer justify-content-start">
                         <button
                             type="button"
-                            className="btn btn-danger waves-effect"
+                            className="btn btn-primary waves-effect waves-light"
+                            onClick={handleSubmit}
+                            disabled={loading || loadingClients}
+                        >
+                            {loading
+                                ? <><span className="spinner-border spinner-border-sm me-1" role="status" /> Guardando...</>
+                                : 'Guardar'
+                            }
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-outline-secondary waves-effect"
+                            onClick={handleClear}
+                            disabled={loading}
+                        >
+                            Limpiar
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-danger waves-effect ms-auto"
                             data-bs-dismiss="modal"
                             disabled={loading}
                         >
