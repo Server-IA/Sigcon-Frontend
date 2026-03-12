@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 
@@ -14,9 +14,15 @@ const formatCOP = (value) => {
 
 // POST /api/v1/assets/depreciation/calculate — response.results[].depreciationMethod
 const METHOD_LABELS = {
+    LINEAR:               'Línea Recta',
     STRAIGHT_LINE:        'Línea Recta',
     DECLINING_BALANCE:    'Saldo Decreciente',
     UNITS_OF_PRODUCTION:  'Unidades de Producción',
+};
+
+const CLASSIFICATION_LABELS = {
+    CURRENT: 'Corriente',
+    NON_CURRENT: 'No corriente',
 };
 
 const currentPeriod = () => {
@@ -27,20 +33,226 @@ const currentPeriod = () => {
 const thStyle = { fontSize: '0.8rem', fontWeight: 500 };
 const tdStyle = { fontSize: '0.875rem' };
 
+const HISTORY_STATUS_MESSAGES = {
+    400: 'Parámetro inválido para la consulta solicitada.',
+    403: 'Acceso denegado. Se requiere rol de administrador.',
+    500: 'Error interno del servidor al consultar el histórico.',
+};
+
+const CALCULATION_STATUS_MESSAGES = {
+    400: 'Método no reconocido, no permitido o vida útil no definida.',
+    403: 'Acceso denegado. Se requiere rol de administrador.',
+    404: 'Cuenta de depreciación faltante o inactiva.',
+    422: 'Operación no permitida: el periodo contable está cerrado.',
+};
+
+const getPayloadData = (response) => response?.data ?? response;
+
+const normalizeArrayPayload = (response) => {
+    const payload = getPayloadData(response);
+
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.results)) return payload.results;
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (payload && typeof payload === 'object') return [payload];
+
+    return [];
+};
+
+const getDepreciationMethod = (item) => item?.depreciationMethod ?? item?.depretationType;
+
+const asText = (value) => {
+    if (value == null || value === '') return '—';
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+
+    if (typeof value === 'object') {
+        return value.customName
+            || value.name
+            || value.businessName
+            || value.label
+            || value.code
+            || value.assetCode
+            || value.accountingCode
+            || value.description
+            || '—';
+    }
+
+    return String(value);
+};
+
+const getAccountingCode = (item) => (
+    item?.accountingCode
+    ?? item?.accountingAccountCode
+    ?? item?.accountingAccount
+    ?? item?.accountingAccountId
+    ?? null
+);
+
+const getClassification = (item) => (
+    item?.classification
+    ?? item?.classificationName
+    ?? null
+);
+
+const getClassificationLabel = (item) => {
+    const classification = getClassification(item);
+    return CLASSIFICATION_LABELS[classification] ?? classification;
+};
+
+const getSupplierLabel = (supplier) => {
+    if (!supplier) return '—';
+    if (typeof supplier === 'string') return supplier;
+
+    return supplier.businessName
+        || supplier.thirdPartyCode
+        || supplier.nit
+        || supplier.name
+        || '—';
+};
+
+const formatDateTime = (value) => {
+    if (!value) return '—';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return new Intl.DateTimeFormat('es-CO', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+    }).format(date);
+};
+
 const CalculoDepreciacionActivos = () => {
     const [period, setPeriod] = useState(currentPeriod());
+    const [assetHistoryId, setAssetHistoryId] = useState('');
     const [activosElegibles, setActivosElegibles] = useState([]);
     const [resultados, setResultados] = useState(null);
+    const [assetMetadataMap, setAssetMetadataMap] = useState({});
+    const [historicoPeriodo, setHistoricoPeriodo] = useState([]);
+    const [historicoActivo, setHistoricoActivo] = useState([]);
     const [alert, setAlert] = useState({ show: false, type: '', message: '' });
     const [verificado, setVerificado] = useState(false);
     const [calculado, setCalculado] = useState(false);
+    const [historicoPeriodoConsultado, setHistoricoPeriodoConsultado] = useState(false);
+    const [historicoActivoConsultado, setHistoricoActivoConsultado] = useState(false);
 
     const dismissAlert = () => setAlert({ show: false, type: '', message: '' });
+
+    useEffect(() => {
+        if (!alert.show) return;
+
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth',
+        });
+    }, [alert]);
 
     // ACT-RF-02 — POST /api/v1/assets/depreciation/calculate?period=YYYY-MM
     const callEndpoint = () => {
         const url = base_url(['api', 'v1', 'assets', 'depreciation', 'calculate'], { period });
         return fetchHelper.post(url, {}, {}, 1000, true);
+    };
+
+    const fetchHistorialPeriodo = () => {
+        const url = base_url(['api', 'v1', 'assets', 'depreciation', 'history'], { period });
+        return fetchHelper.get(url, {}, 1000, true);
+    };
+
+    const fetchHistorialActivo = (assetId) => {
+        const url = base_url(['api', 'v1', 'assets', 'depreciation', 'history', assetId]);
+        return fetchHelper.get(url, {}, 1000, true);
+    };
+
+    const fetchAssetsMetadata = async () => {
+        if (Object.keys(assetMetadataMap).length > 0) return assetMetadataMap;
+
+        const response = await fetchHelper.post(
+            base_url(['api', 'v1', 'assets', 'search']),
+            { length: -1 },
+            {},
+            1,
+            false,
+        );
+
+        const assets = normalizeArrayPayload(response);
+        const nextMetadataMap = assets.reduce((accumulator, asset) => {
+            if (asset?.id != null) accumulator[`id:${asset.id}`] = asset;
+            if (asset?.assetCode) accumulator[`code:${asset.assetCode}`] = asset;
+            return accumulator;
+        }, {});
+
+        setAssetMetadataMap(nextMetadataMap);
+        return nextMetadataMap;
+    };
+
+    const enrichAssetsMetadata = async (items = []) => {
+        if (!items.length) return [];
+
+        const missingMetadata = items.some((item) => !getAccountingCode(item) || !getClassification(item));
+        if (!missingMetadata) return items;
+
+        try {
+            const metadata = await fetchAssetsMetadata();
+
+            return items.map((item) => {
+                const source = metadata[`id:${item.assetId}`] || metadata[`code:${item.assetCode}`] || {};
+
+                return {
+                    ...source,
+                    ...item,
+                    accountingCode: getAccountingCode(item) ?? getAccountingCode(source),
+                    classification: getClassification(item) ?? getClassification(source),
+                };
+            });
+        } catch {
+            return items;
+        }
+    };
+
+    const loadHistorialActivo = async (assetId) => {
+        dismissAlert();
+
+        if (!assetId) {
+            setHistoricoActivo([]);
+            setHistoricoActivoConsultado(true);
+            setAlert({
+                show: true,
+                type: 'warning',
+                message: 'Ingrese un Asset ID válido para consultar el histórico.',
+            });
+            return;
+        }
+
+        try {
+            const response = await fetchHistorialActivo(assetId);
+            const records = normalizeArrayPayload(response);
+
+            setHistoricoActivo(records);
+            setHistoricoActivoConsultado(true);
+            setAssetHistoryId(String(assetId));
+
+            if (!records.length) {
+                setAlert({
+                    show: true,
+                    type: 'warning',
+                    message: `No se encontraron depreciaciones históricas para el activo ${assetId}.`,
+                });
+            } else {
+                setAlert({
+                    show: true,
+                    type: 'success',
+                    message: `Se cargó el histórico del activo ${assetId} con ${records.length} registro(s).`,
+                });
+            }
+        } catch (error) {
+            setHistoricoActivo([]);
+            setHistoricoActivoConsultado(true);
+            setAlert({
+                show: true,
+                type: 'danger',
+                message: HISTORY_STATUS_MESSAGES[error.status] || error.msg || 'Error al consultar el histórico por activo',
+            });
+        }
     };
 
     // Paso 1: verificar activos elegibles (carga results sin mostrar sección de resultados)
@@ -51,28 +263,29 @@ const CalculoDepreciacionActivos = () => {
         try {
             const response = await callEndpoint();
             const payload = response.data ?? response; // wrapper { code, data } o respuesta directa
-            setActivosElegibles(payload.results || []);
+            const enrichedResults = await enrichAssetsMetadata(payload.results || []);
+            setActivosElegibles(enrichedResults);
             setVerificado(true);
-            if (!payload.results?.length) {
+            if (!enrichedResults.length) {
                 setAlert({
                     show: true,
                     type: 'warning',
                     message: 'No se encontraron activos elegibles para el período seleccionado',
                 });
+            } else {
+                setAlert({
+                    show: true,
+                    type: 'success',
+                    message: `Se cargaron ${enrichedResults.length} activo(s) elegibles para el período ${period}.`,
+                });
             }
         } catch (error) {
             setActivosElegibles([]);
             setVerificado(true);
-            // showErrorAlert=true ya muestra el Swal; este alert es el banner inferior
-            const STATUS_MESSAGES = {
-                403: 'Acceso denegado. Se requiere rol de administrador.',
-                404: 'Cuenta de depreciación faltante o inactiva.',
-                422: 'Operación no permitida: el periodo contable está cerrado.',
-            };
             setAlert({
                 show: true,
                 type: 'danger',
-                message: STATUS_MESSAGES[error.status] || error.msg || 'Error al verificar activos elegibles',
+                message: CALCULATION_STATUS_MESSAGES[error.status] || error.msg || 'Error al verificar activos elegibles',
             });
         }
     };
@@ -83,7 +296,8 @@ const CalculoDepreciacionActivos = () => {
         try {
             const response = await callEndpoint();
             const payload = response.data ?? response; // wrapper { code, data } o respuesta directa
-            setActivosElegibles(payload.results || []);
+            const enrichedResults = await enrichAssetsMetadata(payload.results || []);
+            setActivosElegibles(enrichedResults);
             setResultados(payload);
             setVerificado(true);
             setCalculado(true);
@@ -93,17 +307,50 @@ const CalculoDepreciacionActivos = () => {
                 message: payload.message || response.message || 'Depreciación calculada exitosamente',
             });
         } catch (error) {
-            const STATUS_MESSAGES = {
-                403: 'Acceso denegado. Se requiere rol de administrador.',
-                404: 'Cuenta de depreciación faltante o inactiva.',
-                422: 'Operación no permitida: el periodo contable está cerrado.',
-            };
             setAlert({
                 show: true,
                 type: 'danger',
-                message: STATUS_MESSAGES[error.status] || error.msg || 'Error al calcular la depreciación',
+                message: CALCULATION_STATUS_MESSAGES[error.status] || error.msg || 'Error al calcular la depreciación',
             });
         }
+    };
+
+    const handleConsultarHistoricoPeriodo = async () => {
+        dismissAlert();
+
+        try {
+            const response = await fetchHistorialPeriodo();
+            const records = normalizeArrayPayload(response);
+
+            setHistoricoPeriodo(records);
+            setHistoricoPeriodoConsultado(true);
+
+            if (!records.length) {
+                setAlert({
+                    show: true,
+                    type: 'warning',
+                    message: 'No se encontraron depreciaciones históricas para el período seleccionado.',
+                });
+            } else {
+                setAlert({
+                    show: true,
+                    type: 'success',
+                    message: `Se cargó el histórico del período ${period} con ${records.length} registro(s).`,
+                });
+            }
+        } catch (error) {
+            setHistoricoPeriodo([]);
+            setHistoricoPeriodoConsultado(true);
+            setAlert({
+                show: true,
+                type: 'danger',
+                message: HISTORY_STATUS_MESSAGES[error.status] || error.msg || 'Error al consultar el histórico por período',
+            });
+        }
+    };
+
+    const handleConsultarHistoricoActivo = async () => {
+        await loadHistorialActivo(assetHistoryId);
     };
 
     return (
@@ -167,6 +414,44 @@ const CalculoDepreciacionActivos = () => {
                             >
                                 Calcular depreciación
                             </button>
+                            <button
+                                className="btn btn-outline-primary waves-effect"
+                                onClick={handleConsultarHistoricoPeriodo}
+                                disabled={!period}
+                            >
+                                Consultar histórico del período
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="col-12">
+                <div className="card">
+                    <div className="card-body py-3">
+                        <p className="fw-semibold mb-3">Histórico por activo</p>
+                        <div className="d-flex gap-3 flex-wrap align-items-end">
+                            <div>
+                                <label className="form-label mb-1" style={{ fontSize: '0.875rem' }}>
+                                    Asset ID
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    className="form-control form-control-sm"
+                                    value={assetHistoryId}
+                                    onChange={(e) => setAssetHistoryId(e.target.value)}
+                                    style={{ width: '160px' }}
+                                    placeholder="Ej: 15"
+                                />
+                            </div>
+                            <button
+                                className="btn btn-outline-secondary waves-effect"
+                                onClick={handleConsultarHistoricoActivo}
+                                disabled={!assetHistoryId}
+                            >
+                                Consultar histórico del activo
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -190,12 +475,13 @@ const CalculoDepreciacionActivos = () => {
                                         <th className="text-primary" style={thStyle}>Costo</th>
                                         <th className="text-primary" style={thStyle}>Dep. Periodo</th>
                                         <th className="text-primary" style={thStyle}>Valor Libros · Cta Dep.</th>
+                                        <th className="text-primary text-end pe-0" style={thStyle}>Histórico</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {activosElegibles.length === 0 ? (
                                         <tr>
-                                            <td colSpan={9} className="text-center text-muted py-4 ps-0" style={tdStyle}>
+                                            <td colSpan={10} className="text-center text-muted py-4 ps-0" style={tdStyle}>
                                                 {verificado
                                                     ? 'No hay activos elegibles para el período seleccionado'
                                                     : 'Presione "Verificar activos elegibles" para cargar los datos'}
@@ -204,18 +490,27 @@ const CalculoDepreciacionActivos = () => {
                                     ) : (
                                         activosElegibles.map((activo) => (
                                             <tr key={activo.assetId} style={tdStyle}>
-                                                <td className="ps-0">{activo.assetCode}</td>
-                                                <td>{activo.assetName}</td>
-                                                <td>{activo.accountingCode}</td>
-                                                <td>{activo.accountingName}</td>
-                                                <td>{METHOD_LABELS[activo.depreciationMethod] ?? activo.depreciationMethod}</td>
-                                                <td>{activo.calculationDate || '—'}</td>
+                                                <td className="ps-0">{asText(activo.assetCode)}</td>
+                                                <td>{asText(activo.assetName ?? activo.name)}</td>
+                                                <td>{asText(getAccountingCode(activo))}</td>
+                                                <td>{asText(getClassificationLabel(activo))}</td>
+                                                <td>{asText(METHOD_LABELS[getDepreciationMethod(activo)] ?? getDepreciationMethod(activo))}</td>
+                                                <td>{asText(activo.calculationDate)}</td>
                                                 <td>{formatCOP(activo.previousBookValue)}</td>
                                                 <td>{formatCOP(activo.depreciationAmount)}</td>
                                                 <td>
                                                     {activo.currentBookValue != null
-                                                        ? `${formatCOP(activo.currentBookValue)} · ${activo.depreciationAccountName || ''}`.replace(/ · $/, '')
+                                                    ? `${formatCOP(activo.currentBookValue)} · ${asText(activo.depreciationAccountName) === '—' ? '' : asText(activo.depreciationAccountName)}`.replace(/ · $/, '')
                                                         : '—'}
+                                                </td>
+                                                <td className="text-end pe-0">
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm btn-outline-secondary waves-effect"
+                                                        onClick={() => loadHistorialActivo(activo.assetId)}
+                                                    >
+                                                        Ver histórico
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))
@@ -241,27 +536,37 @@ const CalculoDepreciacionActivos = () => {
                                         <th className="text-primary" style={thStyle}>Método</th>
                                         <th className="text-primary" style={thStyle}>Dep. periodo · Cta Dep.</th>
                                         <th className="text-primary" style={thStyle}>Proveedor</th>
+                                        <th className="text-primary text-end pe-0" style={thStyle}>Histórico</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {!calculado ? (
                                         <tr>
-                                            <td colSpan={5} className="text-center text-muted py-4 ps-0" style={tdStyle}>
+                                            <td colSpan={6} className="text-center text-muted py-4 ps-0" style={tdStyle}>
                                                 Presione "Calcular depreciación" para ver los resultados
                                             </td>
                                         </tr>
                                     ) : (
                                         (resultados?.results || []).map((item) => (
                                             <tr key={item.assetId} style={tdStyle}>
-                                                <td className="ps-0">{item.assetCode}</td>
-                                                <td>{item.assetName}</td>
-                                                <td>{METHOD_LABELS[item.depreciationMethod] ?? item.depreciationMethod}</td>
+                                                <td className="ps-0">{asText(item.assetCode)}</td>
+                                                <td>{asText(item.assetName ?? item.name)}</td>
+                                                <td>{asText(METHOD_LABELS[getDepreciationMethod(item)] ?? getDepreciationMethod(item))}</td>
                                                 <td>
                                                     {item.depreciationAmount != null
-                                                        ? `${formatCOP(item.depreciationAmount)} · ${item.depreciationAccountName || ''}`.replace(/ · $/, '')
+                                                    ? `${formatCOP(item.depreciationAmount)} · ${asText(item.depreciationAccountName) === '—' ? '' : asText(item.depreciationAccountName)}`.replace(/ · $/, '')
                                                         : <span className="text-muted">—</span>}
                                                 </td>
-                                                <td>{item.supplierName || '—'}</td>
+                                                <td>{getSupplierLabel(item.supplier) !== '—' ? getSupplierLabel(item.supplier) : asText(item.supplierName)}</td>
+                                                <td className="text-end pe-0">
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm btn-outline-secondary waves-effect"
+                                                        onClick={() => loadHistorialActivo(item.assetId)}
+                                                    >
+                                                        Ver histórico
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))
                                     )}
@@ -287,9 +592,9 @@ const CalculoDepreciacionActivos = () => {
                                         <tbody>
                                             {resultados.skipped.map((s) => (
                                                 <tr key={s.assetId} style={tdStyle}>
-                                                    <td className="ps-0 text-muted">{s.assetCode}</td>
-                                                    <td className="text-muted">{s.assetName}</td>
-                                                    <td className="text-muted">{s.reason}</td>
+                                                    <td className="ps-0 text-muted">{asText(s.assetCode)}</td>
+                                                    <td className="text-muted">{asText(s.assetName ?? s.name)}</td>
+                                                    <td className="text-muted">{asText(s.reason)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -312,6 +617,106 @@ const CalculoDepreciacionActivos = () => {
                                     Procesados: {resultados?.processedCount ?? 0} &nbsp;·&nbsp; Excluidos: {resultados?.skippedCount ?? 0}
                                 </span>
                             )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="col-12">
+                <div className="card">
+                    <div className="card-body pb-2">
+                        <p className="fw-semibold mb-3">Histórico del período</p>
+                        <div className="table-responsive">
+                            <table className="table table-sm table-borderless mb-0">
+                                <thead>
+                                    <tr>
+                                        <th className="text-primary ps-0" style={thStyle}>Asset ID</th>
+                                        <th className="text-primary" style={thStyle}>Nombre</th>
+                                        <th className="text-primary" style={thStyle}>Período</th>
+                                        <th className="text-primary" style={thStyle}>Método</th>
+                                        <th className="text-primary" style={thStyle}>Valor anterior</th>
+                                        <th className="text-primary" style={thStyle}>Dep. periodo</th>
+                                        <th className="text-primary" style={thStyle}>Valor actual</th>
+                                        <th className="text-primary" style={thStyle}>F. cálculo</th>
+                                        <th className="text-primary" style={thStyle}>Creado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {historicoPeriodo.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={9} className="text-center text-muted py-4 ps-0" style={tdStyle}>
+                                                {historicoPeriodoConsultado
+                                                    ? 'No hay registros históricos para el período seleccionado'
+                                                    : 'Presione "Consultar histórico del período" para cargar los datos'}
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        historicoPeriodo.map((item) => (
+                                            <tr key={item.id} style={tdStyle}>
+                                                <td className="ps-0">{asText(item.assetCode)}</td>
+                                                <td>{asText(item.assetName ?? item.name)}</td>
+                                                <td>{asText(item.depreciationPeriod)}</td>
+                                                <td>{asText(METHOD_LABELS[getDepreciationMethod(item)] ?? getDepreciationMethod(item))}</td>
+                                                <td>{formatCOP(item.previousBookValue)}</td>
+                                                <td>{formatCOP(item.depreciationAmount)}</td>
+                                                <td>{formatCOP(item.currentBookValue)}</td>
+                                                <td>{asText(item.calculationDate)}</td>
+                                                <td>{formatDateTime(item.createdAt)}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="col-12">
+                <div className="card">
+                    <div className="card-body pb-2">
+                        <p className="fw-semibold mb-3">Histórico del activo</p>
+                        <div className="table-responsive">
+                            <table className="table table-sm table-borderless mb-0">
+                                <thead>
+                                    <tr>
+                                        <th className="text-primary ps-0" style={thStyle}>Período</th>
+                                        <th className="text-primary" style={thStyle}>Asset ID</th>
+                                        <th className="text-primary" style={thStyle}>Nombre</th>
+                                        <th className="text-primary" style={thStyle}>Método</th>
+                                        <th className="text-primary" style={thStyle}>Valor anterior</th>
+                                        <th className="text-primary" style={thStyle}>Dep. periodo</th>
+                                        <th className="text-primary" style={thStyle}>Valor actual</th>
+                                        <th className="text-primary" style={thStyle}>F. cálculo</th>
+                                        <th className="text-primary" style={thStyle}>Creado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {historicoActivo.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={9} className="text-center text-muted py-4 ps-0" style={tdStyle}>
+                                                {historicoActivoConsultado
+                                                    ? 'No hay registros históricos para el activo consultado'
+                                                    : 'Ingrese un Asset ID o use "Ver histórico" en una fila para consultar'}
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        historicoActivo.map((item) => (
+                                            <tr key={item.id} style={tdStyle}>
+                                                <td className="ps-0">{asText(item.depreciationPeriod)}</td>
+                                                <td>{asText(item.assetCode)}</td>
+                                                <td>{asText(item.assetName ?? item.name)}</td>
+                                                <td>{asText(METHOD_LABELS[getDepreciationMethod(item)] ?? getDepreciationMethod(item))}</td>
+                                                <td>{formatCOP(item.previousBookValue)}</td>
+                                                <td>{formatCOP(item.depreciationAmount)}</td>
+                                                <td>{formatCOP(item.currentBookValue)}</td>
+                                                <td>{asText(item.calculationDate)}</td>
+                                                <td>{formatDateTime(item.createdAt)}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
