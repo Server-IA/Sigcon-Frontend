@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import DataTableReference from '../../../components/organism/DataTable';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 
@@ -123,6 +124,15 @@ const formatDateTime = (value) => {
 };
 
 const CalculoDepreciacionActivos = () => {
+    const tableRefElegibles = useRef(null);
+    const dataTableRefElegibles = useRef(null);
+    const tableRefResultados = useRef(null);
+    const dataTableRefResultados = useRef(null);
+    const tableRefHistoricoPeriodo = useRef(null);
+    const dataTableRefHistoricoPeriodo = useRef(null);
+    const tableRefHistoricoActivo = useRef(null);
+    const dataTableRefHistoricoActivo = useRef(null);
+
     const [period, setPeriod] = useState(currentPeriod());
     const [assetHistoryId, setAssetHistoryId] = useState('');
     const [activosElegibles, setActivosElegibles] = useState([]);
@@ -135,6 +145,11 @@ const CalculoDepreciacionActivos = () => {
     const [calculado, setCalculado] = useState(false);
     const [historicoPeriodoConsultado, setHistoricoPeriodoConsultado] = useState(false);
     const [historicoActivoConsultado, setHistoricoActivoConsultado] = useState(false);
+    const [activeTab, setActiveTab] = useState('elegibles');
+    const [searchElegibles, setSearchElegibles] = useState({ value: '', checked: true });
+    const [searchResultados, setSearchResultados] = useState({ value: '', checked: true });
+    const [searchHistoricoPeriodo, setSearchHistoricoPeriodo] = useState({ value: '', checked: true });
+    const [searchHistoricoActivo, setSearchHistoricoActivo] = useState({ value: '', checked: true });
 
     const dismissAlert = () => setAlert({ show: false, type: '', message: '' });
 
@@ -353,6 +368,155 @@ const CalculoDepreciacionActivos = () => {
         await loadHistorialActivo(assetHistoryId);
     };
 
+    const columnsElegibles = [
+        { title: 'Asset ID', data: 'assetCode', name: 'assetCode', render: (value) => asText(value) },
+        { title: 'Nombre', data: 'assetName', name: 'assetName', render: (value, type, row) => asText(value ?? row.name) },
+        { title: 'Cuenta activo', data: 'accountingCode', name: 'accountingCode', render: (value, type, row) => asText(value ?? getAccountingCode(row)) },
+        { title: 'Clasificacion', data: 'classification', name: 'classification', render: (value, type, row) => asText(getClassificationLabel(row)) },
+        {
+            title: 'Metodo',
+            data: 'depreciationMethod',
+            name: 'depreciationMethod',
+            render: (value, type, row) => {
+                const method = value ?? getDepreciationMethod(row);
+                return asText(METHOD_LABELS[method] ?? method);
+            },
+        },
+        { title: 'F. Calculo', data: 'calculationDate', name: 'calculationDate', render: (value) => asText(value) },
+        { title: 'Costo', data: 'previousBookValue', name: 'previousBookValue', render: (value) => formatCOP(value) },
+        { title: 'Dep. Periodo', data: 'depreciationAmount', name: 'depreciationAmount', render: (value) => formatCOP(value) },
+        {
+            title: 'Valor Libros · Cta Dep.',
+            data: 'currentBookValue',
+            name: 'currentBookValue',
+            render: (value, type, row) => {
+                if (value == null) return '—';
+                const depAccount = asText(row.depreciationAccountName);
+                return `${formatCOP(value)} · ${depAccount === '—' ? '' : depAccount}`.replace(/ · $/, '');
+            },
+        },
+        {
+            title: 'Historico',
+            data: 'assetId',
+            name: 'assetId',
+            searchable: false,
+            render: (assetId) => `
+                <button class="btn btn-sm btn-outline-secondary waves-effect action-btn"
+                    data-action="history" data-id="${assetId}" title="Ver historico">
+                    Ver historico
+                </button>`,
+        },
+    ];
+
+    const columnsResultados = [
+        { title: 'Asset ID', data: 'assetCode', name: 'assetCode', render: (value) => asText(value) },
+        { title: 'Nombre', data: 'assetName', name: 'assetName', render: (value, type, row) => asText(value ?? row.name) },
+        {
+            title: 'Metodo',
+            data: 'depreciationMethod',
+            name: 'depreciationMethod',
+            render: (value, type, row) => {
+                const method = value ?? getDepreciationMethod(row);
+                return asText(METHOD_LABELS[method] ?? method);
+            },
+        },
+        {
+            title: 'Dep. periodo · Cta Dep.',
+            data: 'depreciationAmount',
+            name: 'depreciationAmount',
+            render: (value, type, row) => {
+                if (value == null) return '—';
+                const depAccount = asText(row.depreciationAccountName);
+                return `${formatCOP(value)} · ${depAccount === '—' ? '' : depAccount}`.replace(/ · $/, '');
+            },
+        },
+        {
+            title: 'Proveedor',
+            data: 'supplier',
+            name: 'supplier',
+            render: (value, type, row) => getSupplierLabel(value) !== '—' ? getSupplierLabel(value) : asText(row.supplierName),
+        },
+        {
+            title: 'Historico',
+            data: 'assetId',
+            name: 'assetId',
+            searchable: false,
+            render: (assetId) => `
+                <button class="btn btn-sm btn-outline-secondary waves-effect action-btn"
+                    data-action="history" data-id="${assetId}" title="Ver historico">
+                    Ver historico
+                </button>`,
+        },
+    ];
+
+    const columnsHistoricoPeriodo = [
+        { title: 'Asset ID', data: 'assetCode', name: 'assetCode', render: (value) => asText(value) },
+        { title: 'Nombre', data: 'assetName', name: 'assetName', render: (value, type, row) => asText(value ?? row.name) },
+        { title: 'Periodo', data: 'depreciationPeriod', name: 'depreciationPeriod', render: (value) => asText(value) },
+        {
+            title: 'Metodo',
+            data: 'depreciationMethod',
+            name: 'depreciationMethod',
+            render: (value, type, row) => {
+                const method = value ?? getDepreciationMethod(row);
+                return asText(METHOD_LABELS[method] ?? method);
+            },
+        },
+        { title: 'Valor anterior', data: 'previousBookValue', name: 'previousBookValue', render: (value) => formatCOP(value) },
+        { title: 'Dep. periodo', data: 'depreciationAmount', name: 'depreciationAmount', render: (value) => formatCOP(value) },
+        { title: 'Valor actual', data: 'currentBookValue', name: 'currentBookValue', render: (value) => formatCOP(value) },
+        { title: 'F. calculo', data: 'calculationDate', name: 'calculationDate', render: (value) => asText(value) },
+        { title: 'Creado', data: 'createdAt', name: 'createdAt', render: (value) => formatDateTime(value) },
+    ];
+
+    const columnsHistoricoActivo = [
+        { title: 'Periodo', data: 'depreciationPeriod', name: 'depreciationPeriod', render: (value) => asText(value) },
+        { title: 'Asset ID', data: 'assetCode', name: 'assetCode', render: (value) => asText(value) },
+        { title: 'Nombre', data: 'assetName', name: 'assetName', render: (value, type, row) => asText(value ?? row.name) },
+        {
+            title: 'Metodo',
+            data: 'depreciationMethod',
+            name: 'depreciationMethod',
+            render: (value, type, row) => {
+                const method = value ?? getDepreciationMethod(row);
+                return asText(METHOD_LABELS[method] ?? method);
+            },
+        },
+        { title: 'Valor anterior', data: 'previousBookValue', name: 'previousBookValue', render: (value) => formatCOP(value) },
+        { title: 'Dep. periodo', data: 'depreciationAmount', name: 'depreciationAmount', render: (value) => formatCOP(value) },
+        { title: 'Valor actual', data: 'currentBookValue', name: 'currentBookValue', render: (value) => formatCOP(value) },
+        { title: 'F. calculo', data: 'calculationDate', name: 'calculationDate', render: (value) => asText(value) },
+        { title: 'Creado', data: 'createdAt', name: 'createdAt', render: (value) => formatDateTime(value) },
+    ];
+
+    useEffect(() => {
+        const bindAction = (tableRefInstance) => {
+            const table = tableRefInstance?.current;
+            if (!table) return () => {};
+
+            const handler = function () {
+                const action = $(this).data('action');
+                const id = Number($(this).data('id'));
+
+                if (action === 'history' && id) {
+                    loadHistorialActivo(id);
+                    setActiveTab('historico-activo');
+                }
+            };
+
+            table.on('click', '.action-btn', handler);
+            return () => table.off('click', '.action-btn', handler);
+        };
+
+        const cleanElegibles = bindAction(dataTableRefElegibles);
+        const cleanResultados = bindAction(dataTableRefResultados);
+
+        return () => {
+            cleanElegibles();
+            cleanResultados();
+        };
+    }, [activosElegibles, resultados]);
+
     return (
         <>
             {/* Título de página */}
@@ -457,266 +621,214 @@ const CalculoDepreciacionActivos = () => {
                 </div>
             </div>
 
-            {/* Activos elegibles — response.results[] */}
             <div className="col-12">
                 <div className="card">
                     <div className="card-body pb-2">
-                        <p className="fw-semibold mb-3">Activos elegibles</p>
-                        <div className="table-responsive">
-                            <table className="table table-sm table-borderless mb-0">
-                                <thead>
-                                    <tr>
-                                        <th className="text-primary ps-0" style={thStyle}>Asset ID</th>
-                                        <th className="text-primary" style={thStyle}>Nombre</th>
-                                        <th className="text-primary" style={thStyle}>Cuenta activo</th>
-                                        <th className="text-primary" style={thStyle}>Clasificación</th>
-                                        <th className="text-primary" style={thStyle}>Método</th>
-                                        <th className="text-primary" style={thStyle}>F. Cálculo</th>
-                                        <th className="text-primary" style={thStyle}>Costo</th>
-                                        <th className="text-primary" style={thStyle}>Dep. Periodo</th>
-                                        <th className="text-primary" style={thStyle}>Valor Libros · Cta Dep.</th>
-                                        <th className="text-primary text-end pe-0" style={thStyle}>Histórico</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {activosElegibles.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={10} className="text-center text-muted py-4 ps-0" style={tdStyle}>
-                                                {verificado
-                                                    ? 'No hay activos elegibles para el período seleccionado'
-                                                    : 'Presione "Verificar activos elegibles" para cargar los datos'}
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        activosElegibles.map((activo) => (
-                                            <tr key={activo.assetId} style={tdStyle}>
-                                                <td className="ps-0">{asText(activo.assetCode)}</td>
-                                                <td>{asText(activo.assetName ?? activo.name)}</td>
-                                                <td>{asText(getAccountingCode(activo))}</td>
-                                                <td>{asText(getClassificationLabel(activo))}</td>
-                                                <td>{asText(METHOD_LABELS[getDepreciationMethod(activo)] ?? getDepreciationMethod(activo))}</td>
-                                                <td>{asText(activo.calculationDate)}</td>
-                                                <td>{formatCOP(activo.previousBookValue)}</td>
-                                                <td>{formatCOP(activo.depreciationAmount)}</td>
-                                                <td>
-                                                    {activo.currentBookValue != null
-                                                    ? `${formatCOP(activo.currentBookValue)} · ${asText(activo.depreciationAccountName) === '—' ? '' : asText(activo.depreciationAccountName)}`.replace(/ · $/, '')
-                                                        : '—'}
-                                                </td>
-                                                <td className="text-end pe-0">
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-sm btn-outline-secondary waves-effect"
-                                                        onClick={() => loadHistorialActivo(activo.assetId)}
-                                                    >
-                                                        Ver histórico
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                        <div className="nav-align-top mb-2">
+                            <ul className="nav nav-pills mb-4" role="tablist">
+                                <li className="nav-item" role="presentation">
+                                    <button
+                                        type="button"
+                                        className={`nav-link waves-effect ${activeTab === 'elegibles' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('elegibles')}
+                                    >
+                                        Activos elegibles
+                                        <span className="badge bg-label-primary ms-2">{activosElegibles.length}</span>
+                                    </button>
+                                </li>
+                                <li className="nav-item" role="presentation">
+                                    <button
+                                        type="button"
+                                        className={`nav-link waves-effect ${activeTab === 'resultados' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('resultados')}
+                                    >
+                                        Resultados del cálculo
+                                        <span className="badge bg-label-primary ms-2">{resultados?.results?.length ?? 0}</span>
+                                    </button>
+                                </li>
+                                <li className="nav-item" role="presentation">
+                                    <button
+                                        type="button"
+                                        className={`nav-link waves-effect ${activeTab === 'historico-periodo' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('historico-periodo')}
+                                    >
+                                        Histórico del período
+                                        <span className="badge bg-label-primary ms-2">{historicoPeriodo.length}</span>
+                                    </button>
+                                </li>
+                                <li className="nav-item" role="presentation">
+                                    <button
+                                        type="button"
+                                        className={`nav-link waves-effect ${activeTab === 'historico-activo' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('historico-activo')}
+                                    >
+                                        Histórico del activo
+                                        <span className="badge bg-label-primary ms-2">{historicoActivo.length}</span>
+                                    </button>
+                                </li>
+                            </ul>
 
-            {/* Resultados del cálculo — response.results[] + response.skipped[] */}
-            <div className="col-12">
-                <div className="card">
-                    <div className="card-body pb-2">
-                        <p className="fw-semibold mb-3">Resultados del cálculo</p>
-                        <div className="table-responsive">
-                            <table className="table table-sm table-borderless mb-0">
-                                <thead>
-                                    <tr>
-                                        <th className="text-primary ps-0" style={thStyle}>Asset ID</th>
-                                        <th className="text-primary" style={thStyle}>Nombre</th>
-                                        <th className="text-primary" style={thStyle}>Método</th>
-                                        <th className="text-primary" style={thStyle}>Dep. periodo · Cta Dep.</th>
-                                        <th className="text-primary" style={thStyle}>Proveedor</th>
-                                        <th className="text-primary text-end pe-0" style={thStyle}>Histórico</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {!calculado ? (
-                                        <tr>
-                                            <td colSpan={6} className="text-center text-muted py-4 ps-0" style={tdStyle}>
-                                                Presione "Calcular depreciación" para ver los resultados
-                                            </td>
-                                        </tr>
+                            <div className="tab-content">
+                                <div className={`tab-pane fade ${activeTab === 'elegibles' ? 'show active' : ''}`}>
+                                    <p className="fw-semibold mb-3">Activos elegibles</p>
+                                    {verificado && activosElegibles.length > 0 ? (
+                                        <div className="card-datatable text-nowrap">
+                                            <DataTableReference
+                                                url_api={['api', 'v1', 'assets', 'depreciation', 'calculate']}
+                                                columns={columnsElegibles}
+                                                tableRef={tableRefElegibles}
+                                                dataTableRef={dataTableRefElegibles}
+                                                method="POST"
+                                                buttons={[]}
+                                                title="Activos elegibles"
+                                                setData={setActivosElegibles}
+                                                exportParams={{ period }}
+                                                exportMethod="POST"
+                                                search={searchElegibles}
+                                                setSearch={setSearchElegibles}
+                                                filtered={true}
+                                                data={activosElegibles}
+                                            />
+                                        </div>
                                     ) : (
-                                        (resultados?.results || []).map((item) => (
-                                            <tr key={item.assetId} style={tdStyle}>
-                                                <td className="ps-0">{asText(item.assetCode)}</td>
-                                                <td>{asText(item.assetName ?? item.name)}</td>
-                                                <td>{asText(METHOD_LABELS[getDepreciationMethod(item)] ?? getDepreciationMethod(item))}</td>
-                                                <td>
-                                                    {item.depreciationAmount != null
-                                                    ? `${formatCOP(item.depreciationAmount)} · ${asText(item.depreciationAccountName) === '—' ? '' : asText(item.depreciationAccountName)}`.replace(/ · $/, '')
-                                                        : <span className="text-muted">—</span>}
-                                                </td>
-                                                <td>{getSupplierLabel(item.supplier) !== '—' ? getSupplierLabel(item.supplier) : asText(item.supplierName)}</td>
-                                                <td className="text-end pe-0">
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-sm btn-outline-secondary waves-effect"
-                                                        onClick={() => loadHistorialActivo(item.assetId)}
-                                                    >
-                                                        Ver histórico
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
+                                        <p className="text-muted mb-0" style={tdStyle}>
+                                            {verificado
+                                                ? 'No hay activos elegibles para el período seleccionado'
+                                                : 'Presione "Verificar activos elegibles" para cargar los datos'}
+                                        </p>
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
+                                </div>
 
-                        {/* Activos excluidos — response.skipped[] */}
-                        {calculado && resultados?.skipped?.length > 0 && (
-                            <div className="pt-3 mt-2 border-top">
-                                <p className="fw-semibold mb-2 text-muted" style={{ fontSize: '0.8rem' }}>
-                                    Activos excluidos del cálculo ({resultados.skipped.length})
-                                </p>
-                                <div className="table-responsive">
-                                    <table className="table table-sm table-borderless mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th className="text-muted ps-0" style={thStyle}>AssetID</th>
-                                                <th className="text-muted" style={thStyle}>Nombre</th>
-                                                <th className="text-muted" style={thStyle}>Motivo</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {resultados.skipped.map((s) => (
-                                                <tr key={s.assetId} style={tdStyle}>
-                                                    <td className="ps-0 text-muted">{asText(s.assetCode)}</td>
-                                                    <td className="text-muted">{asText(s.assetName ?? s.name)}</td>
-                                                    <td className="text-muted">{asText(s.reason)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div className={`tab-pane fade ${activeTab === 'resultados' ? 'show active' : ''}`}>
+                                    <p className="fw-semibold mb-3">Resultados del cálculo</p>
+                                    {calculado && (resultados?.results || []).length > 0 ? (
+                                        <div className="card-datatable text-nowrap">
+                                            <DataTableReference
+                                                url_api={['api', 'v1', 'assets', 'depreciation', 'calculate']}
+                                                columns={columnsResultados}
+                                                tableRef={tableRefResultados}
+                                                dataTableRef={dataTableRefResultados}
+                                                method="POST"
+                                                buttons={[]}
+                                                title="Resultados del calculo"
+                                                exportParams={{ period }}
+                                                exportMethod="POST"
+                                                search={searchResultados}
+                                                setSearch={setSearchResultados}
+                                                filtered={true}
+                                                data={resultados?.results || []}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <p className="text-muted mb-0" style={tdStyle}>
+                                            {!calculado
+                                                ? 'Presione "Calcular depreciación" para ver los resultados'
+                                                : 'No hay resultados para mostrar en el período seleccionado'}
+                                        </p>
+                                    )}
+
+                                    {calculado && resultados?.skipped?.length > 0 && (
+                                        <div className="pt-3 mt-2 border-top">
+                                            <p className="fw-semibold mb-2 text-muted" style={{ fontSize: '0.8rem' }}>
+                                                Activos excluidos del cálculo ({resultados.skipped.length})
+                                            </p>
+                                            <div className="table-responsive">
+                                                <table className="table table-sm table-borderless mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th className="text-muted ps-0" style={thStyle}>AssetID</th>
+                                                            <th className="text-muted" style={thStyle}>Nombre</th>
+                                                            <th className="text-muted" style={thStyle}>Motivo</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {resultados.skipped.map((s) => (
+                                                            <tr key={s.assetId} style={tdStyle}>
+                                                                <td className="ps-0 text-muted">{asText(s.assetCode)}</td>
+                                                                <td className="text-muted">{asText(s.assetName ?? s.name)}</td>
+                                                                <td className="text-muted">{asText(s.reason)}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="pt-3 pb-1 border-top mt-2">
+                                        <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                                            Total depreciación del periodo:{' '}
+                                            {!calculado
+                                                ? ''
+                                                : resultados?.totalDepreciation != null
+                                                    ? formatCOP(resultados.totalDepreciation)
+                                                    : '-----'}
+                                        </span>
+                                        {calculado && (
+                                            <span className="ms-4 text-muted" style={{ fontSize: '0.8rem' }}>
+                                                Procesados: {resultados?.processedCount ?? 0} &nbsp;·&nbsp; Excluidos: {resultados?.skippedCount ?? 0}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className={`tab-pane fade ${activeTab === 'historico-periodo' ? 'show active' : ''}`}>
+                                    <p className="fw-semibold mb-3">Histórico del período</p>
+                                    {historicoPeriodoConsultado && historicoPeriodo.length > 0 ? (
+                                        <div className="card-datatable text-nowrap">
+                                            <DataTableReference
+                                                url_api={['api', 'v1', 'assets', 'depreciation', 'history']}
+                                                columns={columnsHistoricoPeriodo}
+                                                tableRef={tableRefHistoricoPeriodo}
+                                                dataTableRef={dataTableRefHistoricoPeriodo}
+                                                method="GET"
+                                                buttons={[]}
+                                                title="Historico del periodo"
+                                                exportParams={{ period }}
+                                                exportMethod="GET"
+                                                search={searchHistoricoPeriodo}
+                                                setSearch={setSearchHistoricoPeriodo}
+                                                filtered={true}
+                                                data={historicoPeriodo}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <p className="text-muted mb-0" style={tdStyle}>
+                                            {historicoPeriodoConsultado
+                                                ? 'No hay registros históricos para el período seleccionado'
+                                                : 'Presione "Consultar histórico del período" para cargar los datos'}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className={`tab-pane fade ${activeTab === 'historico-activo' ? 'show active' : ''}`}>
+                                    <p className="fw-semibold mb-3">Histórico del activo</p>
+                                    {historicoActivoConsultado && historicoActivo.length > 0 ? (
+                                        <div className="card-datatable text-nowrap">
+                                            <DataTableReference
+                                                url_api={['api', 'v1', 'assets', 'depreciation', 'history', assetHistoryId || 0]}
+                                                columns={columnsHistoricoActivo}
+                                                tableRef={tableRefHistoricoActivo}
+                                                dataTableRef={dataTableRefHistoricoActivo}
+                                                method="GET"
+                                                buttons={[]}
+                                                title="Historico del activo"
+                                                exportMethod="GET"
+                                                search={searchHistoricoActivo}
+                                                setSearch={setSearchHistoricoActivo}
+                                                filtered={true}
+                                                data={historicoActivo}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <p className="text-muted mb-0" style={tdStyle}>
+                                            {historicoActivoConsultado
+                                                ? 'No hay registros históricos para el activo consultado'
+                                                : 'Ingrese un Asset ID o use "Ver histórico" en una fila para consultar'}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
-                        )}
-
-                        <div className="pt-3 pb-1 border-top mt-2">
-                            <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                                Total depreciación del periodo:{' '}
-                                {!calculado
-                                    ? ''
-                                    : resultados?.totalDepreciation != null
-                                        ? formatCOP(resultados.totalDepreciation)
-                                        : '-----'}
-                            </span>
-                            {calculado && (
-                                <span className="ms-4 text-muted" style={{ fontSize: '0.8rem' }}>
-                                    Procesados: {resultados?.processedCount ?? 0} &nbsp;·&nbsp; Excluidos: {resultados?.skippedCount ?? 0}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="col-12">
-                <div className="card">
-                    <div className="card-body pb-2">
-                        <p className="fw-semibold mb-3">Histórico del período</p>
-                        <div className="table-responsive">
-                            <table className="table table-sm table-borderless mb-0">
-                                <thead>
-                                    <tr>
-                                        <th className="text-primary ps-0" style={thStyle}>Asset ID</th>
-                                        <th className="text-primary" style={thStyle}>Nombre</th>
-                                        <th className="text-primary" style={thStyle}>Período</th>
-                                        <th className="text-primary" style={thStyle}>Método</th>
-                                        <th className="text-primary" style={thStyle}>Valor anterior</th>
-                                        <th className="text-primary" style={thStyle}>Dep. periodo</th>
-                                        <th className="text-primary" style={thStyle}>Valor actual</th>
-                                        <th className="text-primary" style={thStyle}>F. cálculo</th>
-                                        <th className="text-primary" style={thStyle}>Creado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {historicoPeriodo.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={9} className="text-center text-muted py-4 ps-0" style={tdStyle}>
-                                                {historicoPeriodoConsultado
-                                                    ? 'No hay registros históricos para el período seleccionado'
-                                                    : 'Presione "Consultar histórico del período" para cargar los datos'}
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        historicoPeriodo.map((item) => (
-                                            <tr key={item.id} style={tdStyle}>
-                                                <td className="ps-0">{asText(item.assetCode)}</td>
-                                                <td>{asText(item.assetName ?? item.name)}</td>
-                                                <td>{asText(item.depreciationPeriod)}</td>
-                                                <td>{asText(METHOD_LABELS[getDepreciationMethod(item)] ?? getDepreciationMethod(item))}</td>
-                                                <td>{formatCOP(item.previousBookValue)}</td>
-                                                <td>{formatCOP(item.depreciationAmount)}</td>
-                                                <td>{formatCOP(item.currentBookValue)}</td>
-                                                <td>{asText(item.calculationDate)}</td>
-                                                <td>{formatDateTime(item.createdAt)}</td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="col-12">
-                <div className="card">
-                    <div className="card-body pb-2">
-                        <p className="fw-semibold mb-3">Histórico del activo</p>
-                        <div className="table-responsive">
-                            <table className="table table-sm table-borderless mb-0">
-                                <thead>
-                                    <tr>
-                                        <th className="text-primary ps-0" style={thStyle}>Período</th>
-                                        <th className="text-primary" style={thStyle}>Asset ID</th>
-                                        <th className="text-primary" style={thStyle}>Nombre</th>
-                                        <th className="text-primary" style={thStyle}>Método</th>
-                                        <th className="text-primary" style={thStyle}>Valor anterior</th>
-                                        <th className="text-primary" style={thStyle}>Dep. periodo</th>
-                                        <th className="text-primary" style={thStyle}>Valor actual</th>
-                                        <th className="text-primary" style={thStyle}>F. cálculo</th>
-                                        <th className="text-primary" style={thStyle}>Creado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {historicoActivo.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={9} className="text-center text-muted py-4 ps-0" style={tdStyle}>
-                                                {historicoActivoConsultado
-                                                    ? 'No hay registros históricos para el activo consultado'
-                                                    : 'Ingrese un Asset ID o use "Ver histórico" en una fila para consultar'}
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        historicoActivo.map((item) => (
-                                            <tr key={item.id} style={tdStyle}>
-                                                <td className="ps-0">{asText(item.depreciationPeriod)}</td>
-                                                <td>{asText(item.assetCode)}</td>
-                                                <td>{asText(item.assetName ?? item.name)}</td>
-                                                <td>{asText(METHOD_LABELS[getDepreciationMethod(item)] ?? getDepreciationMethod(item))}</td>
-                                                <td>{formatCOP(item.previousBookValue)}</td>
-                                                <td>{formatCOP(item.depreciationAmount)}</td>
-                                                <td>{formatCOP(item.currentBookValue)}</td>
-                                                <td>{asText(item.calculationDate)}</td>
-                                                <td>{formatDateTime(item.createdAt)}</td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </div>

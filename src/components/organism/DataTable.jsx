@@ -19,6 +19,8 @@ const DataTableReference = ({
   buttons,
   title,
   setData,
+  exportParams = {},
+  exportMethod = "POST",
   filtered = false,
   search = {
     value: "",
@@ -99,7 +101,7 @@ const DataTableReference = ({
               },
             },
 
-            ...default_buttons(url_api, title),
+            ...default_buttons(url_api, title, { method: exportMethod, params: exportParams }),
           ],
         },
 
