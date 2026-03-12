@@ -74,3 +74,12 @@ export function lightenColor(hex, percent = 75) {
         b.toString(16).padStart(2, "0")
     );
 }
+
+export function formatPrice(price, currency = 'COP', locale = 'es-CO', minimumFractionDigits = 0){
+    const formatter = new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: minimumFractionDigits
+    })
+    return formatter.format(price)
+}

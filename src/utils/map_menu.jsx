@@ -4,7 +4,7 @@ import PerfilPage from "../pages/parametrizacion/perfil/index";
 // Parametrizacion
 import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
-import PermissionsIndex from "../pages/parametrizacion/permissions/index"
+import PermissionsIndex from "../pages/parametrizacion/permissions/index";
 import IndexUsers from "../pages/parametrizacion/users/index";
 
 import IndexRoles from "../pages/parametrizacion/roles/index";
@@ -12,6 +12,9 @@ import IndexParameters from "../pages/parametrizacion/parameters/index";
 import IndexCentrosCosto from "../pages/list_accounts/centros-costo/index";
 import MenuPermissionIndex from "../pages/parametrizacion/menus-permissions";
 import IndexCuentasContables from "../pages/list_accounts/cuentas-contables/index";
+
+// Activos
+import IndexAssets from "../pages/assets/assets_registry/index";
 
 // List Accounts
 import IndexDepreciationRules from "../pages/list_accounts/depreciation_rules/index";
@@ -49,13 +52,19 @@ import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
 
 export const getMenu = async () => {
-    const modules = [];
-    const url = base_url(['api', 'modules', 'menu']);
-    modules.push({
+  const modules = [];
+  const url = base_url(["api", "modules", "menu"]);
+  modules.push({
+    id: 0,
+    name: "Dashboard",
+    url: "dashboard",
+    icon: "ri-home-smile-line",
+    position: 0,
+    menus: [
+      {
         id: 0,
-        name: "Dashboard",
-        url: "dashboard",
-        icon: "ri-home-smile-line",
+        label: "Home",
+        path: "",
         position: 0,
         menus: [
             {
@@ -87,47 +96,44 @@ export const getMenu = async () => {
                 };
             }));
         }
-
-    } catch (error) {
-        console.log(error);
-    } finally {
-        return modules;
-    }
-
-
-
+  } catch (error) {
+    console.log(error);
+  } finally {
     return modules;
-}
+  }
+
+  return modules;
+};
 
 const buildMenuTree = (menus) => {
-    const menuMap = {};
-    const tree = [];
+  const menuMap = {};
+  const tree = [];
 
-    // 1. Crear el mapa y preparar childrens
-    menus.forEach(menu => {
-        menuMap[menu.id] = {
-            ...menu,
-            childrens: []
-        };
-    });
+  // 1. Crear el mapa y preparar childrens
+  menus.forEach((menu) => {
+    menuMap[menu.id] = {
+      ...menu,
+      childrens: [],
+    };
+  });
 
-    // 2. Construir el árbol
-    menus.forEach(menu => {
-        if (menu.parentId === null) {
-            tree.push(menuMap[menu.id]);
-        } else {
-            const parent = menuMap[menu.parentId];
-            if (parent) {
-                parent.childrens.push(menuMap[menu.id]);
-            }
-        }
-    });
+  // 2. Construir el árbol
+  menus.forEach((menu) => {
+    if (menu.parentId === null) {
+      tree.push(menuMap[menu.id]);
+    } else {
+      const parent = menuMap[menu.parentId];
+      if (parent) {
+        parent.childrens.push(menuMap[menu.id]);
+      }
+    }
+  });
 
-    return tree;
+  return tree;
 };
 
 export const buildFullPath = (parent = "", current = "") => {
-    return `/${[parent, current].filter(Boolean).join("/")}`;
+  return `/${[parent, current].filter(Boolean).join("/")}`;
 };
 
 export const COMPONENT_MAP = [
@@ -157,4 +163,5 @@ export const COMPONENT_MAP = [
     { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
     { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: CalculoDepreciacionActivos },
     { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
+    { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets }
 ];
