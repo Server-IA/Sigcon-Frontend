@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { flushSync } from 'react-dom';
 import DataTableReference from '../../../components/organism/DataTable';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
@@ -9,9 +8,9 @@ import FilterThirdParty from './filter';
 import DropzoneModal from '../../../components/molecules/DropzoneModal';
 import AlertPage from '../../../components/molecules/AlertPage';
 
-const API_LIST    = ['api', 'v1', 'third-parties', 'search'];
-const API_GET     = (id) => ['api', 'v1', 'third-parties', id];
-const API_DELETE  = (id) => ['api', 'v1', 'third-parties', id];
+const API_LIST = ['api', 'v1', 'third-parties', 'search'];
+const API_GET = (id) => ['api', 'v1', 'third-parties', id];
+const API_DELETE = (id) => ['api', 'v1', 'third-parties', id];
 
 const ROLE_LABELS = {
     CLIENT: 'Cliente',
@@ -21,6 +20,26 @@ const ROLE_LABELS = {
     DEBTOR: 'Deudor',
     OTHER: 'Otro',
 };
+
+// Mapas inversos: ID del backend → código interno
+const ROLE_ID_TO_CODE   = { 1: 'CLIENT', 2: 'SUPPLIER', 3: 'EMPLOYEE', 4: 'CREDITOR', 5: 'DEBTOR', 6: 'OTHER' };
+const STATUS_ID_TO_CODE = { 1: 'ACTIVE', 2: 'BLOCKED', 3: 'INACTIVE' };
+
+// Mapea un ThirdPartyDTO (respuesta del backend) al estado interno del formulario
+const mapDTOToState = (row) => ({
+    id:                 row.id                    ?? '',
+    nit:                row.nit                   ?? '',
+    dv:                 row.dv                    ?? '',
+    businessName:       row.businessName          ?? '',
+    typeOrganizationId: row.typeOrganization?.id  ?? '',
+    typeRegimenId:      row.typeRegimen?.id        ?? '',
+    withholdingIds:     (row.withholdings  ?? []).map(w => w.id).join(','),
+    roles:              (row.roles         ?? []).map(r => ROLE_ID_TO_CODE[r.id]).filter(Boolean),
+    municipalityId:     row.municipality?.id      ?? '',
+    contacts:           row.contacts              ?? [],
+    status:             STATUS_ID_TO_CODE[row.status?.id] ?? 'ACTIVE',
+    blockReason:        row.blockingReason        ?? '',
+});
 
 const emptyThirdParty = {
     id: '',
@@ -84,12 +103,17 @@ const IndexThirdPartyList = () => {
             title: 'Rol', data: 'roles', name: 'roles',
             render: (roles) => {
                 if (!roles || roles.length === 0) return '-';
-                const arr = Array.isArray(roles) ? roles : [roles];
-                return arr.map(r => ROLE_LABELS[r] ?? r).join(', ');
+
+                const names = roles.reduce((acc, role) => {
+                    acc.push(role.name);
+                    return acc;
+                }, []);
+
+                return names.join(', ');
             }
         },
         {
-            title: 'Estado', data: 'status', name: 'status',
+            title: 'Estado', data: 'status.name', name: 'status',
             render: (status) => {
                 if (status === 'ACTIVE') return '<span class="badge bg-label-success"><i class="ri-circle-fill me-1" style="font-size:0.5rem"></i>Activo</span>';
                 if (status === 'INACTIVE') return '<span class="badge bg-label-danger"><i class="ri-circle-fill me-1" style="font-size:0.5rem"></i>Inactivo</span>';
@@ -189,63 +213,26 @@ const IndexThirdPartyList = () => {
         const table = dataTableRef?.current;
         if (!table) return;
 
-        const handler = async function () {
+        const handler = function () {
             const action = $(this).data('action');
             const id = Number($(this).data('id'));
             const row = data.find(m => m.id === id);
             if (!row) return;
 
-            const mapDetail = (src) => ({
-                    id:                 src.id                 ?? '',
-                    nit:                src.nit                ?? '',
-                    dv:                 src.dv                 ?? '',
-                    businessName:       src.businessName       ?? '',
-                    typeOrganizationId: src.typeOrganizationId ?? '',
-                    typeRegimenId:      src.typeRegimenId      ?? '',
-                    withholdingIds:     (Array.isArray(src.withholdingIds) ? src.withholdingIds : []).join(','),
-                    roles:              src.roles              ?? [],
-                    municipalityId:     src.municipalityId     ?? '',
-                    creditLimit:        src.creditLimit        ?? '',
-                    paymentConditions:  src.paymentTerms       ?? '',
-                    marketSegment:      src.marketSegment      ?? '',
-                    contacts:           src.contacts           ?? [],
-                    status:             src.status             ?? 'ACTIVE',
-                    blockReason:        src.blockReason        ?? '',
-                });
-
-                const loadAndOpen = async (isViewMode) => {
-                    let mapped;
-                    try {
-                        const url = base_url(API_GET(id));
-                        const response = await fetchHelper.get(url, {}, 0);
-                        const detail = response?.data ?? response ?? {};
-                        mapped = mapDetail(detail);
-                    } catch (err) {
-                        console.error('Error al cargar detalle del tercero:', err);
-                        mapped = mapDetail(row);
-                    }
-                    // flushSync garantiza que React aplica el estado ANTES de abrir el modal
-                    flushSync(() => {
-                        setThirdParty(mapped);
-                        setViewMode(isViewMode);
-                    });
-                    openModalUpdate();
-                };
-
-                switch (action) {
-                case 'view': {
-                    await loadAndOpen(true);
-                    break;
-                }
+            switch (action) {
+                case 'view':
                 case 'edit': {
-                    await loadAndOpen(false);
+                    setThirdParty(mapDTOToState(row));
+                    setViewMode(action === 'view');
+                    if (!modalUpdateInstance.current) {
+                        modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
+                    }
+                    modalUpdateInstance.current.show();
                     break;
                 }
-
                 case 'delete':
                     openConfirmDelete(row.id, row.nit, row.businessName);
                     break;
-
                 default:
                     break;
             }

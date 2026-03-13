@@ -22,8 +22,8 @@ const ROLE_ID_MAP = {
 
 const STATUS_ID_MAP = {
     ACTIVE:   1,
-    INACTIVE: 2,
-    BLOCKED:  3,
+    BLOCKED:  2,
+    INACTIVE: 3,
 };
 
 const STATUSES = [
