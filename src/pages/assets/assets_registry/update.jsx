@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import AlertPage from "../../../components/molecules/AlertPage";
+import InputDate from "../../../components/molecules/InputDate";
 
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
@@ -10,31 +11,13 @@ import { fetchHelper } from "../../../utils/fetch";
 const UpdateAssets = ({
   modalRef,
   modalInstance,
-  assets = {
-    id: "",
-    code: "",
-    name: "",
-    description: "",
-    classification: "",
-    acquisition_date: "",
-    acquisition_cost: "",
-    useful_life_months: "",
-    accumulated_depreciation: "",
-    book_value: "",
-    revaluation_value: "",
-    is_depreciable: true,
-    depreciation_rule_id: null,
-    companies_id: null,
-    accounting_accounts_id: null,
-    company_locations_id: null,
-    third_parties_id: null,
-    states_assets_id: null,
-  },
+  assets,
   setAssets,
   dataTableRef,
-  modules,
-  parents,
-  components,
+  thirds,
+  accountingAccount,
+  depreciationRules,
+  setModuleEdit,
 }) => {
   const [errors, setErrors] = useState({});
   const [error, setError] = useState({ message: "", type: "", show: false });
@@ -53,7 +36,7 @@ const UpdateAssets = ({
 
   const handleSave = async () => {
     try {
-      const url = base_url(["api", "assets", assets.id]);
+      const url = base_url(["api", "v1", "assets", assets.id]);
       await fetchHelper.put(url, assets, {}, 1000);
 
       dataTableRef?.current?.ajax.reload();
@@ -74,16 +57,22 @@ const UpdateAssets = ({
       }
     }
   };
-
+  console.log("ASSETS", assets);
+  console.log("ACCOUNTS", accountingAccount);
+  console.log("THIRDS", thirds);
+  console.log("RULES", depreciationRules);
   return (
     <div
       className="modal fade"
       ref={modalRef}
-      id="modalUpdateAsset"
+      id="modalCenter"
       tabIndex={-1}
       aria-hidden="true"
     >
-      <div className="modal-dialog modal-dialog-centered" role="document">
+      <div
+        className="modal-dialog modal-dialog-centered modal-xl"
+        role="document"
+      >
         <div className="modal-content">
           <div className="modal-header">
             <h4 className="modal-title">Editar Activo</h4>
@@ -107,68 +96,160 @@ const UpdateAssets = ({
               <div className="col mb-6 mt-2">
                 <InputModal
                   type="text"
-                  id="labelUpdate"
-                  label="Nombre del activo"
-                  value={assets.label}
+                  id="name_asset_update"
+                  label="Nombre"
+                  value={assets.name}
                   onChange={(e) => {
-                    setAssets({ ...assets, label: e.target.value });
-                    setErrors((prev) => ({ ...prev, label: "" }));
+                    setAssets({ ...assets, name: e.target.value });
+                    setErrors((prev) => ({ ...prev, name: "" }));
                   }}
-                  error={errors.label}
-                  placeholder="Nombre del activo"
-                  required={true}
+                  error={errors.name}
+                  required
                 />
               </div>
 
               <div className="col mb-6 mt-2">
                 <InputModal
                   type="text"
-                  id="pathUpdate"
-                  label="Ruta del activo"
-                  value={assets.path}
+                  id="description_asset_update"
+                  label="Descripción"
+                  value={assets.description}
                   onChange={(e) => {
-                    setAssets({ ...assets, path: e.target.value });
-                    setErrors((prev) => ({ ...prev, path: "" }));
+                    setAssets({ ...assets, description: e.target.value });
+                    setErrors((prev) => ({ ...prev, description: "" }));
                   }}
-                  error={errors.path}
-                  placeholder="Ruta del activo"
-                  required={true}
+                  error={errors.description}
+                />
+              </div>
+
+              <div className="col mb-6 mt-2">
+                <InputSelectModal
+                  id="classification_asset_update"
+                  label="Clasificación"
+                  value={assets.classification}
+                  onChange={(value) => {
+                    setAssets({ ...assets, classification: value });
+                    setErrors((prev) => ({ ...prev, classification: "" }));
+                  }}
+                  options={[
+                    { id: "NON_CURRENT", label: "Activo no corriente" },
+                    { id: "CURRENT", label: "Activo corriente" },
+                  ]}
+                  required
                 />
               </div>
             </div>
 
             <div className="row">
               <div className="col mb-6 mt-2">
-                <InputModal
-                  type="text"
-                  id="iconUpdate"
-                  label="Icono del activo"
-                  value={assets.icon}
-                  onChange={(e) => {
-                    setAssets({ ...assets, icon: e.target.value });
-                    setErrors((prev) => ({ ...prev, icon: "" }));
+                <InputSelectModal
+                  id="type_asset_update"
+                  label="Tipo"
+                  value={assets.type}
+                  onChange={(value) => {
+                    setAssets({ ...assets, type: value });
+                    setErrors((prev) => ({ ...prev, type: "" }));
                   }}
-                  error={errors.icon}
-                  placeholder="Icono del activo"
+                  options={[
+                    { id: "TANGIBLE", label: "Tangible" },
+                    { id: "INTANGIBLE", label: "Intangible" },
+                  ]}
+                  required
+                />
+              </div>
+
+              <div className="col mb-6 mt-2">
+                <InputSelectModal
+                  id="accountingAccountId_update"
+                  label="Cuenta contable"
+                  value={assets.accountingAccountId}
+                  onChange={(value) => {
+                    setAssets({
+                      ...assets,
+                      accountingAccountId: value,
+                    });
+                    setErrors((prev) => ({ ...prev, accountingAccountId: "" }));
+                  }}
+                  options={accountingAccount}
+                  required
+                  error={errors.accountingAccountId}
                 />
               </div>
 
               <div className="col mb-6 mt-2">
                 <InputModal
                   type="number"
-                  id="menuOrderUpdate"
-                  label="Orden del menu"
-                  value={assets.menuOrder}
+                  id="acquisitionValue_update"
+                  label="Valor adquisición"
+                  value={assets.acquisitionValue}
                   onChange={(e) => {
                     setAssets({
                       ...assets,
-                      menuOrder: e.target.value ? parseInt(e.target.value) : 1,
+                      acquisitionValue: Number(e.target.value),
                     });
-                    setErrors((prev) => ({ ...prev, menuOrder: "" }));
+                    setErrors((prev) => ({ ...prev, acquisitionValue: "" }));
                   }}
-                  error={errors.menuOrder}
-                  placeholder="Orden del menu"
-                  required={true}
+                  error={errors.acquisitionValue}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="row">
+              <div className="col mb-6 mt-2">
+                <InputDate
+                  id="acquisitionDate_update"
+                  label="Fecha adquisición"
+                  date={assets.acquisitionDate}
+                  onChange={(date) => {
+                    const acquisitionDate = date ? new Date(date) : null;
+
+                    setAssets({
+                      ...assets,
+                      acquisitionDate: acquisitionDate
+                        .toISOString()
+                        .split("T")[0],
+                    });
+                    setErrors((prev) => ({ ...prev, acquisitionDate: "" }));
+                  }}
+                  required
+                />
+              </div>
+
+              <div className="col mb-6 mt-2">
+                <InputModal
+                  type="number"
+                  id="usefulLifeMonths_update"
+                  label="Vida útil (meses)"
+                  value={assets.usefulLifeMonths}
+                  onChange={(e) => {
+                    setAssets({
+                      ...assets,
+                      usefulLifeMonths: Number(e.target.value),
+                    });
+                    setErrors((prev) => ({ ...prev, usefulLifeMonths: "" }));
+                  }}
+                  required
+                />
+              </div>
+
+              <div className="col mb-6 mt-2">
+                <InputSelectModal
+                  id="depreciationRuleId_update"
+                  label="Método depreciación"
+                  value={assets.depreciationRuleId}
+                  onChange={(value) => {
+                    setAssets({
+                      ...assets,
+                      depreciationRuleId: value,
+                    });
+                    setErrors((prev) => ({ ...prev, depreciationRuleId: "" }));
+                  }}
+                  options={depreciationRules.filter(
+                    (d) => d.accountingAccountId == assets.accountingAccountId,
+                  )}
+                  required
+                  error={errors.depreciationRuleId}
                 />
               </div>
             </div>
@@ -176,69 +257,115 @@ const UpdateAssets = ({
             <div className="row">
               <div className="col mb-6 mt-2">
                 <InputSelectModal
-                  id="componentUpdate"
-                  label="Componente del menu"
-                  value={assets.component}
+                  id="supplierId_update"
+                  label="Proveedor"
+                  value={assets.supplierId}
                   onChange={(value) => {
-                    setAssets({ ...assets, component: value });
-                    setErrors((prev) => ({ ...prev, component: "" }));
+                    setAssets({
+                      ...assets,
+                      supplierId: Number(value),
+                    });
+                    setErrors((prev) => ({ ...prev, supplierId: "" }));
                   }}
-                  error={errors.component}
-                  placeholder="Componente del menu"
-                  options={components}
-                  clearable={true}
+                  options={thirds}
+                  required
                 />
               </div>
 
               <div className="col mb-6 mt-2">
-                <InputSelectModal
-                  id="moduleIdUpdate"
-                  label="Modulo del menu"
-                  value={assets.moduleId}
-                  onChange={(value) => {
-                    setAssets({ ...assets, moduleId: value });
-                    setErrors((prev) => ({ ...prev, moduleId: "" }));
+                <InputModal
+                  type="text"
+                  id="paymentTerms_update"
+                  label="Condición de pago"
+                  value={assets.paymentTerms}
+                  onChange={(e) => {
+                    setAssets({
+                      ...assets,
+                      paymentTerms: e.target.value,
+                    });
                   }}
-                  error={errors.moduleId}
-                  placeholder="Modulo del menu"
-                  options={modules}
-                  required={true}
+                />
+              </div>
+
+              <div className="col mb-6 mt-2">
+                <InputModal
+                  type="number"
+                  id="accountsPayableReferenceId_update"
+                  label="Referencia cuentas por pagar"
+                  value={assets.accountsPayableReferenceId}
+                  onChange={(e) => {
+                    setAssets({
+                      ...assets,
+                      accountsPayableReferenceId: Number(e.target.value),
+                    });
+                  }}
                 />
               </div>
             </div>
 
             <div className="row">
               <div className="col mb-6 mt-2">
-                <InputSelectModal
-                  id="parentIdUpdate"
-                  label="Menú principal"
-                  value={assets.parentId}
-                  onChange={(value) =>
-                    setAssets({ ...assets, parentId: value })
-                  }
-                  error={errors.parentId}
-                  placeholder="Menú principal"
-                  options={parents}
-                  clearable={true}
+                <InputModal
+                  type="number"
+                  id="bankCashReferenceId_update"
+                  label="Referencia banco/caja"
+                  value={assets.bankCashReferenceId}
+                  onChange={(e) => {
+                    setAssets({
+                      ...assets,
+                      bankCashReferenceId: Number(e.target.value),
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="col mb-6 mt-2">
+                <InputModal
+                  type="text"
+                  id="costCenterOrAccountingLocation_update"
+                  label="Centro de costo / sede"
+                  value={assets.costCenterOrAccountingLocation}
+                  onChange={(e) => {
+                    setAssets({
+                      ...assets,
+                      costCenterOrAccountingLocation: e.target.value,
+                    });
+                  }}
                 />
               </div>
 
               <div className="col mb-6 mt-2">
                 <InputSelectModal
-                  id="statusUpdate"
+                  id="status_update"
                   label="Estado"
                   value={assets.status}
                   onChange={(value) => {
                     setAssets({ ...assets, status: value });
-                    setErrors((prev) => ({ ...prev, status: "" }));
                   }}
-                  error={errors.status}
-                  placeholder="Estado"
                   options={[
-                    { id: "ACTIVE", name: "Activo" },
-                    { id: "INACTIVE", name: "Inactivo" },
+                    { id: "ACTIVE", label: "Activo" },
+                    { id: "IN_REPAIR", label: "En reparación" },
+                    { id: "DECOMMISSIONED", label: "Dado de baja" },
+                    { id: "TRANSFERRED", label: "Transferido" },
                   ]}
-                  required={true}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="row">
+              <div className="col mb-6 mt-2">
+                <InputModal
+                  type="text"
+                  id="observations_update"
+                  label="Observaciones"
+                  value={assets.observations}
+                  onChange={(e) => {
+                    setAssets({
+                      ...assets,
+                      observations: e.target.value,
+                    });
+                  }}
                 />
               </div>
             </div>
