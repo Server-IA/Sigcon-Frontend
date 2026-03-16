@@ -1,129 +1,159 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-import InputModal from '../../../components/molecules/InputModal';
+import AlertPage        from '../../../components/molecules/AlertPage';
+import InputModal       from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
-const FilterSegmentation = ({
-    filterRef,
-    filterInstance,
-    dataTableRef,
-    segments,
-    adjustmentTypes,
-}) => {
+import { fetchHelper } from '../../../utils/fetch';
+import { base_url }    from '../../../utils/functions';
 
-    const initialFilters = [
-        { regex: true,  value: '', column: 'clientName:name' },
-        { regex: false, value: '', column: 'autoSegment:name' },
-        { regex: false, value: '', column: 'finalSegment:name' },
-        { regex: false, value: '', column: 'adjustmentType:name' },
-    ];
+const FilterSegmentation = ({ filterRef, filterInstance, dataTableRef, segments, adjustmentTypes }) => {
 
-    const [filters, setFilters] = useState(initialFilters);
+    const getTable = () => dataTableRef?.current;
 
-    const getTable  = () => dataTableRef?.current;
-    const getFilter = (col) => filters.find(f => f.column === col);
+    // clientId se maneja aparte (GET endpoint), no como column search
+    const [clientId, setClientId] = useState('');
 
-    const updateFilter = (col, key, val) => {
-        setFilters(prev => prev.map(f => f.column === col ? { ...f, [key]: val } : f));
-    };
+    const [filters, setFilters] = useState([
+        { regex: true, value: '', column: 'finalSegment:name'       },
+        { regex: true, value: '', column: 'segmentationSource:name' },
+    ]);
 
-    const selectValue = (col) => {
-        const f = getFilter(col);
-        return f?.value ? f.value.split(',').filter(Boolean) : [];
-    };
+    const [loading,      setLoading]      = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
-    // Aplicar filtros en tiempo real (búsquedas de texto)
     useEffect(() => {
         const table = getTable();
         if (!table) return;
-
         filters.forEach(f => {
             table.column(f.column).search(f.value, f.regex, false);
         });
     }, [filters]);
 
-    const handleFilter = () => {
-        const table = getTable();
-        if (!table) return;
-        table.draw();
-        filterInstance?.current?.hide();
-    };
+    const getFilter    = (col) => filters.find(f => f.column === col);
+    const updateFilter = (col, key, val) =>
+        setFilters(prev => prev.map(f => f.column === col ? { ...f, [key]: val } : f));
 
-    const handleClear = () => {
-        setFilters(initialFilters);
-        const table = getTable();
-        if (!table) return;
-        table.columns().search('');
-        table.search('');
-        table.draw();
+    const handleFilter = async () => {
+        setErrorMessage('');
+        const t = getTable();
+        if (!t) return;
+
+        // Aplicar column searches sincrónicamente antes del draw
+        filters.forEach(f => {
+            t.column(f.column).search(f.value, f.regex, false);
+        });
+
+        if (clientId.trim() !== '') {
+            try {
+                setLoading(true);
+                await fetchHelper.get(base_url(['api', 'v1', 'ecl-segmentation', clientId.trim()]), {}, 1000);
+                t.search(clientId.trim(), false, true);
+                t.draw();
+                filterInstance?.current?.hide();
+            } catch (error) {
+                setErrorMessage(error?.msg || `No se encontró segmentación para el cliente ID ${clientId.trim()}`);
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            t.search('', false, false);
+            t.draw();
+            filterInstance?.current?.hide();
+        }
     };
 
     return (
-        <div
-            className="modal fade"
-            ref={filterRef}
-            id="modalFilterSegmentation"
-            tabIndex="-1"
-            aria-hidden="true"
-        >
-            <div className="modal-dialog modal-lg modal-dialog-centered">
+        <div className="modal fade" ref={filterRef} tabIndex={-1} aria-hidden="true">
+            <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
                 <div className="modal-content">
 
                     <div className="modal-header">
                         <h4 className="modal-title">Filtrar Segmentación ECL</h4>
-                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Cerrar" />
+                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
                     </div>
 
                     <div className="modal-body">
 
-                        <div className="row g-3">
+                        <AlertPage
+                            message={errorMessage}
+                            type="danger"
+                            show={!!errorMessage}
+                            onChange={() => setErrorMessage('')}
+                        />
 
-                            {/* Nombre del cliente */}
-                            <div className="col-md-6">
+                        <div className="row">
+
+                            {/* ID Cliente */}
+                            <div className="col-md-6 mb-4 mt-2">
                                 <InputModal
                                     type="text"
-                                    id="filter_ecl_clientName"
-                                    label="Nombre del cliente"
-                                    value={getFilter('clientName:name')?.value || ''}
-                                    onChange={(e) => updateFilter('clientName:name', 'value', e.target.value)}
-                                    placeholder="Buscar por nombre..."
+                                    id="filter_ecl_clientId"
+                                    label="ID Cliente"
+                                    value={clientId}
+                                    onChange={(e) => setClientId(e.target.value)}
+                                    placeholder="Buscar por ID"
                                 />
                             </div>
 
-                            {/* Segmento automático */}
-                            <div className="col-md-6">
-                                <InputSelectModal
-                                    id="filter_ecl_autoSegment"
-                                    label="Segmento automático"
-                                    value={selectValue('autoSegment:name')}
-                                    onChange={(val) => updateFilter('autoSegment:name', 'value', Array.isArray(val) ? val.join(',') : val)}
-                                    options={segments}
-                                    multiple={true}
-                                />
-                            </div>
-
-                            {/* Segmento final */}
-                            <div className="col-md-6">
-                                <InputSelectModal
-                                    id="filter_ecl_finalSegment"
-                                    label="Segmento final"
-                                    value={selectValue('finalSegment:name')}
-                                    onChange={(val) => updateFilter('finalSegment:name', 'value', Array.isArray(val) ? val.join(',') : val)}
-                                    options={segments}
-                                    multiple={true}
-                                />
+                            {/* Segmentación */}
+                            <div className="col-md-6 mb-4 mt-2">
+                                <div className="input-group">
+                                    <div className="input-group-text form-check mb-0">
+                                        <input
+                                            checked={getFilter('finalSegment:name')?.regex ?? false}
+                                            className="form-check-input m-auto"
+                                            type="checkbox"
+                                            onChange={(e) => updateFilter('finalSegment:name', 'regex', e.target.checked)}
+                                            disabled={!dataTableRef?.current}
+                                            aria-label="Buscar"
+                                        />
+                                    </div>
+                                    <InputSelectModal
+                                        id="filter_ecl_finalSegment"
+                                        label="Segmentación"
+                                        options={segments}
+                                        value={
+                                            getFilter('finalSegment:name')?.value === ''
+                                                ? []
+                                                : (getFilter('finalSegment:name')?.value ?? '').split('|')
+                                        }
+                                        onChange={(val) =>
+                                            updateFilter('finalSegment:name', 'value', (val || []).join('|'))
+                                        }
+                                        multiple={true}
+                                    />
+                                </div>
                             </div>
 
                             {/* Tipo de ajuste */}
-                            <div className="col-md-6">
-                                <InputSelectModal
-                                    id="filter_ecl_adjustmentType"
-                                    label="Tipo de ajuste"
-                                    value={selectValue('adjustmentType:name')}
-                                    onChange={(val) => updateFilter('adjustmentType:name', 'value', Array.isArray(val) ? val.join(',') : val)}
-                                    options={adjustmentTypes}
-                                    multiple={true}
-                                />
+                            <div className="col-md-6 mb-4 mt-2">
+                                <div className="input-group">
+                                    <div className="input-group-text form-check mb-0">
+                                        <input
+                                            checked={getFilter('segmentationSource:name')?.regex ?? false}
+                                            className="form-check-input m-auto"
+                                            type="checkbox"
+                                            onChange={(e) => updateFilter('segmentationSource:name', 'regex', e.target.checked)}
+                                            disabled={!dataTableRef?.current}
+                                            aria-label="Buscar"
+                                        />
+                                    </div>
+                                    <InputSelectModal
+                                        id="filter_ecl_segmentationSource"
+                                        label="Tipo de ajuste"
+                                        options={adjustmentTypes}
+                                        value={
+                                            getFilter('segmentationSource:name')?.value === ''
+                                                ? []
+                                                : (getFilter('segmentationSource:name')?.value ?? '').split('|')
+                                        }
+                                        onChange={(val) =>
+                                            updateFilter('segmentationSource:name', 'value', (val || []).join('|'))
+                                        }
+                                        multiple={true}
+                                    />
+                                </div>
                             </div>
 
                         </div>
@@ -132,17 +162,34 @@ const FilterSegmentation = ({
                     <div className="modal-footer">
                         <button
                             type="button"
-                            className="btn btn-secondary waves-effect"
-                            onClick={handleClear}
+                            className="btn btn-primary"
+                            onClick={handleFilter}
+                            disabled={loading}
                         >
-                            <i className="ri-refresh-line me-1" /> Limpiar
+                            {loading
+                                ? <><span className="spinner-border spinner-border-sm me-1" role="status" /> Buscando...</>
+                                : 'Filtrar'
+                            }
                         </button>
                         <button
                             type="button"
-                            className="btn btn-primary waves-effect waves-light"
-                            onClick={handleFilter}
+                            className="btn btn-danger"
+                            onClick={() => {
+                                setErrorMessage('');
+                                setClientId('');
+                                setFilters([
+                                    { regex: true, value: '', column: 'finalSegment:name'       },
+                                    { regex: true, value: '', column: 'segmentationSource:name' },
+                                ]);
+                                const t = getTable();
+                                if (t) { t.columns().search(''); t.search(''); t.draw(); }
+                                filterInstance?.current?.hide();
+                            }}
                         >
-                            <i className="ri-filter-line me-1" /> Filtrar
+                            Limpiar
+                        </button>
+                        <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            Cerrar
                         </button>
                     </div>
 
