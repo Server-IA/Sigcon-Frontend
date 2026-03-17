@@ -2,6 +2,14 @@ import { base_url } from './functions';
 
 import { fetchHelper } from './fetch';
 
+const normalizeExportData = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.results)) return payload.results;
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (payload && typeof payload === 'object') return [payload];
+    return [];
+};
+
 export const sweetAlertExport = async (visibleColumns, dt) => {
     // 🔹 Armar HTML con checkboxes
     let html = '<div style="text-align:left">';
@@ -54,7 +62,8 @@ export const exportConfig = {
     }
 };
         
-export const default_buttons = (url_api, title) => {
+export const default_buttons = (url_api, title, exportOptions = {}) => {
+    const { method = 'POST', params = {} } = exportOptions;
     const buttons = [
         {
             extend: 'excel',
@@ -80,11 +89,16 @@ export const default_buttons = (url_api, title) => {
                 };
 
                 const getData = {
-                    length:         -1,
-                }
+                    length: -1,
+                    ...params,
+                };
 
                 const url = base_url(url_api, getData);
-                const {data: dataExport} = await fetchHelper.post(url, getData, {}, 0);
+                const requestMethod = String(method || 'POST').toUpperCase();
+                const response = requestMethod === 'GET'
+                    ? await fetchHelper.get(url, {}, 0, false)
+                    : await fetchHelper.post(url, getData, {}, 0);
+                const dataExport = normalizeExportData(response?.data ?? response);
 
                 // 🔹 Recargar datos temporalmente
                 dt.clear();
@@ -118,11 +132,16 @@ export const default_buttons = (url_api, title) => {
                 };
 
                 const getData = {
-                    length:         -1,
-                }
+                    length: -1,
+                    ...params,
+                };
 
                 const url = base_url(url_api, getData);
-                const {data: dataExport} = await fetchHelper.post(url, getData, {}, 0);
+                const requestMethod = String(method || 'POST').toUpperCase();
+                const response = requestMethod === 'GET'
+                    ? await fetchHelper.get(url, {}, 0, false)
+                    : await fetchHelper.post(url, getData, {}, 0);
+                const dataExport = normalizeExportData(response?.data ?? response);
 
                 // 🔹 Recargar datos temporalmente
                 dt.clear();
@@ -155,11 +174,16 @@ export const default_buttons = (url_api, title) => {
                 };
 
                 const getData = {
-                    length:         -1,
-                }
+                    length: -1,
+                    ...params,
+                };
 
                 const url = base_url(url_api, getData);
-                const {data: dataExport} = await fetchHelper.post(url, getData, {}, 0);
+                const requestMethod = String(method || 'POST').toUpperCase();
+                const response = requestMethod === 'GET'
+                    ? await fetchHelper.get(url, {}, 0, false)
+                    : await fetchHelper.post(url, getData, {}, 0);
+                const dataExport = normalizeExportData(response?.data ?? response);
 
                 // 🔹 Recargar datos temporalmente
                 dt.clear();
