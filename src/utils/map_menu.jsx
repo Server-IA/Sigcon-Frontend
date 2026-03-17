@@ -36,8 +36,8 @@ import AssetReportGeneration from "../pages/assets/asset-report-generation";
 // Third Party
 import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 
-// Activos
-import CalculoDepreciacionActivos from "../pages/activos/calculo-depreciacion/index";
+// Assets
+import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -161,7 +161,7 @@ export const COMPONENT_MAP = [
     { id: "SEGMENTATION", name: "Segmentacion Terceros", component: IndexSegmentation },
     { id: "NIIF_VERIFICATION", name: "Verificación NIIF", component: NiifVerificationIndex },
     { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
-    { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: CalculoDepreciacionActivos },
+    { id: "ACT_CALCULO_DEPRECIACION", name: "Depreciation Calculation", component: AssetDepreciationCalculation },
     { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
     { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets }
 ];
