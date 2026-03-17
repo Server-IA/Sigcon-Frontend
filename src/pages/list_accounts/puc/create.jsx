@@ -8,63 +8,36 @@ import { useEffect, useState } from 'react';
 const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef, setMessage, accountClasses, levels, accountNatures }) => {
 
     const [errors, setErrors] = useState({});
-    const [errorMessage, setErrorMessage] = useState({
+    const [error, setError] = useState({
         message: '',
         type: '',
-        show: false
+        show: false,
     });
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        setErrors({});
-        setErrorMessage({
-            message: '',
-            type: '',
-            show: false
-        });
-    }, [account]);
+        if (!modalRef.current) return;
+        const el = modalRef.current;
+        const onHidden = () => {
+            setErrors({});
+            setError({ message: '', type: '', show: false });
+        };
+        el.addEventListener('hidden.bs.modal', onHidden);
+        return () => el.removeEventListener('hidden.bs.modal', onHidden);
+    }, [modalRef]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!account.code || account.code.trim() === '') {
-            setErrorsMessage({ field: 'code', message: 'El código de la cuenta es obligatorio' });
-            return;
-        }
-        if (!/^[0-9]{1,10}$/.test(account.code)) {
-            setErrorsMessage({ field: 'code', message: 'El código solo debe contener números y tener máximo 10 dígitos' });
-            return;
-        }
-        if (!account.name || account.name.trim() === '') {
-            setErrorsMessage({ field: 'name', message: 'El nombre de la cuenta es obligatorio' });
-            return;
-        }
-        if (!/^[A-Za-z0-9_\-\s]{1,100}$/.test(account.name)) {
-            setErrorsMessage({ field: 'name', message: 'El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)' });
-            return;
-        }
-        if (!account.accountClass) {
-            setErrorsMessage({ field: 'accountClass', message: 'Por favor seleccione la clase de la cuenta' });
-            return;
-        }
-        if (!account.level) {
-            setErrorMessage('Por favor seleccione el nivel jerárquico');
-            return;
-        }
-        if (!account.nature) {
-            setErrorsMessage({ field: 'nature', message: 'Por favor seleccione la naturaleza de la cuenta' });
-            return;
-        }
-
         const url = base_url(['api', 'v1', 'chart-of-accounts']);
         const payload = {
-            code: account.code,
-            name: account.name,
-            accountClass: account.accountClass,
-            level: account.level,
-            nature: account.nature,
+            code:         account.code         || null,
+            name:         account.name         || null,
+            accountClass: account.accountClass || null,
+            level:        account.level        || null,
+            nature:       account.nature       || null,
         };
-        console.log('DEBUG create payload:', payload);
+
         try {
             setLoading(true);
             await fetchHelper.post(url, payload, {}, 1000);
@@ -90,11 +63,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
             });
 
             setErrors({});
-            setErrorMessage({
-                message: '',
-                type: '',
-                show: true
-            });
+            setError({ message: '', type: '', show: false });
         } catch (error) {
             console.log(error);
             const errores = error?.errors;
@@ -103,7 +72,7 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                 errores.forEach(err => { fieldErrors[err.field] = err.message; });
                 setErrors(fieldErrors);
             } else if (error?.msg) {
-                setErrorMessage({ message: error.msg, type: 'danger', show: true });
+                setError({ message: error.msg, type: 'danger', show: true });
             }
         } finally {
             setLoading(false);
@@ -126,10 +95,10 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
 
                     <div className="modal-body">
                         <AlertPage
-                            type={errorMessage.type}
-                            message={errorMessage.message}
-                            show={errorMessage.show}
-                            onChange={() => setErrorMessage({ message: '', type: '', show: false })}
+                            type={error.type}
+                            message={error.message}
+                            show={error.show}
+                            onChange={() => setError({ message: '', type: '', show: false })}
                             duration={60000}
                         />
 
@@ -141,7 +110,10 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                                     label="Código"
                                     placeholder="Ej. 1105"
                                     value={account.code}
-                                    onChange={(e) => setAccount({ ...account, code: e.target.value })}
+                                    onChange={(e) => {
+                                        setAccount({ ...account, code: e.target.value });
+                                        setErrors(prev => ({ ...prev, code: '' }));
+                                    }}
                                     error={errors.code}
                                     required
                                 />
@@ -156,7 +128,10 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                                     label="Nombre"
                                     placeholder="Ej. Caja"
                                     value={account.name}
-                                    onChange={(e) => setAccount({ ...account, name: e.target.value })}
+                                    onChange={(e) => {
+                                        setAccount({ ...account, name: e.target.value });
+                                        setErrors(prev => ({ ...prev, name: '' }));
+                                    }}
                                     error={errors.name}
                                     required
                                 />
@@ -169,7 +144,10 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                                     id="puc_accountClass"
                                     label="Clase de la cuenta"
                                     value={account.accountClass}
-                                    onChange={(value) => setAccount({ ...account, accountClass: value })}
+                                    onChange={(value) => {
+                                        setAccount({ ...account, accountClass: value });
+                                        setErrors(prev => ({ ...prev, accountClass: '' }));
+                                    }}
                                     error={errors.accountClass}
                                     placeholder="Seleccionar clase"
                                     options={accountClasses}
@@ -184,7 +162,10 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                                     id="puc_level"
                                     label="Nivel jerárquico"
                                     value={account.level}
-                                    onChange={(value) => setAccount({ ...account, level: value })}
+                                    onChange={(value) => {
+                                        setAccount({ ...account, level: value });
+                                        setErrors(prev => ({ ...prev, level: '' }));
+                                    }}
                                     error={errors.level}
                                     placeholder="Seleccionar nivel"
                                     options={levels}
@@ -196,7 +177,10 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
                                     id="puc_nature"
                                     label="Naturaleza"
                                     value={account.nature}
-                                    onChange={(value) => setAccount({ ...account, nature: value })}
+                                    onChange={(value) => {
+                                        setAccount({ ...account, nature: value });
+                                        setErrors(prev => ({ ...prev, nature: '' }));
+                                    }}
                                     error={errors.nature}
                                     placeholder="Seleccionar naturaleza"
                                     options={accountNatures}
