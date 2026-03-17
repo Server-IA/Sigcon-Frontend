@@ -42,8 +42,8 @@ import CalculoDepreciacionActivos from "../pages/activos/calculo-depreciacion/in
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 // NIIF
-import NiifVerificationIndex from "../pages/list_accounts/niif_verification/index";
-import NiifCorrectionIndex from "../pages/list_accounts/niif_correction/index";
+import NiifVerificationIndex from "../pages/assets/niif_verification/index";
+import NiifCorrectionIndex from "../pages/assets/niif_correction/index";
 
 import IndexSegmentation from "../pages/third-party/segmentation/index"
 
