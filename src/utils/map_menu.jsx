@@ -38,6 +38,7 @@ import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 
 // Assets
 import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
+import IndexCashAndBanks from "../pages/assets/cash-and-banks/index";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -163,5 +164,6 @@ export const COMPONENT_MAP = [
     { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
     { id: "ACT_CALCULO_DEPRECIACION", name: "Depreciation Calculation", component: AssetDepreciationCalculation },
     { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
-    { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets }
+    { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
+    { id: "CATALOGO_BANCOS", name: "Catalogo de Bancos", component: IndexCashAndBanks }
 ];
