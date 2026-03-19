@@ -27,6 +27,7 @@ const CreateAssets = ({
   const filteredDepreciationRules = depreciationRules.filter(
     (d) => d.accountingAccountId == assets.accountingAccountId,
   );
+
   const [errors, setErrors] = useState({});
 
   const [error, setError] = useState({
@@ -53,11 +54,6 @@ const CreateAssets = ({
       }
     };
   }, []);
-
-  useEffect(() => {
-    console.log("Assets: ", assets);
-    console.log("Depreciation Rules: ", depreciationRules);
-  }, [assets]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -96,8 +92,7 @@ const CreateAssets = ({
       }
     }
   };
-  console.log("Thirds:", thirds);
-  console.log("PUC:", accountingAccount);
+
   return (
     <div
       className="modal fade"
@@ -129,45 +124,45 @@ const CreateAssets = ({
               onChange={() => setError({ message: "", type: "", show: false })}
             />
 
+            {/* FILA 1 */}
             <div className="row">
-              <div className="col mb-6 mt-2">
+              <div className="col-md-4 mb-4">
                 <InputModal
                   type="text"
                   id="name"
+                  placeholder="Ej: Computador portátil Dell XPS 13"
                   label="Nombre"
                   value={assets.name}
-                  onChange={(e) => {
-                    setAssets({ ...assets, name: e.target.value });
-                    setErrors((prev) => ({ ...prev, name: "" }));
-                  }}
+                  onChange={(e) =>
+                    setAssets({ ...assets, name: e.target.value })
+                  }
                   error={errors.name}
                   required
                 />
               </div>
 
-              <div className="col mb-6 mt-2">
+              <div className="col-md-4 mb-4">
                 <InputModal
                   type="text"
                   id="description"
+                  placeholder="Ej: Computador portátil Dell XPS 13"
                   label="Descripción"
                   value={assets.description}
-                  onChange={(e) => {
-                    setAssets({ ...assets, description: e.target.value });
-                    setErrors((prev) => ({ ...prev, description: "" }));
-                  }}
+                  onChange={(e) =>
+                    setAssets({ ...assets, description: e.target.value })
+                  }
                   error={errors.description}
                 />
               </div>
 
-              <div className="col mb-6 mt-2">
+              <div className="col-md-4 mb-4">
                 <InputSelectModal
                   id="classification"
                   label="Clasificación"
                   value={assets.classification}
-                  onChange={(value) => {
-                    setAssets({ ...assets, classification: value });
-                    setErrors((prev) => ({ ...prev, classification: "" }));
-                  }}
+                  onChange={(value) =>
+                    setAssets({ ...assets, classification: value })
+                  }
                   options={[
                     { id: "NON_CURRENT", label: "Activo no corriente" },
                     { id: "CURRENT", label: "Activo corriente" },
@@ -177,16 +172,14 @@ const CreateAssets = ({
               </div>
             </div>
 
+            {/* FILA 2 */}
             <div className="row">
-              <div className="col mb-6 mt-2">
+              <div className="col-md-4 mb-4">
                 <InputSelectModal
                   id="type"
                   label="Tipo"
                   value={assets.type}
-                  onChange={(value) => {
-                    setAssets({ ...assets, type: value });
-                    setErrors((prev) => ({ ...prev, type: "" }));
-                  }}
+                  onChange={(value) => setAssets({ ...assets, type: value })}
                   options={[
                     { id: "TANGIBLE", label: "Tangible" },
                     { id: "INTANGIBLE", label: "Intangible" },
@@ -195,93 +188,84 @@ const CreateAssets = ({
                 />
               </div>
 
-              <div className="col mb-6 mt-2">
+              <div className="col-md-4 mb-4">
                 <InputSelectModal
                   id="accountingAccountId"
                   label="Cuenta contable"
                   value={assets.accountingAccountId}
-                  onChange={(value) => {
-                    setAssets({
-                      ...assets,
-                      accountingAccountId: value,
-                    });
-                    setErrors((prev) => ({ ...prev, accountingAccountId: "" }));
-                  }}
+                  onChange={(value) =>
+                    setAssets({ ...assets, accountingAccountId: value })
+                  }
                   options={accountingAccount}
                   required
                   error={errors.accountingAccountId}
                 />
               </div>
 
-              <div className="col mb-6 mt-2">
+              <div className="col-md-4 mb-4">
                 <InputModal
                   type="number"
                   id="acquisitionValue"
                   label="Valor adquisición"
+                  placeholder="Ej: 1500000"
                   value={assets.acquisitionValue}
-                  onChange={(e) => {
+                  onChange={(e) =>
                     setAssets({
                       ...assets,
                       acquisitionValue: Number(e.target.value),
-                    });
-                    setErrors((prev) => ({ ...prev, acquisitionValue: "" }));
-                  }}
+                    })
+                  }
                   error={errors.acquisitionValue}
                   required
                 />
               </div>
             </div>
 
+            {/* FILA 3 */}
             <div className="row">
-              <div className="col mb-6 mt-2">
+              <div className="col-md-4 mb-4">
                 <InputDate
                   id="acquisitionDate"
                   label="Fecha adquisición"
+                  placeholder="AAAA-MM-DD"
                   date={assets.acquisitionDate}
-                  onChange={(date) => {
-                    const acquisitionDate = date ? new Date(date) : null;
-
+                  onChange={(date) =>
                     setAssets({
                       ...assets,
-                      acquisitionDate: acquisitionDate
+                      acquisitionDate: new Date(date)
                         .toISOString()
                         .split("T")[0],
-                    });
-                    setErrors((prev) => ({ ...prev, acquisitionDate: "" }));
-                  }}
+                    })
+                  }
                   required
                 />
               </div>
 
-              <div className="col mb-6 mt-2">
+              <div className="col-md-4 mb-4">
                 <InputModal
                   type="number"
                   id="usefulLifeMonths"
                   label="Vida útil (meses)"
+                  placeholder="Ej: 60"
                   value={assets.usefulLifeMonths}
-                  onChange={(e) => {
+                  onChange={(e) =>
                     setAssets({
                       ...assets,
                       usefulLifeMonths: Number(e.target.value),
-                    });
-                    setErrors((prev) => ({ ...prev, usefulLifeMonths: "" }));
-                  }}
+                    })
+                  }
                   required
                 />
               </div>
 
-              <div className="col mb-6 mt-2">
+              <div className="col-md-4 mb-4">
                 <InputSelectModal
                   id="depreciationRuleId"
                   label="Método depreciación"
                   value={assets.depreciationRuleId}
-                  onChange={(value) => {
-                    setAssets({
-                      ...assets,
-                      depreciationRuleId: value,
-                    });
-                    setErrors((prev) => ({ ...prev, depreciationRuleId: "" }));
-                  }}
+                  onChange={(value) =>
+                    setAssets({ ...assets, depreciationRuleId: value })
+                  }
                   options={filteredDepreciationRules}
                   required
                   error={errors.depreciationRuleId}
@@ -289,94 +273,78 @@ const CreateAssets = ({
               </div>
             </div>
 
+            {/* FILA 4 */}
             <div className="row">
-              <div className="col mb-6 mt-2">
+              <div className="col-md-6 mb-4">
                 <InputSelectModal
                   id="supplierId"
                   label="Proveedor"
                   value={assets.supplierId}
-                  onChange={(value) => {
-                    setAssets({
-                      ...assets,
-                      supplierId: Number(value),
-                    });
-                    setErrors((prev) => ({ ...prev, supplierId: "" }));
-                  }}
+                  onChange={(value) =>
+                    setAssets({ ...assets, supplierId: Number(value) })
+                  }
                   options={thirds}
                   required
                 />
               </div>
 
-              <div className="col mb-6 mt-2">
+              <div className="col-md-3 mb-4">
                 <InputModal
                   type="text"
                   id="paymentTerms"
                   label="Condición de pago"
+                  placeholder="Ej: Net 30" //POR DEFINIR CONDICIONES DE PAGO
                   value={assets.paymentTerms}
-                  onChange={(e) => {
+                  onChange={(e) =>
                     setAssets({
                       ...assets,
                       paymentTerms: e.target.value,
-                    });
-                  }}
+                    })
+                  }
                 />
               </div>
 
-              <div className="col mb-6 mt-2">
+              <div className="col-md-3 mb-4">
                 <InputModal
                   type="number"
                   id="accountsPayableReferenceId"
-                  label="Referencia cuentas por pagar"
+                  label="Ref. cuentas por pagar"
+                  placeholder="Ej: 12345" //POR DEFINIR DE CUENTAS POR PAGAR
                   value={assets.accountsPayableReferenceId}
-                  onChange={(e) => {
+                  onChange={(e) =>
                     setAssets({
                       ...assets,
                       accountsPayableReferenceId: Number(e.target.value),
-                    });
-                  }}
+                    })
+                  }
                 />
               </div>
             </div>
 
+            {/* FILA 5 */}
             <div className="row">
-              <div className="col mb-6 mt-2">
+              <div className="col-md-6 mb-4">
                 <InputModal
                   type="number"
                   id="bankCashReferenceId"
                   label="Referencia banco/caja"
+                  placeholder="Ej: 12345" //POR DEFINIR REFERENCIA BANCO/CAJA
                   value={assets.bankCashReferenceId}
-                  onChange={(e) => {
+                  onChange={(e) =>
                     setAssets({
                       ...assets,
                       bankCashReferenceId: Number(e.target.value),
-                    });
-                  }}
+                    })
+                  }
                 />
               </div>
 
-              <div className="col mb-6 mt-2">
-                <InputModal
-                  type="text"
-                  id="costCenterOrAccountingLocation"
-                  label="Centro de costo / sede"
-                  value={assets.costCenterOrAccountingLocation}
-                  onChange={(e) => {
-                    setAssets({
-                      ...assets,
-                      costCenterOrAccountingLocation: e.target.value,
-                    });
-                  }}
-                />
-              </div>
-
-              <div className="col mb-6 mt-2">
+              <div className="col-md-6 mb-4">
                 <InputSelectModal
                   id="status"
                   label="Estado"
                   value={assets.status}
-                  onChange={(value) => {
-                    setAssets({ ...assets, status: value });
-                  }}
+                  onChange={(value) => setAssets({ ...assets, status: value })}
                   options={[
                     { id: "ACTIVE", label: "Activo" },
                     { id: "IN_REPAIR", label: "En reparación" },
@@ -388,19 +356,21 @@ const CreateAssets = ({
               </div>
             </div>
 
+            {/* FILA 6 */}
             <div className="row">
-              <div className="col mb-6 mt-2">
+              <div className="col-md-12 mb-4">
                 <InputModal
                   type="text"
                   id="observations"
                   label="Observaciones"
+                  placeholder="Ej: El activo se encuentra en buen estado" //POR DEFINIR OBSERVACIONES
                   value={assets.observations}
-                  onChange={(e) => {
+                  onChange={(e) =>
                     setAssets({
                       ...assets,
                       observations: e.target.value,
-                    });
-                  }}
+                    })
+                  }
                 />
               </div>
             </div>
