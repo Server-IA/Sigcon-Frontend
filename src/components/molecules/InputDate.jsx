@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const InputDate = ({ id, label, date, onChange, error, placeholder, required}) => {
+const InputDate = ({ id, label, date, onChange, error, placeholder, required, dateFormat = 'd-m-Y'}) => {
 
     const dateRef = useRef(null);
     const onChangeRef = useRef(onChange);
@@ -14,7 +14,7 @@ const InputDate = ({ id, label, date, onChange, error, placeholder, required}) =
         const $date = $(dateRef.current);
         $date.flatpickr({
             mode: 'single',
-            dateFormat: 'd-m-Y',
+            dateFormat: dateFormat,
             placeholder: placeholder,
             required: required,
             defaultDate: date,

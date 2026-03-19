@@ -36,8 +36,8 @@ import AssetReportGeneration from "../pages/assets/asset-report-generation";
 // Third Party
 import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 
-// Activos
-import CalculoDepreciacionActivos from "../pages/activos/calculo-depreciacion/index";
+// Assets
+import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -68,17 +68,17 @@ export const getMenu = async () => {
         label: "Home",
         path: "",
         position: 0,
+        componentName: "HOME",
         menus: [
-          {
-            id: 0,
-            label: "Home",
-            path: "",
-            position: 0,
-            icon: "ri-home-smile-line",
-            childrens: [],
-            // component: Home,
-            componentName: "HOME"
-          }
+            {
+                id: 0,
+                label: "Home",
+                path: "",
+                position: 0,
+                icon: "ri-home-smile-line",
+                childrens: [],
+                componentName: "HOME"
+            }
         ]
       }
     ]
