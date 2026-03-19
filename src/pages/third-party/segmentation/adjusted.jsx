@@ -79,7 +79,6 @@ const AdjustSegmentation = ({
         }
 
         const payload = {
-            clientId:        client.id,
             newSegmentation: adjustment.segment,
             justification:   adjustment.justification.trim(),
         };
@@ -93,7 +92,7 @@ const AdjustSegmentation = ({
         // Modo standalone: llamada API directa
         try {
             setLoading(true);
-            const url = base_url(['api', 'ecl-segmentation', 'adjust']);
+            const url = base_url(['api', 'v1', 'ecl-segmentation', 'adjust', client.clientId]);
             await fetchHelper.put(url, payload, {}, 1000);
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
@@ -208,13 +207,8 @@ const AdjustSegmentation = ({
                         <button
                             type="button"
                             className="btn btn-danger waves-effect"
+                            data-bs-dismiss="modal"
                             disabled={loading}
-                            onClick={() => {
-                                modalInstance?.current?.hide();
-                                if (typeof onBack === 'function') {
-                                    setTimeout(() => onBack(), 350);
-                                }
-                            }}
                         >
                             Volver
                         </button>

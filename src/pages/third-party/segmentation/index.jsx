@@ -4,8 +4,6 @@ import { useSelector } from 'react-redux';
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
 
-import { fetchHelper } from '../../../utils/fetch';
-import { base_url } from '../../../utils/functions';
 
 import FilterSegmentation from './filter';
 import CreateSegmentation from './create';
@@ -59,22 +57,19 @@ const IndexSegmentation = () => {
     const modalAdjustInstance = useRef(null);
 
     const [data, setData] = useState([]);
-    const [clickEdit, setClickEdit] = useState(false);
     const [clickAdjust, setClickAdjust] = useState(false);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
 
     const [search, setSearch] = useState({ value: '', checked: true });
 
     const emptyRecord = {
-        id: '',
-        clientId: '',
-        clientName: '',
-        lastCalculationDate: '',
-        autoSegment: '',
-        finalSegment: '',
-        daysPastDue: 0,
-        overdueAmount: 0,
-        adjustmentType: 'AUTOMATIC',
+        id:                 '',
+        clientId:           '',
+        clientName:         '',
+        autoSegment:        '',
+        finalSegment:       '',
+        segmentationSource: 'AUTOMATIC',
+        calculationDate:    '',
     };
 
     const [selectedRecord, setSelectedRecord] = useState(emptyRecord);
@@ -83,45 +78,33 @@ const IndexSegmentation = () => {
 
     const actions = [
         ...(userPermissions.some(p => p.code === 'UPDATE_SEGMENTATION' && p.type === 'UPDATE') || isAdmin
-            ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
-
-        ...(userPermissions.some(p => p.code === 'DELETE_SEGMENTATION' && p.type === 'DELETE') || isAdmin
-            ? [{ key: 'delete', icon: 'ri-delete-bin-line', class: 'btn-label-danger', title: 'Eliminar' }] : []),
+            ? [{ key: 'adjust', icon: 'ri-equalizer-line', class: 'btn-label-warning', title: 'Ajuste manual' }] : []),
     ];
 
     const columns = [
         {
-            title: 'ID Cliente', data: 'clientId', name: 'clientId',
-            render: (val) => val ?? '-'
-        },
-        { title: 'Cliente', data: 'clientName', name: 'clientName' },
-        {
-            title: 'Segmento Auto.', data: 'autoSegment', name: 'autoSegment',
-            render: (val) => renderSegmentBadge(val)
-        },
-        {
-            title: 'Segmento Final', data: 'finalSegment', name: 'finalSegment',
-            render: (val) => renderSegmentBadge(val)
-        },
-        {
-            title: 'Días mora', data: 'daysPastDue', name: 'daysPastDue',
+            title: 'ID Cliente', data: 'clientId', name: '',
+            searchable: false, orderable: false,
             render: (val) => val ?? '-'
         },
         {
-            title: 'Monto vencido', data: 'overdueAmount', name: 'overdueAmount',
-            render: (val) => val != null
-                ? `$${Number(val).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`
-                : '-'
+            title: 'Cliente', data: 'thirdParty', name: '',
+            searchable: false, orderable: false,
+            render: (val) => val?.businessName ?? '-'
         },
         {
-            title: 'Tipo ajuste', data: 'adjustmentType', name: 'adjustmentType',
+            title: 'Segmentación', data: 'finalSegment', name: 'finalSegment',
+            render: (val) => renderSegmentBadge(val)
+        },
+        {
+            title: 'Tipo ajuste', data: 'segmentationSource', name: 'segmentationSource',
             render: (val) => val === 'MANUAL'
                 ? `<span class="badge bg-label-info">Manual</span>`
                 : `<span class="badge bg-label-secondary">Automático</span>`
         },
         {
             title: 'Fecha cálculo', data: 'calculationDate', name: 'calculationDate',
-            render: (val) => val ?? '-'
+            render: (val) => val ? val.split('T')[0] : '-'
         },
         {
             title: 'Acciones', data: 'id', searchable: false,
@@ -162,25 +145,6 @@ const IndexSegmentation = () => {
         modalAdjustInstance.current.show();
     };
 
-    // Desde el modal de edición: cierra edición y abre ajuste con los datos actuales
-    const handleAdjustRequest = (localData) => {
-        setSelectedRecord(prev => ({
-            ...prev,
-            clientName: localData.clientName ?? prev.clientName,
-            autoSegment: localData.autoSegment ?? prev.autoSegment,
-            daysPastDue: localData.daysPastDue ?? prev.daysPastDue,
-        }));
-        modalUpdateInstance.current?.hide();
-        setTimeout(() => openModalAdjust(), 350);
-    };
-
-    // Desde el ajuste: Volver reabre el modal de edición
-    const handleAdjustBack = () => {
-        if (!modalUpdateInstance.current) {
-            modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
-        }
-        modalUpdateInstance.current.show();
-    };
 
     const buttons = [
         {
@@ -199,12 +163,6 @@ const IndexSegmentation = () => {
             action: function () { openModalCreate(); }
         }] : []),
     ];
-
-    useEffect(() => {
-        if (!clickEdit) return;
-        openModalUpdate();
-        setClickEdit(false);
-    }, [clickEdit]);
 
     useEffect(() => {
         if (!clickAdjust) return;
@@ -227,48 +185,18 @@ const IndexSegmentation = () => {
             }
 
             const mapped = {
-                id: row.id ?? '',
-                clientId: row.clientId ?? '',
-                clientName: row.clientName ?? '',
-                lastCalculationDate: row.lastCalculationDate ?? '',
-                autoSegment: row.autoSegment ?? '',
-                finalSegment: row.finalSegment ?? '',
-                daysPastDue: row.daysPastDue ?? 0,
-                overdueAmount: row.overdueAmount ?? 0,
-                adjustmentType: row.adjustmentType ?? 'AUTOMATIC',
+                id:                row.id ?? '',
+                clientId:          row.clientId ?? '',
+                clientName:        row.thirdParty?.businessName ?? '',
+                autoSegment:       row.autoSegment ?? '',
+                finalSegment:      row.finalSegment ?? '',
+                segmentationSource: row.segmentationSource ?? 'AUTOMATIC',
+                calculationDate:   row.calculationDate ?? '',
             };
-
-            if (action === 'edit') {
-                setSelectedRecord(mapped);
-                setClickEdit(true);
-            }
 
             if (action === 'adjust') {
                 setSelectedRecord(mapped);
                 setClickAdjust(true);
-            }
-
-            if (action === 'delete') {
-                window.Swal.fire({
-                    title: `¿Eliminar segmentación de ${row.clientName}?`,
-                    text: 'Esta acción no se puede deshacer.',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    showDenyButton: false,
-                    confirmButtonText: 'Eliminar',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#d33',
-                }).then(async (result) => {
-                    if (!result.isConfirmed) return;
-                    try {
-                        const deleteUrl = base_url(['api', 'v1', 'third-parties', row.id]);
-                        await fetchHelper.delete(deleteUrl, {}, {}, 500, false);
-                        dataTableRef?.current?.ajax.reload();
-                        setMessage({ message: `Segmentación de ${row.clientName} eliminada exitosamente`, type: 'success', show: true });
-                    } catch (error) {
-                        setMessage({ message: error?.msg || 'Error al eliminar la segmentación', type: 'danger', show: true });
-                    }
-                });
             }
         };
 
@@ -331,7 +259,6 @@ const IndexSegmentation = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 segments={SEGMENTS}
-                onAdjustRequest={handleAdjustRequest}
             />
 
             <AdjustSegmentation
@@ -341,7 +268,6 @@ const IndexSegmentation = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 segments={SEGMENTS}
-                onBack={handleAdjustBack}
             />
         </>
     );
