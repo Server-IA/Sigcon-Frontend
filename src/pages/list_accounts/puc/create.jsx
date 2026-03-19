@@ -28,31 +28,31 @@ const CreatePUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef,
         e.preventDefault();
 
         if (!account.code || account.code.trim() === '') {
-            setErrorsMessage({ field: 'code', message: 'El código de la cuenta es obligatorio' });
+            setErrors({ ...errors, code: 'El código de la cuenta es obligatorio' });
             return;
         }
         if (!/^[0-9]{1,10}$/.test(account.code)) {
-            setErrorsMessage({ field: 'code', message: 'El código solo debe contener números y tener máximo 10 dígitos' });
+            setErrors({ ...errors, code: 'El código solo debe contener números y tener máximo 10 dígitos' });
             return;
         }
         if (!account.name || account.name.trim() === '') {
-            setErrorsMessage({ field: 'name', message: 'El nombre de la cuenta es obligatorio' });
+            setErrors({ ...errors, name: 'El nombre de la cuenta es obligatorio' });
             return;
         }
         if (!/^[A-Za-z0-9_\-\s]{1,100}$/.test(account.name)) {
-            setErrorsMessage({ field: 'name', message: 'El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)' });
+            setErrors({ ...errors, name: 'El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)' });
             return;
         }
         if (!account.accountClass) {
-            setErrorsMessage({ field: 'accountClass', message: 'Por favor seleccione la clase de la cuenta' });
+            setErrors({ ...errors, accountClass: 'Por favor seleccione la clase de la cuenta' });
             return;
         }
         if (!account.level) {
-            setErrorMessage('Por favor seleccione el nivel jerárquico');
+            setErrors({ ...errors, level: 'Por favor seleccione el nivel jerárquico' });
             return;
         }
         if (!account.nature) {
-            setErrorsMessage({ field: 'nature', message: 'Por favor seleccione la naturaleza de la cuenta' });
+            setErrors({ ...errors, nature: 'Por favor seleccione la naturaleza de la cuenta' });
             return;
         }
 
