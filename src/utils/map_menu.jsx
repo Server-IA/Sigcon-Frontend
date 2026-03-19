@@ -65,6 +65,7 @@ export const getMenu = async () => {
         label: "Home",
         path: "",
         position: 0,
+        componentName: "HOME",
         menus: [
             {
                 id: 0,
@@ -73,7 +74,6 @@ export const getMenu = async () => {
                 position: 0,
                 icon: "ri-home-smile-line",
                 childrens: [],
-                // component: Home,
                 componentName: "HOME"
             }
         ]
