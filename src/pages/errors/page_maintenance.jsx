@@ -1,13 +1,8 @@
 import { useEffect } from "react";
 import Link from "../../components/atoms/Link";
 import "../../styles/page-misc.css";
-import { equi } from "../../utils/functions";
 
 const PageMaintenance = () => {
-
-    useEffect(() => {
-        console.log(equi(5));
-    }, []);
 
     return <>
         <div className="misc-wrapper h-100">
