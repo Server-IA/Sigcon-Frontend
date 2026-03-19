@@ -229,14 +229,22 @@ const CreateAssets = ({
                   label="Fecha adquisición"
                   placeholder="AAAA-MM-DD"
                   date={assets.acquisitionDate}
-                  onChange={(date) =>
-                    setAssets({
-                      ...assets,
-                      acquisitionDate: new Date(date)
-                        .toISOString()
-                        .split("T")[0],
-                    })
+                  dateFormat="Y-m-d"
+                  onChange={(date) =>{
+
+                      setAssets({
+                        ...assets,
+                        acquisitionDate: date,
+                      })
+
+                      setErrors({
+                        ...errors,
+                        acquisitionDate: null,
+                      })
+
+                    }
                   }
+                  error={errors.acquisitionDate}
                   required
                 />
               </div>
