@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import DataTableReference from '../../../components/organism/DataTable';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
+import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 const formatCOP = (value) => {
     if (value == null) return '—';
@@ -150,6 +151,8 @@ const CalculoDepreciacionActivos = () => {
     const [searchResultados, setSearchResultados] = useState({ value: '', checked: true });
     const [searchHistoricoPeriodo, setSearchHistoricoPeriodo] = useState({ value: '', checked: true });
     const [searchHistoricoActivo, setSearchHistoricoActivo] = useState({ value: '', checked: true });
+
+    const [assets, setAssets] = useState([]);
 
     const dismissAlert = () => setAlert({ show: false, type: '', message: '' });
 
@@ -517,6 +520,28 @@ const CalculoDepreciacionActivos = () => {
         };
     }, [activosElegibles, resultados]);
 
+    useEffect(() => {
+
+        console.log('fetchAssets');
+
+        const fetchAssets = async () => {
+            const response = await fetchHelper.post(
+                base_url(['api', 'v1', 'assets', 'search']),
+                { length: -1 },
+                {},
+                1,
+                false,
+            );
+            const payload = response.data ?? response;
+            setAssets(payload);
+        }
+        fetchAssets();
+    }, [])
+
+    useEffect(() => {
+        console.log(assets, 'assets');
+    }, [assets])
+
     return (
         <>
             {/* Título de página */}
@@ -596,7 +621,25 @@ const CalculoDepreciacionActivos = () => {
                         <p className="fw-semibold mb-3">Histórico por activo</p>
                         <div className="d-flex gap-3 flex-wrap align-items-end">
                             <div>
-                                <label className="form-label mb-1" style={{ fontSize: '0.875rem' }}>
+
+                                <InputSelectModal
+                                    id="assetHistoryId"
+                                    label="Asset ID"
+                                    value={assetHistoryId}
+                                    onChange={(value) => {
+                                        console.log(assets, 'value');
+                                        setAssetHistoryId(value)
+                                    }
+                                    }
+                                    options={assets.map(asset => ({
+                                        id: asset.id,
+                                        label: `${asset.assetCode} - ${asset.name}`,
+                                    }))}
+                                    
+                                    clearable={true}
+                                />
+
+                                {/* <label className="form-label mb-1" style={{ fontSize: '0.875rem' }}>
                                     Asset ID
                                 </label>
                                 <input
@@ -607,7 +650,7 @@ const CalculoDepreciacionActivos = () => {
                                     onChange={(e) => setAssetHistoryId(e.target.value)}
                                     style={{ width: '160px' }}
                                     placeholder="Ej: 15"
-                                />
+                                /> */}
                             </div>
                             <button
                                 className="btn btn-outline-secondary waves-effect"

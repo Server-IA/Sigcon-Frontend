@@ -24,7 +24,7 @@ import { fetchHelper } from "../../utils/fetch";
 
 
 
-const API_STORE = ["api", "v1", "cash-and-banks", "store"];
+const API_STORE = ["api", "v1", "banks", "store"];
 
 const backendErrorMap = {
   CODIGO_BANCO: "BNK-ERR-034: Codigo de banco ya registrado",

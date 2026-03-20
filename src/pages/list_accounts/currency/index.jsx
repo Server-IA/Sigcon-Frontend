@@ -137,14 +137,13 @@ const CurrencyIndex = () => {
                             });
                         } catch (error) {
                             console.error(error);
-                            window.Swal.fire({
-                                title: 'Error',
-                                text: error?.msg || 'Error al eliminar el tipo de moneda',
-                                icon: 'error',
-                                confirmButtonText: 'Cerrar',
-                                showCancelButton: false,
-                                allowOutsideClick: false,
+
+                            setMessage({
+                                message: error?.msg || 'Error al eliminar el tipo de moneda',
+                                type: 'danger',
+                                show: true,
                             });
+
                         }
                     });
                     break;

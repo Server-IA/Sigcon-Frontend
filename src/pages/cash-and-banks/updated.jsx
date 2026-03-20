@@ -28,7 +28,7 @@ import { fetchHelper } from "../../utils/fetch";
 
 
 
-const API_BASE = ["api", "v1", "cash-and-banks"];
+const API_BASE = ["api", "v1", "banks"];
 
 const UpdatedCashAndBanks = ({
   modalRef,

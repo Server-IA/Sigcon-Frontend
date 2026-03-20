@@ -36,8 +36,9 @@ import FilterCashAndBanks from "./filter";
 
 
 
-const API_SEARCH = ["api", "v1", "cash-and-banks", "search"];
-const API_BASE = ["api", "v1", "cash-and-banks"];
+const API_SEARCH = ["api", "v1", "banks", "search"];
+const API_BASE = ["api", "v1", "banks"];
+const API_STORE = ["api", "v1", "banks", "store"];
 
 const countryEndpointCandidates = [
   ["api", "v1", "countries", "search"],
