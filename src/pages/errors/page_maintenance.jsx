@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import Link from "../../components/atoms/Link";
 import "../../styles/page-misc.css";
 
 const PageMaintenance = () => {
+
     return <>
         <div className="misc-wrapper h-100">
             <h1 className="mb-2 mx-2">Under Maintenance! 🚧</h1>

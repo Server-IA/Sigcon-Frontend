@@ -182,10 +182,17 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
                                     id="dr_usefulLife_create"
                                     label="Vida útil (años)"
                                     value={rule.usefulLife}
-                                    onChange={(e) => setRule({ ...rule, usefulLife: e.target.value })}
+                                    onChange={(e) => {
+                                        if (e.target.value > 0) {
+                                            setRule({ ...rule, usefulLife: e.target.value })
+                                        }else{
+                                            setRule({ ...rule, usefulLife: 0 })}
+                                        }
+                                    }
                                     error={errors.usefulLife}
                                     placeholder="Ej. 5"
                                     required={true}
+                                    min={0}
                                 />
                             </div>
                         </div>
