@@ -14,6 +14,10 @@ import FilterMenu from "./filter";
 import { refreshMenu } from "../../../routes/routes";
 
 const IndexMenus = () => {
+
+  const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => { return p.code.includes('MENUS') }) || []; // Permisos del usuario
+  const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
+
   const dispatch = useDispatch();
   const [data, setData] = useState([]);
   const tableRefMenu = useRef(null);
@@ -129,30 +133,29 @@ const IndexMenus = () => {
       },
     },
 
-    user.permissions.find((p) => p.code === "CREATE_MENUS")
-      ? {
-          text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Menu</span>',
-          className: "btn rounded-pill btn-primary waves-effect mx-2 my-2 ",
-          action: async function (e, dt, button, config) {
-            openModalCreate();
-          },
-        }
-      : null,
-  ].filter((button) => button !== null);
+    ...(userPermissions.some(p => p.code === 'CREATE_MENUS' && p.type === 'CREATE') || isAdmin
+      ? [{
+        text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Menu</span>',
+        className: "btn rounded-pill btn-primary waves-effect mx-2 my-2 ",
+        action: async function (e, dt, button, config) {
+          openModalCreate();
+        },
+      }] : []),
+  ];
 
   const actions = [
-    {
+    ...(userPermissions.some(p => p.code === 'UPDATE_MENUS' && p.type === 'UPDATE') || isAdmin ? [{
       key: "edit",
       icon: "ri-edit-line",
       class: "btn-label-primary",
       title: "Editar",
-    },
-    {
+      }] : []),
+    ...(userPermissions.some(p => p.code === 'DELETE_MENUS' && p.type === 'DELETE') || isAdmin ? [{
       key: "delete",
       icon: "ri-delete-bin-5-line",
-      class: "btn-label-danger",
-      title: "Eliminar",
-    },
+        class: "btn-label-danger",
+        title: "Eliminar",
+      }] : []),
   ];
 
   const columns = [
