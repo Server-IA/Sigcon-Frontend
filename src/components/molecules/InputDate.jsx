@@ -18,7 +18,7 @@ const InputDate = ({ id, label, date, onChange, error, placeholder, required, da
             placeholder: placeholder,
             required: required,
             defaultDate: date,
-            onChange: (selectedDates, dateStr, instance) => {
+onChange: (selectedDates, dateStr, instance) => {
                 console.log(selectedDates, dateStr, instance);
                 onChangeRef.current?.(dateStr ? dateStr : null);
             }
