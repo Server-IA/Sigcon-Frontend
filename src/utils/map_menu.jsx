@@ -142,37 +142,6 @@ export const buildFullPath = (parent = "", current = "") => {
 };
 
 export const COMPONENT_MAP = [
-<<<<<<< HEAD
-    { id: "HOME", name: "Home", component: Home },
-    { id: "PERFIL", name: "Perfil", component: PerfilPage },
-    { id: "MODULOS", name: "Módulos", component: IndexModules },
-    { id: "MENUS", name: "Menus", component: IndexMenus },
-    { id: "PERMISSIONS", name: "Permisos", component: PermissionsIndex },
-    { id: "USERS", name: "Usuarios", component: IndexUsers },
-    { id: "ROLES", name: "Roles", component: IndexRoles },
-    { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
-    { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
-    { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
-    { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
-    { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
-    { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
-    { id: "REP_BALANCE_COMPROBACION", name: "Reporte Balance de Comprobación", component: RepBalanceComprobacion },
-    { id: "REP_LIBRO_DIARIO", name: "Reporte Libro Diario", component: RepLibroDiario },
-    { id: "REP_LIBRO_MAYOR", name: "Reporte Libro Mayor", component: RepLibroMayor },
-    { id: "REP_AUXILIARES_CUENTAS", name: "Reporte Auxiliares de cuentas", component: RepAuxiliaresCuentas },
-    { id: "REP_ESTADOS_FINANCIEROS", name: "Reporte Estados Financieros", component: RepEstadosFinancieros },
-    { id: "ACT_GENERACION_INFORMES", name: "Activos Generación de Informes", component: AssetReportGeneration },
-    { id: "EXCHANGE_RATE", name: "Tasas de Cambio", component: ExchangeRateIndex },
-    { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
-    { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
-    { id: "SEGMENTATION", name: "Segmentacion Terceros", component: IndexSegmentation },
-    { id: "NIIF_VERIFICATION", name: "Verificación NIIF", component: NiifVerificationIndex },
-    { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
-    { id: "ACT_CALCULO_DEPRECIACION", name: "Depreciation Calculation", component: AssetDepreciationCalculation },
-    { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
-    { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
-    { id: "CATALOGO_BANCOS", name: "Catalogo de Bancos", component: IndexCashAndBanks }
-=======
   { id: "HOME", name: "Home", component: Home },
   { id: "PERFIL", name: "Perfil", component: PerfilPage },
   { id: "MODULOS", name: "Módulos", component: IndexModules },
@@ -201,6 +170,6 @@ export const COMPONENT_MAP = [
   { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: AssetDepreciationCalculation },
   { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
   { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
+  { id: "CATALOGO_BANCOS", name: "Catalogo de Bancos", component: IndexCashAndBanks },
   { id: "CHEQUES", name: "Cheques", component: IndexCheques },
->>>>>>> fa33396fa8fc2163dc511bcce9884303b97f604a
 ];

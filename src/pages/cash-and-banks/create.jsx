@@ -1,9 +1,9 @@
 
 const BANK_TYPES = [
-  { id: "COMERCIAL", label: "Comercial" },
-  { id: "COOPERATIVO", label: "Cooperativo" },
-  { id: "PUBLICO", label: "Publico" },
-  { id: "EXTRANJERO", label: "Extranjero" },
+  { id: "COMMERCIAL", label: "Comercial" },
+  { id: "COOPERATIVE", label: "Cooperativo" },
+  { id: "PUBLIC", label: "Publico" },
+  { id: "FOREIGN", label: "Extranjero" },
 ];
 
 const EXTRACT_FORMATS = [
@@ -21,15 +21,94 @@ import TextareaModal from "../../components/molecules/TextareaModal";
 
 import { base_url } from "../../utils/functions";
 import { fetchHelper } from "../../utils/fetch";
+import {
+  sanitizeUpperAlphaNum,
+  sanitizeNit,
+  sanitizeSimpleText,
+  sanitizeSwift,
+} from "../../utils/bankUtils";
 
 
 
 const API_STORE = ["api", "v1", "banks", "store"];
 
+const INITIAL_BANK = {
+  ID_BANCO: null,
+  CODIGO_BANCO: "",
+  NOMBRE_BANCO: "",
+  NOMBRE_CORTO: "",
+  TIPO_BANCO: "",
+  NIT_BANCO: "",
+  PAIS_ID: null,
+  CODIGO_SWIFT: "",
+  CODIGO_ACH: "",
+  CIUDAD_PRINCIPAL: "",
+  DIRECCION_PRINCIPAL: "",
+  TELEFONO_PRINCIPAL: "",
+  FORMATO_EXTRACTO: "",
+  URL_WEBSERVICE: "",
+  DIAS_CONCILIACION: "",
+  ESTADO: "ACTIVE",
+  MOTIVO_CAMBIO: "",
+  MOTIVO_ELIMINACION: "",
+  HAS_ASSOCIATED_ACCOUNTS: false,
+  HAS_ACTIVE_ASSOCIATED_ACCOUNTS: false,
+};
+
 const backendErrorMap = {
   CODIGO_BANCO: "BNK-ERR-034: Codigo de banco ya registrado",
   NOMBRE_BANCO: "BNK-ERR-035: Nombre de banco ya registrado",
   NIT_BANCO: "BNK-ERR-036: NIT de banco ya registrado",
+};
+
+const apiFieldToUiField = {
+  code: "CODIGO_BANCO",
+  name: "NOMBRE_BANCO",
+  nameShort: "NOMBRE_CORTO",
+  typeBank: "TIPO_BANCO",
+  nit: "NIT_BANCO",
+  countryId: "PAIS_ID",
+  swift: "CODIGO_SWIFT",
+  codeAch: "CODIGO_ACH",
+  urlWebservice: "URL_WEBSERVICE",
+  conciliationDays: "DIAS_CONCILIACION",
+  phone: "TELEFONO_PRINCIPAL",
+  formatExtract: "FORMATO_EXTRACTO",
+};
+
+const buildBankPayload = (bank) => ({
+  code: bank.CODIGO_BANCO?.trim() || "",
+  name: bank.NOMBRE_BANCO?.trim() || "",
+  nameShort: bank.NOMBRE_CORTO?.trim() || "",
+  typeBank: bank.TIPO_BANCO || "",
+  nit: bank.NIT_BANCO?.trim() || "",
+  swift: bank.CODIGO_SWIFT?.trim() || "",
+  codeAch: bank.CODIGO_ACH?.trim() || null,
+  urlWebservice: bank.URL_WEBSERVICE?.trim() || null,
+  conciliationDays: bank.DIAS_CONCILIACION ? Number(bank.DIAS_CONCILIACION) : null,
+  phone: bank.TELEFONO_PRINCIPAL?.trim() || null,
+  formatExtract: bank.FORMATO_EXTRACTO || null,
+  countryId: bank.PAIS_ID ? Number(bank.PAIS_ID) : null,
+});
+
+const validateBankForm = ({ bank }) => {
+  const nextErrors = {};
+
+  if (!bank.CODIGO_BANCO) nextErrors.CODIGO_BANCO = "Codigo requerido";
+  if (!bank.NIT_BANCO) nextErrors.NIT_BANCO = "NIT requerido";
+  if (!bank.NOMBRE_BANCO) nextErrors.NOMBRE_BANCO = "Nombre requerido";
+  if (!bank.NOMBRE_CORTO) nextErrors.NOMBRE_CORTO = "Nombre corto requerido";
+  if (!bank.TIPO_BANCO) nextErrors.TIPO_BANCO = "Tipo de banco requerido";
+  if (!bank.PAIS_ID) nextErrors.PAIS_ID = "Pais requerido";
+  if (!bank.CODIGO_SWIFT) nextErrors.CODIGO_SWIFT = "Codigo SWIFT requerido";
+  if (bank.FORMATO_EXTRACTO === "API" && !bank.URL_WEBSERVICE) {
+    nextErrors.URL_WEBSERVICE = "URL webservice requerida";
+  }
+
+  return {
+    isValid: Object.keys(nextErrors).length === 0,
+    errors: nextErrors,
+  };
 };
 
 const CreateCashAndBanks = ({
@@ -50,7 +129,8 @@ const CreateCashAndBanks = ({
       const fieldErrors = {};
       apiErrors.forEach((err) => {
         const field = err.field || err.path;
-        fieldErrors[field] = backendErrorMap[field] || err.message;
+        const uiField = apiFieldToUiField[field] || field;
+        fieldErrors[uiField] = backendErrorMap[uiField] || err.message;
       });
       setErrors(fieldErrors);
       return;
@@ -76,7 +156,7 @@ const CreateCashAndBanks = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { isValid, errors: validationErrors, normalized } = validateBankForm({
+    const { isValid, errors: validationErrors } = validateBankForm({
       bank,
       countries,
     });
@@ -87,7 +167,7 @@ const CreateCashAndBanks = ({
     }
 
     const payload = buildBankPayload({
-      ...normalized,
+      ...bank,
       ESTADO: "ACTIVE",
     });
 
@@ -216,14 +296,14 @@ const CreateCashAndBanks = ({
               </div>
               <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                 <InputSelectModal
-                  id="PAIS_CODIGO"
+                  id="PAIS_ID"
                   label="Pais"
-                  value={bank.PAIS_CODIGO}
+                  value={bank.PAIS_ID}
                   onChange={(value) => {
-                    setBank({ ...bank, PAIS_CODIGO: sanitizeCountryCode(value) });
-                    setErrors({ ...errors, PAIS_CODIGO: "" });
+                    setBank({ ...bank, PAIS_ID: Number(value) || null });
+                    setErrors({ ...errors, PAIS_ID: "" });
                   }}
-                  error={errors.PAIS_CODIGO}
+                  error={errors.PAIS_ID}
                   options={countries}
                   required
                 />

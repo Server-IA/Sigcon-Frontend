@@ -4,10 +4,10 @@ const BANK_STATUS_OPTIONS = [
 ];
 
 const BANK_TYPES = [
-  { id: "COMERCIAL", label: "Comercial" },
-  { id: "COOPERATIVO", label: "Cooperativo" },
-  { id: "PUBLICO", label: "Publico" },
-  { id: "EXTRANJERO", label: "Extranjero" },
+  { id: "COMMERCIAL", label: "Comercial" },
+  { id: "COOPERATIVE", label: "Cooperativo" },
+  { id: "PUBLIC", label: "Publico" },
+  { id: "FOREIGN", label: "Extranjero" },
 ];
 
 const EXTRACT_FORMATS = [
@@ -25,10 +25,71 @@ import TextareaModal from "../../components/molecules/TextareaModal";
 
 import { base_url } from "../../utils/functions";
 import { fetchHelper } from "../../utils/fetch";
+import {
+  sanitizeUpperAlphaNum,
+  sanitizeNit,
+  sanitizeSimpleText,
+  sanitizeSwift,
+} from "../../utils/bankUtils";
 
 
 
 const API_BASE = ["api", "v1", "banks"];
+
+const apiFieldToUiField = {
+  code: "CODIGO_BANCO",
+  name: "NOMBRE_BANCO",
+  nameShort: "NOMBRE_CORTO",
+  typeBank: "TIPO_BANCO",
+  nit: "NIT_BANCO",
+  countryId: "PAIS_ID",
+  swift: "CODIGO_SWIFT",
+  codeAch: "CODIGO_ACH",
+  urlWebservice: "URL_WEBSERVICE",
+  conciliationDays: "DIAS_CONCILIACION",
+  phone: "TELEFONO_PRINCIPAL",
+  formatExtract: "FORMATO_EXTRACTO",
+};
+
+const buildBankPayload = (bank) => ({
+  code: bank.CODIGO_BANCO?.trim() || "",
+  name: bank.NOMBRE_BANCO?.trim() || "",
+  nameShort: bank.NOMBRE_CORTO?.trim() || "",
+  typeBank: bank.TIPO_BANCO || "",
+  nit: bank.NIT_BANCO?.trim() || "",
+  swift: bank.CODIGO_SWIFT?.trim() || "",
+  codeAch: bank.CODIGO_ACH?.trim() || null,
+  urlWebservice: bank.URL_WEBSERVICE?.trim() || null,
+  conciliationDays: bank.DIAS_CONCILIACION ? Number(bank.DIAS_CONCILIACION) : null,
+  phone: bank.TELEFONO_PRINCIPAL?.trim() || null,
+  formatExtract: bank.FORMATO_EXTRACTO || null,
+  countryId: bank.PAIS_ID ? Number(bank.PAIS_ID) : null,
+  status: bank.ESTADO || "ACTIVE",
+});
+
+const validateBankForm = ({ bank, sensitiveChanged }) => {
+  const nextErrors = {};
+
+  if (!bank.CODIGO_BANCO) nextErrors.CODIGO_BANCO = "Codigo requerido";
+  if (!bank.NIT_BANCO) nextErrors.NIT_BANCO = "NIT requerido";
+  if (!bank.NOMBRE_BANCO) nextErrors.NOMBRE_BANCO = "Nombre requerido";
+  if (!bank.NOMBRE_CORTO) nextErrors.NOMBRE_CORTO = "Nombre corto requerido";
+  if (!bank.TIPO_BANCO) nextErrors.TIPO_BANCO = "Tipo de banco requerido";
+  if (!bank.PAIS_ID) nextErrors.PAIS_ID = "Pais requerido";
+  if (!bank.CODIGO_SWIFT) nextErrors.CODIGO_SWIFT = "Codigo SWIFT requerido";
+  if (!bank.ESTADO) nextErrors.ESTADO = "Estado requerido";
+  if (bank.FORMATO_EXTRACTO === "API" && !bank.URL_WEBSERVICE) {
+    nextErrors.URL_WEBSERVICE = "URL webservice requerida";
+  }
+  if (sensitiveChanged && (!bank.MOTIVO_CAMBIO || bank.MOTIVO_CAMBIO.trim().length < 10)) {
+    nextErrors.MOTIVO_CAMBIO = "Motivo de cambio requerido";
+  }
+
+  return {
+    isValid: Object.keys(nextErrors).length === 0,
+    errors: nextErrors,
+  };
+};
 
 const UpdatedCashAndBanks = ({
   modalRef,
@@ -61,8 +122,8 @@ const UpdatedCashAndBanks = ({
     const validation = validateBankForm({
       bank,
       countries,
-      isUpdate: true,
       originalBank,
+      sensitiveChanged,
     });
 
     if (!validation.isValid) {
@@ -72,7 +133,7 @@ const UpdatedCashAndBanks = ({
 
     try {
       const url = base_url([...API_BASE, bank.ID_BANCO]);
-      await fetchHelper.put(url, buildBankPayload(validation.normalized), {}, 1000, true);
+      await fetchHelper.put(url, buildBankPayload(bank), {}, 1000, true);
       dataTableRef?.current?.ajax.reload();
       modalInstance?.current?.hide();
       setBankUpdate(true);
@@ -83,7 +144,9 @@ const UpdatedCashAndBanks = ({
       if (apiErrors?.length > 0) {
         const fieldErrors = {};
         apiErrors.forEach((err) => {
-          fieldErrors[err.field || err.path] = err.message;
+          const field = err.field || err.path;
+          const uiField = apiFieldToUiField[field] || field;
+          fieldErrors[uiField] = err.message;
         });
         setErrors(fieldErrors);
         return;
@@ -211,16 +274,16 @@ const UpdatedCashAndBanks = ({
               </div>
               <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
                 <InputSelectModal
-                  id={`PAIS_CODIGO_${sfx}`}
+                  id={`PAIS_ID_${sfx}`}
                   label="Pais"
-                  value={bank.PAIS_CODIGO ?? ""}
+                  value={bank.PAIS_ID ?? ""}
                   onChange={(value) => {
                     if (readOnly) return;
-                    setBank({ ...bank, PAIS_CODIGO: sanitizeCountryCode(value) });
-                    setErrors({ ...errors, PAIS_CODIGO: "" });
+                    setBank({ ...bank, PAIS_ID: Number(value) || null });
+                    setErrors({ ...errors, PAIS_ID: "" });
                   }}
                   options={countries}
-                  error={errors.PAIS_CODIGO}
+                  error={errors.PAIS_ID}
                   required={!readOnly}
                   disabled={readOnly}
                 />

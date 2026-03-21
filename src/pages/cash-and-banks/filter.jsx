@@ -4,15 +4,21 @@ const BANK_STATUS_OPTIONS = [
 ];
 
 const BANK_TYPES = [
-  { id: "COMERCIAL", label: "Comercial" },
-  { id: "COOPERATIVO", label: "Cooperativo" },
-  { id: "PUBLICO", label: "Publico" },
-  { id: "EXTRANJERO", label: "Extranjero" },
+  { id: "COMMERCIAL", label: "Comercial" },
+  { id: "COOPERATIVE", label: "Cooperativo" },
+  { id: "PUBLIC", label: "Publico" },
+  { id: "FOREIGN", label: "Extranjero" },
 ];
 import { useState } from "react";
 
 import InputModal from "../../components/molecules/InputModal";
 import InputSelectModal from "../../components/molecules/inputSelectModal";
+import {
+  exactRegex,
+  sanitizeUpperAlphaNum,
+  sanitizeSimpleText,
+  sanitizeCountryCode,
+} from "../../utils/bankUtils";
 
 
 
@@ -38,12 +44,12 @@ const FilterCashAndBanks = ({
     const table = dataTableRef?.current;
     if (!table) return;
 
-    table.column("CODIGO_BANCO:name").search(exactRegex(nextFilters.CODIGO_BANCO), true, false);
-    table.column("NOMBRE_BANCO:name").search(nextFilters.NOMBRE_BANCO || "", false, true);
-    table.column("NOMBRE_CORTO:name").search(nextFilters.NOMBRE_CORTO || "", false, true);
-    table.column("TIPO_BANCO:name").search(exactRegex(nextFilters.TIPO_BANCO), true, false);
-    table.column("PAIS_CODIGO:name").search(exactRegex(nextFilters.PAIS_CODIGO), true, false);
-    table.column("ESTADO:name").search(exactRegex(nextFilters.ESTADO), true, false);
+    table.column("code:name").search(exactRegex(nextFilters.CODIGO_BANCO), true, false);
+    table.column("name:name").search(nextFilters.NOMBRE_BANCO || "", false, true);
+    table.column("nameShort:name").search(nextFilters.NOMBRE_CORTO || "", false, true);
+    table.column("typeBank:name").search(exactRegex(nextFilters.TIPO_BANCO), true, false);
+    table.column("country.code:name").search(exactRegex(nextFilters.PAIS_CODIGO), true, false);
+    table.column("status:name").search(exactRegex(nextFilters.ESTADO), true, false);
     table.draw();
   };
 

@@ -6,7 +6,7 @@ const INITIAL_BANK = {
   NOMBRE_CORTO: "",
   TIPO_BANCO: "",
   NIT_BANCO: "",
-  PAIS_CODIGO: "",
+  PAIS_ID: null,
   CODIGO_SWIFT: "",
   CODIGO_ACH: "",
   CIUDAD_PRINCIPAL: "",
@@ -29,6 +29,11 @@ import AlertPage from "../../components/molecules/AlertPage";
 
 import { base_url } from "../../utils/functions";
 import { fetchHelper } from "../../utils/fetch";
+import {
+  highlightMatch,
+  formatBankStatus,
+  sanitizeSimpleText,
+} from "../../utils/bankUtils";
 
 import CreateCashAndBanks from "./create";
 import UpdatedCashAndBanks from "./updated";
@@ -40,11 +45,21 @@ const API_SEARCH = ["api", "v1", "banks", "search"];
 const API_BASE = ["api", "v1", "banks"];
 const API_STORE = ["api", "v1", "banks", "store"];
 
-const countryEndpointCandidates = [
-  ["api", "v1", "countries", "search"],
-  ["api", "v1", "cfg", "countries", "search"],
-  ["api", "cfg", "countries", "search"],
-];
+const countryEndpointCandidates = [["api", "v1", "resources", "countries"]];
+
+const TYPE_BANK_LABELS = {
+  COMMERCIAL: "Comercial",
+  COOPERATIVE: "Cooperativo",
+  PUBLIC: "Publico",
+  FOREIGN: "Extranjero",
+};
+
+const TYPE_BANK_UI_MAP = {
+  COMMERCIAL: "COMERCIAL",
+  COOPERATIVE: "COOPERATIVO",
+  PUBLIC: "PUBLICO",
+  FOREIGN: "EXTRANJERO",
+};
 
 const formatCountryOptions = (rows = []) =>
   rows
@@ -53,14 +68,40 @@ const formatCountryOptions = (rows = []) =>
       return !status || String(status).toUpperCase() === "ACTIVE";
     })
     .map((row) => {
-      const code = (row.code || row.iso3 || row.PAIS_CODIGO || row.id || "").toUpperCase();
+      const code = (row.code || row.iso3 || row.PAIS_CODIGO || "").toUpperCase();
       const label = row.name || row.nombre || row.countryName || code;
       return {
-        id: code,
+        id: row.id ?? row.ID ?? row.countryId ?? null,
+        code,
         label: `${code} - ${label}`,
       };
     })
-    .filter((row) => row.id.length === 3);
+    .filter((row) => row.id !== null && row.id !== undefined);
+
+const normalizeBankFromRow = (row = {}) => ({
+  ID_BANCO: row.id ?? row.ID_BANCO ?? null,
+  CODIGO_BANCO: row.code ?? row.CODIGO_BANCO ?? "",
+  NOMBRE_BANCO: row.name ?? row.NOMBRE_BANCO ?? "",
+  NOMBRE_CORTO: row.nameShort ?? row.NOMBRE_CORTO ?? "",
+  TIPO_BANCO: TYPE_BANK_UI_MAP[row.typeBank] || row.typeBank || row.TIPO_BANCO || "",
+  NIT_BANCO: row.nit ?? row.NIT_BANCO ?? "",
+  PAIS_ID: row.country?.id ?? row.countryId ?? row.PAIS_ID ?? null,
+  CODIGO_SWIFT: row.swift ?? row.CODIGO_SWIFT ?? "",
+  CODIGO_ACH: row.codeAch ?? row.CODIGO_ACH ?? "",
+  CIUDAD_PRINCIPAL: row.city ?? row.CIUDAD_PRINCIPAL ?? "",
+  DIRECCION_PRINCIPAL: row.address ?? row.DIRECCION_PRINCIPAL ?? "",
+  TELEFONO_PRINCIPAL: row.phone ?? row.TELEFONO_PRINCIPAL ?? "",
+  FORMATO_EXTRACTO: row.formatExtract ?? row.FORMATO_EXTRACTO ?? "",
+  URL_WEBSERVICE: row.urlWebservice ?? row.URL_WEBSERVICE ?? "",
+  DIAS_CONCILIACION: row.conciliationDays ?? row.DIAS_CONCILIACION ?? "",
+  ESTADO: row.status ?? row.ESTADO ?? "ACTIVE",
+  MOTIVO_CAMBIO: "",
+  MOTIVO_ELIMINACION: "",
+  HAS_ASSOCIATED_ACCOUNTS:
+    row.hasAssociatedAccounts ?? row.HAS_ASSOCIATED_ACCOUNTS ?? false,
+  HAS_ACTIVE_ASSOCIATED_ACCOUNTS:
+    row.hasActiveAssociatedAccounts ?? row.HAS_ACTIVE_ASSOCIATED_ACCOUNTS ?? false,
+});
 
 const IndexCashAndBanks = () => {
   const userPermissions =
@@ -84,6 +125,7 @@ const IndexCashAndBanks = () => {
 
   const [data, setData] = useState([]);
   const [countries, setCountries] = useState([]);
+  const [countryFilterOptions, setCountryFilterOptions] = useState([]);
   const [search, setSearch] = useState({ value: "", checked: true });
   const [appliedFilters, setAppliedFilters] = useState({
     CODIGO_BANCO: "",
@@ -179,19 +221,7 @@ const IndexCashAndBanks = () => {
 
     try {
       const url = base_url([...API_BASE, deleteTarget.ID_BANCO]);
-      await fetchHelper.delete(
-        url,
-        {
-          ID_BANCO: deleteTarget.ID_BANCO,
-          MOTIVO_ELIMINACION: deleteReason,
-          CONFIRMACION_REFORZADA: true,
-          ACCION: "DELETE_LOGICO",
-          ESTADO: "INACTIVE",
-        },
-        {},
-        1000,
-        true,
-      );
+      await fetchHelper.delete(url, null, {}, 1000, true);
       dataTableRef?.current?.ajax.reload();
       setBankDelete(true);
       setBankError({ show: false, message: "" });
@@ -205,41 +235,51 @@ const IndexCashAndBanks = () => {
   };
 
   const columns = [
-    { title: "ID", data: "ID_BANCO", name: "ID_BANCO" },
+    { title: "ID", data: "id", name: "id" },
     {
       title: "Codigo",
-      data: "CODIGO_BANCO",
-      name: "CODIGO_BANCO",
+      data: "code",
+      name: "code",
       render: (value) => highlightMatch(value, appliedFilters.CODIGO_BANCO, true),
     },
     {
       title: "Nombre",
-      data: "NOMBRE_BANCO",
-      name: "NOMBRE_BANCO",
+      data: "name",
+      name: "name",
       render: (value) => highlightMatch(value, appliedFilters.NOMBRE_BANCO),
     },
     {
       title: "Nombre corto",
-      data: "NOMBRE_CORTO",
-      name: "NOMBRE_CORTO",
+      data: "nameShort",
+      name: "nameShort",
       render: (value) => highlightMatch(value, appliedFilters.NOMBRE_CORTO),
     },
-    { title: "Tipo", data: "TIPO_BANCO", name: "TIPO_BANCO" },
-    { title: "NIT", data: "NIT_BANCO", name: "NIT_BANCO" },
-    { title: "Pais", data: "PAIS_CODIGO", name: "PAIS_CODIGO" },
+    {
+      title: "Tipo",
+      data: "typeBank",
+      name: "typeBank",
+      render: (value) => TYPE_BANK_LABELS[value] || value,
+    },
+    { title: "NIT", data: "nit", name: "nit" },
+    {
+      title: "Pais",
+      data: "country.code",
+      name: "country.code",
+      render: (_, __, row) => row?.country?.code || "",
+    },
     {
       title: "Estado",
-      data: "ESTADO",
-      name: "ESTADO",
+      data: "status",
+      name: "status",
       render: (status) => formatBankStatus(status),
     },
     {
       title: "Acciones",
-      data: "ID_BANCO",
+      data: "id",
       orderable: false,
       render: (id, _, row) => {
-        const bankCode = row?.CODIGO_BANCO ?? "";
-        const bankName = row?.NOMBRE_BANCO ?? "";
+        const bankCode = row?.code ?? "";
+        const bankName = row?.name ?? "";
         return `
           <div class="d-flex gap-1">
             ${actions
@@ -289,11 +329,23 @@ const IndexCashAndBanks = () => {
       for (const endpoint of countryEndpointCandidates) {
         try {
           const url = base_url(endpoint);
-          const response = await fetchHelper.post(url, { length: -1 }, {}, 0, false);
-          const rows = response?.data || [];
+          const response = await fetchHelper.post(
+            url,
+            { draw: 1, start: 0, length: 1000 },
+            {},
+            0,
+            false,
+          );
+          const rows = response?.data?.data ?? response?.data ?? response?.data?.rows ?? [];
           const options = formatCountryOptions(rows);
           if (options.length > 0) {
             setCountries(options);
+            setCountryFilterOptions(
+              options.map((option) => ({
+                id: option.code,
+                label: option.label,
+              })),
+            );
             return;
           }
         } catch {
@@ -301,6 +353,7 @@ const IndexCashAndBanks = () => {
         }
       }
       setCountries([]);
+      setCountryFilterOptions([]);
     };
 
     loadCountries();
@@ -313,7 +366,7 @@ const IndexCashAndBanks = () => {
     const handler = function () {
       const action = $(this).data("action");
       const id = Number($(this).data("id"));
-      const row = data.find((item) => Number(item.ID_BANCO ?? item.id) === id);
+      const row = data.find((item) => Number(item.id ?? item.ID_BANCO ?? item.ID) === id);
 
       if (!row) {
         setBankError({
@@ -434,7 +487,7 @@ const IndexCashAndBanks = () => {
         filterRef={filterRef}
         filterInstance={filterInstance}
         dataTableRef={dataTableRef}
-        countries={countries}
+        countries={countryFilterOptions}
         onApply={(filters) => setAppliedFilters(filters)}
       />
 
