@@ -1,18 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 import InputModal       from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
+import InputDate        from '../../../components/molecules/InputDate';
 import AlertPage        from '../../../components/molecules/AlertPage';
 import TextareaModal    from '../../../components/molecules/TextareaModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-// Carga las chequeras activas disponibles para selección
-// TODO: confirmar endpoint con backend
-const CHEQUERAS_URL  = ['api', 'v1', 'cash-and-banks', 'chequeras', 'search'];
+const CHEQUERAS_URL  = ['api', 'v1', 'checkbooks', 'search'];
 const SIGUIENTE_URL  = (idChequera) => ['api', 'v1', 'cash-and-banks', 'cheques', 'siguiente', idChequera];
-const CREAR_URL      = ['api', 'v1', 'cash-and-banks', 'cheques'];
+const CREAR_URL      = ['api', 'v1', 'banks', 'checks', 'store'];
 
 const emptyErrors = {
     idChequera: '', numeroCheque: '', beneficiario: '', valorCheque: '',
@@ -45,9 +44,9 @@ const CreateCheque = ({
             setLoadingChequeras(true);
             try {
                 const url = base_url(CHEQUERAS_URL);
-                const res = await fetchHelper.post(url, { length: -1, filters: { estado: 'ACTIVA' } }, {}, 500, false);
-                const items = res?.data ?? res ?? [];
-                setChequeras(items.map(c => ({ id: c.id, name: `${c.numeroCuenta ?? c.id} — ${c.banco ?? ''}` })));
+                const res = await fetchHelper.post(url, { draw: 1, start: 0, length: -1, search: { value: '', regex: false }, columns: [], order: [] }, {}, 500, false);
+                const items = (res?.data ?? []).filter(c => c.status === 'ACTIVA');
+                setChequeras(items.map(c => ({ id: c.id, name: `${c.checkbookNumber} — ${c.issuingBank ?? ''}` })));
             } catch (e) {
                 setChequeras([]);
             } finally {
@@ -82,16 +81,17 @@ const CreateCheque = ({
         fetchSiguiente();
     }, [record.idChequera]);
 
-    // Leer archivo y convertir a base64
+    // Leer archivo y convertir a base64 (solo el contenido, sin el prefijo data:...)
     const handleFile = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
             setRecord(prev => ({
                 ...prev,
-                documentoSoporte: reader.result,       // base64 completo (data:...;base64,...)
+                documentoSoporte: base64,
                 _documentoNombre: file.name,
             }));
         };
@@ -143,17 +143,17 @@ const CreateCheque = ({
 
         const url = base_url(CREAR_URL);
         const payload = {
-            idChequera:      Number(record.idChequera),
-            numeroCheque:    Number(record.numeroCheque),
-            beneficiario:    record.beneficiario.trim(),
-            valorCheque:     Number(record.valorCheque),
-            concepto:        record.concepto.trim(),
-            fechaExpedicion: record.fechaExpedicion,
-            tipoCheque:      record.tipoCheque || 'FISICO',
-            observaciones:   record.observaciones?.trim() || null,
-            ...(record.tipoCheque === 'VIRTUAL' && {
-                documentoSoporte: record.documentoSoporte,
-                documentoNombre:  record._documentoNombre,
+            checkbookId:              Number(record.idChequera),
+            numberCheck:              Number(record.numeroCheque),
+            beneficiary:              record.beneficiario.trim(),
+            value:                    Number(record.valorCheque),
+            concept:                  record.concepto.trim(),
+            issueDate:                record.fechaExpedicion,
+            typeCheck:                record.tipoCheque || 'FISICO',
+            observations:             record.observaciones?.trim() || null,
+            ...(record.documentoSoporte && {
+                supportDocumentBase64:    record.documentoSoporte,
+                supportDocumentFileName:  record._documentoNombre,
             }),
         };
 
@@ -290,12 +290,12 @@ const CreateCheque = ({
                                 />
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                                <InputDate
                                     id="cheque_fecha_expedicion"
                                     label="Fecha de expedición"
-                                    value={record.fechaExpedicion}
-                                    onChange={(e) => setRecord(prev => ({ ...prev, fechaExpedicion: e.target.value }))}
+                                    date={record.fechaExpedicion}
+                                    dateFormat="Y-m-d"
+                                    onChange={(dateStr) => setRecord(prev => ({ ...prev, fechaExpedicion: dateStr ?? '' }))}
                                     error={errors.fechaExpedicion}
                                     required
                                 />
