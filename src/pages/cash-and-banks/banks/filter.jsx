@@ -44,12 +44,12 @@ const FilterCashAndBanks = ({
     const table = dataTableRef?.current;
     if (!table) return;
 
-    table.column("code:name").search(exactRegex(nextFilters.CODIGO_BANCO), true, false);
+    table.column("code:name").search(nextFilters.CODIGO_BANCO || "", false, false);
     table.column("name:name").search(nextFilters.NOMBRE_BANCO || "", false, true);
     table.column("nameShort:name").search(nextFilters.NOMBRE_CORTO || "", false, true);
-    table.column("typeBank:name").search(exactRegex(nextFilters.TIPO_BANCO), true, false);
-    table.column("country.code:name").search(exactRegex(nextFilters.PAIS_CODIGO), true, false);
-    table.column("status:name").search(exactRegex(nextFilters.ESTADO), true, false);
+    table.column("typeBank:name").search(nextFilters.TIPO_BANCO || "", false, false);
+    table.column("country.code:name").search(nextFilters.PAIS_CODIGO || "", false, false);
+    table.column("status:name").search(nextFilters.ESTADO || "", false, false);
     table.draw();
   };
 
