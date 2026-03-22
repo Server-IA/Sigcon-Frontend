@@ -38,20 +38,18 @@ import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 
 // Bank and Cash
 import IndexCashList from "../pages/cash-and-banks/cash_list/index";
+import IndexCheques from "../pages/cash-and-banks/cheques/index";
 
 // Assets
 import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
-
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 // NIIF
 import NiifVerificationIndex from "../pages/list_accounts/niif_verification/index";
 import NiifCorrectionIndex from "../pages/list_accounts/niif_correction/index";
-
 import IndexSegmentation from "../pages/third-party/segmentation/index"
 
-// Cash and Banks
-import IndexCheques from "../pages/cash-and-banks/cheques/index";
+
 
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
@@ -170,5 +168,7 @@ export const COMPONENT_MAP = [
   { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
   { id: "ACT_CALCULO_DEPRECIACION", name: "Depreciation Calculation", component: AssetDepreciationCalculation },
   { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
-  { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets }
+  { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
+  { id: "CASH_LIST", name: "Lista de Cajas", component: IndexCashList },
+  { id: "CHEQUES", name: "Cheques", component: IndexCheques }
 ];

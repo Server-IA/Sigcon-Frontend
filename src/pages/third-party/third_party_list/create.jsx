@@ -5,7 +5,12 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const API_STORE = ['api', 'v1', 'third-parties', 'store'];
+const API_STORE        = ['api', 'v1', 'third-parties', 'store'];
+const API_COUNTRIES    = ['api', 'v1', 'resources', 'countries'];
+const API_MUNICIPIOS   = ['api', 'v1', 'resources', 'municipalities'];
+const API_PAYMENT_TERMS = ['api', 'v1', 'resources', 'payment-terms'];
+
+const CATALOG_BODY = { draw: 1, start: 0, length: 10000, columns: [], search: { value: '', regex: false } };
 
 // TODO: Confirmar IDs reales de roles con el backend
 const ROLE_ID_MAP = {
@@ -54,10 +59,40 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
+    const [countries, setCountries]               = useState([]);
+    const [allMunicipalities, setAllMunicipalities] = useState([]);
+    const [municipalities, setMunicipalities]     = useState([]);
+    const [paymentTermsOpts, setPaymentTermsOpts] = useState([]);
+    const [selectedCountry, setSelectedCountry]   = useState('');
+
+    // Cargar catálogos al montar
+    useEffect(() => {
+        fetchHelper.post(base_url(API_COUNTRIES), CATALOG_BODY, {}, 0)
+            .then(res => setCountries((res?.data ?? []).map(c => ({ id: c.id, label: c.name }))))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_MUNICIPIOS), CATALOG_BODY, {}, 0)
+            .then(res => setAllMunicipalities(res?.data ?? []))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_PAYMENT_TERMS), CATALOG_BODY, {}, 0)
+            .then(res => setPaymentTermsOpts((res?.data ?? []).map(p => ({ id: p.name ?? String(p.id), label: p.name ?? String(p.id) }))))
+            .catch(() => {});
+    }, []);
+
+    // Filtrar municipios por país
+    useEffect(() => {
+        if (!selectedCountry) { setMunicipalities([]); return; }
+        setMunicipalities(
+            allMunicipalities
+                .filter(m => String(m.country?.id) === String(selectedCountry))
+                .map(m => ({ id: m.id, label: m.name }))
+        );
+    }, [selectedCountry, allMunicipalities]);
+
     useEffect(() => {
         setErrors({});
         setErrorMessage('');
         setActiveTab('general');
+        setSelectedCountry('');
     }, [thirdParty.id]);
 
     const toggleRole = (roleId) => {
@@ -333,15 +368,30 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                             <div>
                                 <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal
-                                            type="number"
-                                            id="tp_municipalityId_create"
-                                            label="Municipio ID"
-                                            value={thirdParty.municipalityId}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, municipalityId: e.target.value })}
-                                            error={errors.municipalityId}
-                                            placeholder="Ej. 1"
+                                        <InputSelectModal
+                                            id="tp_country_create"
+                                            label="País"
+                                            value={selectedCountry}
+                                            onChange={(v) => {
+                                                setSelectedCountry(v);
+                                                setThirdParty({ ...thirdParty, municipalityId: '' });
+                                            }}
+                                            options={countries}
+                                            placeholder="Seleccione país"
                                             required={true}
+                                        />
+                                    </div>
+                                    <div className="col-md-6 mb-4 mt-2">
+                                        <InputSelectModal
+                                            id="tp_municipalityId_create"
+                                            label="Municipio"
+                                            value={thirdParty.municipalityId}
+                                            onChange={(v) => setThirdParty({ ...thirdParty, municipalityId: v })}
+                                            error={errors.municipalityId}
+                                            options={municipalities}
+                                            placeholder={selectedCountry ? 'Seleccione municipio' : 'Primero seleccione un país'}
+                                            required={true}
+                                            disabled={!selectedCountry}
                                         />
                                     </div>
                                 </div>
@@ -443,14 +493,15 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                     </div>
                                 </div>
                                 <div className="row">
-                                    <div className="col-md-12 mb-4 mt-2">
-                                        <TextareaModal
+                                    <div className="col-md-6 mb-4 mt-2">
+                                        <InputSelectModal
                                             id="tp_paymentConditions_create"
                                             label="Condiciones de pago"
                                             value={thirdParty.paymentConditions}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, paymentConditions: e.target.value })}
+                                            onChange={(v) => setThirdParty({ ...thirdParty, paymentConditions: v })}
                                             error={errors.paymentConditions}
-                                            placeholder="Ej. Pago a 30 días"
+                                            options={paymentTermsOpts}
+                                            placeholder="Seleccione condición de pago"
                                         />
                                     </div>
                                 </div>

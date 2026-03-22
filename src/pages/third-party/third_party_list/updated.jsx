@@ -5,10 +5,16 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-// id va en el PATH: PUT /api/v1/third-parties/{id}
-const API_UPDATE = (id) => ['api', 'v1', 'third-parties', id];
-// id va en el PATH: PUT /api/v1/third-parties/{id}/roles-status
+const API_UPDATE              = (id) => ['api', 'v1', 'third-parties', id];
 const API_UPDATE_ROLES_STATUS = (id) => ['api', 'v1', 'third-parties', id, 'roles-status'];
+const API_COUNTRIES           = ['api', 'v1', 'resources', 'countries'];
+const API_MUNICIPIOS          = ['api', 'v1', 'resources', 'municipalities'];
+const API_PAYMENT_TERMS       = ['api', 'v1', 'resources', 'payment-terms'];
+const API_COMMERCIAL_GET      = (id) => ['api', 'v1', 'commercial-data', id];
+const API_COMMERCIAL_POST     = ['api', 'v1', 'commercial-data'];
+const API_COMMERCIAL_PUT      = (id) => ['api', 'v1', 'commercial-data', id];
+
+const CATALOG_BODY = { draw: 1, start: 0, length: 10000, columns: [], search: { value: '', regex: false } };
 
 // TODO: Confirmar IDs reales de roles con el backend
 const ROLE_ID_MAP = {
@@ -41,11 +47,18 @@ const ROLES = [
     { id: 'OTHER',    label: 'Otro',      icon: 'ri-more-line' },
 ];
 
+const RISK_LEVELS = [
+    { id: 'LOW',    label: 'Bajo' },
+    { id: 'MEDIUM', label: 'Medio' },
+    { id: 'HIGH',   label: 'Alto' },
+];
+
 const TABS = [
-    { id: 'general', label: 'Datos Generales', icon: 'ri-user-3-line' },
-    { id: 'roles',   label: 'Roles',           icon: 'ri-shield-user-line' },
-    { id: 'fiscal',  label: 'Datos Fiscales',  icon: 'ri-file-text-line' },
-    { id: 'contact', label: 'Contacto',        icon: 'ri-phone-line' },
+    { id: 'general',    label: 'Datos Generales', icon: 'ri-user-3-line' },
+    { id: 'roles',      label: 'Roles',           icon: 'ri-shield-user-line' },
+    { id: 'fiscal',     label: 'Datos Fiscales',  icon: 'ri-file-text-line' },
+    { id: 'contact',    label: 'Contacto',        icon: 'ri-phone-line' },
+    { id: 'commercial', label: 'Comercial',       icon: 'ri-store-2-line' },
 ];
 
 const emptyContact = { position: '', phone: '', email: '', contactPerson: '' };
@@ -59,10 +72,43 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
     const [thirdPartyUpdated, setThirdPartyUpdated] = useState({
         id: '', nit: '', dv: '', businessName: '',
         typeOrganizationId: '', typeRegimenId: '', withholdingIds: '',
-        roles: [], municipalityId: '',
+        roles: [], municipalityId: '', countryId: '',
         contacts: [],
         status: 'ACTIVE', blockReason: '',
     });
+
+    const [countries, setCountries]               = useState([]);
+    const [allMunicipalities, setAllMunicipalities] = useState([]);
+    const [municipalities, setMunicipalities]     = useState([]);
+    const [paymentTermsOpts, setPaymentTermsOpts] = useState([]);
+
+    const emptyCommercial = { paymentTermId: '', limitCredit: '', riskLevel: '' };
+    const [commercial, setCommercial]       = useState(emptyCommercial);
+    const [commercialId, setCommercialId]   = useState(null); // null = no existe aún
+    const [commercialLoading, setCommercialLoading] = useState(false);
+
+    // Cargar catálogos al montar
+    useEffect(() => {
+        fetchHelper.post(base_url(API_COUNTRIES), CATALOG_BODY, {}, 0)
+            .then(res => setCountries((res?.data ?? []).map(c => ({ id: c.id, label: c.name }))))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_MUNICIPIOS), CATALOG_BODY, {}, 0)
+            .then(res => setAllMunicipalities(res?.data ?? []))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_PAYMENT_TERMS), CATALOG_BODY, {}, 0)
+            .then(res => setPaymentTermsOpts((res?.data ?? []).map(p => ({ id: p.id, label: p.name ?? String(p.id) }))))
+            .catch(() => {});
+    }, []);
+
+    // Filtrar municipios cuando cambia el país
+    useEffect(() => {
+        if (!thirdPartyUpdated.countryId) { setMunicipalities([]); return; }
+        setMunicipalities(
+            allMunicipalities
+                .filter(m => String(m.country?.id) === String(thirdPartyUpdated.countryId))
+                .map(m => ({ id: m.id, label: m.name }))
+        );
+    }, [thirdPartyUpdated.countryId, allMunicipalities]);
 
     useEffect(() => {
         setThirdPartyUpdated({
@@ -75,6 +121,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             withholdingIds:     thirdParty.withholdingIds     ?? '',
             roles:              thirdParty.roles              ?? [],
             municipalityId:     thirdParty.municipalityId     ?? '',
+            countryId:          thirdParty.countryId          ?? '',
             contacts:           thirdParty.contacts           ?? [],
             status:             thirdParty.status             ?? 'ACTIVE',
             blockReason:        thirdParty.blockReason        ?? '',
@@ -82,6 +129,28 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
         setErrors({});
         setErrorMessage('');
         setActiveTab('general');
+
+        // Cargar datos comerciales del tercero
+        setCommercial(emptyCommercial);
+        setCommercialId(null);
+        if (thirdParty.id) {
+            setCommercialLoading(true);
+            fetchHelper.get(base_url(API_COMMERCIAL_GET(thirdParty.id)), {}, 0, false)
+                .then(res => {
+                    setCommercialId(res?.id ?? null);
+                    setCommercial({
+                        paymentTermId: res?.paymentTermId ?? res?.paymentTerm?.id ?? '',
+                        limitCredit:   res?.limitCredit   ?? '',
+                        riskLevel:     res?.riskLevel     ?? '',
+                    });
+                })
+                .catch(() => {
+                    // 404 = no existe; se creará con POST
+                    setCommercialId(null);
+                    setCommercial(emptyCommercial);
+                })
+                .finally(() => setCommercialLoading(false));
+        }
     }, [thirdParty]);
 
     const toggleRole = (roleId) => {
@@ -135,6 +204,22 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                 }),
             };
             await fetchHelper.put(urlRolesStatus, rolesStatusPayload, {}, 1000);
+
+            // ── 3. Guardar datos comerciales (POST si no existe, PUT si existe) ──
+            const hasCommercialData = commercial.paymentTermId || commercial.limitCredit || commercial.riskLevel;
+            if (hasCommercialData) {
+                const commercialPayload = {
+                    thirdPartyId:  thirdPartyUpdated.id,
+                    paymentTermId: commercial.paymentTermId ? Number(commercial.paymentTermId) : null,
+                    limitCredit:   commercial.limitCredit   ? Number(commercial.limitCredit)   : null,
+                    riskLevel:     commercial.riskLevel     || null,
+                };
+                if (commercialId) {
+                    await fetchHelper.put(base_url(API_COMMERCIAL_PUT(commercialId)), commercialPayload, {}, 1000);
+                } else {
+                    await fetchHelper.post(base_url(API_COMMERCIAL_POST), commercialPayload, {}, 1000);
+                }
+            }
 
             setThirdParty({
                 id: '', nit: '', dv: '', businessName: '',
@@ -310,11 +395,29 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                             <div>
                                 <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal type="number" id="tp_municipalityId_update" label="Municipio ID"
+                                        <InputSelectModal
+                                            id="tp_country_update"
+                                            label="País"
+                                            value={thirdPartyUpdated.countryId}
+                                            onChange={(v) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, countryId: v, municipalityId: '' })}
+                                            options={countries}
+                                            placeholder="Seleccione país"
+                                            required={!readOnly}
+                                            disabled={readOnly}
+                                        />
+                                    </div>
+                                    <div className="col-md-6 mb-4 mt-2">
+                                        <InputSelectModal
+                                            id="tp_municipalityId_update"
+                                            label="Municipio"
                                             value={thirdPartyUpdated.municipalityId}
-                                            onChange={(e) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, municipalityId: e.target.value })}
-                                            error={errors.municipalityId} placeholder="Ej. 1"
-                                            required={!readOnly} disabled={readOnly} readOnly={readOnly} />
+                                            onChange={(v) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, municipalityId: v })}
+                                            error={errors.municipalityId}
+                                            options={municipalities}
+                                            placeholder={thirdPartyUpdated.countryId ? 'Seleccione municipio' : 'Primero seleccione un país'}
+                                            required={!readOnly}
+                                            disabled={readOnly || !thirdPartyUpdated.countryId}
+                                        />
                                     </div>
                                 </div>
 
@@ -391,6 +494,60 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* ── Tab: Comercial ── */}
+                        {activeTab === 'commercial' && (
+                            <div>
+                                {commercialLoading ? (
+                                    <div className="text-center py-4">
+                                        <div className="spinner-border text-primary" role="status" />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <p className="text-muted mb-3">
+                                            {commercialId
+                                                ? 'Datos comerciales existentes. Los cambios se aplicarán al guardar.'
+                                                : 'No hay datos comerciales registrados aún. Se crearán al guardar.'}
+                                        </p>
+                                        <div className="row">
+                                            <div className="col-md-6 mb-4 mt-2">
+                                                <InputSelectModal
+                                                    id="tp_paymentTermId_update"
+                                                    label="Condición de pago"
+                                                    value={commercial.paymentTermId}
+                                                    onChange={(v) => !readOnly && setCommercial({ ...commercial, paymentTermId: v })}
+                                                    options={paymentTermsOpts}
+                                                    placeholder="Seleccione condición de pago"
+                                                    disabled={readOnly}
+                                                />
+                                            </div>
+                                            <div className="col-md-3 mb-4 mt-2">
+                                                <InputModal
+                                                    type="number"
+                                                    id="tp_limitCredit_update"
+                                                    label="Límite de crédito"
+                                                    value={commercial.limitCredit}
+                                                    onChange={(e) => !readOnly && setCommercial({ ...commercial, limitCredit: e.target.value })}
+                                                    placeholder="Ej. 5000000"
+                                                    disabled={readOnly} readOnly={readOnly}
+                                                />
+                                            </div>
+                                            <div className="col-md-3 mb-4 mt-2">
+                                                <InputSelectModal
+                                                    id="tp_riskLevel_update"
+                                                    label="Nivel de riesgo"
+                                                    value={commercial.riskLevel}
+                                                    onChange={(v) => !readOnly && setCommercial({ ...commercial, riskLevel: v })}
+                                                    options={RISK_LEVELS}
+                                                    placeholder="Seleccione nivel"
+                                                    disabled={readOnly}
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
 
