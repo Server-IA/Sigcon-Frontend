@@ -25,7 +25,14 @@ const FilterBankBranch = ({ filterRef, filterInstance, dataTableRef, onApply }) 
     if (!table) return;
 
     table.column("city:name").search(nextFilters.city || "", false, true);
-    table.column("mainBranch:name").search(exactRegex(nextFilters.mainBranch), true, false);
+    const mainBranchValue =
+      nextFilters.mainBranch === "true"
+        ? "Principal"
+        : nextFilters.mainBranch === "false"
+          ? "Secundaria"
+          : "";
+
+    table.column("mainBranch:name").search(mainBranchValue, false, true);
     table.draw();
   };
 
