@@ -14,19 +14,19 @@ const EXTRACT_FORMATS = [
 ];
 import { useState } from "react";
 
-import AlertPage from "../../components/molecules/AlertPage";
-import InputModal from "../../components/molecules/InputModal";
-import InputSelectModal from "../../components/molecules/inputSelectModal";
-import TextareaModal from "../../components/molecules/TextareaModal";
+import AlertPage from "../../../components/molecules/AlertPage";
+import InputModal from "../../../components/molecules/InputModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
+import TextareaModal from "../../../components/molecules/TextareaModal";
 
-import { base_url } from "../../utils/functions";
-import { fetchHelper } from "../../utils/fetch";
+import { base_url } from "../../../utils/functions";
+import { fetchHelper } from "../../../utils/fetch";
 import {
   sanitizeUpperAlphaNum,
   sanitizeNit,
   sanitizeSimpleText,
   sanitizeSwift,
-} from "../../utils/bankUtils";
+} from "../../../utils/bankUtils";
 
 
 

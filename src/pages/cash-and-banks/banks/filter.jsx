@@ -11,14 +11,14 @@ const BANK_TYPES = [
 ];
 import { useState } from "react";
 
-import InputModal from "../../components/molecules/InputModal";
-import InputSelectModal from "../../components/molecules/inputSelectModal";
+import InputModal from "../../../components/molecules/InputModal";
+import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import {
   exactRegex,
   sanitizeUpperAlphaNum,
   sanitizeSimpleText,
   sanitizeCountryCode,
-} from "../../utils/bankUtils";
+} from "../../../utils/bankUtils";
 
 
 

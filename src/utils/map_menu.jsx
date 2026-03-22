@@ -40,7 +40,7 @@ import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
 
 //Cajas y bancos
-import IndexCashAndBanks from "../pages/cash-and-banks/index";
+import IndexCashAndBanks from "../pages/cash-and-banks/banks/index";
 
 import PageMaintenance from "../pages/errors/page_maintenance";
 
@@ -52,6 +52,7 @@ import IndexSegmentation from "../pages/third-party/segmentation/index"
 
 // Cash and Banks
 import IndexCheques from "../pages/cash-and-banks/cheques/index";
+import IndexBankBranches from "../pages/cash-and-banks/surcursales/index";
 
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
@@ -171,5 +172,6 @@ export const COMPONENT_MAP = [
   { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
   { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
   { id: "CATALOGO_BANCOS", name: "Catalogo de Bancos", component: IndexCashAndBanks },
+  { id: "SUCURSALES_BANCARIAS", name: "Sucursales Bancarias", component: IndexBankBranches },
   { id: "CHEQUES", name: "Cheques", component: IndexCheques },
 ];

@@ -24,16 +24,16 @@ const INITIAL_BANK = {
 import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
-import DataTableReference from "../../components/organism/DataTable";
-import AlertPage from "../../components/molecules/AlertPage";
+import DataTableReference from "../../../components/organism/DataTable";
+import AlertPage from "../../../components/molecules/AlertPage";
 
-import { base_url } from "../../utils/functions";
-import { fetchHelper } from "../../utils/fetch";
+import { base_url } from "../../../utils/functions";
+import { fetchHelper } from "../../../utils/fetch";
 import {
   highlightMatch,
   formatBankStatus,
   sanitizeSimpleText,
-} from "../../utils/bankUtils";
+} from "../../../utils/bankUtils";
 
 import CreateCashAndBanks from "./create";
 import UpdatedCashAndBanks from "./updated";
