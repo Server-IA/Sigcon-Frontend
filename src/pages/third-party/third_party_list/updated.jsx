@@ -10,42 +10,17 @@ const API_UPDATE_ROLES_STATUS = (id) => ['api', 'v1', 'third-parties', id, 'role
 const API_COUNTRIES           = ['api', 'v1', 'resources', 'countries'];
 const API_MUNICIPIOS          = ['api', 'v1', 'resources', 'municipalities'];
 const API_PAYMENT_TERMS       = ['api', 'v1', 'resources', 'payment-terms'];
+const API_STATUSES            = ['api', 'v1', 'third-parties', 'statuses'];
+const API_ROLES               = ['api', 'v1', 'third-parties', 'roles'];
 const API_COMMERCIAL_GET      = (id) => ['api', 'v1', 'commercial-data', id];
 const API_COMMERCIAL_POST     = ['api', 'v1', 'commercial-data'];
 const API_COMMERCIAL_PUT      = (id) => ['api', 'v1', 'commercial-data', id];
 
 const CATALOG_BODY = { draw: 1, start: 0, length: 10000, columns: [], search: { value: '', regex: false } };
 
-// TODO: Confirmar IDs reales de roles con el backend
-const ROLE_ID_MAP = {
-    CLIENT:   1,
-    SUPPLIER: 2,
-    EMPLOYEE: 3,
-    CREDITOR: 4,
-    DEBTOR:   5,
-    OTHER:    6,
-};
-
-const STATUS_ID_MAP = {
-    ACTIVE:   1,
-    BLOCKED:  2,
-    INACTIVE: 3,
-};
-
-const STATUSES = [
-    { id: 'ACTIVE',   label: 'Activo' },
-    { id: 'BLOCKED',  label: 'Bloqueado' },
-    { id: 'INACTIVE', label: 'Inactivo' },
-];
-
-const ROLES = [
-    { id: 'CLIENT',   label: 'Cliente',   icon: 'ri-user-line' },
-    { id: 'SUPPLIER', label: 'Proveedor', icon: 'ri-store-line' },
-    { id: 'EMPLOYEE', label: 'Empleado',  icon: 'ri-briefcase-line' },
-    { id: 'CREDITOR', label: 'Acreedor',  icon: 'ri-bank-line' },
-    { id: 'DEBTOR',   label: 'Deudor',    icon: 'ri-money-dollar-circle-line' },
-    { id: 'OTHER',    label: 'Otro',      icon: 'ri-more-line' },
-];
+const STATUS_LABEL_MAP = { ACTIVE: 'Activo', BLOCKED: 'Bloqueado', INACTIVE: 'Inactivo' };
+const ROLE_LABEL_MAP   = { CLIENT: 'Cliente', SUPPLIER: 'Proveedor', EMPLOYEE: 'Empleado', CREDITOR: 'Acreedor', DEBTOR: 'Deudor', OTHER: 'Otro' };
+const ROLE_ICON_MAP    = { CLIENT: 'ri-user-line', SUPPLIER: 'ri-store-line', EMPLOYEE: 'ri-briefcase-line', CREDITOR: 'ri-bank-line', DEBTOR: 'ri-money-dollar-circle-line', OTHER: 'ri-more-line' };
 
 const RISK_LEVELS = [
     { id: 'LOW',    label: 'Bajo' },
@@ -81,6 +56,23 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
     const [allMunicipalities, setAllMunicipalities] = useState([]);
     const [municipalities, setMunicipalities]     = useState([]);
     const [paymentTermsOpts, setPaymentTermsOpts] = useState([]);
+    // Opciones hardcodeadas con codes fijos — la condición status==='BLOCKED' siempre funciona
+    const statusOpts = [
+        { id: 'ACTIVE',   label: 'Activo' },
+        { id: 'BLOCKED',  label: 'Bloqueado' },
+        { id: 'INACTIVE', label: 'Inactivo' },
+    ];
+    const roleOpts = [
+        { id: 'CLIENT',   label: 'Cliente',   icon: 'ri-user-line' },
+        { id: 'SUPPLIER', label: 'Proveedor', icon: 'ri-store-line' },
+        { id: 'EMPLOYEE', label: 'Empleado',  icon: 'ri-briefcase-line' },
+        { id: 'CREDITOR', label: 'Acreedor',  icon: 'ri-bank-line' },
+        { id: 'DEBTOR',   label: 'Deudor',    icon: 'ri-money-dollar-circle-line' },
+        { id: 'OTHER',    label: 'Otro',      icon: 'ri-more-line' },
+    ];
+    // IDmaps cargados desde API — solo usados al construir el payload
+    const [statusIdMap, setStatusIdMap] = useState({ ACTIVE: 1, BLOCKED: 2, INACTIVE: 3 });
+    const [roleIdMap,   setRoleIdMap]   = useState({ CLIENT: 1, SUPPLIER: 2, EMPLOYEE: 3, CREDITOR: 4, DEBTOR: 5, OTHER: 6 });
 
     const emptyCommercial = { paymentTermId: '', limitCredit: '', riskLevel: '' };
     const [commercial, setCommercial]       = useState(emptyCommercial);
@@ -98,6 +90,29 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
         fetchHelper.post(base_url(API_PAYMENT_TERMS), CATALOG_BODY, {}, 0)
             .then(res => setPaymentTermsOpts((res?.data ?? []).map(p => ({ id: p.id, label: p.name ?? String(p.id) }))))
             .catch(() => {});
+        // Solo cargamos los IDmaps desde la API (para construir payloads correctos)
+        // Las opciones de UI son fijas (statusOpts/roleOpts) para garantizar estabilidad
+        fetchHelper.get(base_url(API_STATUSES), {}, 0, false)
+            .then(res => {
+                const list = Array.isArray(res) ? res : (res?.data ?? []);
+                // Mapeamos por ID numérico usando STATUS_LABEL_MAP para encontrar el code
+                const map = {};
+                list.forEach(s => {
+                    const code = Object.keys(STATUS_LABEL_MAP).find(k => STATUS_LABEL_MAP[k] === s.name || k === s.name);
+                    if (code) map[code] = s.id;
+                });
+                if (Object.keys(map).length > 0) setStatusIdMap(map);
+            }).catch(() => {});
+        fetchHelper.get(base_url(API_ROLES), {}, 0, false)
+            .then(res => {
+                const list = Array.isArray(res) ? res : (res?.data ?? []);
+                const map = {};
+                list.forEach(r => {
+                    const code = Object.keys(ROLE_LABEL_MAP).find(k => ROLE_LABEL_MAP[k] === r.name || k === r.name);
+                    if (code) map[code] = r.id;
+                });
+                if (Object.keys(map).length > 0) setRoleIdMap(map);
+            }).catch(() => {});
     }, []);
 
     // Filtrar municipios cuando cambia el país
@@ -137,11 +152,13 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             setCommercialLoading(true);
             fetchHelper.get(base_url(API_COMMERCIAL_GET(thirdParty.id)), {}, 0, false)
                 .then(res => {
-                    setCommercialId(res?.id ?? null);
+                    // El backend puede retornar { data: {...} } o el objeto directamente
+                    const d = res?.data ?? res;
+                    setCommercialId(d?.id ?? null);
                     setCommercial({
-                        paymentTermId: res?.paymentTermId ?? res?.paymentTerm?.id ?? '',
-                        limitCredit:   res?.limitCredit   ?? '',
-                        riskLevel:     res?.riskLevel     ?? '',
+                        paymentTermId: d?.paymentTermId ?? d?.paymentTerm?.id ?? '',
+                        limitCredit:   d?.limitCredit   ?? d?.creditLimit    ?? '',
+                        riskLevel:     d?.riskLevel?.name ?? d?.riskLevel    ?? '',
                     });
                 })
                 .catch(() => {
@@ -196,8 +213,8 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             // ── 2. Actualizar roles y estado (endpoint dedicado) ───────────────
             const urlRolesStatus = base_url(API_UPDATE_ROLES_STATUS(thirdPartyUpdated.id));
             const rolesStatusPayload = {
-                roleIds:  (thirdPartyUpdated.roles ?? []).map(r => ROLE_ID_MAP[r]).filter(Boolean),
-                statusId: STATUS_ID_MAP[thirdPartyUpdated.status] ?? 1,
+                roleIds:  (thirdPartyUpdated.roles ?? []).map(r => roleIdMap[r]).filter(Boolean),
+                statusId: statusIdMap[thirdPartyUpdated.status] ?? 1,
                 // blockingReason requerido (>= 20 chars) cuando el estado es BLOQUEADO
                 ...(thirdPartyUpdated.status === 'BLOCKED' && {
                     blockingReason: thirdPartyUpdated.blockReason,
@@ -206,18 +223,23 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             await fetchHelper.put(urlRolesStatus, rolesStatusPayload, {}, 1000);
 
             // ── 3. Guardar datos comerciales (POST si no existe, PUT si existe) ──
+            // Se maneja en bloque separado para no bloquear el éxito del update principal
             const hasCommercialData = commercial.paymentTermId || commercial.limitCredit || commercial.riskLevel;
             if (hasCommercialData) {
-                const commercialPayload = {
-                    thirdPartyId:  thirdPartyUpdated.id,
-                    paymentTermId: commercial.paymentTermId ? Number(commercial.paymentTermId) : null,
-                    limitCredit:   commercial.limitCredit   ? Number(commercial.limitCredit)   : null,
-                    riskLevel:     commercial.riskLevel     || null,
-                };
-                if (commercialId) {
-                    await fetchHelper.put(base_url(API_COMMERCIAL_PUT(commercialId)), commercialPayload, {}, 1000);
-                } else {
-                    await fetchHelper.post(base_url(API_COMMERCIAL_POST), commercialPayload, {}, 1000);
+                try {
+                    const commercialPayload = {
+                        thirdPartyId:  Number(thirdPartyUpdated.id),
+                        paymentTermId: commercial.paymentTermId ? Number(commercial.paymentTermId) : null,
+                        limitCredit:   commercial.limitCredit   ? Number(commercial.limitCredit)   : null,
+                        riskLevel:     commercial.riskLevel     || null,
+                    };
+                    if (commercialId) {
+                        await fetchHelper.put(base_url(API_COMMERCIAL_PUT(commercialId)), commercialPayload, {}, 1000);
+                    } else {
+                        await fetchHelper.post(base_url(API_COMMERCIAL_POST), commercialPayload, {}, 1000);
+                    }
+                } catch (commercialError) {
+                    console.warn('Advertencia: error al guardar datos comerciales:', commercialError);
                 }
             }
 
@@ -310,7 +332,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                             value={thirdPartyUpdated.status}
                                             onChange={(value) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, status: value, blockReason: '' })}
                                             error={errors.status} placeholder="Seleccione estado"
-                                            options={STATUSES} required={!readOnly}
+                                            options={statusOpts} required={!readOnly}
                                             disabled={readOnly}
                                         />
                                     </div>
@@ -348,7 +370,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                 {errors.roles && <div className="alert alert-danger py-2 mb-3">{errors.roles}</div>}
                                 <p className="text-muted mb-3">Seleccione al menos un rol: <span className="text-danger">*</span></p>
                                 <div className="row g-3">
-                                    {ROLES.map(role => {
+                                    {roleOpts.map(role => {
                                         const selected = (thirdPartyUpdated.roles ?? []).includes(role.id);
                                         return (
                                             <div className="col-md-4 col-sm-6" key={role.id}>

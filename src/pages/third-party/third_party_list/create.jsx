@@ -5,43 +5,18 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const API_STORE        = ['api', 'v1', 'third-parties', 'store'];
-const API_COUNTRIES    = ['api', 'v1', 'resources', 'countries'];
-const API_MUNICIPIOS   = ['api', 'v1', 'resources', 'municipalities'];
+const API_STORE         = ['api', 'v1', 'third-parties', 'store'];
+const API_COUNTRIES     = ['api', 'v1', 'resources', 'countries'];
+const API_MUNICIPIOS    = ['api', 'v1', 'resources', 'municipalities'];
 const API_PAYMENT_TERMS = ['api', 'v1', 'resources', 'payment-terms'];
+const API_STATUSES      = ['api', 'v1', 'third-parties', 'statuses'];
+const API_ROLES         = ['api', 'v1', 'third-parties', 'roles'];
 
 const CATALOG_BODY = { draw: 1, start: 0, length: 10000, columns: [], search: { value: '', regex: false } };
 
-// TODO: Confirmar IDs reales de roles con el backend
-const ROLE_ID_MAP = {
-    CLIENT:   1,
-    SUPPLIER: 2,
-    EMPLOYEE: 3,
-    CREDITOR: 4,
-    DEBTOR:   5,
-    OTHER:    6,
-};
-
-const STATUS_ID_MAP = {
-    ACTIVE:   1,
-    BLOCKED:  2,
-    INACTIVE: 3,
-};
-
-const STATUSES = [
-    { id: 'ACTIVE',   label: 'Activo' },
-    { id: 'INACTIVE', label: 'Inactivo' },
-    { id: 'BLOCKED',  label: 'Bloqueado' },
-];
-
-const ROLES = [
-    { id: 'CLIENT',   label: 'Cliente',   icon: 'ri-user-line' },
-    { id: 'SUPPLIER', label: 'Proveedor', icon: 'ri-store-line' },
-    { id: 'EMPLOYEE', label: 'Empleado',  icon: 'ri-briefcase-line' },
-    { id: 'CREDITOR', label: 'Acreedor',  icon: 'ri-bank-line' },
-    { id: 'DEBTOR',   label: 'Deudor',    icon: 'ri-money-dollar-circle-line' },
-    { id: 'OTHER',    label: 'Otro',      icon: 'ri-more-line' },
-];
+const STATUS_LABEL_MAP = { ACTIVE: 'Activo', BLOCKED: 'Bloqueado', INACTIVE: 'Inactivo' };
+const ROLE_LABEL_MAP   = { CLIENT: 'Cliente', SUPPLIER: 'Proveedor', EMPLOYEE: 'Empleado', CREDITOR: 'Acreedor', DEBTOR: 'Deudor', OTHER: 'Otro' };
+const ROLE_ICON_MAP    = { CLIENT: 'ri-user-line', SUPPLIER: 'ri-store-line', EMPLOYEE: 'ri-briefcase-line', CREDITOR: 'ri-bank-line', DEBTOR: 'ri-money-dollar-circle-line', OTHER: 'ri-more-line' };
 
 const TABS = [
     { id: 'general',    label: 'Datos Generales', icon: 'ri-user-3-line' },
@@ -64,6 +39,23 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
     const [municipalities, setMunicipalities]     = useState([]);
     const [paymentTermsOpts, setPaymentTermsOpts] = useState([]);
     const [selectedCountry, setSelectedCountry]   = useState('');
+    // Opciones hardcodeadas con codes fijos — la condición status==='BLOCKED' siempre funciona
+    const statusOpts = [
+        { id: 'ACTIVE',   label: 'Activo' },
+        { id: 'BLOCKED',  label: 'Bloqueado' },
+        { id: 'INACTIVE', label: 'Inactivo' },
+    ];
+    const roleOpts = [
+        { id: 'CLIENT',   label: 'Cliente',   icon: 'ri-user-line' },
+        { id: 'SUPPLIER', label: 'Proveedor', icon: 'ri-store-line' },
+        { id: 'EMPLOYEE', label: 'Empleado',  icon: 'ri-briefcase-line' },
+        { id: 'CREDITOR', label: 'Acreedor',  icon: 'ri-bank-line' },
+        { id: 'DEBTOR',   label: 'Deudor',    icon: 'ri-money-dollar-circle-line' },
+        { id: 'OTHER',    label: 'Otro',      icon: 'ri-more-line' },
+    ];
+    // IDmaps cargados desde API — solo usados al construir el payload
+    const [statusIdMap, setStatusIdMap] = useState({ ACTIVE: 1, BLOCKED: 2, INACTIVE: 3 });
+    const [roleIdMap,   setRoleIdMap]   = useState({ CLIENT: 1, SUPPLIER: 2, EMPLOYEE: 3, CREDITOR: 4, DEBTOR: 5, OTHER: 6 });
 
     // Cargar catálogos al montar
     useEffect(() => {
@@ -76,6 +68,27 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
         fetchHelper.post(base_url(API_PAYMENT_TERMS), CATALOG_BODY, {}, 0)
             .then(res => setPaymentTermsOpts((res?.data ?? []).map(p => ({ id: p.name ?? String(p.id), label: p.name ?? String(p.id) }))))
             .catch(() => {});
+        // Solo cargamos los IDmaps desde la API (para construir payloads correctos)
+        fetchHelper.get(base_url(API_STATUSES), {}, 0, false)
+            .then(res => {
+                const list = Array.isArray(res) ? res : (res?.data ?? []);
+                const map = {};
+                list.forEach(s => {
+                    const code = Object.keys(STATUS_LABEL_MAP).find(k => STATUS_LABEL_MAP[k] === s.name || k === s.name);
+                    if (code) map[code] = s.id;
+                });
+                if (Object.keys(map).length > 0) setStatusIdMap(map);
+            }).catch(() => {});
+        fetchHelper.get(base_url(API_ROLES), {}, 0, false)
+            .then(res => {
+                const list = Array.isArray(res) ? res : (res?.data ?? []);
+                const map = {};
+                list.forEach(r => {
+                    const code = Object.keys(ROLE_LABEL_MAP).find(k => ROLE_LABEL_MAP[k] === r.name || k === r.name);
+                    if (code) map[code] = r.id;
+                });
+                if (Object.keys(map).length > 0) setRoleIdMap(map);
+            }).catch(() => {});
     }, []);
 
     // Filtrar municipios por país
@@ -128,8 +141,8 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                 nit:                thirdParty.nit,
                 dv:                 thirdParty.dv,
                 businessName:       thirdParty.businessName,
-                roleIds:            (thirdParty.roles ?? []).map(r => ROLE_ID_MAP[r]).filter(Boolean),
-                statusId:           STATUS_ID_MAP[thirdParty.status] ?? 1,
+                roleIds:            (thirdParty.roles ?? []).map(r => roleIdMap[r]).filter(Boolean),
+                statusId:           statusIdMap[thirdParty.status] ?? 1,
                 municipalityId:     thirdParty.municipalityId ? Number(thirdParty.municipalityId) : null,
                 typeOrganizationId: thirdParty.typeOrganizationId ? Number(thirdParty.typeOrganizationId) : null,
                 typeRegimenId:      thirdParty.typeRegimenId ? Number(thirdParty.typeRegimenId) : null,
@@ -273,7 +286,7 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                     Seleccione al menos un rol para el tercero: <span className="text-danger">*</span>
                                 </p>
                                 <div className="row g-3">
-                                    {ROLES.map(role => {
+                                    {roleOpts.map(role => {
                                         const selected = (thirdParty.roles ?? []).includes(role.id);
                                         return (
                                             <div className="col-md-4 col-sm-6" key={role.id}>
@@ -308,7 +321,7 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                             onChange={(value) => setThirdParty({ ...thirdParty, status: value, blockReason: '' })}
                                             error={errors.status}
                                             placeholder="Seleccione estado"
-                                            options={STATUSES}
+                                            options={statusOpts}
                                             required={true}
                                         />
                                     </div>
