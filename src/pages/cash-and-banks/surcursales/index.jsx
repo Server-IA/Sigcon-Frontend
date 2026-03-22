@@ -316,12 +316,14 @@ const IndexBankBranches = () => {
       const response = await fetchHelper.get(url, {}, 0, false);
       const rows = response?.data ?? response?.rows ?? response ?? [];
       const normalized = Array.isArray(rows)
-        ? rows.map((row) => ({
+        ? rows
+            .map((row) => ({
             ...row,
             bankId: String(bankId),
             bankLabel,
             status: row.status ?? row.ESTADO ?? "ACTIVE",
-          }))
+            }))
+            .sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0))
         : [];
       setData(normalized);
       setBranchesLoaded(true);

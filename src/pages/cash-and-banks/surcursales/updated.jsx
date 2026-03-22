@@ -66,6 +66,7 @@ const UpdatedBankBranch = ({
     }
 
     const payload = {
+      bankId: Number(branch.bankId),
       address: branch.address?.trim() || "",
       city: branch.city?.trim() || "",
       mainBranch: Boolean(branch.mainBranch),
