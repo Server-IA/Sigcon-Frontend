@@ -9,27 +9,25 @@ import TextareaModal    from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const CHEQUERAS_URL  = ['api', 'v1', 'checkbooks', 'search'];
-const SIGUIENTE_URL  = (idChequera) => ['api', 'v1', 'cash-and-banks', 'cheques', 'siguiente', idChequera];
-const CREAR_URL      = ['api', 'v1', 'banks', 'checks', 'store'];
+const CHEQUERAS_URL = ['api', 'v1', 'checkbooks', 'search'];
+const CREAR_URL     = ['api', 'v1', 'banks', 'checks', 'store'];
 
 const emptyErrors = {
     idChequera: '', numeroCheque: '', beneficiario: '', valorCheque: '',
-    concepto: '', fechaExpedicion: '', documentoSoporte: '',
+    concepto: '', fechaExpedicion: '',
 };
 
 const CreateCheque = ({
     modalRef, modalInstance, record, setRecord, dataTableRef, setMessage, tipos,
 }) => {
 
-    const [errors,         setErrors]         = useState({ ...emptyErrors });
-    const [errorMessage,   setErrorMessage]   = useState('');
-    const [loading,        setLoading]        = useState(false);
+    const [errors,           setErrors]           = useState({ ...emptyErrors });
+    const [errorMessage,     setErrorMessage]     = useState('');
+    const [loading,          setLoading]          = useState(false);
     const [loadingChequeras, setLoadingChequeras] = useState(false);
-    const [loadingNumero,  setLoadingNumero]  = useState(false);
-    const [chequeras,      setChequeras]      = useState([]);
+    const [chequeras,        setChequeras]        = useState([]);  // { id, name, checkStartNumber, checkEndNumber, availableChecks }
 
-    // Limpiar al abrir modal (record reseteado desde el padre)
+    // Limpiar al abrir modal
     useEffect(() => {
         setErrors({ ...emptyErrors });
         setErrorMessage('');
@@ -44,10 +42,20 @@ const CreateCheque = ({
             setLoadingChequeras(true);
             try {
                 const url = base_url(CHEQUERAS_URL);
-                const res = await fetchHelper.post(url, { draw: 1, start: 0, length: -1, search: { value: '', regex: false }, columns: [], order: [] }, {}, 500, false);
+                const res = await fetchHelper.post(url, {
+                    draw: 1, start: 0, length: -1,
+                    search: { value: '', regex: false }, columns: [], order: [],
+                }, {}, 500, false);
+
                 const items = (res?.data ?? []).filter(c => c.status === 'ACTIVA');
-                setChequeras(items.map(c => ({ id: c.id, name: `${c.checkbookNumber} — ${c.issuingBank ?? ''}` })));
-            } catch (e) {
+                setChequeras(items.map(c => ({
+                    id:               c.id,
+                    name:             `${c.checkbookNumber} — ${c.issuingBank ?? ''}`,
+                    checkStartNumber: c.checkStartNumber,
+                    checkEndNumber:   c.checkEndNumber,
+                    availableChecks:  c.availableChecks,
+                })));
+            } catch {
                 setChequeras([]);
             } finally {
                 setLoadingChequeras(false);
@@ -58,45 +66,16 @@ const CreateCheque = ({
         return () => el.removeEventListener('show.bs.modal', onShow);
     }, [modalRef]);
 
-    // Sugerir siguiente número al cambiar chequera
+    // Al seleccionar chequera: sugerir checkStartNumber como primer número disponible
     useEffect(() => {
         if (!record.idChequera) return;
+        const chequera = chequeras.find(c => String(c.id) === String(record.idChequera));
+        if (chequera?.checkStartNumber != null) {
+            setRecord(prev => ({ ...prev, numeroCheque: String(chequera.checkStartNumber) }));
+        }
+    }, [record.idChequera, chequeras]);
 
-        const fetchSiguiente = async () => {
-            setLoadingNumero(true);
-            try {
-                const url = base_url(SIGUIENTE_URL(record.idChequera));
-                const res = await fetchHelper.get(url, {}, 500, false);
-                const siguiente = res?.data ?? res;
-                if (siguiente !== undefined && siguiente !== null) {
-                    setRecord(prev => ({ ...prev, numeroCheque: String(siguiente) }));
-                }
-            } catch {
-                // No bloquear si falla — el usuario puede ingresar manualmente
-            } finally {
-                setLoadingNumero(false);
-            }
-        };
-
-        fetchSiguiente();
-    }, [record.idChequera]);
-
-    // Leer archivo y convertir a base64 (solo el contenido, sin el prefijo data:...)
-    const handleFile = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            const base64 = reader.result.split(',')[1];
-            setRecord(prev => ({
-                ...prev,
-                documentoSoporte: base64,
-                _documentoNombre: file.name,
-            }));
-        };
-        reader.readAsDataURL(file);
-    };
+    const chequeraActual = chequeras.find(c => String(c.id) === String(record.idChequera)) ?? null;
 
     const validate = () => {
         const errs = { ...emptyErrors };
@@ -106,10 +85,21 @@ const CreateCheque = ({
             errs.idChequera = 'Seleccione una chequera activa';
             valid = false;
         }
+
+        const numCheque = Number(record.numeroCheque);
         if (!record.numeroCheque || String(record.numeroCheque).trim() === '') {
             errs.numeroCheque = 'El número de cheque es obligatorio';
             valid = false;
+        } else if (chequeraActual) {
+            if (numCheque < chequeraActual.checkStartNumber || numCheque > chequeraActual.checkEndNumber) {
+                errs.numeroCheque = `BNK-ERR-090: Número fuera del rango de la chequera (${chequeraActual.checkStartNumber} – ${chequeraActual.checkEndNumber})`;
+                valid = false;
+            } else if (chequeraActual.availableChecks <= 0) {
+                errs.numeroCheque = 'BNK-ERR-093: No hay cheques disponibles en la chequera seleccionada';
+                valid = false;
+            }
         }
+
         if (!record.beneficiario || record.beneficiario.trim() === '') {
             errs.beneficiario = 'El beneficiario es obligatorio';
             valid = false;
@@ -129,10 +119,6 @@ const CreateCheque = ({
             errs.fechaExpedicion = 'La fecha de expedición no puede ser futura (BNK-ERR-095)';
             valid = false;
         }
-        if (record.tipoCheque === 'VIRTUAL' && !record.documentoSoporte) {
-            errs.documentoSoporte = 'Debe adjuntar el documento soporte para cheques virtuales (BNK-ERR-097)';
-            valid = false;
-        }
 
         setErrors(errs);
         return valid;
@@ -143,24 +129,24 @@ const CreateCheque = ({
 
         const url = base_url(CREAR_URL);
         const payload = {
-            checkbookId:              Number(record.idChequera),
-            numberCheck:              Number(record.numeroCheque),
-            beneficiary:              record.beneficiario.trim(),
-            value:                    Number(record.valorCheque),
-            concept:                  record.concepto.trim(),
-            issueDate:                record.fechaExpedicion,
-            typeCheck:                record.tipoCheque || 'FISICO',
-            observations:             record.observaciones?.trim() || null,
-            ...(record.documentoSoporte && {
-                supportDocumentBase64:    record.documentoSoporte,
-                supportDocumentFileName:  record._documentoNombre,
-            }),
+            checkbookId:  Number(record.idChequera),
+            numberCheck:  Number(record.numeroCheque),
+            beneficiary:  record.beneficiario.trim(),
+            value:        Number(record.valorCheque),
+            concept:      record.concepto.trim(),
+            issueDate:    record.fechaExpedicion,
+            typeCheck:    record.tipoCheque || 'FISICO',
+            observations: record.observaciones?.trim() || null,
         };
 
         try {
             setLoading(true);
-            await fetchHelper.post(url, payload, {}, 1000);
+            const response = await fetchHelper.post(url, payload, {}, 1000);
             dataTableRef?.current?.ajax.reload();
+
+            const numeroCheque = record.numeroCheque;
+            const tipoCheque   = record.tipoCheque || 'FISICO';
+            const pdfPath      = response?.data?.supportDocumentPath ?? null;
 
             setRecord(prev => ({
                 id: '', idChequera: '', numeroCheque: '', beneficiario: '',
@@ -170,17 +156,30 @@ const CreateCheque = ({
             }));
 
             modalInstance?.current?.hide();
-
-            setMessage({
-                message: `Cheque emitido exitosamente - Número: ${record.numeroCheque}`,
-                type: 'success',
-                show: true,
-            });
-
             setErrors({ ...emptyErrors });
             setErrorMessage('');
+
+            if (tipoCheque === 'VIRTUAL' && pdfPath) {
+                window.Swal.fire({
+                    icon: 'success',
+                    title: `Cheque Virtual emitido — N° ${numeroCheque}`,
+                    html: `
+                        <p class="mb-3">El cheque virtual fue emitido exitosamente y su documento digital ha sido generado.</p>
+                        <a href="${pdfPath}" target="_blank" rel="noopener noreferrer"
+                            class="btn btn-primary">
+                            <i class="ri-file-pdf-line me-1"></i> Ver PDF del cheque
+                        </a>`,
+                    confirmButtonText: 'Cerrar',
+                    showConfirmButton: true,
+                });
+            } else {
+                setMessage({
+                    message: `Cheque emitido exitosamente - Número: ${numeroCheque}`,
+                    type: 'success',
+                    show: true,
+                });
+            }
         } catch (error) {
-            console.error(error);
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = { ...emptyErrors };
@@ -198,7 +197,7 @@ const CreateCheque = ({
         setRecord(prev => ({
             ...prev,
             numeroCheque: '', beneficiario: '', valorCheque: '', concepto: '',
-            fechaExpedicion: '', tipoCheque: 'FISICO', observaciones: '', documentoSoporte: '',
+            fechaExpedicion: '', tipoCheque: 'FISICO', observaciones: '',
         }));
         setErrors({ ...emptyErrors });
         setErrorMessage('');
@@ -238,20 +237,26 @@ const CreateCheque = ({
                                 <InputModal
                                     type="number"
                                     id="cheque_numero"
-                                    label={loadingNumero ? 'Calculando número...' : 'Número de cheque'}
-                                    placeholder="Número sugerido automáticamente"
+                                    label="Número de cheque"
+                                    placeholder="Número del cheque"
                                     value={record.numeroCheque}
                                     onChange={(e) => setRecord(prev => ({ ...prev, numeroCheque: e.target.value }))}
                                     error={errors.numeroCheque}
                                     required
                                 />
+                                {chequeraActual && !errors.numeroCheque && (
+                                    <small className="text-muted d-block mt-1">
+                                        Rango: <strong>{chequeraActual.checkStartNumber} – {chequeraActual.checkEndNumber}</strong>
+                                        &nbsp;·&nbsp;Disponibles: <strong>{chequeraActual.availableChecks}</strong>
+                                    </small>
+                                )}
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
                                 <InputSelectModal
                                     id="cheque_tipo"
                                     label="Tipo de cheque"
                                     value={record.tipoCheque}
-                                    onChange={(val) => setRecord(prev => ({ ...prev, tipoCheque: val, documentoSoporte: '' }))}
+                                    onChange={(val) => setRecord(prev => ({ ...prev, tipoCheque: val }))}
                                     placeholder="Seleccionar tipo"
                                     options={tipos}
                                     required
@@ -327,29 +332,14 @@ const CreateCheque = ({
                             />
                         </div>
 
-                        {/* Documento soporte — solo cheques virtuales */}
+                        {/* Aviso cheque virtual */}
                         {record.tipoCheque === 'VIRTUAL' && (
                             <div className="row">
-                                <div className="col-12 mb-4 mt-2">
-                                    <label className="form-label">
-                                        Documento soporte <span className="text-danger">*</span>
-                                    </label>
-                                    <input
-                                        type="file"
-                                        className={`form-control ${errors.documentoSoporte ? 'is-invalid' : ''}`}
-                                        id="cheque_documento"
-                                        accept=".pdf,.jpg,.jpeg,.png"
-                                        onChange={handleFile}
-                                    />
-                                    {errors.documentoSoporte && (
-                                        <div className="invalid-feedback">{errors.documentoSoporte}</div>
-                                    )}
-                                    {record.documentoSoporte && (
-                                        <small className="text-success mt-1 d-block">
-                                            <i className="ri-check-line me-1"></i>
-                                            Archivo cargado: {record._documentoNombre}
-                                        </small>
-                                    )}
+                                <div className="col-12 mb-2">
+                                    <div className="alert alert-info d-flex align-items-center gap-2 mb-0 py-2">
+                                        <i className="ri-file-pdf-line fs-5" />
+                                        <span>El sistema generará automáticamente el documento PDF del cheque virtual al confirmar la emisión.</span>
+                                    </div>
                                 </div>
                             </div>
                         )}

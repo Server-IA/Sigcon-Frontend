@@ -362,20 +362,29 @@ const DetailCheque = ({ modalRef, record }) => {
                                     </div>
                                 )}
 
-                                {/* Documento soporte */}
+                                {/* Documento soporte / PDF cheque virtual */}
                                 {d.supportDocumentPath && (
                                     <div className="row g-3 mb-2">
                                         <div className="col-12">
-                                            <label className="form-label">Documento soporte</label>
-                                            <div className="d-flex align-items-center gap-2">
+                                            <label className="form-label">
+                                                {d.typeCheck === 'VIRTUAL' ? 'Documento digital del cheque virtual' : 'Documento soporte'}
+                                            </label>
+                                            <div className="d-flex align-items-center gap-2 flex-wrap">
                                                 <i className="ri-file-pdf-line text-danger fs-4" />
                                                 <a
                                                     href={d.supportDocumentPath}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="text-primary"
+                                                    className="btn btn-sm btn-label-danger"
                                                 >
-                                                    Ver documento
+                                                    <i className="ri-eye-line me-1" />Ver PDF
+                                                </a>
+                                                <a
+                                                    href={d.supportDocumentPath}
+                                                    download
+                                                    className="btn btn-sm btn-label-primary"
+                                                >
+                                                    <i className="ri-download-line me-1" />Descargar
                                                 </a>
                                             </div>
                                         </div>
