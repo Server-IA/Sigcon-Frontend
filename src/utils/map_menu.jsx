@@ -38,6 +38,8 @@ import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 
 // Assets
 import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
+import BajasTransferencias from "../pages/assets/bajas_transferencias/index";
+import KardexAssets from "../pages/assets/kardex/index";
 
 //Cajas y bancos
 import IndexCashAndBanks from "../pages/cash-and-banks/banks/index";
@@ -169,6 +171,8 @@ export const COMPONENT_MAP = [
   { id: "NIIF_VERIFICATION", name: "Verificación NIIF", component: NiifVerificationIndex },
   { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
   { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: AssetDepreciationCalculation },
+  { id: "ACT_BAJAS_TRANSFERENCIAS", name: "Control de Bajas y Transferencias", component: BajasTransferencias },
+  { id: "ACT_KARDEX", name: "Kardex", component: KardexAssets },
   { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
   { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
   { id: "CATALOGO_BANCOS", name: "Catalogo de Bancos", component: IndexCashAndBanks },

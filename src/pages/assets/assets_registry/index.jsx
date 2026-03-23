@@ -212,6 +212,12 @@ const IndexAssets = () => {
       title: "Editar",
     },
     {
+      key: "kardex",
+      icon: "ri-arrow-left-right-line",
+      class: "btn-label-primary",
+      title: "Kardex",
+    },
+    {
       key: "delete",
       icon: "ri-delete-bin-5-line",
       class: "btn-label-danger",
@@ -333,6 +339,19 @@ const IndexAssets = () => {
     filterInstance.current.show();
   };
 
+  const getKardexUrl = (assetCode = "") => {
+    const basePath =
+      import.meta.env.VITE_ENVIRONMENT == "local"
+        ? ""
+        : import.meta.env.VITE_ENVIRONMENT == "development"
+          ? "/sigcon/dev"
+          : "/sigcon";
+
+    const query = assetCode ? `?asset=${encodeURIComponent(assetCode)}` : "";
+
+    return `${basePath}/activos/kardex${query}`;
+  };
+
   useEffect(() => {
     const table = dataTableRef?.current;
     if (!table) return;
@@ -382,6 +401,17 @@ const IndexAssets = () => {
           });
 
           openModalUpdate();
+          break;
+
+        case "kardex":
+          const assetKardex = data.find((m) => m.id === id);
+
+          if (!assetKardex) {
+            console.warn("Activo no encontrado", id);
+            return;
+          }
+
+          window.open(getKardexUrl(assetKardex.assetCode || ""), "_blank");
           break;
 
         case "delete":
