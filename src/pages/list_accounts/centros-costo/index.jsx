@@ -34,7 +34,11 @@ const IndexCentrosCosto = () => {
     const [centroCostoCreate, setCentroCostoCreate] = useState(false);
     const [centroCostoEdit, setCentroCostoEdit] = useState(false);
     const [centroCostoDelete, setCentroCostoDelete] = useState(false);
-    const [centroCostoError, setCentroCostoError] = useState(false);
+    const [centroCostoError, setCentroCostoError] = useState({
+        message: null,
+        show: false,
+        type: 'danger',
+    });
 
     const [search, setSearch] = useState({ value: '', checked: true });
 
@@ -134,16 +138,25 @@ const IndexCentrosCosto = () => {
         try {
             await fetchHelper.delete(url, {}, {}, 500, false);
             dataTableRef?.current?.ajax.reload();
-            modalReasonDeleteInstance.current?.hide();
             setCentroCostoDelete(true);
-            setCentroCostoError(false);
+            setCentroCostoError({
+                message: null,
+                show: false
+            });
             setDeleteTarget(null);
             setDeletionReason('');
         } catch (error) {
             console.error(error);
-            setCentroCostoError(true);
+            setCentroCostoError({
+                message: error.message || error.msg || 'Error al eliminar el centro de costo. Verifique su conexión e intente nuevamente.',
+                show: true,
+                type: 'danger',
+            });
             setCentroCostoDelete(false);
             dataTableRef?.current?.ajax.reload();
+        } finally{
+            modalReasonDeleteInstance.current?.hide();
+            setDeletionReason('');
         }
     };
 
@@ -226,10 +239,14 @@ const IndexCentrosCosto = () => {
         <>
             <div className="card">
                 <h5 className="card-header text-md-start text-center">Centro de costos</h5>
-                <AlertPage type="success" message="Centro de Costo creado exitosamente" show={centroCostoCreate} onChange={() => setCentroCostoCreate(false)} />
+                <AlertPage type="success" message={"Centro de Costo creado exitosamente"} show={centroCostoCreate} onChange={() => setCentroCostoCreate(false)} />
                 <AlertPage type="success" message="Centro de Costo actualizado exitosamente" show={centroCostoEdit} onChange={() => setCentroCostoEdit(false)} />
                 <AlertPage type="success" message="Centro de Costo eliminado/inactivado exitosamente" show={centroCostoDelete} onChange={() => setCentroCostoDelete(false)} />
-                <AlertPage type="danger" message="Error al eliminar el centro de costo. Verifique su conexión e intente nuevamente." show={centroCostoError} onChange={() => setCentroCostoError(false)} />
+                <AlertPage type="danger" message={centroCostoError.message} show={centroCostoError.show} onChange={() => setCentroCostoError({
+                    message: null,
+                    show: false,
+                    type: 'danger',
+                })} />
                 <div className="card-datatable text-nowrap">
                     <DataTableReference
                         url_api={API_SEARCH}

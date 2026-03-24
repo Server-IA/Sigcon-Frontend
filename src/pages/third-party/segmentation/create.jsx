@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 
-import AlertPage from '../../../components/molecules/AlertPage';
-import InputModal from '../../../components/molecules/InputModal';
+import AlertPage        from '../../../components/molecules/AlertPage';
+import InputModal       from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 import { fetchHelper } from '../../../utils/fetch';
-import { base_url } from '../../../utils/functions';
+import { base_url }    from '../../../utils/functions';
 
 const CreateSegmentation = ({
     modalRef,
@@ -17,11 +17,11 @@ const CreateSegmentation = ({
     segments,
 }) => {
 
-    const [errors, setErrors] = useState({});
+    const [errors, setErrors]             = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading]           = useState(false);
 
-    const [clientOptions, setClientOptions] = useState([]);
+    const [clientOptions, setClientOptions]   = useState([]);
     const [loadingClients, setLoadingClients] = useState(false);
 
     // Cargar clientes al abrir el modal
@@ -35,15 +35,11 @@ const CreateSegmentation = ({
             try {
                 setLoadingClients(true);
                 const url = base_url(['api', 'v1', 'third-parties', 'search']);
-                const payload = {
-
-                    length: -1,
-
-                };
+                const payload = { length: -1 };
                 const response = await fetchHelper.post(url, payload, {}, 1000);
                 const items = response?.data || [];
                 setClientOptions(items.map(item => ({
-                    id: item.id,
+                    id:   item.id,
                     name: `${item.nit ?? ''} — ${item.businessName ?? ''}`.trim(),
                 })));
             } catch {
@@ -57,7 +53,6 @@ const CreateSegmentation = ({
         return () => el.removeEventListener('show.bs.modal', onShow);
     }, [modalRef]);
 
-    // Limpiar errores cuando cambia el record desde el padre
     useEffect(() => {
         setErrors({});
         setErrorMessage('');
@@ -66,11 +61,11 @@ const CreateSegmentation = ({
     const handleClear = () => {
         setRecord(prev => ({
             ...prev,
-            clientId: '',
-            clientName: '',
+            clientId:            '',
+            clientName:          '',
             lastCalculationDate: '',
-            autoSegment: '',
-            daysPastDue: '',
+            autoSegment:         '',
+            daysPastDue:         '',
         }));
         setErrors({});
         setErrorMessage('');
@@ -105,18 +100,19 @@ const CreateSegmentation = ({
         try {
             setLoading(true);
 
-            const url = base_url(['api', 'v1', 'ecl-segmentation', 'calculate', record.clientId]);
+            const url     = base_url(['api', 'v1', 'ecl-segmentation', 'calculate']);
             const payload = {
+                clientId:            Number(record.clientId),
                 lastCalculationDate: record.lastCalculationDate,
-                autoSegment: record.autoSegment,
-                daysPastDue: Number(record.daysPastDue),
+                autoSegment:         record.autoSegment,
+                daysPastDue:         Number(record.daysPastDue),
             };
 
             await fetchHelper.post(url, payload, {}, 1000);
 
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
-            setMessage({ message: 'Segmentación creada exitosamente', type: 'success', show: true });
+            setMessage({ message: 'Segmentación calculada exitosamente', type: 'success', show: true });
             setErrors({});
             setErrorMessage('');
 
@@ -168,20 +164,13 @@ const CreateSegmentation = ({
 
                         <div className="row g-3">
 
-                            {/* Cliente — cargado desde terceros */}
+                            {/* Cliente */}
                             <div className="col-md-6">
                                 <InputSelectModal
                                     id="seg_create_client"
                                     label={loadingClients ? 'Cargando clientes...' : 'Cliente'}
                                     value={record.clientId}
-                                    onChange={(val) => {
-                                        const selected = clientOptions.find(c => String(c.id) === String(val));
-                                        setRecord(prev => ({
-                                            ...prev,
-                                            clientId: val,
-                                            clientName: selected?.rawName ?? '',
-                                        }));
-                                    }}
+                                    onChange={(val) => setRecord(prev => ({ ...prev, clientId: val }))}
                                     options={clientOptions}
                                     error={errors.clientId}
                                     required

@@ -17,7 +17,7 @@ const DataTableReference = ({
   tableRef,
   dataTableRef,
   buttons,
-  title,
+  title = '',
   setData,
   exportParams = {},
   exportMethod = "POST",

@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 //componentes
 import DataTableReference from "../../../components/organism/DataTable";
 import AlertPage from "../../../components/molecules/AlertPage";
+import DropzoneModal from "../../../components/molecules/DropzoneModal";
 
 //VISTAS
 import CreateAssets from "./create";
@@ -17,20 +18,24 @@ import { fetchHelper } from "../../../utils/fetch";
 import { COMPONENT_MAP } from "../../../utils/map_menu";
 
 const IndexAssets = () => {
-  const isAdmin = useSelector((state) => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
+  const isAdmin = useSelector((state) => state.user.user)?.isAdmin || false;
   const dispatch = useDispatch();
   const [data, setData] = useState([]);
   const tableRef = useRef(null);
   const dataTableRef = useRef(null);
   const filterRef = useRef(null);
   const filterInstance = useRef(null);
+  const modalBulkUploadRef = useRef(null);
+  const modalBulkUploadInstance = useRef(null);
 
   const [thirds, setThirds] = useState([]);
   const [accountingAccount, setAccountingAccount] = useState([]);
   const [depreciationRules, setDepreciationRules] = useState([]);
+  const [assetsBulk, setAssetsBulk] = useState(false);
+
+  // const [costCenters, setCostCenters] = useState([]);
 
   const user = useSelector((state) => state.user).user;
-  const [clickEdit, setClickEdit] = useState(false);
   const [assetsCreate, setAssetsCreate] = useState(false);
   const [assetsUpdate, setAssetsUpdate] = useState(false);
 
@@ -41,39 +46,44 @@ const IndexAssets = () => {
 
   const loadData = async () => {
     try {
-      const [depreciationRulerRes, accountingAccountRes, thirdsRes] =
-        await Promise.allSettled([
-          fetchHelper.post(
-            base_url(["api", "v1", "depreciation-rules", "search"]),
-            {
-              length: -1,
-            },
-            {},
-            1,
-          ),
+      const [
+        depreciationRulerRes,
+        accountingAccountRes,
+        thirdsRes,
+        costCenterRes,
+      ] = await Promise.allSettled([
+        fetchHelper.post(
+          base_url(["api", "v1", "depreciation-rules", "search"]),
+          { length: -1 },
+          {},
+          1,
+        ),
 
-          fetchHelper.post(
-            base_url(["api", "v1", "accounting-accounts"]),
-            {
-              length: -1,
-            },
-            {},
-            1,
-          ),
+        fetchHelper.post(
+          base_url(["api", "v1", "accounting-accounts"]),
+          { length: -1 },
+          {},
+          1,
+        ),
 
-          fetchHelper.post(
-            base_url(["api", "v1", "third-parties", "search"]),
-            {
-              length: -1,
-              columns: [
-                { data: "roles.id", search: { value: 2, regex: false } },
-              ],
-            },
-
-            {},
-            1,
-          ),
-        ]);
+        fetchHelper.post(
+          base_url(["api", "v1", "third-parties", "search"]),
+          {
+            length: -1,
+            columns: [{ data: "roles.id", search: { value: 2, regex: false } }],
+          },
+          {},
+          1,
+        ),
+        // fetchHelper.post(
+        //   base_url(["api", "v1", "cost-centers", "search"]),
+        //   {
+        //     length: -1,
+        //   },
+        //   {},
+        //   1,
+        // ),
+      ]);
 
       if (depreciationRulerRes.status === "fulfilled")
         setDepreciationRules(
@@ -83,6 +93,7 @@ const IndexAssets = () => {
             accountingAccountId: d.accountingAccountId,
           })) || [],
         );
+
       if (accountingAccountRes.status === "fulfilled")
         setAccountingAccount(
           accountingAccountRes.value.data.map((d) => ({
@@ -90,6 +101,7 @@ const IndexAssets = () => {
             label: d.customName,
           })) || [],
         );
+
       if (thirdsRes.status === "fulfilled")
         setThirds(
           thirdsRes.value.data.map((d) => ({
@@ -98,11 +110,21 @@ const IndexAssets = () => {
           })) || [],
         );
 
+      // if (costCenterRes.status === "fulfilled")
+      //   setCostCenters(
+      //     costCenterRes.value.data.map((d) => ({
+      //       id: d.id,
+      //       label: `${d.companyId} - ${d.name}`,
+      //     })) || [],
+      //   );
+
       const failed = [
         depreciationRulerRes,
         accountingAccountRes,
         thirdsRes,
+        // costCenterRes,
       ].filter((r) => r.status === "rejected");
+
       if (failed.length)
         console.warn(
           "Algunos datos no pudieron cargarse:",
@@ -148,78 +170,34 @@ const IndexAssets = () => {
   const modalUpdateInstance = useRef(null);
 
   const [url, setUrl] = useState(base_url(["api", "v1", "assets", "search"]));
+
+  const openModalBulkUpload = () => {
+    if (!modalBulkUploadInstance.current) {
+      modalBulkUploadInstance.current = new window.bootstrap.Modal(
+        modalBulkUploadRef.current,
+      );
+    }
+    modalBulkUploadInstance.current.show();
+  };
   const buttons = [
     {
       text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
       className: "btn rounded-pill btn-secondary waves-effect mx-2 my-2 ",
-      action: async function (e, dt, button, config) {
-        useEffect(() => {
-          if (!dataTableRef.current) return;
-
-          const table = dataTableRef.current;
-
-          const handler = function () {
-            const action = $(this).data("action");
-            const id = Number($(this).data("id"));
-
-            console.log("CLICK:", action, id);
-
-            switch (action) {
-              case "edit":
-                const assetsRef = data.find((m) => m.id === id);
-
-                if (!assetsRef) {
-                  console.warn("Activo no encontrado", id);
-                  return;
-                }
-
-                setAssets({
-                  id: assets.id,
-                  name: assets.name || "",
-                  description: assets.description || "",
-                  classification: assets.classification || "",
-                  type: assets.type || "",
-                  accountingAccountId: assets.accountingAccountId || "",
-                  acquisitionValue: assets.acquisitionValue || "",
-                  acquisitionDate: assets.acquisitionDate || "",
-                  usefulLifeMonths: assets.usefulLifeMonths || "",
-                  depreciationRuleId: assets.depreciationRuleId || "",
-                  supplierId: assets.supplierId || "",
-                  paymentTerms: assets.paymentTerms || "",
-                  accountsPayableReferenceId:
-                    assets.accountsPayableReferenceId || "",
-                  bankCashReferenceId: assets.bankCashReferenceId || "",
-                  costCenterOrAccountingLocation:
-                    assets.costCenterOrAccountingLocation || "",
-                  status: assets.status || "",
-                  observations: assets.observations || "",
-                });
-                openModalUpdate();
-                break;
-
-              case "delete":
-                console.log("Eliminar", id);
-                break;
-
-              default:
-                console.warn("Acción no válida", action);
-            }
-          };
-
-          table.on("click", ".action-btn", handler);
-
-          return () => {
-            table.off("click", ".action-btn", handler);
-          };
-        }, [dataTableRef.current]);
+      action: function () {
+        openFilter();
       },
+    },
+    {
+      text: '<i class="ri-upload-cloud-2-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Carga Masiva</span>',
+      className: "btn rounded-pill btn-outline-primary waves-effect mx-2 my-2",
+      action: openModalBulkUpload,
     },
 
     user.permissions.find((p) => p.code === "CREATE_ASSETS") || isAdmin
       ? {
           text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Activo</span>',
           className: "btn rounded-pill btn-primary waves-effect mx-2 my-2 ",
-          action: async function (e, dt, button, config) {
+          action: function () {
             openModalCreate();
           },
         }
@@ -239,7 +217,14 @@ const IndexAssets = () => {
       class: "btn-label-danger",
       title: "Eliminar",
     },
+    {
+      key: "view",
+      icon: "ri-eye-line",
+      class: "btn-label-info",
+      title: "Ver",
+    },
   ];
+
   const columns = [
     { title: "Código", data: "assetCode", name: "assetCode" },
     { title: "Nombre", data: "name", name: "name" },
@@ -252,7 +237,6 @@ const IndexAssets = () => {
           NON_CURRENT: "Activo no corriente",
           CURRENT: "Activo corriente",
         };
-
         return map[v] || v;
       },
     },
@@ -308,26 +292,27 @@ const IndexAssets = () => {
         modalCreateRef.current,
       );
     }
+
+    //  RESET DEL FORM
     setAssets({
-      id: "",
-      code: "",
       name: "",
       description: "",
       classification: "",
-      acquisition_date: "",
-      acquisition_cost: "",
-      useful_life_months: "",
-      accumulated_depreciation: "",
-      book_value: "",
-      revaluation_value: "",
-      is_depreciable: true,
-      depreciation_rule_id: null,
-      companies_id: null,
-      accounting_accounts_id: null,
-      company_locations_id: null,
-      third_parties_id: null,
-      states_assets_id: null,
+      type: "",
+      accountingAccountId: "",
+      acquisitionValue: "",
+      acquisitionDate: "",
+      usefulLifeMonths: "",
+      depreciationRuleId: "",
+      supplierId: "",
+      paymentTerms: "",
+      accountsPayableReferenceId: "",
+      bankCashReferenceId: "",
+      costCenterOrAccountingLocation: "",
+      status: "",
+      observations: "",
     });
+
     modalCreateInstance.current.show();
   };
   const openModalUpdate = () => {
@@ -336,6 +321,7 @@ const IndexAssets = () => {
         modalUpdateRef.current,
       );
     }
+
     modalUpdateInstance.current.show();
   };
 
@@ -343,6 +329,7 @@ const IndexAssets = () => {
     if (!filterInstance.current) {
       filterInstance.current = new window.bootstrap.Modal(filterRef.current);
     }
+
     filterInstance.current.show();
   };
 
@@ -362,6 +349,7 @@ const IndexAssets = () => {
             console.warn("Activo no encontrado", id);
             return;
           }
+
           console.log("Activo seleccionado:", assetsRef);
           setAssets({
             id: assetsRef.id,
@@ -369,54 +357,43 @@ const IndexAssets = () => {
             description: assetsRef.description || "",
             classification: assetsRef.classification || "",
             type: assetsRef.type || "",
-            accountingAccountId: assetsRef.accountingAccountId || "",
+
+            accountingAccountId: assetsRef.accountingAccount?.id || "",
+
             acquisitionValue: assetsRef.acquisitionValue || "",
             acquisitionDate: assetsRef.acquisitionDate || "",
             usefulLifeMonths: assetsRef.usefulLifeMonths || "",
-            depreciationRuleId: assetsRef.depreciationRuleId || "",
-            supplierId: assetsRef.supplierId || "",
+
+            depreciationRuleId: assetsRef.depretationRule?.id || "",
+
+            supplierId: assetsRef.supplier?.id || "",
+
             paymentTerms: assetsRef.paymentTerms || "",
             accountsPayableReferenceId:
               assetsRef.accountsPayableReferenceId || "",
+
             bankCashReferenceId: assetsRef.bankCashReferenceId || "",
+
             costCenterOrAccountingLocation:
               assetsRef.costCenterOrAccountingLocation || "",
+
             status: assetsRef.status || "",
             observations: assetsRef.observations || "",
           });
-          openModalUpdate(); // <-- esto faltaba
+
+          openModalUpdate();
           break;
+
         case "delete":
-          window.Swal.fire({
-            title: "¿Estás seguro?",
-            text: "¿Estás seguro de querer eliminar este activo?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Eliminar",
-            cancelButtonText: "Cancelar",
-          }).then(async (result) => {
-            if (result.isConfirmed) {
-              const url = base_url(["api", "assets", id]);
-              try {
-                await fetchHelper.delete(url, {}, {}, 500, false);
-                dataTableRef?.current?.ajax.reload();
-                dispatch(refreshAssets());
-                setAssetsDelete(true);
-                setAssetsError(false);
-              } catch (error) {
-                console.error(error);
-                setAssetsError(true);
-                setAssetsDelete(false);
-                dataTableRef?.current?.ajax.reload();
-              }
-            }
-          });
+          console.log("Eliminar", id);
           break;
+
         default:
           console.warn("Acción no válida", action);
           break;
       }
     };
+
     table.on("click", ".action-btn", handler);
 
     return () => {
@@ -455,17 +432,6 @@ const IndexAssets = () => {
           />
         </div>
 
-        {/* <FilterAssets
-          filterRef={filterRef}
-          filterInstance={filterInstance}
-          dataTableRef={dataTableRef}
-          parents={parents}
-          components={COMPONENT_MAP.map((component) => ({
-            id: component.id,
-            name: component.name,
-          }))}
-        /> */}
-
         <CreateAssets
           modalRef={modalCreateRef}
           modalInstance={modalCreateInstance}
@@ -476,6 +442,7 @@ const IndexAssets = () => {
           thirds={thirds}
           accountingAccount={accountingAccount}
           depreciationRules={depreciationRules}
+          // costCenters={costCenters}
         />
 
         <UpdateAssets
@@ -488,6 +455,23 @@ const IndexAssets = () => {
           thirds={thirds}
           accountingAccount={accountingAccount}
           depreciationRules={depreciationRules}
+        />
+        <FilterAssets
+          filterRef={filterRef}
+          filterInstance={filterInstance}
+          dataTableRef={dataTableRef}
+          thirds={thirds}
+          accountingAccount={accountingAccount}
+          depreciationRules={depreciationRules}
+        />
+        <DropzoneModal
+          modalRef={modalBulkUploadRef}
+          title="Carga Masiva de Activos"
+          uploadUrl={base_url(["api", "v1", "assets", "bulk", "store"])}
+          onSuccess={() => {
+            setAssetsBulk(true);
+            dataTableRef?.current?.ajax?.reload?.();
+          }}
         />
       </div>
     </>
