@@ -4,20 +4,20 @@ import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 const TIPOS_CAJA = [
     { id: 'GENERAL',    label: 'General' },
-    { id: 'MENOR',      label: 'Menor' },
-    { id: 'FONDO_FIJO', label: 'Fondo Fijo' },
+    { id: 'PETTY_CASH', label: 'Caja Menor' },
+    { id: 'FIXED_FUND', label: 'Fondo Fijo' },
 ];
 
 const ESTADOS_CAJA = [
-    { id: 'ACTIVA',   label: 'Activa' },
-    { id: 'INACTIVA', label: 'Inactiva' },
-    { id: 'CERRADA',  label: 'Cerrada' },
+    { id: 'ACTIVE',   label: 'Activa' },
+    { id: 'INACTIVE', label: 'Inactiva' },
+    { id: 'CLOSED',   label: 'Cerrada' },
 ];
 
 const LIBROS_CONTABLES = [
-    { id: 'LOCAL',  label: 'Local' },
-    { id: 'NIIF',   label: 'NIIF' },
-    { id: 'FISCAL', label: 'Fiscal' },
+    { id: 'LOCAL', label: 'Local' },
+    { id: 'IFRS',  label: 'NIIF (IFRS)' },
+    { id: 'TAX',   label: 'Fiscal (TAX)' },
 ];
 
 const emptyFilter = {

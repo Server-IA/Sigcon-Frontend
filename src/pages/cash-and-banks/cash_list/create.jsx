@@ -9,20 +9,20 @@ const API_CREATE = ['api', 'v1', 'cash', 'store'];
 
 const TIPOS_CAJA = [
     { id: 'GENERAL',    label: 'General' },
-    { id: 'MENOR',      label: 'Menor' },
-    { id: 'FONDO_FIJO', label: 'Fondo Fijo' },
+    { id: 'PETTY_CASH', label: 'Caja Menor' },
+    { id: 'FIXED_FUND', label: 'Fondo Fijo' },
 ];
 
 const PERIODICIDAD_ARQUEO = [
-    { id: 'DIARIO',  label: 'Diario' },
-    { id: 'SEMANAL', label: 'Semanal' },
-    { id: 'MENSUAL', label: 'Mensual' },
+    { id: 'DAILY',   label: 'Diario' },
+    { id: 'WEEKLY',  label: 'Semanal' },
+    { id: 'MONTHLY', label: 'Mensual' },
 ];
 
 const LIBROS_CONTABLES = [
-    { id: 'LOCAL',  label: 'Local' },
-    { id: 'NIIF',   label: 'NIIF' },
-    { id: 'FISCAL', label: 'Fiscal' },
+    { id: 'LOCAL', label: 'Local' },
+    { id: 'IFRS',  label: 'NIIF (IFRS)' },
+    { id: 'TAX',   label: 'Fiscal (TAX)' },
 ];
 
 const TABS = [
@@ -85,27 +85,27 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
         setErrorMessage('');
 
         const payload = {
-            codigoCaja:              caja.codigoCaja,
-            nombreCaja:              caja.nombreCaja,
-            tipoCaja:                caja.tipoCaja,
-            descripcion:             caja.descripcion || null,
-            ubicacionFisica:         caja.ubicacionFisica,
-            idResponsablePrincipal:  Number(caja.idResponsablePrincipal),
-            idResponsableSuplente:   caja.idResponsableSuplente ? Number(caja.idResponsableSuplente) : null,
-            horarioOperacion:        caja.horarioOperacion || null,
-            monedaCodigo:            caja.monedaCodigo,
-            saldoInicial:            Number(caja.saldoInicial),
-            fechaSaldoInicial:       caja.fechaSaldoInicial,
-            fechaCreacionCaja:       caja.fechaCreacionCaja,
-            limiteMaximo:            caja.limiteMaximo !== '' ? Number(caja.limiteMaximo) : null,
-            limiteMinimo:            caja.limiteMinimo !== '' ? Number(caja.limiteMinimo) : null,
-            requiereAutorizacion:    caja.requiereAutorizacion,
-            montoMaxSinAutorizacion: caja.montoMaxSinAutorizacion !== '' ? Number(caja.montoMaxSinAutorizacion) : null,
-            notificarLimite:         caja.notificarLimite !== '' ? Number(caja.notificarLimite) : null,
-            periodicidadArqueo:      caja.periodicidadArqueo,
-            idCuentaContable:        Number(caja.idCuentaContable),
-            centroCosto:             caja.centroCosto || null,
-            libroContable:           caja.libroContable,
+            cashCode:                    caja.codigoCaja,
+            cashName:                    caja.nombreCaja,
+            cashType:                    caja.tipoCaja,
+            description:                 caja.descripcion || null,
+            physicalLocation:            caja.ubicacionFisica,
+            principalResponsibleId:      Number(caja.idResponsablePrincipal),
+            alternateResponsibleId:      caja.idResponsableSuplente ? Number(caja.idResponsableSuplente) : null,
+            operationSchedule:           caja.horarioOperacion || null,
+            currencyId:                  Number(caja.monedaCodigo),
+            initialBalanace:             Number(caja.saldoInicial),   // typo intencional del backend
+            initialBalanceDay:           caja.fechaSaldoInicial,
+            cashCreationDate:            caja.fechaCreacionCaja,
+            maxLimit:                    caja.limiteMaximo !== '' ? Number(caja.limiteMaximo) : null,
+            minLimit:                    caja.limiteMinimo !== '' ? Number(caja.limiteMinimo) : null,
+            requiresAuthorization:       caja.requiereAutorizacion,
+            maxAmountWithoutAuthorization: caja.montoMaxSinAutorizacion !== '' ? Number(caja.montoMaxSinAutorizacion) : null,
+            notifyLimit:                 caja.notificarLimite !== '' ? Number(caja.notificarLimite) : null,
+            auditFrequency:              caja.periodicidadArqueo,
+            accountingAccountId:         Number(caja.idCuentaContable),
+            costCenterId:                caja.centroCosto !== '' ? Number(caja.centroCosto) : null,
+            accountingBook:              caja.libroContable,
         };
 
         try {
@@ -196,9 +196,9 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                         {activeTab === 'financiero' && (
                             <div className="row">
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cc_moneda" label="Código Moneda (ISO 4217)" value={caja.monedaCodigo}
+                                    <InputModal id="cc_moneda" label="ID Moneda" type="number" value={caja.monedaCodigo}
                                         onChange={e => set('monedaCodigo', e.target.value)} error={errors.monedaCodigo}
-                                        placeholder="Ej: COP, USD" required={true} />
+                                        placeholder="ID numérico de la moneda" required={true} />
                                 </div>
                                 <div className="col-md-4 mb-3">
                                     <InputModal id="cc_saldo" label="Saldo Inicial" type="number"
@@ -281,7 +281,7 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                                         onChange={e => set('idCuentaContable', e.target.value)} error={errors.idCuentaContable} required={true} />
                                 </div>
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cc_centro" label="Centro de Costo" value={caja.centroCosto}
+                                    <InputModal id="cc_centro" label="ID Centro de Costo" type="number" value={caja.centroCosto}
                                         onChange={e => set('centroCosto', e.target.value)} error={errors.centroCosto}
                                         placeholder="Opcional" />
                                 </div>

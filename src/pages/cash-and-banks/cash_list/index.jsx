@@ -8,7 +8,36 @@ import FilterCaja from './filter';
 import AlertPage from '../../../components/molecules/AlertPage';
 
 const API_LIST   = ['api', 'v1', 'cash', 'search'];
-const API_DELETE = (id) => ['api', 'v1', 'cash', id];
+const API_GET    = (id) => ['api', 'v1', 'cash', id];
+const API_DELETE = (id) => ['api', 'v1', 'cash', 'delete', id];
+
+// Mapea el DTO del backend al estado interno del formulario
+const mapDTOToState = (row) => ({
+    id:                      row.id                              ?? '',
+    codigoCaja:              row.cashCode                        ?? '',
+    nombreCaja:              row.cahsName                        ?? '',   // typo en backend
+    tipoCaja:                row.cashType                        ?? '',
+    estadoCaja:              row.cashStatus                      ?? '',
+    descripcion:             row.description                     ?? '',
+    ubicacionFisica:         row.physicalLocation                ?? '',
+    idResponsablePrincipal:  row.principalResponsibleId          ?? '',
+    idResponsableSuplente:   row.alternateResponsibleId          ?? '',
+    horarioOperacion:        row.operationSchedule               ?? '',
+    monedaCodigo:            row.currencyId                      ?? '',
+    saldoInicial:            row.initialBalanace                 ?? '',   // typo en backend
+    fechaSaldoInicial:       row.initialBalanceDay               ?? '',
+    fechaCreacionCaja:       row.cashCreationDate                ?? '',
+    limiteMaximo:            row.maxLimit                        ?? '',
+    limiteMinimo:            row.minLimit                        ?? '',
+    requiereAutorizacion:    row.requiresAuthorization           ?? false,
+    montoMaxSinAutorizacion: row.maxAmountWithoutAuthorization   ?? '',
+    notificarLimite:         row.notifyLimit                     ?? '',
+    periodicidadArqueo:      row.auditFrequency                  ?? '',
+    idCuentaContable:        row.accountingAccountId             ?? '',
+    centroCosto:             row.costCenterId                    ?? '',
+    libroContable:           row.accountingBook                  ?? '',
+    motivoCambio:            '',
+});
 
 const emptyCaja = {
     id: '',
@@ -85,8 +114,8 @@ export default function IndexCashList() {
             return;
         }
         try {
-            const url = base_url(API_DELETE(deleteTarget.id));
-            await fetchHelper.delete(url, { motivo: deleteMotivo }, {}, 500, true);
+            const url = base_url(API_DELETE(deleteTarget.id)) + `?confirmation=${encodeURIComponent(deleteKeyword)}&reason=${encodeURIComponent(deleteMotivo.trim())}`;
+            await fetchHelper.delete(url, {}, {}, 500, true);
             modalDeleteInstance.current?.hide();
             setCajaDelete(true);
             dataTableRef?.current?.ajax?.reload?.();
@@ -97,23 +126,23 @@ export default function IndexCashList() {
     };
 
     const columns = [
-        { title: 'Código',      data: 'codigoCaja',     name: 'codigoCaja' },
-        { title: 'Nombre',      data: 'nombreCaja',     name: 'nombreCaja' },
-        { title: 'Ubicación',   data: 'ubicacionFisica', name: 'ubicacionFisica' },
+        { title: 'Código',    data: 'cashCode',         name: 'cashCode' },
+        { title: 'Nombre',    data: 'cahsName',          name: 'cahsName' },
+        { title: 'Ubicación', data: 'physicalLocation',  name: 'physicalLocation' },
         {
-            title: 'Tipo', data: 'tipoCaja', name: 'tipoCaja',
-            render: (val) => ({ GENERAL: 'General', MENOR: 'Menor', FONDO_FIJO: 'Fondo Fijo' }[val] ?? val ?? '-'),
+            title: 'Tipo', data: 'cashType', name: 'cashType',
+            render: (val) => ({ GENERAL: 'General', PETTY_CASH: 'Caja Menor', FIXED_FUND: 'Fondo Fijo' }[val] ?? val ?? '-'),
         },
         {
-            title: 'Estado', data: 'estadoCaja', name: 'estadoCaja',
+            title: 'Estado', data: 'cashStatus', name: 'cashStatus',
             render: (val) => {
-                const color = { ACTIVA: 'success', INACTIVA: 'warning', CERRADA: 'secondary' }[val] ?? 'secondary';
-                const label = { ACTIVA: 'Activa', INACTIVA: 'Inactiva', CERRADA: 'Cerrada' }[val] ?? val ?? '-';
+                const color = { ACTIVE: 'success', INACTIVE: 'warning', CLOSED: 'secondary' }[val] ?? 'secondary';
+                const label = { ACTIVE: 'Activa', INACTIVE: 'Inactiva', CLOSED: 'Cerrada' }[val] ?? val ?? '-';
                 return `<span class="badge bg-label-${color}">${label}</span>`;
             },
         },
         {
-            title: 'Saldo Actual', data: 'saldoActual', name: 'saldoActual',
+            title: 'Saldo Actual', data: 'currentBalance', name: 'currentBalance',
             render: (val) => val != null ? Number(val).toLocaleString('es-CO', { minimumFractionDigits: 2 }) : '-',
         },
         {
@@ -154,33 +183,7 @@ export default function IndexCashList() {
             switch (action) {
                 case 'view':
                 case 'edit': {
-                    const mapped = {
-                        id:                      row.id                      ?? '',
-                        codigoCaja:              row.codigoCaja              ?? '',
-                        nombreCaja:              row.nombreCaja              ?? '',
-                        tipoCaja:                row.tipoCaja                ?? '',
-                        estadoCaja:              row.estadoCaja              ?? '',
-                        descripcion:             row.descripcion             ?? '',
-                        ubicacionFisica:         row.ubicacionFisica         ?? '',
-                        idResponsablePrincipal:  row.idResponsablePrincipal  ?? '',
-                        idResponsableSuplente:   row.idResponsableSuplente   ?? '',
-                        horarioOperacion:        row.horarioOperacion        ?? '',
-                        monedaCodigo:            row.monedaCodigo            ?? '',
-                        saldoInicial:            row.saldoInicial            ?? '',
-                        fechaSaldoInicial:       row.fechaSaldoInicial       ?? '',
-                        fechaCreacionCaja:       row.fechaCreacionCaja       ?? '',
-                        limiteMaximo:            row.limiteMaximo            ?? '',
-                        limiteMinimo:            row.limiteMinimo            ?? '',
-                        requiereAutorizacion:    row.requiereAutorizacion    ?? false,
-                        montoMaxSinAutorizacion: row.montoMaxSinAutorizacion ?? '',
-                        notificarLimite:         row.notificarLimite         ?? '',
-                        periodicidadArqueo:      row.periodicidadArqueo      ?? '',
-                        idCuentaContable:        row.idCuentaContable        ?? '',
-                        centroCosto:             row.centroCosto             ?? '',
-                        libroContable:           row.libroContable           ?? '',
-                        motivoCambio:            '',
-                    };
-                    setCaja(mapped);
+                    setCaja(mapDTOToState(row));
                     setViewMode(action === 'view');
                     if (!modalUpdateInstance.current) {
                         modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
@@ -189,7 +192,7 @@ export default function IndexCashList() {
                     break;
                 }
                 case 'delete':
-                    openConfirmDelete(row.id, row.nombreCaja);
+                    openConfirmDelete(row.id, row.cahsName ?? row.cashCode);
                     break;
                 default:
                     break;

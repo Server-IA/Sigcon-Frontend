@@ -5,30 +5,31 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const API_UPDATE = (id) => ['api', 'v1', 'cash', id];
+const API_UPDATE        = (id) => ['api', 'v1', 'cash', 'update', id];
+const API_UPDATE_STATUS = (id) => ['api', 'v1', 'cash', id, 'status'];
 
 const TIPOS_CAJA = [
     { id: 'GENERAL',    label: 'General' },
-    { id: 'MENOR',      label: 'Menor' },
-    { id: 'FONDO_FIJO', label: 'Fondo Fijo' },
+    { id: 'PETTY_CASH', label: 'Caja Menor' },
+    { id: 'FIXED_FUND', label: 'Fondo Fijo' },
 ];
 
 const ESTADOS_CAJA = [
-    { id: 'ACTIVA',   label: 'Activa' },
-    { id: 'INACTIVA', label: 'Inactiva' },
-    { id: 'CERRADA',  label: 'Cerrada' },
+    { id: 'ACTIVE',   label: 'Activa' },
+    { id: 'INACTIVE', label: 'Inactiva' },
+    { id: 'CLOSED',   label: 'Cerrada' },
 ];
 
 const PERIODICIDAD_ARQUEO = [
-    { id: 'DIARIO',  label: 'Diario' },
-    { id: 'SEMANAL', label: 'Semanal' },
-    { id: 'MENSUAL', label: 'Mensual' },
+    { id: 'DAILY',   label: 'Diario' },
+    { id: 'WEEKLY',  label: 'Semanal' },
+    { id: 'MONTHLY', label: 'Mensual' },
 ];
 
 const LIBROS_CONTABLES = [
-    { id: 'LOCAL',  label: 'Local' },
-    { id: 'NIIF',   label: 'NIIF' },
-    { id: 'FISCAL', label: 'Fiscal' },
+    { id: 'LOCAL', label: 'Local' },
+    { id: 'IFRS',  label: 'NIIF (IFRS)' },
+    { id: 'TAX',   label: 'Fiscal (TAX)' },
 ];
 
 const TABS = [
@@ -47,13 +48,15 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
     const [activeTab, setActiveTab]           = useState('identificacion');
 
     useEffect(() => {
-        setCajaUpdated(caja);
+        setCajaUpdated({ ...caja, statusReason: '', closingDate: '' });
         setErrors({});
         setErrorMessage('');
         setActiveTab('identificacion');
     }, [caja]);
 
     const set = (field, value) => setCajaUpdated(prev => ({ ...prev, [field]: value }));
+
+    const statusChanged = cajaUpdated.estadoCaja !== caja.estadoCaja;
 
     const validate = () => {
         const e = {};
@@ -62,7 +65,7 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
         if (!cajaUpdated.tipoCaja)                e.tipoCaja               = 'Campo requerido';
         if (!cajaUpdated.ubicacionFisica?.trim()) e.ubicacionFisica        = 'Campo requerido';
         if (!cajaUpdated.idResponsablePrincipal)  e.idResponsablePrincipal = 'Campo requerido';
-        if (!cajaUpdated.monedaCodigo?.trim())    e.monedaCodigo           = 'Campo requerido';
+        if (!cajaUpdated.monedaCodigo)            e.monedaCodigo           = 'Campo requerido';
         if (cajaUpdated.saldoInicial === '')      e.saldoInicial           = 'Campo requerido';
         if (!cajaUpdated.fechaSaldoInicial)       e.fechaSaldoInicial      = 'Campo requerido';
         if (!cajaUpdated.fechaCreacionCaja)       e.fechaCreacionCaja      = 'Campo requerido';
@@ -75,6 +78,14 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
             Number(cajaUpdated.limiteMaximo) <= Number(cajaUpdated.limiteMinimo)) e.limiteMaximo = 'Debe ser mayor que el límite mínimo';
         if (cajaUpdated.requiereAutorizacion && cajaUpdated.montoMaxSinAutorizacion === '')
             e.montoMaxSinAutorizacion = 'Requerido cuando se activa autorización';
+        // Validaciones BNK-RF-12: cambio de estado
+        if (statusChanged && (cajaUpdated.estadoCaja === 'INACTIVE' || cajaUpdated.estadoCaja === 'CLOSED')) {
+            if (!cajaUpdated.statusReason?.trim() || cajaUpdated.statusReason.trim().length < 10)
+                e.statusReason = 'Motivo requerido (mínimo 10 caracteres)';
+        }
+        if (statusChanged && cajaUpdated.estadoCaja === 'CLOSED') {
+            if (!cajaUpdated.closingDate) e.closingDate = 'Fecha de cierre requerida para CLOSED';
+        }
         return e;
     };
 
@@ -89,33 +100,43 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
         setErrorMessage('');
 
         const payload = {
-            codigoCaja:              cajaUpdated.codigoCaja,
-            nombreCaja:              cajaUpdated.nombreCaja,
-            tipoCaja:                cajaUpdated.tipoCaja,
-            estadoCaja:              cajaUpdated.estadoCaja,
-            descripcion:             cajaUpdated.descripcion || null,
-            ubicacionFisica:         cajaUpdated.ubicacionFisica,
-            idResponsablePrincipal:  Number(cajaUpdated.idResponsablePrincipal),
-            idResponsableSuplente:   cajaUpdated.idResponsableSuplente ? Number(cajaUpdated.idResponsableSuplente) : null,
-            horarioOperacion:        cajaUpdated.horarioOperacion || null,
-            monedaCodigo:            cajaUpdated.monedaCodigo,
-            saldoInicial:            Number(cajaUpdated.saldoInicial),
-            fechaSaldoInicial:       cajaUpdated.fechaSaldoInicial,
-            fechaCreacionCaja:       cajaUpdated.fechaCreacionCaja,
-            limiteMaximo:            cajaUpdated.limiteMaximo !== '' ? Number(cajaUpdated.limiteMaximo) : null,
-            limiteMinimo:            cajaUpdated.limiteMinimo !== '' ? Number(cajaUpdated.limiteMinimo) : null,
-            requiereAutorizacion:    cajaUpdated.requiereAutorizacion,
-            montoMaxSinAutorizacion: cajaUpdated.montoMaxSinAutorizacion !== '' ? Number(cajaUpdated.montoMaxSinAutorizacion) : null,
-            notificarLimite:         cajaUpdated.notificarLimite !== '' ? Number(cajaUpdated.notificarLimite) : null,
-            periodicidadArqueo:      cajaUpdated.periodicidadArqueo,
-            idCuentaContable:        Number(cajaUpdated.idCuentaContable),
-            centroCosto:             cajaUpdated.centroCosto || null,
-            libroContable:           cajaUpdated.libroContable,
-            ...(cajaUpdated.motivoCambio && { motivoCambio: cajaUpdated.motivoCambio }),
+            cashCode:                    cajaUpdated.codigoCaja,
+            cashName:                    cajaUpdated.nombreCaja,
+            cashType:                    cajaUpdated.tipoCaja,
+            description:                 cajaUpdated.descripcion || null,
+            physicalLocation:            cajaUpdated.ubicacionFisica,
+            principalResponsibleId:      Number(cajaUpdated.idResponsablePrincipal),
+            alternateResponsibleId:      cajaUpdated.idResponsableSuplente ? Number(cajaUpdated.idResponsableSuplente) : null,
+            operationSchedule:           cajaUpdated.horarioOperacion || null,
+            currencyId:                  Number(cajaUpdated.monedaCodigo),
+            initialBalanace:             Number(cajaUpdated.saldoInicial),   // typo intencional del backend
+            initialBalanceDay:           cajaUpdated.fechaSaldoInicial,
+            cashCreationDate:            cajaUpdated.fechaCreacionCaja,
+            maxLimit:                    cajaUpdated.limiteMaximo !== '' ? Number(cajaUpdated.limiteMaximo) : null,
+            minLimit:                    cajaUpdated.limiteMinimo !== '' ? Number(cajaUpdated.limiteMinimo) : null,
+            requiresAuthorization:       cajaUpdated.requiereAutorizacion,
+            maxAmountWithoutAuthorization: cajaUpdated.montoMaxSinAutorizacion !== '' ? Number(cajaUpdated.montoMaxSinAutorizacion) : null,
+            notifyLimit:                 cajaUpdated.notificarLimite !== '' ? Number(cajaUpdated.notificarLimite) : null,
+            auditFrequency:              cajaUpdated.periodicidadArqueo,
+            accountingAccountId:         Number(cajaUpdated.idCuentaContable),
+            costCenterId:                cajaUpdated.centroCosto !== '' ? Number(cajaUpdated.centroCosto) : null,
+            accountingBook:              cajaUpdated.libroContable,
+            changeReason:                cajaUpdated.motivoCambio || null,
         };
 
         try {
             await fetchHelper.put(base_url(API_UPDATE(cajaUpdated.id)), payload, {}, 1000, true);
+
+            // Si el estado cambió, llamar al endpoint de cambio de estado (BNK-RF-12)
+            if (statusChanged) {
+                const statusPayload = {
+                    status:      cajaUpdated.estadoCaja,
+                    reason:      cajaUpdated.statusReason || null,
+                    closingDate: cajaUpdated.closingDate  || null,
+                };
+                await fetchHelper.put(base_url(API_UPDATE_STATUS(cajaUpdated.id)), statusPayload, {}, 1000, true);
+            }
+
             modalInstance?.current?.hide();
             setCajaEdit(true);
             dataTableRef?.current?.ajax?.reload?.();
@@ -175,6 +196,21 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                         onChange={v => set('estadoCaja', v)} error={errors.estadoCaja}
                                         options={ESTADOS_CAJA} placeholder="Seleccione estado" disabled={readOnly} />
                                 </div>
+                                {!readOnly && statusChanged && (cajaUpdated.estadoCaja === 'INACTIVE' || cajaUpdated.estadoCaja === 'CLOSED') && (
+                                    <div className="col-md-12 mb-3">
+                                        <TextareaModal id="cu_status_reason" label="Motivo del cambio de estado"
+                                            value={cajaUpdated.statusReason}
+                                            onChange={e => set('statusReason', e.target.value)} error={errors.statusReason}
+                                            placeholder="Mínimo 10 caracteres" required={true} />
+                                    </div>
+                                )}
+                                {!readOnly && statusChanged && cajaUpdated.estadoCaja === 'CLOSED' && (
+                                    <div className="col-md-4 mb-3">
+                                        <InputModal id="cu_closing_date" label="Fecha de Cierre" type="date"
+                                            value={cajaUpdated.closingDate}
+                                            onChange={e => set('closingDate', e.target.value)} error={errors.closingDate} required={true} />
+                                    </div>
+                                )}
                                 <div className="col-md-12 mb-3">
                                     <TextareaModal id="cu_desc" label="Descripción" value={cajaUpdated.descripcion}
                                         onChange={e => set('descripcion', e.target.value)} error={errors.descripcion}
@@ -215,9 +251,9 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                         {activeTab === 'financiero' && (
                             <div className="row">
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cu_moneda" label="Código Moneda (ISO 4217)" value={cajaUpdated.monedaCodigo}
+                                    <InputModal id="cu_moneda" label="ID Moneda" type="number" value={cajaUpdated.monedaCodigo}
                                         onChange={e => set('monedaCodigo', e.target.value)} error={errors.monedaCodigo}
-                                        placeholder="Ej: COP, USD" required={true} disabled={readOnly} />
+                                        placeholder="ID numérico de la moneda" required={true} disabled={readOnly} />
                                 </div>
                                 <div className="col-md-4 mb-3">
                                     <InputModal id="cu_saldo" label="Saldo Inicial" type="number"
@@ -306,7 +342,7 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                         required={!readOnly} disabled={readOnly} />
                                 </div>
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cu_centro" label="Centro de Costo" value={cajaUpdated.centroCosto}
+                                    <InputModal id="cu_centro" label="ID Centro de Costo" type="number" value={cajaUpdated.centroCosto}
                                         onChange={e => set('centroCosto', e.target.value)} error={errors.centroCosto}
                                         placeholder="Opcional" disabled={readOnly} />
                                 </div>
