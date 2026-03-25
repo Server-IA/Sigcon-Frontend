@@ -4,13 +4,14 @@ import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import TextareaModal from '../../../components/molecules/TextareaModal';
 import AlertPage from '../../../components/molecules/AlertPage';
+import AssetSearch from './AssetSearch';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
 // ─── Enum exacto del backend NiifCorrectionType ──────────────────────────────
 const CORRECTION_TYPES = [
-    { id: 'USEFUL_LIFE_ADJUSTMENT',    label: 'Ajuste de vida útil' },
-    { id: 'REVALUATION',               label: 'Revaluación' },
+    { id: 'USEFUL_LIFE_ADJUSTMENT',     label: 'Ajuste de vida útil' },
+    { id: 'REVALUATION',                label: 'Revaluación' },
     { id: 'DEPRECIATION_METHOD_CHANGE', label: 'Cambio de método de depreciación' },
 ];
 
@@ -19,44 +20,49 @@ const NiifCorrectionIndex = () => {
     const location = useLocation();
 
     // ── Estado del formulario ────────────────────────────────────────
-    const [correctionType,  setCorrectionType]  = useState('');
-    const [assetId,         setAssetId]         = useState('');
+    const [selectedAsset,       setSelectedAsset]       = useState(null);  // { id, assetCode, name, description }
+    const [correctionType,      setCorrectionType]      = useState('');
     const [newUsefulLifeMonths, setNewUsefulLifeMonths] = useState('');
-    const [newBookValue,    setNewBookValue]    = useState('');
-    const [observations,    setObservations]    = useState('');
+    const [newBookValue,        setNewBookValue]        = useState('');
+    const [observations,        setObservations]        = useState('');
 
     // ── Estado UI ────────────────────────────────────────────────────
-    const [errors,        setErrors]        = useState({});
-    const [errorMessage,  setErrorMessage]  = useState('');
-    const [isSubmitting,  setIsSubmitting]  = useState(false);
-    const [showSuccess,   setShowSuccess]   = useState(false);
-    const [history,       setHistory]       = useState([]);
+    const [errors,       setErrors]       = useState({});
+    const [errorMessage, setErrorMessage] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccess,  setShowSuccess]  = useState(false);
+    const [history,      setHistory]      = useState([]);
 
-    // Autocompletar si viene de verificación
+    // Autocompletar si viene de verificación (el result puede traer assetId)
     useEffect(() => {
         const result = location.state?.result;
         if (result) {
-            if (result.assetId)  setAssetId(String(result.assetId));
-            if (result.usefulLife) setNewUsefulLifeMonths(String(Math.round(Number(result.usefulLife) * 12)));
-            if (result.acquisitionValue) setNewBookValue(String(result.acquisitionValue));
+            if (result.assetId || result.assetCode) {
+                setSelectedAsset({
+                    id:          result.assetId ?? null,
+                    assetCode:   result.assetCode ?? '',
+                    name:        result.assetName ?? '',
+                    description: '',
+                });
+            }
+            if (result.usefulLife)
+                setNewUsefulLifeMonths(String(Math.round(Number(result.usefulLife) * 12)));
+            if (result.acquisitionValue)
+                setNewBookValue(String(result.acquisitionValue));
         }
     }, []);
 
-    // ── Validación de formulario ─────────────────────────────────────
+    // ── Validación ───────────────────────────────────────────────────
     const validate = () => {
         const e = {};
-        if (!assetId || Number(assetId) <= 0)
-            e.assetId = 'Ingrese el ID del activo';
+        if (!selectedAsset)
+            e.asset = 'Seleccione un activo';
         if (!correctionType)
             e.correctionType = 'Seleccione el tipo de corrección';
-        if (correctionType === 'USEFUL_LIFE_ADJUSTMENT') {
-            if (!newUsefulLifeMonths || Number(newUsefulLifeMonths) <= 0)
-                e.newUsefulLifeMonths = 'Ingrese la nueva vida útil en meses';
-        }
-        if (correctionType === 'REVALUATION') {
-            if (!newBookValue || Number(newBookValue) <= 0)
-                e.newBookValue = 'Ingrese el nuevo valor en libros';
-        }
+        if (correctionType === 'USEFUL_LIFE_ADJUSTMENT' && (!newUsefulLifeMonths || Number(newUsefulLifeMonths) <= 0))
+            e.newUsefulLifeMonths = 'Ingrese la nueva vida útil en meses';
+        if (correctionType === 'REVALUATION' && (!newBookValue || Number(newBookValue) <= 0))
+            e.newBookValue = 'Ingrese el nuevo valor en libros';
         if (!observations.trim())
             e.observations = 'Las observaciones son obligatorias';
         setErrors(e);
@@ -77,10 +83,10 @@ const NiifCorrectionIndex = () => {
         try {
             // POST /api/v1/niif-alerts/correction
             const payload = {
-                assetId:            Number(assetId),
+                assetId:             Number(selectedAsset.id),
                 correctionType,
                 newUsefulLifeMonths: newUsefulLifeMonths ? Number(newUsefulLifeMonths) : 0,
-                newBookValue:        newBookValue        ? Number(newBookValue)        : 0,
+                newBookValue:        newBookValue        ? Number(newBookValue)         : 0,
                 observations,
             };
 
@@ -92,21 +98,21 @@ const NiifCorrectionIndex = () => {
             );
 
             // Agregar al historial de sesión
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('es-CO');
+            const dateStr   = new Date().toLocaleDateString('es-CO');
             const corrLabel = CORRECTION_TYPES.find(c => c.id === correctionType)?.label ?? correctionType;
             setHistory(prev => [{
-                assetId,
-                type:  corrLabel,
-                date:  dateStr,
-                data:  response?.data ?? null,
+                assetCode: selectedAsset.assetCode ?? selectedAsset.id,
+                assetName: selectedAsset.name ?? '',
+                type:      corrLabel,
+                date:      dateStr,
+                data:      response?.data ?? null,
             }, ...prev]);
 
             setShowSuccess(true);
 
             // Resetear formulario
+            setSelectedAsset(null);
             setCorrectionType('');
-            setAssetId('');
             setNewUsefulLifeMonths('');
             setNewBookValue('');
             setObservations('');
@@ -114,12 +120,11 @@ const NiifCorrectionIndex = () => {
 
         } catch (err) {
             console.error('Error al aplicar corrección NIIF:', err);
-            // Mostrar mensaje real del servidor si viene disponible
             const serverMsg = err?.message ?? err?.msg ?? '';
             if (err?.status === 400 || serverMsg) {
                 setErrorMessage(serverMsg || 'Error en los datos enviados. Verifique los campos e intente nuevamente.');
             } else if (err?.status === 404) {
-                setErrorMessage('Activo no encontrado. Verifique el ID del activo ingresado.');
+                setErrorMessage('Activo no encontrado. Verifique el activo seleccionado.');
             } else if (err?.status === 423) {
                 setErrorMessage('No se pueden aplicar correcciones. El periodo contable está cerrado.');
             } else {
@@ -128,11 +133,6 @@ const NiifCorrectionIndex = () => {
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const handleClose = () => {
-        setErrorMessage('');
-        setErrors({});
     };
 
     return (
@@ -173,25 +173,24 @@ const NiifCorrectionIndex = () => {
                             </div>
                         </div>
 
-                        {/* ── Datos del Activo y Ajuste ── */}
+                        {/* ── Búsqueda de Activo ── */}
                         <h6 className="fw-bold mb-3">Datos del Activo</h6>
                         <div className="row">
-                            <div className="col-md-4 mb-4">
-                                <InputModal
-                                    type="number"
-                                    id="corr_assetId"
-                                    label="ID del Activo"
-                                    value={assetId}
-                                    onChange={(e) => setAssetId(e.target.value)}
-                                    placeholder="Ej. 1"
-                                    error={errors.assetId}
+                            <div className="col-12 mb-4">
+                                <AssetSearch
+                                    onSelect={(asset) => {
+                                        setSelectedAsset(asset);
+                                        setErrors(prev => { const e = { ...prev }; delete e.asset; return e; });
+                                    }}
+                                    selectedAsset={selectedAsset}
+                                    error={errors.asset}
                                     required
                                 />
                             </div>
 
-                            {/* Nueva vida útil — solo visible para USEFUL_LIFE_ADJUSTMENT */}
+                            {/* Nueva vida útil — solo para USEFUL_LIFE_ADJUSTMENT */}
                             {(correctionType === 'USEFUL_LIFE_ADJUSTMENT' || correctionType === '') && (
-                                <div className="col-md-4 mb-4">
+                                <div className="col-md-6 mb-4">
                                     <InputModal
                                         type="number"
                                         id="corr_usefulLifeMonths"
@@ -205,9 +204,9 @@ const NiifCorrectionIndex = () => {
                                 </div>
                             )}
 
-                            {/* Nuevo valor en libros — solo visible para REVALUATION */}
+                            {/* Nuevo valor en libros — solo para REVALUATION */}
                             {(correctionType === 'REVALUATION' || correctionType === '') && (
-                                <div className="col-md-4 mb-4">
+                                <div className="col-md-6 mb-4">
                                     <InputModal
                                         type="number"
                                         id="corr_bookValue"
@@ -257,7 +256,11 @@ const NiifCorrectionIndex = () => {
                                     ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />Aplicando...</>
                                     : 'Aplicar Corrección'}
                             </button>
-                            <button type="button" className="btn btn-danger" onClick={handleClose}>
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={() => { setErrorMessage(''); setErrors({}); }}
+                            >
                                 Cancelar
                             </button>
                         </div>
@@ -285,7 +288,7 @@ const NiifCorrectionIndex = () => {
                             <table className="table table-hover mb-0">
                                 <thead className="table-light">
                                     <tr>
-                                        <th>ID Activo</th>
+                                        <th>Activo</th>
                                         <th>Tipo de Corrección</th>
                                         <th>Fecha</th>
                                         <th>Estado</th>
@@ -294,7 +297,10 @@ const NiifCorrectionIndex = () => {
                                 <tbody>
                                     {history.map((h, idx) => (
                                         <tr key={idx}>
-                                            <td><small className="fw-semibold">{h.assetId}</small></td>
+                                            <td>
+                                                <small className="fw-semibold d-block">{h.assetCode}</small>
+                                                {h.assetName && <small className="text-muted">{h.assetName}</small>}
+                                            </td>
                                             <td><small>{h.type}</small></td>
                                             <td><small>{h.date}</small></td>
                                             <td><span className="badge bg-label-success">Cumple NIIF</span></td>
