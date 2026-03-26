@@ -282,6 +282,7 @@ const IndexCentrosCosto = () => {
                 setCentroCosto={setCentroCosto}
                 dataTableRef={dataTableRef}
                 setCentroCostoEdit={setCentroCostoEdit}
+                allData={data}
                 readOnly
             />
 
@@ -292,6 +293,7 @@ const IndexCentrosCosto = () => {
                 setCentroCosto={setCentroCosto}
                 dataTableRef={dataTableRef}
                 setCentroCostoEdit={setCentroCostoEdit}
+                allData={data}
             />
 
             <div className="modal fade" ref={modalConfirmDeleteRef} tabIndex={-1} aria-hidden="true">

@@ -6,6 +6,7 @@ import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
 import PermissionsIndex from "../pages/parametrizacion/permissions/index";
 import IndexUsers from "../pages/parametrizacion/users/index";
+import IndexCompanies from "../pages/parametrizacion/companies/index";
 
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
@@ -36,19 +37,23 @@ import AssetReportGeneration from "../pages/assets/asset-report-generation";
 // Third Party
 import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 
+// Bank and Cash
+import IndexCashList from "../pages/cash-and-banks/cash_list/index";
+import IndexCheques from "../pages/cash-and-banks/cheques/index";
+
 // Assets
 import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
-
 import PageMaintenance from "../pages/errors/page_maintenance";
 
 // NIIF
-import NiifVerificationIndex from "../pages/list_accounts/niif_verification/index";
-import NiifCorrectionIndex from "../pages/list_accounts/niif_correction/index";
+import NiifVerificationIndex from "../pages/assets/niif_verification/index";
+import NiifCorrectionIndex from "../pages/assets/niif_correction/index";
 
 import IndexSegmentation from "../pages/third-party/segmentation/index"
 
 // Cash and Banks
 import IndexCheques from "../pages/cash-and-banks/cheques/index";
+import IndexBankAccounts from "../pages/cash-and-banks/bank-accounts/index";
 
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
@@ -70,15 +75,16 @@ export const getMenu = async () => {
         position: 0,
         componentName: "HOME",
         menus: [
-            {
-                id: 0,
-                label: "Home",
-                path: "",
-                position: 0,
-                icon: "ri-home-smile-line",
-                childrens: [],
-                componentName: "HOME"
-            }
+          {
+            id: 0,
+            label: "Home",
+            path: "",
+            position: 0,
+            icon: "ri-home-smile-line",
+            childrens: [],
+            // component: Home,
+            componentName: "HOME"
+          }
         ]
       }
     ]
@@ -164,8 +170,11 @@ export const COMPONENT_MAP = [
   { id: "SEGMENTATION", name: "Segmentacion Terceros", component: IndexSegmentation },
   { id: "NIIF_VERIFICATION", name: "Verificación NIIF", component: NiifVerificationIndex },
   { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
-  { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: AssetDepreciationCalculation },
+  { id: "ACT_CALCULO_DEPRECIACION", name: "Depreciation Calculation", component: AssetDepreciationCalculation },
   { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
   { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
   { id: "CHEQUES", name: "Cheques", component: IndexCheques },
+  { id: "COMPANIES", name: "Empresas", component: IndexCompanies },
+  { id: "BANK_ACCOUNTS", name: "Cuentas Bancarias", component: IndexBankAccounts },
+  { id: "CASH_LIST", name: "Lista de Cajas", component: IndexCashList }
 ];
