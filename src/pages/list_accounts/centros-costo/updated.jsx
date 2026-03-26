@@ -9,15 +9,71 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 
 const COMPANY_ID_HARDCODED = 79;
 
-const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCosto, dataTableRef, setCentroCostoEdit, readOnly = false }) => {
+// Regex: sólo letras (incluidas tildes/ñ), números, espacios, guiones y puntos
+const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-\.]+$/;
+
+const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCosto, dataTableRef, setCentroCostoEdit, allData = [], readOnly = false }) => {
     const sfx = readOnly ? 'view' : 'updated'; // sufijo único por instancia para evitar conflicto de IDs con Select2
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
+    // Limpiar errores cada vez que se abre el modal con un nuevo registro
+    useEffect(() => {
+        setErrors({});
+        setErrorMessage('');
+    }, [centroCosto.id]);
+
+    const validateFrontend = () => {
+        const newErrors = {};
+
+        const nombre = (centroCosto.name ?? '').trim();
+        if (!nombre) {
+            newErrors.name = 'El nombre es obligatorio';
+        } else if (!NAME_REGEX.test(nombre)) {
+            newErrors.name = 'El nombre no puede contener caracteres especiales (ej: /, *, #, @, etc.)';
+        } else {
+            // Verificar nombre duplicado en los datos en memoria (excluyendo el registro actual)
+            const nombreDuplicado = allData.some(
+                (item) =>
+                    item.id !== centroCosto.id &&
+                    (item.name ?? '').trim().toLowerCase() === nombre.toLowerCase()
+            );
+            if (nombreDuplicado) {
+                newErrors.name = 'Código o nombre duplicado para la empresa, ingrese uno diferente';
+            }
+        }
+
+        const codigo = (centroCosto.code ?? '').trim();
+        if (!codigo) {
+            newErrors.code = 'El código es obligatorio';
+        } else {
+            // Verificar código duplicado en los datos en memoria (excluyendo el registro actual)
+            const codigoDuplicado = allData.some(
+                (item) =>
+                    item.id !== centroCosto.id &&
+                    (item.code ?? '').trim().toLowerCase() === codigo.toLowerCase()
+            );
+            if (codigoDuplicado) {
+                newErrors.code = 'Código o nombre duplicado para la empresa, ingrese uno diferente';
+            }
+        }
+
+        return newErrors;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validación frontend
+        const frontendErrors = validateFrontend();
+        if (Object.keys(frontendErrors).length > 0) {
+            setErrors(frontendErrors);
+            return;
+        }
+
         const payload = {
             ...centroCosto,
+            name: (centroCosto.name ?? '').trim(),
             companyId: centroCosto.companyId ?? COMPANY_ID_HARDCODED,
         };
         const url = base_url(['api', 'v1', 'cost-centers', centroCosto.id]);
@@ -41,11 +97,23 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
                 errores.forEach((err) => {
-                    fieldErrors[err.field] = err.message;
+                    // Mapear errores de campo del backend
+                    const msg = err.message || 'Código o nombre duplicado para la empresa, ingrese uno diferente';
+                    if (err.field === 'name' || err.field === 'code') {
+                        fieldErrors[err.field] = msg;
+                    } else {
+                        fieldErrors[err.field] = msg;
+                    }
                 });
                 setErrors(fieldErrors);
-            } else if (error?.msg) {
-                setErrorMessage(error.msg);
+            } else {
+                // Error global del backend (400 duplicado, 404 no encontrado, etc.)
+                const msg =
+                    error?.msg ||
+                    error?.message ||
+                    error?.error ||
+                    'Error al guardar los cambios. Verifique su conexión e intente nuevamente.';
+                setErrorMessage(msg);
             }
         }
     };
@@ -61,11 +129,6 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
         setErrorMessage('');
     };
 
-    useEffect(() => {
-        setErrors({});
-        setErrorMessage('');
-    }, [centroCosto]);
-
     return (
         <div className="modal fade" ref={modalRef} tabIndex={-1} aria-hidden="true">
             <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
@@ -76,7 +139,7 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
                     </div>
                     <div className="modal-body">
                         <div className={`alert alert-danger alert-dismissible ${errorMessage ? '' : 'd-none'}`} role="alert">
-                            <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <button type="button" className="btn-close" onClick={() => setErrorMessage('')} aria-label="Close"></button>
                             <span>{errorMessage}</span>
                         </div>
 
@@ -87,23 +150,18 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
                                     id={`name_${sfx}`}
                                     label="Nombre del Centro de Costo"
                                     value={centroCosto.name ?? ''}
-                                    onChange={(e) => !readOnly && setCentroCosto({ ...centroCosto, name: e.target.value })}
+                                    onChange={(e) => {
+                                        if (readOnly) return;
+                                        setCentroCosto({ ...centroCosto, name: e.target.value });
+                                        setErrors({ ...errors, name: null });
+                                        setErrorMessage('');
+                                    }}
                                     error={!readOnly ? errors.name : undefined}
                                     placeholder="Nombre"
                                     required={!readOnly}
                                     readOnly={readOnly}
                                 />
                             </div>
-                            {/* <div className="col-md-6 mb-3">
-                                <InputModal
-                                    type="text"
-                                    id="companyId_updated"
-                                    label="Identificador de la Empresa"
-                                    value={String(centroCosto.companyId ?? COMPANY_ID_HARDCODED)}
-                                    readOnly
-                                    placeholder="Id empresa"
-                                />
-                            </div> */}
                         </div>
 
                         <div className="row">
@@ -117,6 +175,7 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
                                         if (readOnly) return;
                                         setCentroCosto({ ...centroCosto, code: e.target.value.toUpperCase().trim().replace(/ /g, '') });
                                         setErrors({ ...errors, code: null });
+                                        setErrorMessage('');
                                     }}
                                     error={!readOnly ? errors.code : undefined}
                                     placeholder="EJ: CC001"
