@@ -7,11 +7,6 @@ const InputSelectModal = ({ id, label, value, onChange, error, options, placehol
     onChangeRef.current = onChange;
 
     useEffect(() => {
-        console.log(id);
-        console.log(options);
-    }, []);
-
-    useEffect(() => {
 
         const $select = $(selectRef.current);
 

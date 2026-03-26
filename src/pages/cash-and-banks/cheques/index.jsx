@@ -3,6 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
 
+import { fetchHelper } from '../../../utils/fetch';
+import { base_url }    from '../../../utils/functions';
+
 import CreateCheque    from './create';
 import DetailCheque    from './updated';
 import FilterCheque    from './filter';
@@ -101,8 +104,7 @@ const IndexCheques = () => {
     const [clickLost,      setClickLost]      = useState(false);
     const [clickReconcile, setClickReconcile] = useState(false);
 
-    // TODO: confirmar ruta del endpoint con backend
-    const url = ['api', 'v1', 'cash-and-banks', 'cheques', 'search'];
+    const url = ['api', 'v1', 'banks', 'checks', 'search'];
 
     const formatCurrency = (val) => {
         if (val === null || val === undefined) return '-';
@@ -112,22 +114,22 @@ const IndexCheques = () => {
     };
 
     const columns = [
-        { title: 'N° Cheque',        data: 'numeroCheque',   name: 'numeroCheque' },
-        { title: 'Beneficiario',     data: 'beneficiario',   name: 'beneficiario' },
+        { title: 'N° Cheque',        data: 'numberCheck',  name: 'numberCheck' },
+        { title: 'Beneficiario',     data: 'beneficiary',  name: 'beneficiary' },
         {
-            title: 'Valor', data: 'valorCheque', name: 'valorCheque', searchable: false,
+            title: 'Valor', data: 'value', name: 'value', searchable: false,
             render: (val) => formatCurrency(val),
         },
-        { title: 'Concepto',         data: 'concepto',         name: 'concepto' },
-        { title: 'Fecha Expedición', data: 'fechaExpedicion',  name: 'fechaExpedicion', searchable: false },
+        { title: 'Concepto',         data: 'concept',   name: 'concept' },
+        { title: 'Fecha Expedición', data: 'issueDate', name: 'issueDate', searchable: false },
         {
-            title: 'Tipo', data: 'tipoCheque', name: 'tipoCheque',
+            title: 'Tipo', data: 'typeCheck', name: 'typeCheck',
             render: (val) => val
                 ? `<span class="badge ${TIPO_BADGE[val] || 'bg-label-secondary'}">${val === 'FISICO' ? 'Físico' : 'Virtual'}</span>`
                 : '-',
         },
         {
-            title: 'Estado', data: 'estadoCheque', name: 'estadoCheque',
+            title: 'Estado', data: 'statusCheck', name: 'statusCheck',
             render: (val) => val
                 ? `<span class="badge ${ESTADO_BADGE[val] || 'bg-label-secondary'}">${ESTADOS_CHEQUE.find(e => e.id === val)?.name || val}</span>`
                 : '-',
@@ -135,8 +137,8 @@ const IndexCheques = () => {
         {
             title: 'Acciones', data: 'id', searchable: false,
             render: (id, _type, row) => {
-                const estado = row.estadoCheque;
-                const tipo   = row.tipoCheque;
+                const estado = row.statusCheck;
+                const tipo   = row.typeCheck;
 
                 let btns = `
                     <button class="btn btn-sm btn-label-info action-btn"
@@ -165,6 +167,14 @@ const IndexCheques = () => {
                     <button class="btn btn-sm btn-label-success action-btn ms-1"
                         data-action="reconcile" data-id="${id}" title="Registrar cobro">
                         <i class="ri-check-double-line"></i>
+                    </button>`;
+                }
+
+                if (estado === 'DISPONIBLE') {
+                    btns += `
+                    <button class="btn btn-sm btn-label-danger action-btn ms-1"
+                        data-action="delete" data-id="${id}" title="Eliminar cheque">
+                        <i class="ri-delete-bin-line"></i>
                     </button>`;
                 }
 
@@ -250,19 +260,19 @@ const IndexCheques = () => {
             }
 
             setSelectedRecord({
-                id:               ref.id               ?? '',
-                idChequera:       ref.idChequera        ?? '',
-                numeroCheque:     ref.numeroCheque      ?? '',
-                beneficiario:     ref.beneficiario      ?? '',
-                valorCheque:      ref.valorCheque       ?? '',
-                concepto:         ref.concepto          ?? '',
-                fechaExpedicion:  ref.fechaExpedicion   ?? '',
-                tipoCheque:       ref.tipoCheque        ?? 'FISICO',
-                estadoCheque:     ref.estadoCheque      ?? '',
-                fechaCobro:       ref.fechaCobro        ?? '',
-                idMovimiento:     ref.idMovimiento      ?? '',
-                observaciones:    ref.observaciones     ?? '',
-                documentoSoporte: ref.documentoSoporte  ?? '',
+                id:               ref.id                       ?? '',
+                idChequera:       ref.checkbook?.id            ?? '',
+                numeroCheque:     ref.numberCheck              ?? '',
+                beneficiario:     ref.beneficiary              ?? '',
+                valorCheque:      ref.value                    ?? '',
+                concepto:         ref.concept                  ?? '',
+                fechaExpedicion:  ref.issueDate                ?? '',
+                tipoCheque:       ref.typeCheck                ?? 'FISICO',
+                estadoCheque:     ref.statusCheck              ?? '',
+                fechaCobro:       ref.collectionDate           ?? '',
+                idMovimiento:     ref.financialMovementId      ?? '',
+                observaciones:    ref.observations             ?? '',
+                documentoSoporte: ref.supportDocumentPath      ?? '',
             });
 
             switch (action) {
@@ -270,6 +280,28 @@ const IndexCheques = () => {
                 case 'annul':     setClickAnnul(true);     break;
                 case 'lost':      setClickLost(true);      break;
                 case 'reconcile': setClickReconcile(true); break;
+                case 'delete': {
+                    window.Swal.fire({
+                        title: '¿Eliminar cheque?',
+                        html: `¿Está seguro de eliminar el cheque <strong>N° ${mapped.numeroCheque}</strong>?<br/><br/><em>Esta acción no se puede deshacer.</em>`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#d33',
+                    }).then(async (result) => {
+                        if (!result.isConfirmed) return;
+                        try {
+                            const url = base_url(['api', 'v1', 'banks', 'checks', mapped.id]);
+                            await fetchHelper.delete(url, {}, 1000);
+                            dataTableRef?.current?.ajax.reload();
+                            setMessage({ message: `Cheque N° ${mapped.numeroCheque} eliminado exitosamente`, type: 'success', show: true });
+                        } catch (error) {
+                            setMessage({ message: error?.msg || 'Error al eliminar el cheque', type: 'danger', show: true });
+                        }
+                    });
+                    break;
+                }
                 default: console.warn('Acción no reconocida', action);
             }
         };
@@ -283,7 +315,7 @@ const IndexCheques = () => {
             <div className="card">
                 <h5 className="card-header text-md-start text-center">Cheques — Gestión de Chequeras</h5>
 
-                <AlertPage type={message.type} message={message.message} show={message.show} />
+                <AlertPage type={message.type} message={message.message} show={message.show} onChange={() => setMessage({ message: '', type: '', show: false })} />
 
                 <div className="card-datatable text-nowrap">
                     <DataTableReference
@@ -323,17 +355,15 @@ const IndexCheques = () => {
             <DetailCheque
                 modalRef={modalDetailRef}
                 record={selectedRecord}
-                estados={ESTADOS_CHEQUE}
-                tipos={TIPOS_CHEQUE}
             />
 
             <AnnulCheque
                 modalRef={modalAnnulRef}
                 modalInstance={modalAnnulInstance}
                 record={selectedRecord}
-                setRecord={setSelectedRecord}
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
+                onReportLost={() => setClickLost(true)}
             />
 
             <LostCheque

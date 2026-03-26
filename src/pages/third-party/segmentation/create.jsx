@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 
 import AlertPage        from '../../../components/molecules/AlertPage';
 import InputModal       from '../../../components/molecules/InputModal';
+import InputDate        from '../../../components/molecules/InputDate';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 import { fetchHelper } from '../../../utils/fetch';
@@ -32,6 +33,7 @@ const CreateSegmentation = ({
         const onShow = async () => {
             setErrors({});
             setErrorMessage('');
+            document.getElementById('seg_create_lastCalcDate')?._flatpickr?.set('minDate', 'today');
             try {
                 setLoadingClients(true);
                 const url = base_url(['api', 'v1', 'third-parties', 'search']);
@@ -180,12 +182,12 @@ const CreateSegmentation = ({
 
                             {/* Fecha último cálculo */}
                             <div className="col-md-6">
-                                <InputModal
-                                    type="date"
+                                <InputDate
                                     id="seg_create_lastCalcDate"
                                     label="Fecha del ultimo cálculo"
-                                    value={record.lastCalculationDate}
-                                    onChange={(e) => setRecord(prev => ({ ...prev, lastCalculationDate: e.target.value }))}
+                                    date={record.lastCalculationDate}
+                                    dateFormat="Y-m-d"
+                                    onChange={(dateStr) => setRecord(prev => ({ ...prev, lastCalculationDate: dateStr ?? '' }))}
                                     error={errors.lastCalculationDate}
                                     required
                                 />
