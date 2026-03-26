@@ -35,10 +35,12 @@ const mapDTOToState = (row) => ({
     typeRegimenId:      row.typeRegimen?.id        ?? '',
     withholdingIds:     (row.withholdings  ?? []).map(w => w.id).join(','),
     roles:              (row.roles         ?? []).map(r => ROLE_ID_TO_CODE[r.id]).filter(Boolean),
-    municipalityId:     row.municipality?.id      ?? '',
-    contacts:           row.contacts              ?? [],
+    municipalityId:     row.municipality?.id           ?? '',
+    countryId:          row.municipality?.country?.id  ?? '',
+    contacts:           row.contacts                   ?? [],
     status:             STATUS_ID_TO_CODE[row.status?.id] ?? 'ACTIVE',
-    blockReason:        row.blockingReason        ?? '',
+    blockReason:        row.blockingReason             ?? '',
+    paymentConditions:  row.paymentTerms               ?? '',
 });
 
 const emptyThirdParty = {
@@ -51,6 +53,7 @@ const emptyThirdParty = {
     withholdingIds: '',
     roles: [],
     municipalityId: '',
+    countryId: '',
     creditLimit: '',
     paymentConditions: '',
     marketSegment: '',
