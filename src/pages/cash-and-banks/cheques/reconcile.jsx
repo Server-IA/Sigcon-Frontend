@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 
 import AlertPage        from '../../../components/molecules/AlertPage';
 import InputModal       from '../../../components/molecules/InputModal';
+import InputDate        from '../../../components/molecules/InputDate';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-// TODO: confirmar ruta del endpoint con backend
-const COBRAR_URL = (id) => ['api', 'v1', 'cash-and-banks', 'cheques', id, 'cobrar'];
+const COBRAR_URL = (id) => ['api', 'v1', 'banks', 'checks', id, 'collect'];
 
 const ReconcileCheque = ({
     modalRef, modalInstance, record, setRecord, dataTableRef, setMessage, metodos,
@@ -58,10 +58,10 @@ const ReconcileCheque = ({
             setLoading(true);
             const url = base_url(COBRAR_URL(record.id));
             await fetchHelper.put(url, {
-                fechaCobro:         form.fechaCobro,
-                metodoConciliacion: form.metodoConciliacion,
-                referenciaCobro:    form.referenciaCobro.trim(),
-                ...(form.idMovimiento && { idMovimiento: Number(form.idMovimiento) }),
+                collectionDate:      form.fechaCobro,
+                conciliationMethod:  form.metodoConciliacion,
+                collectionReference: form.referenciaCobro.trim(),
+                ...(form.idMovimiento && { financialMovementId: Number(form.idMovimiento) }),
             }, {}, 1000);
 
             dataTableRef?.current?.ajax.reload();
@@ -76,7 +76,6 @@ const ReconcileCheque = ({
             setForm({ fechaCobro: today, metodoConciliacion: '', referenciaCobro: '', idMovimiento: '' });
             setErrorMessage('');
         } catch (error) {
-            console.error(error);
             setErrorMessage(error?.msg || 'Error al registrar el cobro, intente nuevamente');
         } finally {
             setLoading(false);
@@ -93,7 +92,7 @@ const ReconcileCheque = ({
                     </div>
 
                     <div className="modal-body">
-                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} />
+                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} onChange={() => setErrorMessage('')} />
 
                         {/* Datos del cheque (solo lectura) */}
                         <div className="row">
@@ -157,13 +156,12 @@ const ReconcileCheque = ({
                         {/* Datos de conciliación */}
                         <div className="row">
                             <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                                <InputDate
                                     id="rec_fecha_cobro"
                                     label="Fecha de cobro"
-                                    value={form.fechaCobro}
-                                    onChange={(e) => setForm(prev => ({ ...prev, fechaCobro: e.target.value }))}
-                                    error=""
+                                    date={form.fechaCobro}
+                                    dateFormat="Y-m-d"
+                                    onChange={(dateStr) => setForm(prev => ({ ...prev, fechaCobro: dateStr ?? '' }))}
                                     required
                                 />
                             </div>
