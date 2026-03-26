@@ -6,6 +6,7 @@ import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
 import PermissionsIndex from "../pages/parametrizacion/permissions/index";
 import IndexUsers from "../pages/parametrizacion/users/index";
+import IndexCompanies from "../pages/parametrizacion/companies/index";
 
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
@@ -173,6 +174,7 @@ export const COMPONENT_MAP = [
   { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
   { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
   { id: "CHEQUES", name: "Cheques", component: IndexCheques },
+  { id: "COMPANIES", name: "Empresas", component: IndexCompanies },
   { id: "BANK_ACCOUNTS", name: "Cuentas Bancarias", component: IndexBankAccounts },
   { id: "CASH_LIST", name: "Lista de Cajas", component: IndexCashList }
 ];
