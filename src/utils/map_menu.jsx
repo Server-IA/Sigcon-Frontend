@@ -39,7 +39,6 @@ import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 
 // Bank and Cash
 import IndexCashList from "../pages/cash-and-banks/cash_list/index";
-import IndexCheques from "../pages/cash-and-banks/cheques/index";
 
 // Assets
 import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
