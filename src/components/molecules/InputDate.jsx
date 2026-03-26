@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const InputDate = ({ id, label, date, onChange, error, placeholder, required, dateFormat = 'd-m-Y'}) => {
+const InputDate = ({ id, label, date, onChange, error, placeholder, required, dateFormat = 'd-m-Y', maxDate, minDate }) => {
 
     const dateRef = useRef(null);
     const onChangeRef = useRef(onChange);
@@ -12,17 +12,20 @@ const InputDate = ({ id, label, date, onChange, error, placeholder, required, da
 
     useEffect(() => {
         const $date = $(dateRef.current);
-        $date.flatpickr({
+        const config = {
             mode: 'single',
             dateFormat: dateFormat,
             placeholder: placeholder,
             required: required,
             defaultDate: date,
-            onChange: (selectedDates, dateStr, instance) => {
+onChange: (selectedDates, dateStr, instance) => {
                 console.log(selectedDates, dateStr, instance);
                 onChangeRef.current?.(dateStr ? dateStr : null);
             }
-        });
+        };
+        if (maxDate !== undefined) config.maxDate = maxDate;
+        if (minDate !== undefined) config.minDate = minDate;
+        $date.flatpickr(config);
     }, []);
 
     return (

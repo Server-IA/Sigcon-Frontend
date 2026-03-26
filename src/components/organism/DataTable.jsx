@@ -44,10 +44,10 @@ const DataTableReference = ({
       scrollX: true,
       scrollY: false,
       ordering: false,
-      processing: true,
-      serverSide: data.length === 0,
+      processing: url_api !== null,
+      serverSide: url_api !== null,
       drawCallback: function (settings) {
-        if (setData && data.length <= 0) {
+        if (setData && data.length <= 0 && url_api !== null) {
           setData(settings.json.data);
         }
       },
@@ -108,7 +108,8 @@ const DataTableReference = ({
         ...buttons,
       ],
     };
-    if (data.length > 0) {
+
+    if (data.length >= 0 && url_api === null) {
       config.data = data;
     } else {
       config.ajax = async function (data, callback, settings) {
@@ -128,23 +129,34 @@ const DataTableReference = ({
             recordsFiltered: 0,
           });
           if (error.status === 403 || error.msg === "Access Denied") {
-            // console.log("Error 403");
 
             $(tableRef.current).html(`
-                            <tbody>
-                                <tr>
-                                    <td colspan="${columns.length}" class="text-center text-danger py-5">
-                                        <i class="ri-lock-line fs-2 d-block mb-2"></i>
-                                        No tiene permisos para ver esta información
-                                    </td>
-                                </tr>
-                            </tbody>
-                        `);
+              <tbody>
+                <tr>
+                  <td colspan="${columns.length}" class="text-center text-danger py-5">
+                    <i class="ri-lock-line fs-2 d-block mb-2"></i>
+                    No tiene permisos para ver esta información
+                  </td>
+                </tr>
+              </tbody>
+            `);
+          }else{
+            $(tableRef.current).html(`
+              <tbody>
+                <tr>
+                  <td colspan="${columns.length}" class="text-center py-5">
+                    ${error.msg || error.message || 'No se encontraron datos'}
+                  </td>
+                </tr>
+              </tbody>
+            `);
           }
+
           return;
         }
       };
     }
+
     // Inicializar DataTable
     dataTableRef.current = $(tableRef.current).DataTable(config);
 
