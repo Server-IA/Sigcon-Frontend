@@ -450,7 +450,7 @@ const IndexBankBranches = () => {
             columns={columns}
             tableRef={tableRef}
             dataTableRef={dataTableRef}
-            method="POST"
+            method="GET"
             buttons={buttons}
             title="Sucursales bancarias"
             search={search}
