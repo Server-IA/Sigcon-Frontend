@@ -49,6 +49,7 @@ import IndexSegmentation from "../pages/third-party/segmentation/index"
 
 // Cash and Banks
 import IndexCheques from "../pages/cash-and-banks/cheques/index";
+import IndexCheckbooks from "../pages/cash-and-banks/chequeras/index";
 
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
@@ -168,4 +169,5 @@ export const COMPONENT_MAP = [
   { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
   { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
   { id: "CHEQUES", name: "Cheques", component: IndexCheques },
+  { id: "CHEQUERAS", name: "Chequeras", component: IndexCheckbooks },
 ];

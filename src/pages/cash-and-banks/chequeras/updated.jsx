@@ -1,0 +1,360 @@
+import { useEffect, useState } from 'react';
+
+import InputModal from '../../../components/molecules/InputModal';
+import InputSelectModal from '../../../components/molecules/inputSelectModal';
+import TextareaModal from '../../../components/molecules/TextareaModal';
+import AlertPage from '../../../components/molecules/AlertPage';
+
+import { base_url } from '../../../utils/functions';
+import { fetchHelper } from '../../../utils/fetch';
+
+// Endpoint oficial para actualizar por ID.
+const UPDATE_URL = (id) => ['api', 'v1', 'checkbooks', id];
+
+// Limites de UX para entradas de texto.
+const MAX_CHECKBOOK_NUMBER = 20;
+const MAX_ISSUING_BANK = 120;
+const MAX_OBSERVATIONS = 500;
+
+// Errores por campo.
+const emptyErrors = {
+    bankAccountId: '',
+    checkbookNumber: '',
+    issuingBank: '',
+    checkStartNumber: '',
+    checkEndNumber: '',
+    receivedDate: '',
+    activationDate: '',
+    status: '',
+    observations: '',
+};
+
+// Convierte a entero cuando aplique.
+const toInt = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const UpdatedCheckbook = ({
+    modalRef,
+    modalInstance,
+    record,
+    setRecord,
+    dataTableRef,
+    setMessage,
+    statuses = [],
+    accountOptions = [],
+}) => {
+
+    // Estado local del formulario.
+    const [errors, setErrors] = useState({ ...emptyErrors });
+    const [errorMessage, setErrorMessage] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    // Limpia errores al cambiar registro.
+    useEffect(() => {
+        setErrors({ ...emptyErrors });
+        setErrorMessage('');
+    }, [record]);
+
+    // Valida solo UX (campos vacios/formato).
+    const validate = () => {
+        const nextErrors = { ...emptyErrors };
+        let valid = true;
+
+        const bankAccountId = toInt(record.bankAccountId);
+        const checkbookNumber = String(record.checkbookNumber || '').trim();
+        const issuingBank = String(record.issuingBank || '').trim();
+        const checkStartNumber = toInt(record.checkStartNumber);
+        const checkEndNumber = toInt(record.checkEndNumber);
+        const receivedDate = record.receivedDate;
+        const activationDate = record.activationDate;
+        const status = String(record.status || '').trim();
+        const observations = String(record.observations || '');
+
+        if (!record.id) {
+            setErrorMessage('No se puede actualizar: identificador invalido');
+            return false;
+        }
+        if (!bankAccountId) {
+            nextErrors.bankAccountId = 'La cuenta bancaria es obligatoria';
+            valid = false;
+        }
+        if (!checkbookNumber) {
+            nextErrors.checkbookNumber = 'El numero de chequera es obligatorio';
+            valid = false;
+        } else if (checkbookNumber.length > MAX_CHECKBOOK_NUMBER) {
+            nextErrors.checkbookNumber = `Maximo ${MAX_CHECKBOOK_NUMBER} caracteres`;
+            valid = false;
+        }
+        if (!issuingBank) {
+            nextErrors.issuingBank = 'El banco emisor es obligatorio';
+            valid = false;
+        } else if (issuingBank.length > MAX_ISSUING_BANK) {
+            nextErrors.issuingBank = `Maximo ${MAX_ISSUING_BANK} caracteres`;
+            valid = false;
+        }
+        if (!checkStartNumber || checkStartNumber <= 0) {
+            nextErrors.checkStartNumber = 'Ingrese un numero valido';
+            valid = false;
+        }
+        if (!checkEndNumber || checkEndNumber <= 0) {
+            nextErrors.checkEndNumber = 'Ingrese un numero valido';
+            valid = false;
+        }
+        if (!receivedDate) {
+            nextErrors.receivedDate = 'La fecha de recepcion es obligatoria';
+            valid = false;
+        }
+        if (!activationDate) {
+            nextErrors.activationDate = 'La fecha de activacion es obligatoria';
+            valid = false;
+        }
+        if (!status) {
+            nextErrors.status = 'El estado es obligatorio';
+            valid = false;
+        }
+        if (observations.length > MAX_OBSERVATIONS) {
+            nextErrors.observations = `Maximo ${MAX_OBSERVATIONS} caracteres`;
+            valid = false;
+        }
+
+        setErrors(nextErrors);
+        return valid;
+    };
+
+    // Ejecuta PUT de actualizacion.
+    const handleSubmit = async () => {
+        if (!validate()) return;
+
+        const payload = {
+            bankAccountId: toInt(record.bankAccountId),
+            checkbookNumber: String(record.checkbookNumber).trim(),
+            issuingBank: String(record.issuingBank).trim(),
+            checkStartNumber: toInt(record.checkStartNumber),
+            checkEndNumber: toInt(record.checkEndNumber),
+            receivedDate: record.receivedDate,
+            activationDate: record.activationDate,
+            status: record.status,
+            observations: String(record.observations || '').trim(),
+        };
+
+        try {
+            setLoading(true);
+            const url = base_url(UPDATE_URL(record.id));
+            await fetchHelper.put(url, payload, {}, 1000, false);
+
+            dataTableRef?.current?.ajax.reload();
+            modalInstance?.current?.hide();
+
+            setMessage({
+                type: 'success',
+                show: true,
+                message: 'Chequera actualizada exitosamente',
+            });
+        } catch (error) {
+            const backendErrors = error?.errors;
+            if (backendErrors?.length > 0) {
+                const nextErrors = { ...emptyErrors };
+                backendErrors.forEach(item => {
+                    nextErrors[item.field] = item.message;
+                });
+                setErrors(nextErrors);
+            } else {
+                setErrorMessage(error?.msg || 'Error al actualizar la chequera');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Limpia estado visual de errores.
+    const handleClear = () => {
+        setErrors({ ...emptyErrors });
+        setErrorMessage('');
+    };
+
+    return (
+        <div className="modal fade" ref={modalRef} id="modalUpdateCheckbook" tabIndex={-1} aria-hidden="true">
+            <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
+                <div className="modal-content">
+                    <div className="modal-header">
+                        <h4 className="modal-title">Actualizar Chequera</h4>
+                        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+                    </div>
+
+                    <div className="modal-body">
+                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} />
+
+                        {/* Cuenta bancaria editable. */}
+                        <div className="row">
+                            <div className="col-12 mb-4 mt-2">
+                                {accountOptions.length > 0 ? (
+                                    <InputSelectModal
+                                        id="checkbook_bank_account_update"
+                                        label="Cuenta bancaria"
+                                        value={String(record.bankAccountId || '')}
+                                        onChange={(value) => setRecord(prev => ({ ...prev, bankAccountId: value }))}
+                                        error={errors.bankAccountId}
+                                        placeholder="Seleccione cuenta bancaria"
+                                        options={accountOptions}
+                                        required
+                                    />
+                                ) : (
+                                    <InputModal
+                                        type="number"
+                                        id="checkbook_bank_account_update_manual"
+                                        label="ID cuenta bancaria"
+                                        value={record.bankAccountId}
+                                        onChange={(event) => setRecord(prev => ({ ...prev, bankAccountId: event.target.value }))}
+                                        error={errors.bankAccountId}
+                                        placeholder="Ingrese el ID interno de la cuenta"
+                                        min={1}
+                                        required
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Numero de chequera + banco emisor. */}
+                        <div className="row">
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="checkbook_number_update"
+                                    label="Numero de chequera"
+                                    value={record.checkbookNumber}
+                                    onChange={(event) => setRecord(prev => ({ ...prev, checkbookNumber: event.target.value }))}
+                                    error={errors.checkbookNumber}
+                                    maxLength={MAX_CHECKBOOK_NUMBER}
+                                    required
+                                />
+                            </div>
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="checkbook_issuing_bank_update"
+                                    label="Banco emisor"
+                                    value={record.issuingBank}
+                                    onChange={(event) => setRecord(prev => ({ ...prev, issuingBank: event.target.value }))}
+                                    error={errors.issuingBank}
+                                    maxLength={MAX_ISSUING_BANK}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Rango de cheques. */}
+                        <div className="row">
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputModal
+                                    type="number"
+                                    id="checkbook_start_update"
+                                    label="Cheque inicial"
+                                    value={record.checkStartNumber}
+                                    onChange={(event) => setRecord(prev => ({ ...prev, checkStartNumber: event.target.value }))}
+                                    error={errors.checkStartNumber}
+                                    min={1}
+                                    required
+                                />
+                            </div>
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputModal
+                                    type="number"
+                                    id="checkbook_end_update"
+                                    label="Cheque final"
+                                    value={record.checkEndNumber}
+                                    onChange={(event) => setRecord(prev => ({ ...prev, checkEndNumber: event.target.value }))}
+                                    error={errors.checkEndNumber}
+                                    min={1}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Fechas. */}
+                        <div className="row">
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputModal
+                                    type="date"
+                                    id="checkbook_received_date_update"
+                                    label="Fecha de recepcion"
+                                    value={record.receivedDate}
+                                    onChange={(event) => setRecord(prev => ({ ...prev, receivedDate: event.target.value }))}
+                                    error={errors.receivedDate}
+                                    required
+                                />
+                            </div>
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputModal
+                                    type="date"
+                                    id="checkbook_activation_date_update"
+                                    label="Fecha activacion"
+                                    value={record.activationDate}
+                                    onChange={(event) => setRecord(prev => ({ ...prev, activationDate: event.target.value }))}
+                                    error={errors.activationDate}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Estado. */}
+                        <div className="row">
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputSelectModal
+                                    id="checkbook_status_update"
+                                    label="Estado"
+                                    value={record.status}
+                                    onChange={(value) => setRecord(prev => ({ ...prev, status: value }))}
+                                    error={errors.status}
+                                    placeholder="Seleccione estado"
+                                    options={statuses}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Observaciones. */}
+                        <div className="row">
+                            <TextareaModal
+                                id="checkbook_observations_update"
+                                label="Observaciones"
+                                value={record.observations}
+                                onChange={(event) => setRecord(prev => ({ ...prev, observations: event.target.value }))}
+                                error={errors.observations}
+                                placeholder="Observaciones opcionales"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="modal-footer">
+                        <button
+                            type="button"
+                            className="btn btn-primary ms-auto"
+                            onClick={handleSubmit}
+                            disabled={loading}>
+                            {loading ? 'Guardando...' : 'Guardar cambios'}
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-danger"
+                            onClick={handleClear}
+                            disabled={loading}>
+                            Limpiar
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-outline-secondary"
+                            data-bs-dismiss="modal"
+                            disabled={loading}>
+                            Volver
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default UpdatedCheckbook;
+
