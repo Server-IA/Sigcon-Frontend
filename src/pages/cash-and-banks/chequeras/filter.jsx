@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import InputModal from '../../../components/molecules/InputModal';
+import InputDate from '../../../components/molecules/InputDate';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 // Modal de filtros para consulta de chequeras (RF-19).
@@ -183,22 +184,26 @@ const FilterCheckbook = ({
                         {/* Fecha recepcion desde/hasta. */}
                         <div className="row">
                             <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                                {/* Calendario reutilizado (mismo componente usado en depreciation_rules). */}
+                                <InputDate
                                     id="filter_received_date_from"
                                     label="F. recepcion desde"
-                                    value={getFilter('receivedDate:name')?.value || ''}
-                                    onChange={(event) => updateFilter('receivedDate:name', 'value', event.target.value)}
+                                    date={getFilter('receivedDate:name')?.value || ''}
+                                    onChange={(date) => updateFilter('receivedDate:name', 'value', date || '')}
+                                    placeholder="yyyy-mm-dd"
+                                    dateFormat="Y-m-d"
                                     error=""
                                 />
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                                {/* Calendario reutilizado (mismo componente usado en depreciation_rules). */}
+                                <InputDate
                                     id="filter_received_date_to"
                                     label="F. recepcion hasta"
-                                    value={getFilter('receivedDate_hasta:name')?.value || ''}
-                                    onChange={(event) => updateFilter('receivedDate_hasta:name', 'value', event.target.value)}
+                                    date={getFilter('receivedDate_hasta:name')?.value || ''}
+                                    onChange={(date) => updateFilter('receivedDate_hasta:name', 'value', date || '')}
+                                    placeholder="yyyy-mm-dd"
+                                    dateFormat="Y-m-d"
                                     error=""
                                 />
                             </div>
@@ -207,22 +212,26 @@ const FilterCheckbook = ({
                         {/* Fecha activacion desde/hasta. */}
                         <div className="row">
                             <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                                {/* Calendario reutilizado (mismo componente usado en depreciation_rules). */}
+                                <InputDate
                                     id="filter_activation_date_from"
                                     label="F. activacion desde"
-                                    value={getFilter('activationDate:name')?.value || ''}
-                                    onChange={(event) => updateFilter('activationDate:name', 'value', event.target.value)}
+                                    date={getFilter('activationDate:name')?.value || ''}
+                                    onChange={(date) => updateFilter('activationDate:name', 'value', date || '')}
+                                    placeholder="yyyy-mm-dd"
+                                    dateFormat="Y-m-d"
                                     error=""
                                 />
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                                {/* Calendario reutilizado (mismo componente usado en depreciation_rules). */}
+                                <InputDate
                                     id="filter_activation_date_to"
                                     label="F. activacion hasta"
-                                    value={getFilter('activationDate_hasta:name')?.value || ''}
-                                    onChange={(event) => updateFilter('activationDate_hasta:name', 'value', event.target.value)}
+                                    date={getFilter('activationDate_hasta:name')?.value || ''}
+                                    onChange={(date) => updateFilter('activationDate_hasta:name', 'value', date || '')}
+                                    placeholder="yyyy-mm-dd"
+                                    dateFormat="Y-m-d"
                                     error=""
                                 />
                             </div>
@@ -247,4 +256,3 @@ const FilterCheckbook = ({
 };
 
 export default FilterCheckbook;
-

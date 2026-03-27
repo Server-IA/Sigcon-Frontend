@@ -4,6 +4,7 @@ import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import TextareaModal from '../../../components/molecules/TextareaModal';
 import AlertPage from '../../../components/molecules/AlertPage';
+import InputDate from '../../../components/molecules/InputDate';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
@@ -293,27 +294,29 @@ const CreateCheckbook = ({
                             </div>
                         </div>
 
-                        {/* Fechas de recepcion y activacion. */}
+                        {/* Fechas con el mismo calendario usado en depreciation_rules. */}
                         <div className="row">
                             <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                                <InputDate
                                     id="checkbook_received_date_create"
                                     label="Fecha de recepcion"
-                                    value={record.receivedDate}
-                                    onChange={(event) => setRecord(prev => ({ ...prev, receivedDate: event.target.value }))}
+                                    date={record.receivedDate}
+                                    onChange={(date) => setRecord(prev => ({ ...prev, receivedDate: date || '' }))}
                                     error={errors.receivedDate}
+                                    placeholder="yyyy-mm-dd"
+                                    dateFormat="Y-m-d"
                                     required
                                 />
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="date"
+                                <InputDate
                                     id="checkbook_activation_date_create"
                                     label="Fecha activacion"
-                                    value={record.activationDate}
-                                    onChange={(event) => setRecord(prev => ({ ...prev, activationDate: event.target.value }))}
+                                    date={record.activationDate}
+                                    onChange={(date) => setRecord(prev => ({ ...prev, activationDate: date || '' }))}
                                     error={errors.activationDate}
+                                    placeholder="yyyy-mm-dd"
+                                    dateFormat="Y-m-d"
                                     required
                                 />
                             </div>
@@ -383,4 +386,3 @@ const CreateCheckbook = ({
 };
 
 export default CreateCheckbook;
-

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
@@ -25,6 +25,9 @@ const STATUS_BADGE = {
     ANULADA: 'bg-label-danger',
     BLOQUEADA: 'bg-label-secondary',
 };
+
+// Estados donde no se debe permitir la accion de eliminar desde UI.
+const NON_DELETABLE_STATUSES = ['ANULADA', 'BLOQUEADA'];
 
 // Modelo base para crear/editar.
 export const emptyCheckbookRecord = {
@@ -71,6 +74,9 @@ const IndexCheckbooks = () => {
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
 
+    const modalViewRef = useRef(null);
+    const modalViewInstance = useRef(null);
+
     // Estado principal de pantalla.
     const [data, setData] = useState([]);
     const [record, setRecord] = useState({ ...emptyCheckbookRecord });
@@ -92,48 +98,55 @@ const IndexCheckbooks = () => {
         return Array.from(map.values());
     }, [data]);
 
-    // Acciones visibles por fila (sin lógica de permisos local).
+    // Acciones visibles por fila (sin lÃ³gica de permisos local).
     const actions = [
+        { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
 
     // Columnas del listado.
     const columns = [
-        { title: 'No. Chequera', data: 'checkbookNumber', name: 'checkbookNumber' },
+        { title: 'ID', data: 'id', name: 'id' },
+        { title: 'ID CUENTA BANCARIA', data: 'bankAccountId', name: 'bankAccountId' },
+        { title: 'BANCO EMISOR', data: 'issuingBank', name: 'issuingBank' },
+        { title: 'NO. CHEQUERA', data: 'checkbookNumber', name: 'checkbookNumber' },
+        { title: 'CHEQUE INICIAL', data: 'checkStartNumber', name: 'checkStartNumber' },
+        { title: 'CHEQUE FINAL', data: 'checkEndNumber', name: 'checkEndNumber' },
+        { title: 'F. RECEPCION', data: 'receivedDate', name: 'receivedDate' },
+        { title: 'F. ACTIVACION', data: 'activationDate', name: 'activationDate' },
         {
-            title: 'Cuenta bancaria',
-            data: 'bankAccountId',
-            name: 'bankAccountId',
-            render: (value, _type, row) => row.bankAccountLabel ?? row.bankAccountNumber ?? row.accountNumber ?? `#${value ?? '-'}`,
-        },
-        { title: 'Banco emisor', data: 'issuingBank', name: 'issuingBank' },
-        { title: 'Cheque inicial', data: 'checkStartNumber', name: 'checkStartNumber' },
-        { title: 'Cheque final', data: 'checkEndNumber', name: 'checkEndNumber' },
-        { title: 'F. recepcion', data: 'receivedDate', name: 'receivedDate' },
-        { title: 'F. activacion', data: 'activationDate', name: 'activationDate' },
-        {
-            title: 'Estado',
+            title: 'ESTADO',
             data: 'status',
             name: 'status',
             render: (status) => `<span class="badge ${STATUS_BADGE[status] || 'bg-label-secondary'}">${status || '-'}</span>`,
         },
         {
-            title: 'Acciones',
+            title: 'ACCIONES',
             data: 'id',
             searchable: false,
-            render: (id) => `
+            // Deshabilita eliminar cuando la chequera ya esta anulada o bloqueada.
+            render: (id, _type, row) => {
+                const isDeleteDisabledByStatus = NON_DELETABLE_STATUSES.includes(row?.status);
+                return `
                 <div class="d-flex gap-1">
-                    ${actions.map(action => `
+                    ${actions.map(action => {
+                        const isDeleteAction = action.key === 'delete';
+                        const isDisabled = isDeleteAction && isDeleteDisabledByStatus;
+                        const title = isDisabled ? 'No disponible para estado ANULADA/BLOQUEADA' : action.title;
+                        return `
                         <button class="btn btn-sm ${action.class} action-btn"
                             data-action="${action.key}"
                             data-id="${id}"
-                            title="${action.title}">
+                            title="${title}"
+                            ${isDisabled ? 'disabled' : ''}>
                             <i class="${action.icon}"></i>
                         </button>
-                    `).join('')}
+                    `;
+                    }).join('')}
                 </div>
-            `,
+            `;
+            },
         },
     ];
 
@@ -154,10 +167,18 @@ const IndexCheckbooks = () => {
         modalUpdateInstance.current.show();
     };
 
-        // Eliminacion: confirmacion + motivo obligatorio.
+    // Abre modal de visualizacion.
+    const openModalView = () => {
+        if (!modalViewInstance.current) {
+            modalViewInstance.current = new window.bootstrap.Modal(modalViewRef.current);
+        }
+        modalViewInstance.current.show();
+    };
+
+    // Eliminacion: confirmacion + motivo + confirmacion reforzada por texto.
     const handleDelete = async (selected) => {
         const confirm = await window.Swal.fire({
-            title: '�Eliminar chequera?',
+            title: '¿Eliminar chequera?',
             text: `Se eliminara la chequera ${selected.checkbookNumber || ''}`,
             icon: 'warning',
             showCancelButton: true,
@@ -180,6 +201,23 @@ const IndexCheckbooks = () => {
             },
         });
         if (!reasonPrompt.isConfirmed) return;
+
+        // Segunda confirmacion por texto para evitar eliminaciones accidentales.
+        const confirmTextPrompt = await window.Swal.fire({
+            title: 'Confirmacion reforzada',
+            html: 'Esta accion no se puede deshacer.<br/>Escriba <b>Estoy seguro</b> para continuar.',
+            input: 'text',
+            inputLabel: 'Confirmacion por texto',
+            inputPlaceholder: 'Estoy seguro',
+            showCancelButton: true,
+            confirmButtonText: 'Eliminar',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (!value || value.trim() === '') return 'Debe escribir "Estoy seguro"';
+                if (value.trim() !== 'Estoy seguro') return 'El texto debe ser exactamente: "Estoy seguro"';
+            },
+        });
+        if (!confirmTextPrompt.isConfirmed) return;
 
         try {
             const reason = reasonPrompt.value.trim();
@@ -232,6 +270,12 @@ const IndexCheckbooks = () => {
             const selected = data.find(item => item.id === id);
             if (!selected) return;
 
+            if (action === 'view') {
+                setRecord(mapCheckbookRecord(selected));
+                openModalView();
+                return;
+            }
+
             if (action === 'edit') {
                 setRecord(mapCheckbookRecord(selected));
                 openModalUpdate();
@@ -239,6 +283,15 @@ const IndexCheckbooks = () => {
             }
 
             if (action === 'delete') {
+                // Valida nuevamente en el handler para evitar ejecuciones forzadas por consola.
+                if (NON_DELETABLE_STATUSES.includes(selected.status)) {
+                    setMessage({
+                        type: 'warning',
+                        show: true,
+                        message: 'No se puede eliminar una chequera en estado ANULADA o BLOQUEADA',
+                    });
+                    return;
+                }
                 handleDelete(selected);
             }
         };
@@ -246,6 +299,21 @@ const IndexCheckbooks = () => {
         table.on('click', '.action-btn', handler);
         return () => table.off('click', '.action-btn', handler);
     }, [data]);
+
+/*         useEffect(() => {
+    const table = dataTableRef?.current;
+    if (!table) return;
+
+    const onXhr = (_e, _settings, json) => {
+        console.log("recordsTotal:", json?.recordsTotal, typeof json?.recordsTotal);
+        console.log("recordsFiltered:", json?.recordsFiltered, typeof json?.recordsFiltered);
+        console.log("rows:", json?.data?.length);
+    };
+
+    table.on("xhr.dt", onXhr);
+    return () => table.off("xhr.dt", onXhr);
+    }, []); */
+
 
     return (
         <>
@@ -305,10 +373,24 @@ const IndexCheckbooks = () => {
                 statuses={CHECKBOOK_STATUS}
                 accountOptions={accountOptions}
             />
+
+            <UpdatedCheckbook
+                modalRef={modalViewRef}
+                modalInstance={modalViewInstance}
+                record={record}
+                setRecord={setRecord}
+                dataTableRef={dataTableRef}
+                setMessage={setMessage}
+                statuses={CHECKBOOK_STATUS}
+                accountOptions={accountOptions}
+                readOnly
+                modalId="modalViewCheckbook"
+            />
         </>
     );
 };
 
 export default IndexCheckbooks;
+
 
 
