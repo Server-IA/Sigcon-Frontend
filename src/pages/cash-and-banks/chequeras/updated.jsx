@@ -10,7 +10,7 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
 // Endpoint oficial para actualizar chequeras por ID.
-const UPDATE_URL = (id) => ['api', 'v1', 'checkbooks', id];
+const UPDATE_URL = (id) => ['api', 'v1', 'banks', 'checkbooks', id];
 
 // Limites de UX para campos de texto.
 const MAX_CHECKBOOK_NUMBER = 20;
@@ -34,6 +34,54 @@ const emptyErrors = {
 const toInt = (value) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
+};
+
+// Traduce mensajes existentes del backend al catalogo BNK solicitado.
+const mapCheckbookErrorMessage = (rawMessage = '') => {
+    const message = String(rawMessage || '');
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes('rango superpuesto') || normalized.includes('superpuesto')) {
+        return 'BNK-ERR-065: "Rango de cheques superpuesto con chequera existente"';
+    }
+    if (normalized.includes('duplicidad') || normalized.includes('duplicado')) {
+        return 'BNK-ERR-060: "Duplicidad de número de chequera en la misma cuenta"';
+    }
+    if (normalized.includes('no consecutiv') || normalized.includes('rango invalido') || normalized.includes('rango de cheques invalido')) {
+        return 'BNK-ERR-061: "Rango de cheques inválido - números no consecutivos"';
+    }
+    if (normalized.includes('inactiva') || normalized.includes('no habilitada para chequeras')) {
+        return 'BNK-ERR-062: "Cuenta financiera inactiva o no habilitada para chequeras"';
+    }
+    if (normalized.includes('estado inicial no permitido') || normalized.includes('no se puede crear en estado agotada/anulada')) {
+        return 'BNK-ERR-063: "Estado inicial no permitido - no se puede crear en estado AGOTADA/ANULADA"';
+    }
+    if (normalized.includes('permisos insuficientes') || normalized.includes('access denied') || normalized.includes('permiso denegado')) {
+        return 'BNK-ERR-064: "Permisos insuficientes para creación/modificación de chequeras"';
+    }
+
+    return message;
+};
+
+// Interpreta errores de negocio retornados en body aunque el HTTP sea 200.
+const ensureBusinessSuccess = (response) => {
+    const payload = response?.data ?? response;
+    const hasBusinessError =
+        response?.success === false
+        || payload?.success === false
+        || Number(response?.code) >= 400
+        || Number(payload?.code) >= 400;
+
+    if (hasBusinessError) {
+        const rawMessage = response?.message || payload?.message || response?.error || payload?.error || 'Operacion rechazada por backend';
+        throw {
+            msg: mapCheckbookErrorMessage(rawMessage),
+            errors: response?.errors || payload?.errors || response?.details || payload?.details || [],
+            status: Number(response?.code) || Number(payload?.code) || 400,
+        };
+    }
+
+    return payload;
 };
 
 const UpdatedCheckbook = ({
@@ -148,7 +196,8 @@ const UpdatedCheckbook = ({
         try {
             setLoading(true);
             const url = base_url(UPDATE_URL(record.id));
-            await fetchHelper.put(url, payload, {}, 1000, false);
+            const response = await fetchHelper.put(url, payload, {}, 1000, false);
+            ensureBusinessSuccess(response);
 
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
@@ -163,11 +212,11 @@ const UpdatedCheckbook = ({
             if (backendErrors?.length > 0) {
                 const nextErrors = { ...emptyErrors };
                 backendErrors.forEach(item => {
-                    nextErrors[item.field] = item.message;
+                    nextErrors[item.field] = mapCheckbookErrorMessage(item.message);
                 });
                 setErrors(nextErrors);
             } else {
-                setErrorMessage(error?.msg || 'Error al actualizar la chequera');
+                setErrorMessage(mapCheckbookErrorMessage(error?.msg || 'Error al actualizar la chequera'));
             }
         } finally {
             setLoading(false);
@@ -190,7 +239,12 @@ const UpdatedCheckbook = ({
                     </div>
 
                     <div className="modal-body">
-                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} />
+                        <AlertPage
+                            message={errorMessage}
+                            type="danger"
+                            show={errorMessage !== ''}
+                            onChange={() => setErrorMessage('')}
+                        />
 
                         {/* ID Cuenta bancaria editable? en edición y bloqueada en vista. */}
                         <div className="row">
@@ -425,4 +479,3 @@ const UpdatedCheckbook = ({
 };
 
 export default UpdatedCheckbook;
-

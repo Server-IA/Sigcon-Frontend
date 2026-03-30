@@ -59,6 +59,54 @@ const mapCheckbookRecord = (row = {}) => ({
     observations: row.observations ?? '',
 });
 
+// Traduce mensajes existentes del backend al catalogo BNK solicitado.
+const mapCheckbookErrorMessage = (rawMessage = '') => {
+    const message = String(rawMessage || '');
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes('rango superpuesto') || normalized.includes('superpuesto')) {
+        return 'BNK-ERR-065: "Rango de cheques superpuesto con chequera existente"';
+    }
+    if (normalized.includes('duplicidad') || normalized.includes('duplicado')) {
+        return 'BNK-ERR-060: "Duplicidad de número de chequera en la misma cuenta"';
+    }
+    if (normalized.includes('no consecutiv') || normalized.includes('rango invalido') || normalized.includes('rango de cheques invalido')) {
+        return 'BNK-ERR-061: "Rango de cheques inválido - números no consecutivos"';
+    }
+    if (normalized.includes('inactiva') || normalized.includes('no habilitada para chequeras')) {
+        return 'BNK-ERR-062: "Cuenta financiera inactiva o no habilitada para chequeras"';
+    }
+    if (normalized.includes('estado inicial no permitido') || normalized.includes('no se puede crear en estado agotada/anulada')) {
+        return 'BNK-ERR-063: "Estado inicial no permitido - no se puede crear en estado AGOTADA/ANULADA"';
+    }
+    if (normalized.includes('permisos insuficientes') || normalized.includes('access denied') || normalized.includes('permiso denegado')) {
+        return 'BNK-ERR-064: "Permisos insuficientes para creación/modificación de chequeras"';
+    }
+
+    return message;
+};
+
+// Interpreta errores de negocio retornados en body aunque el HTTP sea 200.
+const ensureBusinessSuccess = (response) => {
+    const payload = response?.data ?? response;
+    const hasBusinessError =
+        response?.success === false
+        || payload?.success === false
+        || Number(response?.code) >= 400
+        || Number(payload?.code) >= 400;
+
+    if (hasBusinessError) {
+        const rawMessage = response?.message || payload?.message || response?.error || payload?.error || 'Operacion rechazada por backend';
+        throw {
+            msg: mapCheckbookErrorMessage(rawMessage),
+            errors: response?.errors || payload?.errors || response?.details || payload?.details || [],
+            status: Number(response?.code) || Number(payload?.code) || 400,
+        };
+    }
+
+    return payload;
+};
+
 const IndexCheckbooks = () => {
 
     // Refs de DataTable y modales bootstrap.
@@ -77,28 +125,42 @@ const IndexCheckbooks = () => {
     const modalViewRef = useRef(null);
     const modalViewInstance = useRef(null);
 
+    // Evita que queden elementos enfocados al abrir/cerrar modales (accesibilidad).
+    const blurActiveElement = () => {
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
+    };
+
     // Estado principal de pantalla.
     const [data, setData] = useState([]);
     const [record, setRecord] = useState({ ...emptyCheckbookRecord });
     const [message, setMessage] = useState({ message: '', type: '', show: false });
     const [search, setSearch] = useState({ value: '', checked: true });
 
+    // Normaliza la data de tabla para evitar errores si backend cambia el shape.
+    const rows = useMemo(() => {
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.data)) return data.data;
+        return [];
+    }, [data]);
+
     // Endpoint oficial para consulta paginada.
-    const url = ['api', 'v1', 'checkbooks', 'search'];
+    const url = ['api', 'v1', 'banks', 'checkbooks', 'search'];
 
     // Opciones de cuenta armadas con los datos de la tabla.
     const accountOptions = useMemo(() => {
         const map = new Map();
-        data.forEach(item => {
+        rows.forEach(item => {
             if (item.bankAccountId === null || item.bankAccountId === undefined) return;
             const id = String(item.bankAccountId);
             const name = item.bankAccountLabel ?? item.bankAccountNumber ?? item.accountNumber ?? `Cuenta #${id}`;
             map.set(id, { id, name });
         });
         return Array.from(map.values());
-    }, [data]);
+    }, [rows]);
 
-    // Acciones visibles por fila (sin lÃ³gica de permisos local).
+    // Acciones visibles por fila
     const actions = [
         { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
         { key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' },
@@ -108,7 +170,13 @@ const IndexCheckbooks = () => {
     // Columnas del listado.
     const columns = [
         { title: 'ID', data: 'id', name: 'id' },
-        { title: 'ID CUENTA BANCARIA', data: 'bankAccountId', name: 'bankAccountId' },
+        {
+            // En busqueda server-side el backend resuelve la relacion como bankAccount.id.
+            title: 'ID CUENTA BANCARIA',
+            data: 'bankAccount.id',
+            name: 'bankAccount.id',
+            render: (_value, _type, row) => row.bankAccountId ?? row.bankAccount?.id ?? '-',
+        },
         { title: 'BANCO EMISOR', data: 'issuingBank', name: 'issuingBank' },
         { title: 'NO. CHEQUERA', data: 'checkbookNumber', name: 'checkbookNumber' },
         { title: 'CHEQUE INICIAL', data: 'checkStartNumber', name: 'checkStartNumber' },
@@ -164,6 +232,7 @@ const IndexCheckbooks = () => {
         if (!modalUpdateInstance.current) {
             modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
         }
+        blurActiveElement();
         modalUpdateInstance.current.show();
     };
 
@@ -172,6 +241,7 @@ const IndexCheckbooks = () => {
         if (!modalViewInstance.current) {
             modalViewInstance.current = new window.bootstrap.Modal(modalViewRef.current);
         }
+        blurActiveElement();
         modalViewInstance.current.show();
     };
 
@@ -221,8 +291,9 @@ const IndexCheckbooks = () => {
 
         try {
             const reason = reasonPrompt.value.trim();
-            const deleteUrl = base_url(['api', 'v1', 'checkbooks', selected.id], { reason });
-            await fetchHelper.delete(deleteUrl, { reason }, {}, 1000, false);
+            const deleteUrl = base_url(['api', 'v1', 'banks', 'checkbooks', 'delete']);
+            const response = await fetchHelper.post(deleteUrl, { id: selected.id, reason }, {}, 1000, false);
+            ensureBusinessSuccess(response);
 
             setMessage({
                 type: 'success',
@@ -233,7 +304,7 @@ const IndexCheckbooks = () => {
             setMessage({
                 type: 'danger',
                 show: true,
-                message: error?.msg || 'No fue posible completar la operacion',
+                message: mapCheckbookErrorMessage(error?.msg || 'No fue posible completar la operacion'),
             });
         } finally {
             dataTableRef?.current?.ajax.reload();
@@ -266,8 +337,9 @@ const IndexCheckbooks = () => {
 
         const handler = function () {
             const action = $(this).data('action');
-            const id = Number($(this).data('id'));
-            const selected = data.find(item => item.id === id);
+            const id = String($(this).data('id'));
+            // Compara como string para soportar ids numericos o string sin fallar.
+            const selected = rows.find(item => String(item.id) === id);
             if (!selected) return;
 
             if (action === 'view') {
@@ -298,8 +370,25 @@ const IndexCheckbooks = () => {
 
         table.on('click', '.action-btn', handler);
         return () => table.off('click', '.action-btn', handler);
-    }, [data]);
+    }, [rows]);
 
+    // Limpia foco al cerrar modales para evitar warning de aria-hidden en consola.
+    useEffect(() => {
+        const handleHidden = () => blurActiveElement();
+
+        const updateModal = modalUpdateRef.current;
+        const viewModal = modalViewRef.current;
+
+        updateModal?.addEventListener('hidden.bs.modal', handleHidden);
+        viewModal?.addEventListener('hidden.bs.modal', handleHidden);
+
+        return () => {
+            updateModal?.removeEventListener('hidden.bs.modal', handleHidden);
+            viewModal?.removeEventListener('hidden.bs.modal', handleHidden);
+        };
+    }, []);
+
+    //chequeador pro de datos
 /*         useEffect(() => {
     const table = dataTableRef?.current;
     if (!table) return;

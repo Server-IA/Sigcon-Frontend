@@ -21,7 +21,8 @@ const FilterCheckbook = ({
         { regex: true, value: '', column: 'checkbookNumber:name' },
         { regex: true, value: '', column: 'issuingBank:name' },
         { regex: true, value: '', column: 'status:name' },
-        { regex: false, value: '', column: 'bankAccountId:name' },
+        // Debe apuntar al atributo de relacion que backend reconoce en consulta.
+        { regex: false, value: '', column: 'bankAccount.id:name' },
         { regex: false, value: '', column: 'receivedDate:name' },
         { regex: false, value: '', column: 'receivedDate_hasta:name' },
         { regex: false, value: '', column: 'activationDate:name' },
@@ -163,8 +164,8 @@ const FilterCheckbook = ({
                                         id="filter_bank_account"
                                         label="Cuenta bancaria"
                                         options={accountOptions}
-                                        value={String(getFilter('bankAccountId:name')?.value || '')}
-                                        onChange={(value) => updateFilter('bankAccountId:name', 'value', value)}
+                                        value={String(getFilter('bankAccount.id:name')?.value || '')}
+                                        onChange={(value) => updateFilter('bankAccount.id:name', 'value', value)}
                                         placeholder="Seleccione una cuenta"
                                     />
                                 ) : (
@@ -172,8 +173,8 @@ const FilterCheckbook = ({
                                         type="number"
                                         id="filter_bank_account_manual"
                                         label="ID cuenta bancaria"
-                                        value={getFilter('bankAccountId:name')?.value || ''}
-                                        onChange={(event) => updateFilter('bankAccountId:name', 'value', event.target.value)}
+                                        value={getFilter('bankAccount.id:name')?.value || ''}
+                                        onChange={(event) => updateFilter('bankAccount.id:name', 'value', event.target.value)}
                                         placeholder="Filtrar por ID de cuenta"
                                         error=""
                                     />
