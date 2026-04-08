@@ -8,6 +8,7 @@ import AlertPage from '../../../components/molecules/AlertPage';
 
 import { useDispatch } from 'react-redux';
 import { refreshMenu } from '../../../routes/routes';
+import InputRadio from '../../../components/molecules/InputRadio';
 
 const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuCreate, modules, parents, components }) => {
 
@@ -65,6 +66,7 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                 moduleId: null,
                 status: 'ACTIVE',
                 component: '',
+                visible: true,
             });
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
@@ -246,6 +248,31 @@ const CreateMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setM
                                 placeholder="Menú principal"
                                 options={optionMenus}
                                 clearable={true}
+                            />
+                        </div>
+                        <div className="col mb-6 mt-2">
+                            <small className="text-light fw-medium d-block">Visible</small>
+
+                            <InputRadio
+                                id="menu-visible-true"
+                                label="Si"
+                                name="visible"
+                                value="true"
+                                checked={menu.visible === true}
+                                onChange={() =>
+                                    setMenu((m) => ({ ...m, visible: true }))
+                                }
+                            />
+
+                            <InputRadio
+                                id="menu-visible-false"
+                                label="No"
+                                name="visible"
+                                value="false"
+                                checked={menu.visible === false}
+                                onChange={() =>
+                                    setMenu((m) => ({ ...m, visible: false }))
+                                }
                             />
                         </div>
                     </div>

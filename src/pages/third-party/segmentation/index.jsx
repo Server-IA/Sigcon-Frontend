@@ -5,10 +5,11 @@ import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
 
 
-import FilterSegmentation from './filter';
-import CreateSegmentation from './create';
-import UpdatedSegmentation from './updated';
-import AdjustSegmentation from './adjusted';
+import FilterSegmentation   from './filter';
+import CreateSegmentation   from './create';
+import UpdatedSegmentation  from './updated';
+import AdjustSegmentation   from './adjusted';
+import HistorySegmentation  from './history';
 
 const SEGMENTS = [
     { id: 'LOW', name: 'Bajo' },
@@ -56,8 +57,12 @@ const IndexSegmentation = () => {
     const modalAdjustRef = useRef(null);
     const modalAdjustInstance = useRef(null);
 
+    const modalHistoryRef = useRef(null);
+    const modalHistoryInstance = useRef(null);
+
     const [data, setData] = useState([]);
-    const [clickAdjust, setClickAdjust] = useState(false);
+    const [clickAdjust, setClickAdjust]   = useState(false);
+    const [clickHistory, setClickHistory] = useState(false);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
 
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -79,6 +84,7 @@ const IndexSegmentation = () => {
     const actions = [
         ...(userPermissions.some(p => p.code === 'UPDATE_SEGMENTATION' && p.type === 'UPDATE') || isAdmin
             ? [{ key: 'adjust', icon: 'ri-equalizer-line', class: 'btn-label-warning', title: 'Ajuste manual' }] : []),
+        { key: 'history', icon: 'ri-history-line', class: 'btn-label-info', title: 'Ver historial' },
     ];
 
     const columns = [
@@ -145,6 +151,13 @@ const IndexSegmentation = () => {
         modalAdjustInstance.current.show();
     };
 
+    const openModalHistory = () => {
+        if (!modalHistoryInstance.current) {
+            modalHistoryInstance.current = new window.bootstrap.Modal(modalHistoryRef.current);
+        }
+        modalHistoryInstance.current.show();
+    };
+
 
     const buttons = [
         {
@@ -169,6 +182,12 @@ const IndexSegmentation = () => {
         openModalAdjust();
         setClickAdjust(false);
     }, [clickAdjust]);
+
+    useEffect(() => {
+        if (!clickHistory) return;
+        openModalHistory();
+        setClickHistory(false);
+    }, [clickHistory]);
 
     useEffect(() => {
         const table = dataTableRef?.current;
@@ -197,6 +216,11 @@ const IndexSegmentation = () => {
             if (action === 'adjust') {
                 setSelectedRecord(mapped);
                 setClickAdjust(true);
+            }
+
+            if (action === 'history') {
+                setSelectedRecord(mapped);
+                setClickHistory(true);
             }
         };
 
@@ -268,6 +292,12 @@ const IndexSegmentation = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 segments={SEGMENTS}
+            />
+
+            <HistorySegmentation
+                modalRef={modalHistoryRef}
+                modalInstance={modalHistoryInstance}
+                client={selectedRecord}
             />
         </>
     );

@@ -7,15 +7,15 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
     const getTable = () => dataTableRef?.current?.table();
 
     const [filters, setFilters] = useState([
-        { regex: true,  value: '', column: 'numeroCheque:name' },
-        { regex: true,  value: '', column: 'beneficiario:name' },
-        { regex: true,  value: '', column: 'concepto:name' },
-        { regex: true,  value: '', column: 'estadoCheque:name' },
-        { regex: true,  value: '', column: 'tipoCheque:name' },
-        { regex: false, value: '', column: 'fechaExpedicion:name' },
-        { regex: false, value: '', column: 'fechaExpedicion_hasta:name' },
-        { regex: false, value: '', column: 'valorCheque:name' },
-        { regex: false, value: '', column: 'valorCheque_hasta:name' },
+        { regex: true,  value: '', column: 'numberCheck:name' },
+        { regex: true,  value: '', column: 'beneficiary:name' },
+        { regex: true,  value: '', column: 'concept:name' },
+        { regex: true,  value: '', column: 'statusCheck:name' },
+        { regex: true,  value: '', column: 'typeCheck:name' },
+        { regex: false, value: '', column: 'issueDate:name' },
+        { regex: false, value: '', column: 'issueDate_hasta:name' },
+        { regex: false, value: '', column: 'value:name' },
+        { regex: false, value: '', column: 'value_hasta:name' },
     ]);
 
     useEffect(() => {
@@ -71,11 +71,11 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                 <div className="input-group">
                                     <div className="input-group-text form-check mb-0">
                                         <input
-                                            checked={getFilter('numeroCheque:name')?.regex || false}
+                                            checked={getFilter('numberCheck:name')?.regex || false}
                                             className="form-check-input m-auto"
                                             type="checkbox"
                                             title="Búsqueda por coincidencia"
-                                            onChange={(e) => updateFilter('numeroCheque:name', 'regex', e.target.checked)}
+                                            onChange={(e) => updateFilter('numberCheck:name', 'regex', e.target.checked)}
                                             disabled={!dataTableRef?.current}
                                         />
                                     </div>
@@ -83,8 +83,8 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                         type="text"
                                         id="filter_numero"
                                         label="Número de cheque"
-                                        value={getFilter('numeroCheque:name')?.value || ''}
-                                        onChange={(e) => updateFilter('numeroCheque:name', 'value', e.target.value)}
+                                        value={getFilter('numberCheck:name')?.value || ''}
+                                        onChange={(e) => updateFilter('numberCheck:name', 'value', e.target.value)}
                                         placeholder="Buscar por número"
                                         error=""
                                     />
@@ -95,11 +95,11 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                 <div className="input-group">
                                     <div className="input-group-text form-check mb-0">
                                         <input
-                                            checked={getFilter('beneficiario:name')?.regex || false}
+                                            checked={getFilter('beneficiary:name')?.regex || false}
                                             className="form-check-input m-auto"
                                             type="checkbox"
                                             title="Búsqueda por coincidencia"
-                                            onChange={(e) => updateFilter('beneficiario:name', 'regex', e.target.checked)}
+                                            onChange={(e) => updateFilter('beneficiary:name', 'regex', e.target.checked)}
                                             disabled={!dataTableRef?.current}
                                         />
                                     </div>
@@ -107,8 +107,8 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                         type="text"
                                         id="filter_beneficiario"
                                         label="Beneficiario"
-                                        value={getFilter('beneficiario:name')?.value || ''}
-                                        onChange={(e) => updateFilter('beneficiario:name', 'value', e.target.value)}
+                                        value={getFilter('beneficiary:name')?.value || ''}
+                                        onChange={(e) => updateFilter('beneficiary:name', 'value', e.target.value)}
                                         placeholder="Buscar por beneficiario"
                                         error=""
                                     />
@@ -122,11 +122,11 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                 <div className="input-group">
                                     <div className="input-group-text form-check mb-0">
                                         <input
-                                            checked={getFilter('concepto:name')?.regex || false}
+                                            checked={getFilter('concept:name')?.regex || false}
                                             className="form-check-input m-auto"
                                             type="checkbox"
                                             title="Búsqueda por coincidencia"
-                                            onChange={(e) => updateFilter('concepto:name', 'regex', e.target.checked)}
+                                            onChange={(e) => updateFilter('concept:name', 'regex', e.target.checked)}
                                             disabled={!dataTableRef?.current}
                                         />
                                     </div>
@@ -134,8 +134,8 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                         type="text"
                                         id="filter_concepto"
                                         label="Concepto"
-                                        value={getFilter('concepto:name')?.value || ''}
-                                        onChange={(e) => updateFilter('concepto:name', 'value', e.target.value)}
+                                        value={getFilter('concept:name')?.value || ''}
+                                        onChange={(e) => updateFilter('concept:name', 'value', e.target.value)}
                                         placeholder="Buscar por concepto"
                                         error=""
                                     />
@@ -149,11 +149,11 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                 <div className="input-group">
                                     <div className="input-group-text form-check mb-0">
                                         <input
-                                            checked={getFilter('estadoCheque:name')?.regex || false}
+                                            checked={getFilter('statusCheck:name')?.regex || false}
                                             className="form-check-input m-auto"
                                             type="checkbox"
                                             title="Búsqueda por coincidencia"
-                                            onChange={(e) => updateFilter('estadoCheque:name', 'regex', e.target.checked)}
+                                            onChange={(e) => updateFilter('statusCheck:name', 'regex', e.target.checked)}
                                             disabled={!dataTableRef?.current}
                                         />
                                     </div>
@@ -161,8 +161,8 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                         id="filter_estado"
                                         label="Estado del cheque"
                                         options={estados}
-                                        value={selectValue('estadoCheque:name')}
-                                        onChange={(val) => updateFilter('estadoCheque:name', 'value', val.join(','))}
+                                        value={selectValue('statusCheck:name')}
+                                        onChange={(val) => updateFilter('statusCheck:name', 'value', val.join(','))}
                                         multiple={true}
                                     />
                                 </div>
@@ -172,11 +172,11 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                 <div className="input-group">
                                     <div className="input-group-text form-check mb-0">
                                         <input
-                                            checked={getFilter('tipoCheque:name')?.regex || false}
+                                            checked={getFilter('typeCheck:name')?.regex || false}
                                             className="form-check-input m-auto"
                                             type="checkbox"
                                             title="Búsqueda por coincidencia"
-                                            onChange={(e) => updateFilter('tipoCheque:name', 'regex', e.target.checked)}
+                                            onChange={(e) => updateFilter('typeCheck:name', 'regex', e.target.checked)}
                                             disabled={!dataTableRef?.current}
                                         />
                                     </div>
@@ -184,8 +184,8 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                         id="filter_tipo"
                                         label="Tipo de cheque"
                                         options={tipos}
-                                        value={selectValue('tipoCheque:name')}
-                                        onChange={(val) => updateFilter('tipoCheque:name', 'value', val.join(','))}
+                                        value={selectValue('typeCheck:name')}
+                                        onChange={(val) => updateFilter('typeCheck:name', 'value', val.join(','))}
                                         multiple={true}
                                     />
                                 </div>
@@ -199,8 +199,8 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                     type="date"
                                     id="filter_fecha_desde"
                                     label="Fecha expedición — desde"
-                                    value={getFilter('fechaExpedicion:name')?.value || ''}
-                                    onChange={(e) => updateFilter('fechaExpedicion:name', 'value', e.target.value)}
+                                    value={getFilter('issueDate:name')?.value || ''}
+                                    onChange={(e) => updateFilter('issueDate:name', 'value', e.target.value)}
                                     error=""
                                 />
                             </div>
@@ -224,8 +224,8 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
                                     id="filter_valor_desde"
                                     label="Valor — desde"
                                     placeholder="0.00"
-                                    value={getFilter('valorCheque:name')?.value || ''}
-                                    onChange={(e) => updateFilter('valorCheque:name', 'value', e.target.value)}
+                                    value={getFilter('value:name')?.value || ''}
+                                    onChange={(e) => updateFilter('value:name', 'value', e.target.value)}
                                     error=""
                                 />
                             </div>

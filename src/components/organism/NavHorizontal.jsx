@@ -55,10 +55,6 @@ const NavHorizontal = () => {
     }
 
     useEffect(() => {
-        console.log(modulos);
-    }, [user]);
-
-    useEffect(() => {
         dispatch(refreshMenu());
     }, [dispatch]);
 
@@ -210,7 +206,7 @@ const NavHorizontal = () => {
 
                             {
                                 modulos?.filter((module) => module?.id == 1).map((module) => {
-                                    return module?.menus?.map((menu) => {
+                                    return module?.menus?.filter((menu) => menu.visible).map((menu) => {
                                         return (
                                             <li key={menu.id}>
                                                 <Link to={`${module.url}/${menu.path}`} className="dropdown-item">

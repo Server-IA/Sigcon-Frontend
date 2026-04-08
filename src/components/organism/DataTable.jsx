@@ -29,6 +29,7 @@ const DataTableReference = ({
   setSearch = () => {},
   data = [],
   lengthMenu = [10, 25, 50, 75, 100],
+  filterColumns = [],
 }) => {
   const token = useSelector((state) => state.user.token);
 
@@ -44,10 +45,10 @@ const DataTableReference = ({
       scrollX: true,
       scrollY: false,
       ordering: false,
-      processing: true,
-      serverSide: data.length === 0,
+      processing: url_api !== null,
+      serverSide: url_api !== null,
       drawCallback: function (settings) {
-        if (setData && data.length <= 0) {
+        if (setData && data.length <= 0 && url_api !== null) {
           setData(settings.json.data);
         }
       },
@@ -108,14 +109,15 @@ const DataTableReference = ({
         ...buttons,
       ],
     };
-    if (data.length > 0) {
+
+    if (data.length >= 0 && url_api === null) {
       config.data = data;
     } else {
       config.ajax = async function (data, callback, settings) {
         try {
           const response = await fetchHelper.post(
             base_url(url_api),
-            data,
+            { ...data, columns: [...(data.columns || []), ...filterColumns] },
             {},
             0,
           );
@@ -128,23 +130,20 @@ const DataTableReference = ({
             recordsFiltered: 0,
           });
           if (error.status === 403 || error.msg === "Access Denied") {
-            // console.log("Error 403");
-
-            $(tableRef.current).html(`
-                            <tbody>
-                                <tr>
-                                    <td colspan="${columns.length}" class="text-center text-danger py-5">
-                                        <i class="ri-lock-line fs-2 d-block mb-2"></i>
-                                        No tiene permisos para ver esta información
-                                    </td>
-                                </tr>
-                            </tbody>
-                        `);
+            settings.oLanguage.sEmptyTable = `<span class="text-danger">
+              <i class="ri-lock-line fs-2 d-block mb-2"></i> No tiene permisos para ver esta información</span>
+            `;
+          }else{
+            settings.oLanguage.sEmptyTable = `<span class="text-danger">
+              ${error.msg || error.message || 'No se encontraron datos'}
+              </span>`;
           }
+
           return;
         }
       };
     }
+
     // Inicializar DataTable
     dataTableRef.current = $(tableRef.current).DataTable(config);
 
@@ -185,7 +184,7 @@ const DataTableReference = ({
     dataTableRef.current
       .table()
       .search(search.value, search.checked, true)
-      .draw();
+      .ajax.reload();
   };
 
   return (
