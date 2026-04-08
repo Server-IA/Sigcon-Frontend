@@ -19,8 +19,7 @@ const validateBranchForm = ({ branch }) => {
   const nextErrors = {};
 
   if (!branch.id) nextErrors.id = "ID requerido";
-  if (!branch.bankId) nextErrors.bankId = "Banco requerido";
-  if (!branch.city) nextErrors.city = "Ciudad requerida";
+  if (!branch.municipalityId) nextErrors.municipalityId = "Ciudad requerida";
   if (!branch.address) nextErrors.address = "Direccion requerida";
 
   return {
@@ -34,9 +33,9 @@ const UpdatedBankBranch = ({
   modalInstance,
   branch,
   setBranch,
-  onRefresh,
   setBranchUpdate,
-  banks,
+  municipalities,
+  datatable,
 }) => {
   const [errors, setErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
@@ -66,16 +65,16 @@ const UpdatedBankBranch = ({
     }
 
     const payload = {
-      bankId: Number(branch.bankId),
+      ...branch,
       address: branch.address?.trim() || "",
-      city: branch.city?.trim() || "",
+      municipalityId: Number(branch.municipalityId),
       mainBranch: Boolean(branch.mainBranch),
     };
 
     try {
       const url = base_url([...API_BASE, branch.id]);
-      await fetchHelper.put(url, payload, {}, 1000, true);
-      await onRefresh?.();
+      await fetchHelper.put(url, payload, {}, 1000, false);
+      await datatable?.current?.ajax.reload();
       modalInstance?.current?.hide();
       setBranchUpdate(true);
       setErrors({});
@@ -122,32 +121,17 @@ const UpdatedBankBranch = ({
             <div className="row">
               <div className="col-12 mb-3">
                 <InputSelectModal
-                  id="BANK_ID_UPDATE"
-                  label="Banco"
-                  value={branch.bankId}
-                  onChange={(value) => setBranch({ ...branch, bankId: value })}
-                  error={errors.bankId}
-                  placeholder="Banco"
-                  options={banks}
-                  disabled
-                />
-              </div>
-            </div>
-
-            <div className="row">
-              <div className="col-12 mb-3">
-                <InputModal
-                  type="text"
-                  id="CITY_UPDATE"
+                  id="MUNICIPALITY_UPDATE"
                   label="Ciudad"
-                  value={branch.city}
-                  onChange={(e) => {
-                    setBranch({ ...branch, city: sanitizeSimpleText(e.target.value, 100) });
-                    setErrors({ ...errors, city: "" });
+                  value={branch.municipalityId}
+                  onChange={(value) => {
+                    setBranch({ ...branch, municipalityId: Number(value) });
+                    setErrors({ ...errors, municipalityId: "" });
                   }}
-                  error={errors.city}
-                  placeholder="Ej: Medellin"
+                  error={errors.municipalityId}
+                  placeholder="Seleccione una ciudad"
                   required
+                  options={municipalities.map((m) => ({ id: m.id, label: m.name })) || []}
                 />
               </div>
               <div className="col-12 mb-3">

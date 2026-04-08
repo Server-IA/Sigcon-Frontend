@@ -41,6 +41,7 @@ import IndexThirdPartyList from "../pages/third-party/third_party_list/index";
 import IndexCashList from "../pages/cash-and-banks/cash_list/index";
 
 // Assets
+import CreateAssets from "../pages/assets/assets_registry/create";
 import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
 import BajasTransferencias from "../pages/assets/bajas_transferencias/index";
 import KardexAssets from "../pages/assets/kardex/index";
@@ -61,8 +62,11 @@ import IndexCheques from "../pages/cash-and-banks/cheques/index";
 import IndexBankBranches from "../pages/cash-and-banks/surcursales/index";
 import IndexBankAccounts from "../pages/cash-and-banks/bank-accounts/index";
 
+// Invoices
+
 import { base_url } from "./functions";
 import { fetchHelper } from "./fetch";
+
 
 export const getMenu = async () => {
   const modules = [];
@@ -174,12 +178,12 @@ export const COMPONENT_MAP = [
   { id: "CURRENCY_TYPES", name: "Tipos de Monedas", component: CurrencyIndex },
   { id: "RULES_TAX", name: "Reglas Tributarias", component: RulesTaxIndex },
   { id: "SEGMENTATION", name: "Segmentacion Terceros", component: IndexSegmentation },
+  { id: "CREATE_ASSETS", name: "Crear Activo", component: CreateAssets },
   { id: "NIIF_VERIFICATION", name: "Verificación NIIF", component: NiifVerificationIndex },
   { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
   { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: AssetDepreciationCalculation },
   { id: "ACT_BAJAS_TRANSFERENCIAS", name: "Control de Bajas y Transferencias", component: BajasTransferencias },
   { id: "ACT_KARDEX", name: "Kardex", component: KardexAssets },
-  { id: "ACT_CALCULO_DEPRECIACION", name: "Depreciation Calculation", component: AssetDepreciationCalculation },
   { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
   { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
   { id: "CATALOGO_BANCOS", name: "Catalogo de Bancos", component: IndexCashAndBanks },
@@ -187,5 +191,5 @@ export const COMPONENT_MAP = [
   { id: "CHEQUES", name: "Cheques", component: IndexCheques },
   { id: "COMPANIES", name: "Empresas", component: IndexCompanies },
   { id: "BANK_ACCOUNTS", name: "Cuentas Bancarias", component: IndexBankAccounts },
-  { id: "CASH_LIST", name: "Lista de Cajas", component: IndexCashList }
+  { id: "CASH_LIST", name: "Lista de Cajas", component: IndexCashList },
 ];

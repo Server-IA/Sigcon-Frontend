@@ -24,13 +24,10 @@ const AssignAccount = ({ ruler, accountingAccounts, modalRef, modalInstance, dat
             rulerTaxId: ruler.id,
             accountingAccountIds: ruler.accountingAccountIds,
         });
+
+        console.log(ruler, 'Ruler');
+        console.log(accountingAccounts, 'Accounting Accounts');
     }, [ruler]);
-
-    useEffect(() => {
-        console.log(ruler);
-        console.log(rulerAccountingAccounts);
-
-    }, [rulerAccountingAccounts]);
 
     const handleSave = async () => {
         try{
@@ -87,7 +84,16 @@ const AssignAccount = ({ ruler, accountingAccounts, modalRef, modalInstance, dat
                                             accountingAccountIds: '',
                                         }))
                                     }}
-                                    options={accountingAccounts.map(accountingAccount => ({
+                                    options={accountingAccounts.filter(accountingAccount => {
+                                        switch(ruler.typeRulerTax) {
+                                            case 'TAX':
+                                                return accountingAccount.pucAccount.code.startsWith("24");
+                                            case 'WITHHOLDING':
+                                                return accountingAccount.pucAccount.code.startsWith("23");
+                                            case 'ADJUSTMENT':
+                                                return accountingAccount.pucAccount.code.startsWith("13");
+                                        }
+                                    }).map(accountingAccount => ({
                                         label: accountingAccount.customName,
                                         id: accountingAccount.id,
                                     }))}

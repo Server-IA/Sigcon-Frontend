@@ -35,7 +35,17 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
         const loadAccounts = async () => {
             try {
                 const url = base_url(['api', 'v1', 'accounting-accounts']);
-                const response = await fetchHelper.post(url, {length: -1, columns: [{data: 'status', search: {value: 'ACTIVE', regex: false}}]}, {  }, 0);
+                const response = await fetchHelper.post(url, {length: -1, columns: [
+                    {data: 'status', search: {value: 'ACTIVE', regex: false}},
+                    {
+                        data:"pucAccount.code",
+                        searchable: true,
+                        search:{
+                          value:"14%,12%,15%,16%",
+                          regex:true
+                        }
+                    }
+                ]}, {  }, 0);
                 const list = response?.content ?? response?.data ?? [];
                 setAccounts(list.map(a => ({ id: a.id, label: a.customName })));
             } catch (err) {

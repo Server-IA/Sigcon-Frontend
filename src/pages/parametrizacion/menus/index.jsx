@@ -29,12 +29,7 @@ const IndexMenus = () => {
   const [modules, setModules] = useState([]);
   const [parents, setParents] = useState([]);
 
-  const [components, setComponents] = useState(
-    COMPONENT_MAP.map((component) => ({
-      id: component.id,
-      name: component.name,
-    })),
-  );
+  const [components, setComponents] = useState([]);
 
   const [search, setSearch] = useState({
     value: "",
@@ -86,7 +81,7 @@ const IndexMenus = () => {
     const filtered = COMPONENT_MAP.map((component) => ({
       id: component.id,
       name: component.name,
-    })).filter((component) => !existingIds.includes(component.id));
+    })).filter((component) => component.id !== 'HOME').filter((component) => !existingIds.includes(component.id));
 
     setComponents(filtered);
   }, [parents]);
@@ -234,6 +229,7 @@ const IndexMenus = () => {
       moduleId: null,
       status: "ACTIVE",
       component: "",
+      visible: true,
     });
     modalCreateInstance.current.show();
   };
@@ -264,7 +260,9 @@ const IndexMenus = () => {
     const filtered = COMPONENT_MAP.map((component) => ({
       id: component.id,
       name: component.name,
-    })).filter(
+    }))
+    .filter((component) => component.id !== 'HOME')
+    .filter(
       (component) =>
         !usedComponentIds.has(component.id) || component.id === menu.component, // permitir el actual
     );
@@ -294,6 +292,8 @@ const IndexMenus = () => {
             return;
           }
 
+          console.log(menuRef);
+
           setMenu({
             id: menuRef.id || "",
             label: menuRef.label || "",
@@ -304,6 +304,7 @@ const IndexMenus = () => {
             moduleId: menuRef.module ? String(menuRef.module.id) : null,
             status: menuRef.status || "",
             component: menuRef.component || "",
+            visible: menuRef.visible ?? true,
           });
 
           setClickEdit(true);

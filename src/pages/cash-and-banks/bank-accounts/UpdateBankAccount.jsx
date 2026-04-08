@@ -15,13 +15,15 @@ const UpdateBankAccount = ({
     dataTableRef,
     setMessage,
     costCenters,
+    banks,
+    currencyTypes,
 }) => {
     const [errors, setErrors] = useState({});
     const [error,  setError]  = useState({ message: '', type: '', show: false });
 
     // Sucursales del banco asociado a la cuenta
     const [branches,        setBranches]        = useState([]);
-    const [loadingBranches, setLoadingBranches] = useState(false);
+    // const [loadingBranches, setLoadingBranches] = useState(false);
     const [loadingDetail,   setLoadingDetail]   = useState(false);
 
     // ── Al abrir el modal: cargar detalle completo (GET /{id}) ────────────────
@@ -31,92 +33,62 @@ const UpdateBankAccount = ({
         const el = modalRef.current;
         if (!el) return;
 
-        const onShow = async () => {
-            if (!record.id) return;
-            setLoadingDetail(true);
-            setError({ message: '', type: '', show: false });
-            setErrors({});
+        // const onShow = async () => {
+        //     if (!record.id) return;
+        //     setLoadingDetail(true);
+        //     setError({ message: '', type: '', show: false });
+        //     setErrors({});
 
-            try {
-                const res = await fetchHelper.get(
-                    base_url(['api', 'v1', 'bank-accounts', record.id]),
-                    {}, 1
-                );
-                const d = res.data || res;
+        //     try {
+        //         const d = res.data || res;
 
-                // Actualizar record con TODOS los campos del detalle
-                setRecord(prev => ({
-                    ...prev,
-                    accountName:      d.accountName      ?? prev.accountName,
-                    branchName:       d.branchName       ?? prev.branchName      ?? '',
-                    bankBranchId:     d.bankBranchId     ?? prev.bankBranchId    ?? '',
-                    accountExecutive: d.accountExecutive ?? prev.accountExecutive ?? '',
-                    bankPhone:        d.bankPhone        ?? prev.bankPhone        ?? '',
-                    description:      d.description      ?? prev.description      ?? '',
-                    allowsOverdraft:  d.allowsOverdraft  ?? false,
-                    creditLimit:      d.creditLimit      ?? 0,
-                    notifyLowBalance: d.notifyLowBalance ?? false,
-                    minimumBalance:   d.minimumBalance   ?? 0,
-                    costCenterId:     d.costCenterId     ?? prev.costCenterId    ?? '',
-                    changeReason:     '',
-                }));
+        //         // Actualizar record con TODOS los campos del detalle
+        //         setRecord(prev => ({
+        //             ...prev,
+        //             accountName:      d.accountName      ?? prev.accountName,
+        //             branchName:       d.branchName       ?? prev.branchName      ?? '',
+        //             bankBranchId:     d.bankBranchId     ?? prev.bankBranchId    ?? '',
+        //             accountExecutive: d.accountExecutive ?? prev.accountExecutive ?? '',
+        //             bankPhone:        d.bankPhone        ?? prev.bankPhone        ?? '',
+        //             description:      d.description      ?? prev.description      ?? '',
+        //             allowsOverdraft:  d.allowsOverdraft  ?? false,
+        //             creditLimit:      d.creditLimit      ?? 0,
+        //             notifyLowBalance: d.notifyLowBalance ?? false,
+        //             minimumBalance:   d.minimumBalance   ?? 0,
+        //             costCenterId:     d.costCenterId     ?? prev.costCenterId    ?? '',
+        //             changeReason:     '',
+        //         }));
+        //         console.log(d.bankBranch, 'd.bankBranch');
+        //         setBranches(d.bankBranch ? [d.bankBranch] : []);
 
-                // Una vez tenemos bankId, cargar sus sucursales
-                const bankId = d.bankId ?? record.bankId;
-                if (bankId) {
-                    await loadBranchesForBank(bankId, d.bankBranchId ?? '');
-                }
+        //     } catch (err) {
+        //         console.error('Error cargando detalle para editar:', err);
+        //         setError({ message: 'No se pudo cargar el detalle de la cuenta.', type: 'danger', show: true });
+        //     } finally {
+        //         setLoadingDetail(false);
+        //     }
+        // };
 
-            } catch (err) {
-                console.error('Error cargando detalle para editar:', err);
-                setError({ message: 'No se pudo cargar el detalle de la cuenta.', type: 'danger', show: true });
-            } finally {
-                setLoadingDetail(false);
-            }
-        };
+        // const onHide = () => {
+        //     setErrors({});
+        //     setError({ message: '', type: '', show: false });
+        //     setBranches([]);
+        // };
 
-        const onHide = () => {
-            setErrors({});
-            setError({ message: '', type: '', show: false });
-            setBranches([]);
-        };
-
-        el.addEventListener('show.bs.modal',   onShow);
-        el.addEventListener('hidden.bs.modal', onHide);
-        return () => {
-            el.removeEventListener('show.bs.modal',   onShow);
-            el.removeEventListener('hidden.bs.modal', onHide);
-        };
+        // el.addEventListener('show.bs.modal',   onShow);
+        // el.addEventListener('hidden.bs.modal', onHide);
+        // return () => {
+        //     el.removeEventListener('show.bs.modal',   onShow);
+        //     el.removeEventListener('hidden.bs.modal', onHide);
+        // };
     }, [modalRef, record.id]);
 
-    // ── Carga de sucursales ───────────────────────────────────────────────────
-    const loadBranchesForBank = async (bankId, currentBranchId = '') => {
-        setLoadingBranches(true);
-        try {
-            const res = await fetchHelper.post(
-                base_url(['api', 'v1', 'banks', 'search']),
-                {
-                    length: -1,
-                    columns: [{ data: 'id', search: { value: String(bankId), regex: false } }],
-                },
-                {}, 1
-            );
-            const bankData   = res.data?.find(b => Number(b.id) === Number(bankId));
-            const branchList = bankData?.branches || bankData?.sucursales || [];
-
-            const mapped = branchList.map(b => ({
-                id:    b.id,
-                label: b.name || b.branchName || b.nombre || `Sucursal ${b.id}`,
-            }));
-
-            setBranches(mapped);
-        } catch (err) {
-            console.warn('No se pudieron cargar sucursales:', err);
-            setBranches([]);
-        } finally {
-            setLoadingBranches(false);
-        }
-    };
+    useEffect(() => {
+        if (!record.bank) return;
+        const branches = banks.find(b => b.id === record.bank.id)?.branches.map(b => ({ id: b.id, label: b.name || b.label || b.address }));
+        console.log(branches, 'branches');  
+        setBranches(branches);
+    }, [record.bank, banks]);
 
     // ── Guardar cambios ───────────────────────────────────────────────────────
     const handleSave = async () => {
@@ -187,30 +159,71 @@ const UpdateBankAccount = ({
                         ) : (
                             <>
                                 {/* ── Campos de solo lectura ──────────────── */}
-                                <div className="alert alert-info py-2 mb-4">
-                                    <i className="ri-information-line me-1"></i>
-                                    El código, número de cuenta, moneda y cuenta contable <strong>no pueden modificarse</strong> si existen movimientos registrados.
-                                </div>
+                                {record.used && (
+                                    <div className="alert alert-info py-2 mb-4">
+                                        <i className="ri-information-line me-1"></i>
+                                        El código, número de cuenta, moneda y cuenta contable <strong>no pueden modificarse</strong> si existen movimientos registrados.
+                                    </div>
+                                )}
 
                                 <p className="text-muted fw-semibold mb-3 border-bottom pb-1">
                                     <i className="ri-file-list-3-line me-1"></i>Información de referencia
                                 </p>
                                 <div className="row mb-4">
                                     <div className="col-md-3 mb-3">
+                                        {record.used && (
                                         <InputModal type="text" id="upd_code" label="Código"
                                             value={record.code} readOnly disabled />
+                                        )}
+                                        {!record.used && (
+                                            <InputModal type="text" id="upd_code" label="Código"
+                                                value={record.code} onChange={e => field('code', e.target.value)} />
+                                        )}
                                     </div>
                                     <div className="col-md-3 mb-3">
+                                        {record.used && (
                                         <InputModal type="text" id="upd_accountNumberMasked" label="N° Cuenta"
                                             value={record.accountNumberMasked} readOnly disabled />
+                                        )}
+                                        {!record.used && (
+                                            <InputModal type="text" id="upd_accountNumberMasked" label="N° Cuenta"
+                                                value={record.accountNumberMasked} onChange={e => field('accountNumberMasked', e.target.value)} />
+                                        )}
                                     </div>
                                     <div className="col-md-3 mb-3">
+                                        {record.used && (
                                         <InputModal type="text" id="upd_bankName" label="Banco"
                                             value={record.bankName} readOnly disabled />
+                                        )}
+                                        {!record.used && (
+                                            <InputSelectModal
+                                                id="upd_bankId" label="Banco"
+                                                value={record?.bank?.id ?? ''}
+                                                onChange={v => field('bankId', v)}
+                                                options={banks.map(b => ({ id: b.id, label: b.name || b.label }))}
+                                                error={errors.bankId}
+                                                required={true}
+
+                                            />
+                                            // <InputModal type="text" id="upd_bankName" label="Banco"
+                                            //     value={record.bankName} onChange={e => field('bankName', e.target.value)} />
+                                        )}
                                     </div>
                                     <div className="col-md-3 mb-3">
+                                        {record.used && (
                                         <InputModal type="text" id="upd_currencyCode" label="Moneda"
                                             value={record.currencyCode} readOnly disabled />
+                                        )}
+                                        {!record.used && (
+                                            <InputSelectModal
+                                                id="upd_currencyTypeId" label="Moneda"
+                                                value={record?.currency?.id ?? ''}
+                                                onChange={v => field('currencyTypeId', v)}
+                                                options={currencyTypes.map(c => ({ id: c.id, label: c.name || c.label }))}
+                                                error={errors.currencyTypeId}
+                                                required={true}
+                                            />
+                                        )}
                                     </div>
                                 </div>
 
@@ -244,34 +257,15 @@ const UpdateBankAccount = ({
                                 </p>
                                 <div className="row mb-4">
                                     <div className="col-md-4 mb-4">
-                                        {loadingBranches ? (
-                                            <div className="form-floating form-floating-outline">
-                                                <input type="text" className="form-control"
-                                                    value="Cargando sucursales..." disabled readOnly />
-                                                <label>Sucursal</label>
-                                            </div>
-                                        ) : branches.length > 0 ? (
-                                            <InputSelectModal
-                                                id="upd_bankBranchId" label="Sucursal"
-                                                value={record.bankBranchId}
-                                                onChange={v => {
-                                                    const branch = branches.find(b => String(b.id) === String(v));
-                                                    field('bankBranchId', v);
-                                                    if (branch) field('branchName', branch.label);
-                                                }}
-                                                options={branches}
-                                                error={errors.bankBranchId}
-                                                clearable
-                                            />
-                                        ) : (
-                                            <InputModal
-                                                type="text" id="upd_branchName" label="Sucursal"
-                                                placeholder="Nombre de la sucursal"
-                                                value={record.branchName}
-                                                onChange={e => field('branchName', e.target.value)}
-                                                error={errors.branchName}
-                                            />
-                                        )}
+                                        <InputSelectModal
+                                            id="upd_bankBranchId" label="Sucursal"
+                                            value={record?.bankBranch?.id ?? ''}
+                                            onChange={v => {
+                                                field('bankBranchId', v);
+                                            }}
+                                            options={branches}
+                                            error={errors.bankBranchId}
+                                        />
                                     </div>
                                     <div className="col-md-4 mb-4">
                                         <InputModal

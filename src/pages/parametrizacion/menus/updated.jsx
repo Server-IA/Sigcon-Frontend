@@ -6,6 +6,7 @@ import { fetchHelper } from "../../../utils/fetch";
 import { base_url } from "../../../utils/functions";
 import { useDispatch } from 'react-redux';
 import { refreshMenu } from '../../../routes/routes';
+import InputRadio from "../../../components/molecules/InputRadio";
 
 const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, setMenuUpdate, modules, parents, components }) => {
 
@@ -60,6 +61,7 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                 moduleId: null,
                 status: 'ACTIVE',
                 component: '',
+                visible: true,
             });
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
@@ -244,6 +246,31 @@ const UpdatedMenu = ({ modalRef, modalInstance, menu, setMenu, dataTableRef, set
                                 error={errors.status}
                                 placeholder="Estado del menu"
                                 options={[{ label: 'Activo', id: 'ACTIVE' }, { label: 'Inactivo', id: 'INACTIVE' }]}
+                            />
+                        </div>
+                    </div>
+                    <div className="row">
+                        <div className="col mb-6 mt-2">
+                            <small className="text-light fw-medium d-block">Visible</small>
+                            <InputRadio
+                                id="menu-visible-true-update"
+                                label="Si"
+                                name="visible-update"
+                                value="true"
+                                checked={menu.visible === true}
+                                onChange={() =>
+                                    setMenu((m) => ({ ...m, visible: true }))
+                                }
+                            />
+                            <InputRadio
+                                id="menu-visible-false-update"
+                                label="No"
+                                name="visible-update"
+                                value="false"
+                                checked={menu.visible === false}
+                                onChange={() =>
+                                    setMenu((m) => ({ ...m, visible: false }))
+                                }
                             />
                         </div>
                     </div>
