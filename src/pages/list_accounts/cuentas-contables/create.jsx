@@ -16,7 +16,6 @@ const CreateCuentaContable = ({
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
-    const [pucs, setPucs] = useState([]);
     const [currencies, setCurrencies] = useState([]);
     const [costCenters, setCostCenters] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -30,17 +29,15 @@ const CreateCuentaContable = ({
         const dtBody = { length: -1, columns: [{data:'status', search: {value: 'ACTIVE', regex: false}}] };
         const loadData = async () => {
             // Promise.allSettled: a 403 on one endpoint won't block the others
-            const [pucRes, currRes, ccRes] = await Promise.allSettled([
-                fetchHelper.post(base_url(['api', 'v1', 'chart-of-accounts', 'search']), {dtBody}, {}, 0),
+            const [currRes, ccRes] = await Promise.allSettled([
                 fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']), dtBody, {}, 0),
                 fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']), dtBody, {}, 0),
                 // fetchHelper.post(base_url(['api', 'v1', 'depretation-rules', 'search']), dtBody, {}, 0),
             ]);
-            if (pucRes.status === 'fulfilled')  setPucs(pucRes.value.data || []);
             if (currRes.status === 'fulfilled') setCurrencies(currRes.value.data || []);
             if (ccRes.status === 'fulfilled')   setCostCenters(ccRes.value.data || []);
             // if (drRes.status === 'fulfilled')   setDepreciationRules(drRes.value.data || []);
-            const failed = [pucRes, currRes, ccRes].filter(r => r.status === 'rejected');
+            const failed = [currRes, ccRes].filter(r => r.status === 'rejected');
             if (failed.length) console.warn('Algunos datos no pudieron cargarse:', failed.map(f => f.reason));
         };
         loadData();
@@ -154,20 +151,16 @@ const CreateCuentaContable = ({
                                         label="Cuenta PUC"
                                         value={cuentaContable.puc_id}
                                         onChange={(value) => {
-                                            const selectedPuc = pucs.find(p => p.id === parseInt(value));
                                             setCuentaContable({
                                                 ...cuentaContable,
                                                 puc_id: parseInt(value) || '',
-                                                pucCode: selectedPuc?.code || ''
                                             });
                                         }}
                                         error={errors.puc_id}
-                                        placeholder="Seleccionar cuenta PUC"
-                                        options={pucs.map(puc => ({
-                                            id: puc.id,
-                                            label: `${puc.code} - ${puc.name}`
-                                        }))}
+                                        placeholder="Cuenta PUC"
+                                        options={[]}
                                         required={true}
+                                        url={['api', 'v1', 'chart-of-accounts', 'search']}
                                     />
                                 </div>
                             </div>

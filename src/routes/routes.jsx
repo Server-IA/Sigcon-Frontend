@@ -111,9 +111,11 @@ const renderMenuRoutesFlat = (menu, parentPath = "") => {
     const fullPath = rawPath
         ? `/${[parentPath, rawPath].filter(Boolean).join("/")}`
         : `/${parentPath}`;
+
+    const component = COMPONENT_MAP.find(c => c.id === menu.componentName);
     
     const ComponentResolved =
-        COMPONENT_MAP.find(c => c.id === menu.componentName)?.component
+        component?.component
         || PageMaintenance;
 
     const routes = [

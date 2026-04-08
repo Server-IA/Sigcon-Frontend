@@ -204,6 +204,22 @@ const UpdateRulesTax = ({ rulesTax, setRulesTax, typeRulerTaxOptions, statusRule
                                     required={true}
                                 />
                             </div>
+                            <div className="col-lg-6 col-md-6 col-sm-12 mb-6 mt-2">
+                                <InputSelectModal
+                                    id="accountingAccountIdUpdate"
+                                    label="Cuenta contable"
+                                    value={rulesTax?.accountingAccount?.id}
+                                    onChange={(value) => {
+                                        setRulesTax({ ...rulesTax, accountingAccountId: value })
+                                    }}
+                                    error={errors.accountingAccountId}
+                                    placeholder="Cuenta contable"
+                                    required={true}
+                                    options={rulesTax?.accountingAccount ? [rulesTax.accountingAccount] : []}
+                                    url={['api', 'v1', 'accounting-accounts']}
+                                    searchFields={['customName']}
+                                />
+                            </div>
                         </div>
                     </div>
                     <div className="modal-footer">

@@ -39,7 +39,7 @@ import CreateCashAndBanks from "./create";
 import UpdatedCashAndBanks from "./updated";
 import FilterCashAndBanks from "./filter";
 
-
+import { useNavigate } from "react-router-dom";
 
 const API_SEARCH = ["api", "v1", "banks", "search"];
 const API_BASE = ["api", "v1", "banks"];
@@ -110,6 +110,8 @@ const IndexCashAndBanks = () => {
     ) || [];
   const isAdmin = useSelector((state) => state.user.user)?.isAdmin || false;
 
+  const navigate = useNavigate();
+
   const tableRef = useRef(null);
   const dataTableRef = useRef(null);
   const filterRef = useRef(null);
@@ -158,6 +160,9 @@ const IndexCashAndBanks = () => {
       : []),
     ...(userPermissions.some((p) => p.code === "DELETE_CASH_AND_BANKS" && p.type === "DELETE") || isAdmin
       ? [{ key: "delete", icon: "ri-delete-bin-5-line", class: "btn-label-danger", title: "Inactivar" }]
+      : []),
+    ...(userPermissions.some((p) => p.code === "VIEW_BANK_BRANCH" && p.type === "VIEW") || isAdmin
+      ? [{ key: "view-branches", icon: "ri-home-office-line", class: "btn-label-info", title: "Ver sucursales" }]
       : []),
   ];
 
@@ -386,6 +391,10 @@ const IndexCashAndBanks = () => {
 
       if (action === "delete") {
         openDeleteModal(row);
+      }
+
+      if (action === "view-branches") {
+        navigate(`branches/${row.id}`);
       }
     };
 

@@ -20,7 +20,15 @@ const RulesTaxIndex = () => {
         setTimeout(() => {
             const fetchAccountingAccounts = async () => {
                 const url = base_url(['api/v1/accounting-accounts']);
-                const response = await fetchHelper.post(url, {length: -1}, {}, 0);
+                const response = await fetchHelper.post(url, {length: -1, columns: [
+                    { data:"pucAccount.code",
+                        searchable: true,
+                        search:{
+                          value:"23%,24%",
+                          regex:true
+                        }
+                    }
+                ]}, {}, 0);
                 setAccountingAccounts(response.data);
             }
             fetchAccountingAccounts();
@@ -59,7 +67,7 @@ const RulesTaxIndex = () => {
         scope: '',
         dateStart: null,
         dateEnd: null,
-        companyId: 1
+        accountingAccountId: null
     }
 
     const [rulesTax, setRulesTax] = useState(rulesTaxBase); // Info para el envio de datos
@@ -209,8 +217,6 @@ const RulesTaxIndex = () => {
             const id     = Number($(this).data('id'));
             const rulesTaxRef = data.find(r => r.id === id);
 
-            console.log("rulesTaxRef", rulesTaxRef);
-
             if (!rulesTaxRef) {
                 console.warn('Regla de impuesto no encontrada', id);
                 return;
@@ -227,7 +233,8 @@ const RulesTaxIndex = () => {
                 dateStart: rulesTaxRef.dateStart,
                 dateEnd: rulesTaxRef.dateEnd,
                 companyId: rulesTaxRef.companyId,
-                accountingAccountIds: rulesTaxRef.accountingAccountIds,
+                accountingAccountId: rulesTaxRef.accountingAccountId,
+                accountingAccount: rulesTaxRef.accountingAccount,
             });
 
             switch (action) {
@@ -286,6 +293,9 @@ const RulesTaxIndex = () => {
         return () => { table.off('click', '.action-btn', handler); };
     }, [data]);
 
+    useEffect(() => {
+        console.log("rulesTax", rulesTax);
+    }, [rulesTax]);
 
     return (
         <div className="card">

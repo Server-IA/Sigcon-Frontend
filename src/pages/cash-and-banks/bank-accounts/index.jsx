@@ -44,7 +44,7 @@ export const emptyRecord = {
     bankId:           '',
     currencyTypeId:   '',
     initialBalance:   0,
-    chartOfAccountId: '',
+    accountingAccountId: '',
     companyId:        '',
     bankBranchId:     '',
     branchName:       '',
@@ -102,7 +102,7 @@ const IndexBankAccounts = () => {
     // ── Datos para selects ────────────────────────────────────────────────────
     const [banks,            setBanks]            = useState([]);
     const [currencyTypes,    setCurrencyTypes]    = useState([]);
-    const [chartOfAccounts,  setChartOfAccounts]  = useState([]);
+    const [accountingAccounts,  setAccountingAccounts]  = useState([]);
     const [companies,        setCompanies]        = useState([]);
     const [costCenters,      setCostCenters]      = useState([]);
 
@@ -116,26 +116,26 @@ const IndexBankAccounts = () => {
         try {
             const payload = { length: -1 };
 
-            const [banksRes, currencyRes, accountsRes, companiesRes, costCentersRes] =
+            const [banksRes, currencyRes, accountingAccountsRes, companiesRes, costCentersRes] =
                 await Promise.allSettled([
                     fetchHelper.post(base_url(['api', 'v1', 'banks', 'search']),          payload, {}, 1),
                     fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']), payload, {}, 1),
-                    fetchHelper.post(base_url(['api', 'v1', 'accounting-accounts']),       payload, {}, 1),
+                    fetchHelper.post(base_url(['api', 'v1', 'accounting-accounts']),       {
+                        ...payload,
+                        columns: [{ data: 'pucAccount.code', search: { value: "1110%", regex: true } }],
+                    }, {}, 1),
                     fetchHelper.post(base_url(['api', 'v1', 'companies', 'search']),       payload, {}, 1),
                     fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']),    payload, {}, 1),
                 ]);
 
             if (banksRes.status === 'fulfilled')
-                setBanks(banksRes.value.data?.map(d => ({ id: d.id, label: d.name })) || []);
+                setBanks(banksRes.value.data?.map(d => ({ id: d.id, label: d.name, branches: d.branches })) || []);
 
             if (currencyRes.status === 'fulfilled')
-                setCurrencyTypes(currencyRes.value.data?.map(d => ({ id: d.id, label: `${d.code} - ${d.name}` })) || []);
+                setCurrencyTypes(currencyRes.value.data?.map(d => ({ id: d.id, label: `${d.isoCode} - ${d.name}` })) || []);
 
-            if (accountsRes.status === 'fulfilled')
-                setChartOfAccounts(accountsRes.value.data?.map(d => ({ id: d.id, label: `${d.code || ''} - ${d.customName || d.name}` })) || []);
-
-            if (companiesRes.status === 'fulfilled')
-                setCompanies(companiesRes.value.data?.map(d => ({ id: d.id, label: d.name })) || []);
+            if (accountingAccountsRes.status === 'fulfilled')
+                setAccountingAccounts(accountingAccountsRes.value.data?.map(d => ({ id: d.id, label: `${d.pucAccount?.code || ''} - ${d.customName || d.pucAccount?.name}` })) || []);
 
             if (costCentersRes.status === 'fulfilled')
                 setCostCenters(costCentersRes.value.data?.map(d => ({ id: d.id, label: d.name })) || []);
@@ -158,9 +158,8 @@ const IndexBankAccounts = () => {
         { title: 'Tipo',         data: 'accountType',         name: 'accountType',
             render: (v) => ACCOUNT_TYPES.find(t => t.id === v)?.label || v || '-',
         },
-        { title: 'Banco',        data: 'bankName',            name: 'bankName' },
-        { title: 'Empresa',      data: 'companyName',         name: 'companyName' },
-        { title: 'Moneda',       data: 'currencyCode',        name: 'currencyCode' },
+        { title: 'Banco',        data: 'bankDTO.name',            name: 'bankName' },
+        { title: 'Moneda',       data: 'currencyTypeDTO.isoCode',        name: 'currencyCode' },
         {
             title: 'Estado', data: 'status', name: 'status',
             render: (v) => v
@@ -252,24 +251,24 @@ const IndexBankAccounts = () => {
             if (ref) {
                 setSelectedRecord({
                     id:                  ref.id               ?? '',
+                    used:                ref.used             ?? false,
                     code:                ref.code             ?? '',
                     accountNumber:       ref.accountNumber    ?? '',
                     accountNumberMasked: ref.accountNumberMasked ?? '',
                     accountName:         ref.accountName      ?? '',
                     accountType:         ref.accountType      ?? '',
                     bankId:              ref.bankId           ?? '',
-                    bankName:            ref.bankName         ?? '',
+                    bank:                ref.bankDTO          ?? '',
                     currencyTypeId:      ref.currencyTypeId   ?? '',
-                    currencyCode:        ref.currencyCode     ?? '',
+                    currency:            ref.currencyTypeDTO  ?? '',
                     initialBalance:      ref.initialBalance   ?? 0,
-                    chartOfAccountId:    ref.chartOfAccountId ?? '',
-                    chartOfAccountCode:  ref.chartOfAccountCode ?? '',
-                    chartOfAccountName:  ref.chartOfAccountName ?? '',
-                    companyId:           ref.companyId        ?? '',
-                    companyName:         ref.companyName      ?? '',
+                    accountingAccountId: ref.accountingAccountId ?? '',
                     status:              ref.status           ?? '',
                     openingDate:         ref.openingDate      ?? '',
-                    branchName:          ref.branchName       ?? '',
+                    accountingAccount:   ref.accountingAccount ?? '',
+                    costCenter:          ref.costCenterDTO    ?? '',
+                    bankBranchId:        ref.bankBranchId    ?? '',
+                    bankBranch:          ref.bankBranchDTO    ?? '',
                     accountExecutive:    ref.accountExecutive ?? '',
                     bankPhone:           ref.bankPhone        ?? '',
                     description:         ref.description      ?? '',
@@ -354,7 +353,7 @@ const IndexBankAccounts = () => {
                 setMessage={setMessage}
                 banks={banks}
                 currencyTypes={currencyTypes}
-                chartOfAccounts={chartOfAccounts}
+                accountingAccounts={accountingAccounts}
                 companies={companies}
                 costCenters={costCenters}
                 accountTypes={ACCOUNT_TYPES}
@@ -368,6 +367,9 @@ const IndexBankAccounts = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 costCenters={costCenters}
+                banks={banks}
+                currencyTypes={currencyTypes}
+                accountingAccounts={accountingAccounts}
             />
 
             <ViewBankAccount

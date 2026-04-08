@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
+import { useParams } from "react-router-dom";
 
 import DataTableReference from "../../../components/organism/DataTable";
 import AlertPage from "../../../components/molecules/AlertPage";
@@ -16,47 +17,11 @@ import FilterBankBranch from "./filter";
 const API_BASE = ["api", "v1", "bank-branches"];
 const API_BANKS_SEARCH = ["api", "v1", "banks", "search"];
 
-const INITIAL_BRANCH = {
-  id: null,
-  bankId: "",
-  bankName: "",
-  bankCode: "",
-  address: "",
-  city: "",
-  mainBranch: false,
-  status: "",
-};
-
-const normalizeBankOptions = (payload) => {
-  const rows =
-    payload?.data?.data ?? payload?.data ?? payload?.rows ?? payload ?? [];
-
-  return rows
-    .map((row) => {
-      const id = row.id ?? row.ID_BANCO ?? row.ID ?? null;
-      const code = row.code ?? row.CODIGO_BANCO ?? "";
-      const name = row.name ?? row.NOMBRE_BANCO ?? "";
-      if (id === null || id === undefined) return null;
-      return {
-        id: String(id),
-        label: `${code ? `${code} - ` : ""}${name}`.trim(),
-      };
-    })
-    .filter(Boolean);
-};
-
-const normalizeBranchFromRow = (row = {}) => ({
-  id: row.id ?? row.ID ?? row.branchId ?? null,
-  bankId: String(row.bankId ?? row.bank?.id ?? row.BANK_ID ?? ""),
-  bankName: row.bank?.name ?? row.bankName ?? row.BANK_NAME ?? "",
-  bankCode: row.bank?.code ?? row.bankCode ?? row.BANK_CODE ?? "",
-  address: row.address ?? row.ADDRESS ?? "",
-  city: row.city ?? row.CITY ?? "",
-  mainBranch: row.mainBranch ?? row.main ?? row.MAIN_BRANCH ?? false,
-  status: row.status ?? row.ESTADO ?? "",
-});
 
 const IndexBankBranches = () => {
+
+  const {id: id_bank} = useParams();
+
   const userPermissions =
     useSelector((state) => state.user.user)?.permissions?.filter(
       (p) => p.code.includes("BANK_BRANCH") || p.code.includes("CASH_AND_BANKS"),
@@ -65,7 +30,7 @@ const IndexBankBranches = () => {
 
   const tableRef = useRef(null);
   const dataTableRef = useRef(null);
-  const selectedBankIdRef = useRef("");
+  
   const filterRef = useRef(null);
   const filterInstance = useRef(null);
   const modalCreateRef = useRef(null);
@@ -74,32 +39,39 @@ const IndexBankBranches = () => {
   const modalUpdateInstance = useRef(null);
 
   const [data, setData] = useState([]);
-  const [banks, setBanks] = useState([]);
-  const [selectedBankId, setSelectedBankId] = useState("");
-  const [branchesLoaded, setBranchesLoaded] = useState(false);
+  const [bank, setBank] = useState([]);
   const [search, setSearch] = useState({ value: "", checked: true });
   const [appliedFilters, setAppliedFilters] = useState({
     city: "",
     mainBranch: "",
   });
 
-  const [branch, setBranch] = useState({ ...INITIAL_BRANCH });
+  const [municipalities, setMunicipalities] = useState([]);
+
+  const INITIAL_BRANCH = {
+    id: null,
+    bankId: Number(id_bank),
+    address: null,
+    municipalityId: null,
+    mainBranch: false,
+    status: "active",
+  };
+
+  const [branch, setBranch] = useState(INITIAL_BRANCH);
 
   const [branchCreate, setBranchCreate] = useState(false);
   const [branchUpdate, setBranchUpdate] = useState(false);
   const [branchDelete, setBranchDelete] = useState(false);
   const [branchError, setBranchError] = useState({ show: false, message: "" });
 
-  const seedData = [
-    {
-      id: "",
-      bankId: "",
-      city: "",
-      address: "",
-      mainBranch: false,
-      status: "",
-    },
-  ];
+  const seedData = {
+    id: "",
+    bankId: "",
+    municipalityId: "",
+    address: "",
+    mainBranch: false,
+    status: "active",
+  };
 
   const actions = [
     ...(userPermissions.some((p) => p.code === "UPDATE_BANK_BRANCHES" && p.type === "UPDATE") || isAdmin
@@ -110,39 +82,15 @@ const IndexBankBranches = () => {
       : []),
   ];
 
-  const resolveBankLabel = (row = {}) => {
-    const bankId = String(
-      row.bankId ?? row.bank?.id ?? row.BANK_ID ?? selectedBankId ?? "",
-    );
-    const rowLabel = row.bankLabel ?? row.BANK_LABEL ?? "";
-    const bankName = row.bank?.name ?? row.bankName ?? row.BANK_NAME ?? "";
-    const bankCode = row.bank?.code ?? row.bankCode ?? row.BANK_CODE ?? "";
-
-    if (rowLabel) return String(rowLabel);
-
-    if (bankName || bankCode) {
-      return `${bankCode ? `${bankCode} - ` : ""}${bankName}`.trim();
-    }
-
-    if (!bankId) return "";
-    const match = banks.find((bank) => String(bank.id) === bankId);
-    return match?.label || "";
-  };
+  const filterColumns = [
+    { data: "bank.id", searchable: true, search: { value: id_bank, regex: false } },
+  ];
 
   const columns = [
     { title: "ID", data: "id", name: "id" },
     {
-      title: "Banco",
-      data: "bankId",
-      name: "bankId",
-      render: (_, __, row) => {
-        const label = resolveBankLabel(row);
-        return label || "-";
-      },
-    },
-    {
       title: "Ciudad",
-      data: "city",
+      data: "municipality.name",
       name: "city",
       render: (value) => highlightMatch(value, appliedFilters.city),
     },
@@ -160,12 +108,6 @@ const IndexBankBranches = () => {
         value
           ? '<span class="badge bg-label-primary">Principal</span>'
           : '<span class="badge bg-label-secondary">Secundaria</span>',
-    },
-    {
-      title: "Estado",
-      data: "status",
-      name: "status",
-      render: (value) => formatBankStatus(value || "ACTIVE"),
     },
     {
       title: "Acciones",
@@ -198,7 +140,7 @@ const IndexBankBranches = () => {
     if (!modalCreateInstance.current) {
       modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
     }
-    setBranch({ ...INITIAL_BRANCH, bankId: selectedBankId || "" });
+    setBranch(INITIAL_BRANCH);
     modalCreateInstance.current.show();
   };
 
@@ -206,14 +148,21 @@ const IndexBankBranches = () => {
     if (!modalUpdateInstance.current) {
       modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
     }
-    setBranch(normalizeBranchFromRow(row));
+    setBranch({
+      id: row.id,
+      bankId: Number(id_bank ?? row?.bank?.id),
+      address: row.address,
+      municipalityId: Number(row.municipality?.id ?? row.municipalityId),
+      mainBranch: Boolean(row.mainBranch),
+      status: row.status,
+    });
     modalUpdateInstance.current.show();
   };
 
   const handleDelete = async (row) => {
     const result = await window.Swal.fire({
       title: "Estas seguro?",
-      text: `Se eliminara la sucursal ${row?.city || ""}`,
+      text: `Se eliminara la sucursal ${row?.address || ""}`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Si, eliminar",
@@ -249,13 +198,6 @@ const IndexBankBranches = () => {
       text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
       className: "btn rounded-pill btn-secondary waves-effect mx-2 my-2",
       action: function () {
-        if (!selectedBankIdRef.current) {
-          setBranchError({
-            show: true,
-            message: "Seleccione un banco para filtrar sucursales",
-          });
-          return;
-        }
         if (!filterInstance.current) {
           filterInstance.current = new window.bootstrap.Modal(filterRef.current);
         }
@@ -268,13 +210,6 @@ const IndexBankBranches = () => {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear sucursal</span>',
             className: "btn rounded-pill btn-primary waves-effect mx-2 my-2",
             action: function () {
-              if (!selectedBankIdRef.current) {
-                setBranchError({
-                  show: true,
-                  message: "Seleccione un banco para crear una sucursal",
-                });
-                return;
-              }
               openModalCreate();
             },
           },
@@ -283,75 +218,25 @@ const IndexBankBranches = () => {
   ];
 
   useEffect(() => {
-    const loadBanks = async () => {
+    const loadData = async () => {
       try {
-        const url = base_url(API_BANKS_SEARCH);
-        const response = await fetchHelper.post(
-          url,
-          { draw: 1, start: 0, length: 1000 },
-          {},
-          0,
-          false,
-        );
-        setBanks(normalizeBankOptions(response));
+
+        const [bankResponse, municipalitiesResponse] = await Promise.all([
+          fetchHelper.get(base_url(['api/v1/banks', id_bank]), {}, 0, false),
+          fetchHelper.post(base_url(['api/v1/resources/municipalities']), { length: -1, columns: [
+            { data: 'country.id', searchable: true, search: { value: bank?.country?.id, regex: true } },
+          ] }, {}, 0, false),
+        ]);
+        setBank(bankResponse?.data ?? bankResponse ?? null);
+        setMunicipalities(municipalitiesResponse?.data ?? municipalitiesResponse ?? []);
       } catch (error) {
-        setBanks([]);
+        setBank([]);
+        setMunicipalities([]);
       }
     };
 
-    loadBanks();
+    loadData();
   }, []);
-
-  const refreshBranches = async (bankId = selectedBankId) => {
-    if (!bankId) {
-      setData([]);
-      setBranchesLoaded(false);
-      return;
-    }
-
-    try {
-      const bankLabel =
-        banks.find((bank) => String(bank.id) === String(bankId))?.label || "";
-      const url = base_url([...API_BASE, "bank", bankId]);
-      const response = await fetchHelper.get(url, {}, 0, false);
-      const rows = response?.data ?? response?.rows ?? response ?? [];
-      const normalized = Array.isArray(rows)
-        ? rows
-            .map((row) => ({
-            ...row,
-            bankId: String(bankId),
-            bankLabel,
-            status: row.status ?? row.ESTADO ?? "ACTIVE",
-            }))
-            .sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0))
-        : [];
-      setData(normalized);
-      setBranchesLoaded(true);
-    } catch (error) {
-      setData([]);
-      setBranchesLoaded(true);
-      setBranchError({
-        show: true,
-        message: error?.msg || "No se pudieron cargar las sucursales del banco",
-      });
-    }
-  };
-
-  useEffect(() => {
-    selectedBankIdRef.current = selectedBankId;
-    refreshBranches();
-  }, [selectedBankId]);
-
-  useEffect(() => {
-    const table = dataTableRef?.current;
-    if (!table) return;
-
-    table.clear();
-    if (data.length > 0) {
-      table.rows.add(data);
-    }
-    table.draw();
-  }, [data]);
 
   useEffect(() => {
     const table = dataTableRef?.current;
@@ -376,7 +261,7 @@ const IndexBankBranches = () => {
       }
 
       if (action === "delete") {
-        handleDelete({ ...normalizeBranchFromRow(row), id });
+        handleDelete(row);
       }
     };
 
@@ -389,7 +274,7 @@ const IndexBankBranches = () => {
       <div className="card">
         <h5 className="card-header text-md-start text-center">
           <i className="ri-bank-line me-2"></i>
-          Sucursales bancarias
+          Sucursales bancarias | {bank?.name ?? ""}
         </h5>
 
         <AlertPage
@@ -417,47 +302,22 @@ const IndexBankBranches = () => {
           onChange={() => setBranchError({ show: false, message: "" })}
         />
 
-        <div className="px-4 pt-4 mb-3">
-          <div className="row g-4 align-items-end">
-            <div className="col-12 col-lg-7">
-              <InputSelectModal
-                id="BANK_BRANCHES_BANK"
-                label="Banco"
-                options={banks}
-                value={selectedBankId}
-                onChange={(value) => {
-                  setSelectedBankId(value || "");
-                  setAppliedFilters({ city: "", mainBranch: "" });
-                }}
-                placeholder="Seleccione un banco"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        {selectedBankId && branchesLoaded && data.length === 0 ? (
-          <div className="px-4 pb-4">
-            <div className="alert alert-info mb-0">
-              El banco seleccionado no tiene sucursales registradas.
-            </div>
-          </div>
-        ) : null}
-
         <div className="card-datatable text-nowrap">
           <DataTableReference
-            url_api={["api", "v1", "bank-branches", "bank", selectedBankId || "0"]}
+            url_api={["api", "v1", "bank-branches", "search"]}
             columns={columns}
             tableRef={tableRef}
             dataTableRef={dataTableRef}
             method="POST"
             buttons={buttons}
-            title="Sucursales bancarias"
+            title={`Sucursales bancarias | ${bank?.name ?? ""}`}
             search={search}
+            setData={setData}
             setSearch={setSearch}
             filtered={true}
             lengthMenu={[10, 20, 50, 100]}
-            data={seedData}
+            filterColumns={filterColumns}
+            // data={seedData}
           />
         </div>
       </div>
@@ -474,10 +334,9 @@ const IndexBankBranches = () => {
         modalInstance={modalCreateInstance}
         branch={branch}
         setBranch={setBranch}
-        onRefresh={refreshBranches}
         setBranchCreate={setBranchCreate}
-        banks={banks}
-        selectedBankId={selectedBankId}
+        municipalities={municipalities}
+        datatable={dataTableRef}
       />
 
       <UpdatedBankBranch
@@ -485,9 +344,9 @@ const IndexBankBranches = () => {
         modalInstance={modalUpdateInstance}
         branch={branch}
         setBranch={setBranch}
-        onRefresh={refreshBranches}
         setBranchUpdate={setBranchUpdate}
-        banks={banks}
+        municipalities={municipalities}
+        datatable={dataTableRef}
       />
     </>
   );

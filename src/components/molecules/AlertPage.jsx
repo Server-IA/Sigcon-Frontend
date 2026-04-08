@@ -19,21 +19,20 @@ const AlertPage = ({ type, message, show, duration = 5000, onChange }) => {
 
             // En el siguiente frame, activar la animación de entrada
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setAnimState('visible');
-                });
+                setAnimState('visible');
             });
 
-            // Iniciar fade-out después de `duration` ms
-            timeoutRef.current = setTimeout(() => {
-                setAnimState('exiting');
-                // Esperar a que termine la animación para ocultar
-                fadeTimeoutRef.current = setTimeout(() => {
-                    setVisible(false);
-                    setAnimState('hidden');
-                    onChange();
-                }, 500);
-            }, duration);
+            if(duration > 0){
+                // Iniciar fade-out después de `duration` ms
+                timeoutRef.current = setTimeout(() => {
+                    setAnimState('exiting');
+                    fadeTimeoutRef.current = setTimeout(() => {
+                        setVisible(false);
+                        setAnimState('hidden');
+                        onChange();
+                    }, 500);
+                }, duration);
+            }
         } else {
             setVisible(false);
             setAnimState('hidden');
@@ -43,7 +42,7 @@ const AlertPage = ({ type, message, show, duration = 5000, onChange }) => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
         };
-    }, [show, duration]);
+    }, [show, duration, onChange]);
 
     if (!visible) return null;
 

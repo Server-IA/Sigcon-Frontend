@@ -29,6 +29,7 @@ const DataTableReference = ({
   setSearch = () => {},
   data = [],
   lengthMenu = [10, 25, 50, 75, 100],
+  filterColumns = [],
 }) => {
   const token = useSelector((state) => state.user.token);
 
@@ -116,7 +117,7 @@ const DataTableReference = ({
         try {
           const response = await fetchHelper.post(
             base_url(url_api),
-            data,
+            { ...data, columns: [...(data.columns || []), ...filterColumns] },
             {},
             0,
           );
@@ -129,27 +130,13 @@ const DataTableReference = ({
             recordsFiltered: 0,
           });
           if (error.status === 403 || error.msg === "Access Denied") {
-
-            $(tableRef.current).html(`
-              <tbody>
-                <tr>
-                  <td colspan="${columns.length}" class="text-center text-danger py-5">
-                    <i class="ri-lock-line fs-2 d-block mb-2"></i>
-                    No tiene permisos para ver esta información
-                  </td>
-                </tr>
-              </tbody>
-            `);
+            settings.oLanguage.sEmptyTable = `<span class="text-danger">
+              <i class="ri-lock-line fs-2 d-block mb-2"></i> No tiene permisos para ver esta información</span>
+            `;
           }else{
-            $(tableRef.current).html(`
-              <tbody>
-                <tr>
-                  <td colspan="${columns.length}" class="text-center py-5">
-                    ${error.msg || error.message || 'No se encontraron datos'}
-                  </td>
-                </tr>
-              </tbody>
-            `);
+            settings.oLanguage.sEmptyTable = `<span class="text-danger">
+              ${error.msg || error.message || 'No se encontraron datos'}
+              </span>`;
           }
 
           return;
@@ -197,7 +184,7 @@ const DataTableReference = ({
     dataTableRef.current
       .table()
       .search(search.value, search.checked, true)
-      .draw();
+      .ajax.reload();
   };
 
   return (

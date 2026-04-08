@@ -17,7 +17,7 @@ const CreateBankAccount = ({
     setMessage,
     banks,
     currencyTypes,
-    chartOfAccounts,
+    accountingAccounts,
     companies,
     costCenters,
     accountTypes,
@@ -25,9 +25,7 @@ const CreateBankAccount = ({
     const [errors, setErrors] = useState({});
     const [error,  setError]  = useState({ message: '', type: '', show: false });
 
-    // Sucursales del banco seleccionado
-    const [branches,        setBranches]        = useState([]);
-    const [loadingBranches, setLoadingBranches] = useState(false);
+    const [branches, setBranches] = useState([]);
 
     // Limpiar errores y sucursales al cerrar
     useEffect(() => {
@@ -42,50 +40,6 @@ const CreateBankAccount = ({
         return () => el.removeEventListener('hidden.bs.modal', reset);
     }, [modalRef]);
 
-    // Cargar sucursales cuando cambia el banco
-    useEffect(() => {
-        if (!record.bankId) {
-            setBranches([]);
-            setRecord(prev => ({ ...prev, bankBranchId: '', branchName: '' }));
-            return;
-        }
-
-        const loadBranches = async () => {
-            setLoadingBranches(true);
-            setBranches([]);
-            setRecord(prev => ({ ...prev, bankBranchId: '', branchName: '' }));
-            try {
-                const res = await fetchHelper.post(
-                    base_url(['api', 'v1', 'banks', 'search']),
-                    {
-                        length: -1,
-                        columns: [{ data: 'id', search: { value: String(record.bankId), regex: false } }],
-                    },
-                    {}, 1
-                );
-
-                // El endpoint puede retornar todas las sucursales del banco en data[0].branches
-                // o puede retornar directamente la lista según la implementación del backend
-                const bankData = res.data?.find(b => Number(b.id) === Number(record.bankId));
-                const branchList = bankData?.branches || bankData?.sucursales || [];
-
-                setBranches(
-                    branchList.map(b => ({
-                        id:    b.id,
-                        label: b.name || b.branchName || b.nombre || `Sucursal ${b.id}`,
-                    }))
-                );
-            } catch (err) {
-                console.warn('No se pudieron cargar las sucursales:', err);
-                setBranches([]);
-            } finally {
-                setLoadingBranches(false);
-            }
-        };
-
-        loadBranches();
-    }, [record.bankId]);
-
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -98,8 +52,7 @@ const CreateBankAccount = ({
                 bankId:           Number(record.bankId)           || 0,
                 currencyTypeId:   Number(record.currencyTypeId)   || 0,
                 initialBalance:   Number(record.initialBalance)   || 0,
-                chartOfAccountId: Number(record.chartOfAccountId) || 0,
-                companyId:        Number(record.companyId)        || 0,
+                accountingAccountId: Number(record.accountingAccountId) || 0,
                 bankBranchId:     Number(record.bankBranchId)     || 0,
                 branchName:       record.branchName       || '',
                 accountExecutive: record.accountExecutive || '',
@@ -198,7 +151,7 @@ const CreateBankAccount = ({
                             <i className="ri-settings-3-line me-1"></i>Clasificación
                         </p>
                         <div className="row mb-4">
-                            <div className="col-md-3 mb-4">
+                            <div className="col-md-4 mb-4">
                                 <InputSelectModal
                                     id="ba_accountType" label="Tipo de cuenta"
                                     value={record.accountType}
@@ -207,16 +160,19 @@ const CreateBankAccount = ({
                                     error={errors.accountType} required
                                 />
                             </div>
-                            <div className="col-md-3 mb-4">
+                            <div className="col-md-4 mb-4">
                                 <InputSelectModal
                                     id="ba_bankId" label="Banco"
                                     value={record.bankId}
-                                    onChange={v => field('bankId', v)}
+                                    onChange={v => {
+                                        field('bankId', v)
+                                        setBranches(banks?.find(b => b.id == v)?.branches.map(b => ({ id: b.id, label: b.address })) || [])
+                                    }}
                                     options={banks}
                                     error={errors.bankId} required
                                 />
                             </div>
-                            <div className="col-md-3 mb-4">
+                            <div className="col-md-4 mb-4">
                                 <InputSelectModal
                                     id="ba_currencyTypeId" label="Moneda"
                                     value={record.currencyTypeId}
@@ -225,7 +181,7 @@ const CreateBankAccount = ({
                                     error={errors.currencyTypeId} required
                                 />
                             </div>
-                            <div className="col-md-3 mb-4">
+                            {/* <div className="col-md-3 mb-4">
                                 <InputSelectModal
                                     id="ba_companyId" label="Empresa"
                                     value={record.companyId}
@@ -233,7 +189,7 @@ const CreateBankAccount = ({
                                     options={companies}
                                     error={errors.companyId} required
                                 />
-                            </div>
+                            </div> */}
                         </div>
 
                         {/* ── Sección: Contabilidad ───────────────────────── */}
@@ -243,11 +199,11 @@ const CreateBankAccount = ({
                         <div className="row mb-4">
                             <div className="col-md-4 mb-4">
                                 <InputSelectModal
-                                    id="ba_chartOfAccountId" label="Cuenta PUC"
-                                    value={record.chartOfAccountId}
-                                    onChange={v => field('chartOfAccountId', v)}
-                                    options={chartOfAccounts}
-                                    error={errors.chartOfAccountId} required
+                                    id="ba_accountingAccountId" label="Cuenta Contable"
+                                    value={record.accountingAccountId}
+                                    onChange={v => field('accountingAccountId', v)}
+                                    options={accountingAccounts}
+                                    error={errors.accountingAccountId} required
                                 />
                             </div>
                             <div className="col-md-4 mb-4">
@@ -278,54 +234,22 @@ const CreateBankAccount = ({
                         <div className="row mb-4">
 
                             {/* Sucursal: select si hay sucursales del banco, texto libre si no */}
-                            <div className="col-md-3 mb-4">
-                                {!record.bankId ? (
-                                    /* Sin banco seleccionado: campo deshabilitado */
-                                    <InputModal
-                                        type="text" id="ba_branchName_disabled" label="Sucursal"
-                                        placeholder="Seleccione primero un banco"
-                                        value=""
-                                        onChange={() => {}}
-                                        disabled
-                                    />
-                                ) : loadingBranches ? (
-                                    /* Cargando sucursales */
-                                    <div className="form-floating form-floating-outline">
-                                        <input
-                                            type="text" className="form-control"
-                                            placeholder="Cargando..."
-                                            value="Cargando sucursales..."
-                                            disabled readOnly
-                                        />
-                                        <label>Sucursal</label>
-                                    </div>
-                                ) : branches.length > 0 ? (
-                                    /* Sucursales disponibles: select */
+                            <div className="col-md-4 mb-4">
+                                    {/* Sucursales disponibles: select */}
                                     <InputSelectModal
                                         id="ba_bankBranchId" label="Sucursal"
                                         value={record.bankBranchId}
                                         onChange={v => {
-                                            const branch = branches.find(b => String(b.id) === String(v));
+                                            // const branch = branches.find(b => String(b.id) === String(v));
                                             field('bankBranchId', v);
-                                            if (branch) field('branchName', branch.label);
+                                            // if (branch) field('branchName', branch.label);
                                         }}
                                         options={branches}
                                         error={errors.bankBranchId}
-                                        clearable
                                     />
-                                ) : (
-                                    /* Sin sucursales en el backend: texto libre */
-                                    <InputModal
-                                        type="text" id="ba_branchName" label="Sucursal"
-                                        placeholder="Ej: Sucursal Norte"
-                                        value={record.branchName}
-                                        onChange={e => field('branchName', e.target.value)}
-                                        error={errors.branchName}
-                                    />
-                                )}
                             </div>
 
-                            <div className="col-md-3 mb-4">
+                            <div className="col-md-4 mb-4">
                                 <InputModal
                                     type="text" id="ba_accountExecutive" label="Ejecutivo de cuenta"
                                     placeholder="Ej: Carlos Pérez"
@@ -334,7 +258,7 @@ const CreateBankAccount = ({
                                     error={errors.accountExecutive}
                                 />
                             </div>
-                            <div className="col-md-3 mb-4">
+                            {/* <div className="col-md-3 mb-4">
                                 <InputModal
                                     type="text" id="ba_bankPhone" label="Teléfono banco"
                                     placeholder="Ej: 6016543210"
@@ -342,8 +266,8 @@ const CreateBankAccount = ({
                                     onChange={e => field('bankPhone', e.target.value)}
                                     error={errors.bankPhone}
                                 />
-                            </div>
-                            <div className="col-md-3 mb-4">
+                            </div> */}
+                            <div className="col-md-4 mb-4">
                                 <InputDate
                                     id="ba_openingDate" label="Fecha apertura"
                                     date={record.openingDate}
