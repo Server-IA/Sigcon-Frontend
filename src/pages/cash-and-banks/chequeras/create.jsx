@@ -92,6 +92,7 @@ const CreateCheckbook = ({
     dataTableRef,
     setMessage,
     accountOptions = [],
+    banksAccount = [],
 }) => {
 
     // Estado local de errores y carga.
@@ -129,13 +130,6 @@ const CreateCheckbook = ({
             valid = false;
         } else if (checkbookNumber.length > MAX_CHECKBOOK_NUMBER) {
             nextErrors.checkbookNumber = `Maximo ${MAX_CHECKBOOK_NUMBER} caracteres`;
-            valid = false;
-        }
-        if (!issuingBank) {
-            nextErrors.issuingBank = 'El banco emisor es obligatorio';
-            valid = false;
-        } else if (issuingBank.length > MAX_ISSUING_BANK) {
-            nextErrors.issuingBank = `Maximo ${MAX_ISSUING_BANK} caracteres`;
             valid = false;
         }
         if (!checkStartNumber || checkStartNumber <= 0) {
@@ -264,8 +258,8 @@ const CreateCheckbook = ({
 
                         {/* Cuenta bancaria: si hay opciones, se usa select; si no, ID manual. */}
                         <div className="row">
-                            <div className="col-12 mb-4 mt-2">
-                                {accountOptions.length > 0 ? (
+                            <div className="col-md-6 mb-4 mt-2">
+                                {banksAccount.length > 0 ? (
                                     <InputSelectModal
                                         id="checkbook_bank_account_create"
                                         label="Cuenta bancaria"
@@ -273,7 +267,7 @@ const CreateCheckbook = ({
                                         onChange={(value) => setRecord(prev => ({ ...prev, bankAccountId: value }))}
                                         error={errors.bankAccountId}
                                         placeholder="Seleccione cuenta bancaria"
-                                        options={accountOptions}
+                                        options={banksAccount.map(item => ({ id: item.id, name: `${item.accountName} - ${item?.bankDTO?.name}` }))}
                                         required
                                     />
                                 ) : (
@@ -290,10 +284,7 @@ const CreateCheckbook = ({
                                     />
                                 )}
                             </div>
-                        </div>
-
-                        {/* Numero de chequera + banco emisor. */}
-                        <div className="row">
+                            
                             <div className="col-md-6 mb-4 mt-2">
                                 <InputModal
                                     type="text"
@@ -303,18 +294,6 @@ const CreateCheckbook = ({
                                     onChange={(event) => setRecord(prev => ({ ...prev, checkbookNumber: event.target.value }))}
                                     error={errors.checkbookNumber}
                                     maxLength={MAX_CHECKBOOK_NUMBER}
-                                    required
-                                />
-                            </div>
-                            <div className="col-md-6 mb-4 mt-2">
-                                <InputModal
-                                    type="text"
-                                    id="checkbook_issuing_bank_create"
-                                    label="Banco emisor"
-                                    value={record.issuingBank}
-                                    onChange={(event) => setRecord(prev => ({ ...prev, issuingBank: event.target.value }))}
-                                    error={errors.issuingBank}
-                                    maxLength={MAX_ISSUING_BANK}
                                     required
                                 />
                             </div>

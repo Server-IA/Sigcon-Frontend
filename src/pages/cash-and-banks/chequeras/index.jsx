@@ -47,7 +47,7 @@ export const emptyCheckbookRecord = {
 // Normaliza una fila de backend al modelo interno.
 const mapCheckbookRecord = (row = {}) => ({
     id: row.id ?? null,
-    bankAccountId: row.bankAccountId ?? '',
+    bankAccountId: row.bankAccount.id ?? '',
     bankAccountLabel: row.bankAccountLabel ?? row.bankAccountNumber ?? row.accountNumber ?? '',
     checkbookNumber: row.checkbookNumber ?? '',
     issuingBank: row.issuingBank ?? '',
@@ -137,6 +137,7 @@ const IndexCheckbooks = () => {
     const [record, setRecord] = useState({ ...emptyCheckbookRecord });
     const [message, setMessage] = useState({ message: '', type: '', show: false });
     const [search, setSearch] = useState({ value: '', checked: true });
+    const [banksAccount, setBanksAccount] = useState([]);
 
     // Normaliza la data de tabla para evitar errores si backend cambia el shape.
     const rows = useMemo(() => {
@@ -147,6 +148,29 @@ const IndexCheckbooks = () => {
 
     // Endpoint oficial para consulta paginada.
     const url = ['api', 'v1', 'banks', 'checkbooks', 'search'];
+
+    const loadData = async () => {
+        try {
+            const {data} = await fetchHelper.post(base_url(['api', 'v1', 'bank-accounts', 'search']), {
+                length: -1,
+                columns: [
+                    {data: 'handlesCheckbook', name: 'handlesCheckbook', searchable: true, search: {"value": true, "regex": false}}, 
+                ]
+            },{}, 0);
+            
+            setBanksAccount(data);
+        } catch (error) {
+            setMessage({
+                type: 'danger',
+                show: true,
+                message: error.msg || error?.message || 'No fue posible completar la operacion',
+            });
+        }
+    }
+
+    useEffect(() => {
+        console.log(record,'record');
+    }, [record]);
 
     // Opciones de cuenta armadas con los datos de la tabla.
     const accountOptions = useMemo(() => {
@@ -172,12 +196,11 @@ const IndexCheckbooks = () => {
         { title: 'ID', data: 'id', name: 'id' },
         {
             // En busqueda server-side el backend resuelve la relacion como bankAccount.id.
-            title: 'ID CUENTA BANCARIA',
-            data: 'bankAccount.id',
-            name: 'bankAccount.id',
-            render: (_value, _type, row) => row.bankAccountId ?? row.bankAccount?.id ?? '-',
+            title: 'CUENTA BANCARIA',
+            data: 'bankAccount.accountName',
+            name: 'bankAccount.accountName',
         },
-        { title: 'BANCO EMISOR', data: 'issuingBank', name: 'issuingBank' },
+        { title: 'BANCO EMISOR', data: 'bankAccount.bankDTO.name', name: 'bankAccount.bankDTO.name' },
         { title: 'NO. CHEQUERA', data: 'checkbookNumber', name: 'checkbookNumber' },
         { title: 'CHEQUE INICIAL', data: 'checkStartNumber', name: 'checkStartNumber' },
         { title: 'CHEQUE FINAL', data: 'checkEndNumber', name: 'checkEndNumber' },
@@ -382,6 +405,8 @@ const IndexCheckbooks = () => {
         updateModal?.addEventListener('hidden.bs.modal', handleHidden);
         viewModal?.addEventListener('hidden.bs.modal', handleHidden);
 
+        loadData();
+
         return () => {
             updateModal?.removeEventListener('hidden.bs.modal', handleHidden);
             viewModal?.removeEventListener('hidden.bs.modal', handleHidden);
@@ -450,6 +475,7 @@ const IndexCheckbooks = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 accountOptions={accountOptions}
+                banksAccount={banksAccount}
             />
 
             <UpdatedCheckbook
@@ -461,6 +487,7 @@ const IndexCheckbooks = () => {
                 setMessage={setMessage}
                 statuses={CHECKBOOK_STATUS}
                 accountOptions={accountOptions}
+                banksAccount={banksAccount}
             />
 
             <UpdatedCheckbook
@@ -474,6 +501,7 @@ const IndexCheckbooks = () => {
                 accountOptions={accountOptions}
                 readOnly
                 modalId="modalViewCheckbook"
+                banksAccount={banksAccount}
             />
         </>
     );
