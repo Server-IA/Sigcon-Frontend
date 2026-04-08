@@ -42,7 +42,6 @@ const FilterMenu = ({ filterRef, filterInstance, dataTableRef, modules, parents,
         filters.forEach(filter => {
             table.column(filter.column).search(filter.value, filter.regex, false);
         });
-        console.log(filters, 'filters');
     }, [filters]);
 
     return (

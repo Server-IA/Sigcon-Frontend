@@ -18,14 +18,9 @@ const MAIN_BRANCH_OPTIONS = [
 const validateBranchForm = ({ branch }) => {
   const nextErrors = {};
 
-  if (!branch.bankId) nextErrors.bankId = "Banco requerido";
-  if (!branch.city) nextErrors.city = "Ciudad requerida";
+  if (!branch.municipalityId) nextErrors.municipalityId = "Ciudad requerida";
   if (!branch.address) nextErrors.address = "Direccion requerida";
-
-  return {
-    isValid: Object.keys(nextErrors).length === 0,
-    errors: nextErrors,
-  };
+  return { isValid: Object.keys(nextErrors).length === 0, errors: nextErrors };
 };
 
 const CreateBankBranch = ({
@@ -33,19 +28,13 @@ const CreateBankBranch = ({
   modalInstance,
   branch,
   setBranch,
-  onRefresh,
   setBranchCreate,
-  banks,
-  selectedBankId = "",
+  municipalities,
+  datatable
 }) => {
   const [errors, setErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    if (selectedBankId && !branch.bankId) {
-      setBranch({ ...branch, bankId: String(selectedBankId) });
-    }
-  }, [selectedBankId, branch, setBranch]);
 
   const handleBackendErrors = (error) => {
     const apiErrors = error?.errors;
@@ -72,26 +61,24 @@ const CreateBankBranch = ({
     }
 
     const payload = {
-      address: branch.address?.trim() || "",
-      city: branch.city?.trim() || "",
+      ...branch,
       mainBranch: Boolean(branch.mainBranch),
-      bankId: Number(branch.bankId),
+      municipalityId: Number(branch.municipalityId),
+      address: branch.address?.trim() || "",
     };
 
     try {
       const url = base_url(API_STORE);
-      await fetchHelper.post(url, payload, {}, 1000, true);
+      await fetchHelper.post(url, payload, {}, 1000, false);
       setBranch({
         id: null,
-        bankId: "",
-        bankName: "",
-        bankCode: "",
-        address: "",
-        city: "",
+        bankId: Number(branch.bankId),
+        address: null,
+        municipalityId: null,
         mainBranch: false,
-        status: "",
+        status: "active",
       });
-      await onRefresh?.();
+      datatable?.current?.ajax.reload();
       modalInstance?.current?.hide();
       setBranchCreate(true);
       setErrors({});
@@ -125,35 +112,16 @@ const CreateBankBranch = ({
             <div className="row">
               <div className="col-12 mb-3">
                 <InputSelectModal
-                  id="BANK_ID_CREATE"
-                  label="Banco"
-                  value={branch.bankId}
-                  onChange={(value) => {
-                    setBranch({ ...branch, bankId: value });
-                    setErrors({ ...errors, bankId: "" });
-                  }}
-                  error={errors.bankId}
-                  placeholder="Seleccione un banco"
-                  options={banks}
-                  required
-                  disabled={Boolean(selectedBankId)}
-                />
-              </div>
-            </div>
-
-            <div className="row">
-              <div className="col-12 mb-3">
-                <InputModal
-                  type="text"
-                  id="CITY_CREATE"
+                  id="MUNICIPALITY_CREATE"
                   label="Ciudad"
-                  value={branch.city}
-                  onChange={(e) => {
-                    setBranch({ ...branch, city: sanitizeSimpleText(e.target.value, 100) });
-                    setErrors({ ...errors, city: "" });
+                  value={branch.municipalityId}
+                  onChange={(value) => {
+                    setBranch({ ...branch, municipalityId: value });
+                    setErrors({ ...errors, municipalityId: "" });
                   }}
-                  error={errors.city}
-                  placeholder="Ej: Bogota"
+                  error={errors.municipalityId}
+                  placeholder="Seleccione una ciudad"
+                  options={municipalities.map(municipality => ({ id: municipality.id, label: municipality.name }))}
                   required
                 />
               </div>

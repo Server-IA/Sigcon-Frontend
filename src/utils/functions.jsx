@@ -84,30 +84,6 @@ export function formatPrice(price, currency = 'COP', locale = 'es-CO', minimumFr
     return formatter.format(price)
 }
 
-
-export function equi(n){
-    if(n <= 0) return 'ERROR';
-
-    let lines = [];
-    for(let i = 0; i < n; i++){
-        let line = [];
-        for(let j = 0; j < n; j++){
-            if(i == j)
-                line.push('X');
-            else
-                line.push('_');
-        }
-        lines.push(line);
-    }
-
-    let valid = 0;
-    for(let i = (n - 1); i >= 0; i--){
-        for(let j = 0; j < n; j++){
-            if(i == j)
-                lines[valid][j] = 'X';
-        }
-        valid += 1;
-    }
-
-    return lines;
+export function separateNumber(number, separator = '.'){
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, separator);
 }

@@ -37,8 +37,8 @@ const MenuNav = () =>{
         return () => {
             menuInstance.current?.destroy();
         };
-    }, [modules]);
-    
+    }, []);
+
     return (
         <>
             {/* <!-- Menu --> */}
@@ -80,7 +80,7 @@ const MenuNav = () =>{
                         modules?.filter((module) => module.id != 1).map((module) => {
                             const safeModule = {
                                 ...module,
-                                childrens: module.menus ?? []
+                                childrens: module.menus.filter((menu) => menu.visible) ?? []
                             };
                             return <ItemMenu key={module.id} item={safeModule} parentPath="" />
                         })

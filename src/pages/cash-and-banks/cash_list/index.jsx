@@ -15,7 +15,7 @@ const API_DELETE = (id) => ['api', 'v1', 'cash', 'delete', id];
 const mapDTOToState = (row) => ({
     id:                      row.id                              ?? '',
     codigoCaja:              row.cashCode                        ?? '',
-    nombreCaja:              row.cahsName                        ?? '',   // typo en backend
+    nombreCaja:              row.cashName                        ?? '',   // typo en backend
     tipoCaja:                row.cashType                        ?? '',
     estadoCaja:              row.cashStatus                      ?? '',
     descripcion:             row.description                     ?? '',
@@ -127,7 +127,7 @@ export default function IndexCashList() {
 
     const columns = [
         { title: 'Código',    data: 'cashCode',         name: 'cashCode' },
-        { title: 'Nombre',    data: 'cahsName',          name: 'cahsName' },
+        { title: 'Nombre',    data: 'cashName',          name: 'cashName' },
         { title: 'Ubicación', data: 'physicalLocation',  name: 'physicalLocation' },
         {
             title: 'Tipo', data: 'cashType', name: 'cashType',

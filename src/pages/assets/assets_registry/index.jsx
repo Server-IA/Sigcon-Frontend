@@ -1,6 +1,7 @@
 //menus/filter.jsx
 import { useState, useRef, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 //componentes
 import DataTableReference from "../../../components/organism/DataTable";
@@ -13,11 +14,14 @@ import UpdateAssets from "./update";
 import FilterAssets from "./filter";
 
 //FUNCIONES
-import { base_url, formatPrice } from "../../../utils/functions";
+import { base_url, formatPrice, separateNumber } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 import { COMPONENT_MAP } from "../../../utils/map_menu";
 
 const IndexAssets = () => {
+
+  const navigate = useNavigate();
+
   const isAdmin = useSelector((state) => state.user.user)?.isAdmin || false;
   const dispatch = useDispatch();
   const [data, setData] = useState([]);
@@ -32,6 +36,9 @@ const IndexAssets = () => {
   const [accountingAccount, setAccountingAccount] = useState([]);
   const [depreciationRules, setDepreciationRules] = useState([]);
   const [assetsBulk, setAssetsBulk] = useState(false);
+
+  const [invoicesFC, setInvoicesFC] = useState([]);
+  const [assetsSystem, setAssetsSystem] = useState([]);
 
   // const [costCenters, setCostCenters] = useState([]);
 
@@ -50,7 +57,9 @@ const IndexAssets = () => {
         depreciationRulerRes,
         accountingAccountRes,
         thirdsRes,
-        costCenterRes,
+        // costCenterRes,
+        invoicesFCRes,
+        assetsSystemRes,
       ] = await Promise.allSettled([
         fetchHelper.post(
           base_url(["api", "v1", "depreciation-rules", "search"]),
@@ -61,7 +70,18 @@ const IndexAssets = () => {
 
         fetchHelper.post(
           base_url(["api", "v1", "accounting-accounts"]),
-          { length: -1 },
+          { length: -1,
+            columns:[
+              {
+                data:"pucAccount.code",
+                searchable: true,
+                search:{
+                  value:"14%,12%,15%,16%",
+                  regex:true
+                }
+              }
+            ]
+          },
           {},
           1,
         ),
@@ -83,6 +103,25 @@ const IndexAssets = () => {
         //   {},
         //   1,
         // ),
+
+        fetchHelper.post(
+          base_url(["api", "v1", "invoices", "search"]),
+          {
+            length: -1,
+            columns: [{ data: "typeInvoice.id", search: { value: 1, regex: false } }],
+          },
+          {},
+          1,
+        ),
+
+        fetchHelper.post(
+          base_url(["api", "v1", "assets", "search"]  ),
+          {
+            length: -1,
+          },
+          {},
+          1,
+        ),
       ]);
 
       if (depreciationRulerRes.status === "fulfilled")
@@ -117,6 +156,12 @@ const IndexAssets = () => {
       //       label: `${d.companyId} - ${d.name}`,
       //     })) || [],
       //   );
+
+      if (invoicesFCRes.status === "fulfilled")
+        setInvoicesFC(invoicesFCRes.value.data);
+
+      if (assetsSystemRes.status === "fulfilled")
+        setAssetsSystem(assetsSystemRes.value.data);
 
       const failed = [
         depreciationRulerRes,
@@ -181,24 +226,25 @@ const IndexAssets = () => {
   };
   const buttons = [
     {
-      text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+      text: '<i className="ri-filter-line ri-16px me-sm-2"></i> <span className="d-none d-sm-inline-block">Filtrar</span>',
       className: "btn rounded-pill btn-secondary waves-effect mx-2 my-2 ",
       action: function () {
         openFilter();
       },
     },
     {
-      text: '<i class="ri-upload-cloud-2-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Carga Masiva</span>',
+      text: '<i className="ri-upload-cloud-2-line ri-16px me-sm-2"></i> <span className="d-none d-sm-inline-block">Carga Masiva</span>',
       className: "btn rounded-pill btn-outline-primary waves-effect mx-2 my-2",
       action: openModalBulkUpload,
     },
 
     user.permissions.find((p) => p.code === "CREATE_ASSETS") || isAdmin
       ? {
-          text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Activo</span>',
+          text: '<i className="ri-add-line ri-16px me-sm-2"></i> <span className="d-none d-sm-inline-block">Crear Activo</span>',
           className: "btn rounded-pill btn-primary waves-effect mx-2 my-2 ",
           action: function () {
-            openModalCreate();
+            navigate("create");
+            // openModalCreate();
           },
         }
       : null,
@@ -232,6 +278,10 @@ const IndexAssets = () => {
   ];
 
   const columns = [
+    { title: "Comprobante", data: "vouchers", name: "vouchers", render: (v) => {
+      const comprobado = v.length > 0;
+      return comprobado ? `<span class="badge bg-success">Sí</span>` : `<span class="badge bg-danger">No</span>`;
+    }, searchable: false },
     { title: "Código", data: "assetCode", name: "assetCode" },
     { title: "Nombre", data: "name", name: "name" },
     {
@@ -255,7 +305,7 @@ const IndexAssets = () => {
       title: "Costo adquisición",
       data: "acquisitionValue",
       name: "acquisition_cost",
-      render: (v) => formatPrice(v),
+      render: (v,_,row) => formatPrice(row.acquisitionValue + row.taxValue),
     },
     {
       title: "Vida útil (meses)",
@@ -278,7 +328,7 @@ const IndexAssets = () => {
       data: "id",
       searchable: false,
       render: (id) => `
-         <div class="d-flex gap-1">
+         <div className="d-flex gap-1">
           ${actions
             .map(
               (a) => `
@@ -434,6 +484,53 @@ const IndexAssets = () => {
   return (
     <>
       <div className="card">
+        <div className="card-widget-separator-wrapper">
+          <div className="card-body card-widget-separator">
+            <div className="row gy-4 gy-sm-1">
+              <div className="col-sm-12 col-lg-6">
+                <div className="d-flex justify-content-between align-items-start card-widget-1 border-end pb-4 pb-sm-0">
+                  <div>
+                    <p className="mb-1">Activos comprobados</p>
+                    <h4 className="mb-1">{
+                      (() => {
+                        const total = assetsSystem.reduce((acc, asset) => {
+                          const voucher = asset.vouchers.reduce((acc, voucher) => acc + parseFloat(voucher?.amount ?? 0), 0);
+                          return acc + (voucher ?? 0);
+                        }, 0);
+                        return formatPrice(total);
+
+                      })()
+                    }</h4>
+                    <p className="mb-0">
+                      <span className="me-2">Total: {separateNumber(assetsSystem.filter((asset) => asset.vouchers.length > 0).length)}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="col-sm-12 col-lg-6">
+                <div className="d-flex justify-content-between align-items-start card-widget-2 border-end pb-4 pb-sm-0">
+                  <div>
+                    <p className="mb-1">Activos sin comprobantes</p>
+                    <h4 className="mb-1">{
+                      (() => {
+                        const total = assetsSystem.filter((asset) => asset.vouchers.length === 0).reduce((acc, asset) => {
+                          return acc + parseFloat(asset.acquisitionValue + asset.taxValue);
+                        }, 0);
+                        return formatPrice(total);
+                      })()}
+                      </h4>
+                    <p className="mb-0">
+                      <span className="me-2">Total: {separateNumber(assetsSystem.filter((asset) => asset.vouchers.length === 0).length)}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
         <h5 className="card-header text-md-start text-center">
           Lista de Activos
         </h5>
@@ -462,7 +559,7 @@ const IndexAssets = () => {
           />
         </div>
 
-        <CreateAssets
+        {/* <CreateAssets
           modalRef={modalCreateRef}
           modalInstance={modalCreateInstance}
           assets={assets}
@@ -473,7 +570,7 @@ const IndexAssets = () => {
           accountingAccount={accountingAccount}
           depreciationRules={depreciationRules}
           // costCenters={costCenters}
-        />
+        /> */}
 
         <UpdateAssets
           modalRef={modalUpdateRef}

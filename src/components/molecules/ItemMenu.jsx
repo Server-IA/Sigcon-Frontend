@@ -1,17 +1,33 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 
-import { buildFullPath } from "../../utils/map_menu";
+import { buildFullPath, COMPONENT_MAP } from "../../utils/map_menu";
+
+/** Compara la URL actual con la ruta del menú; segmentos `:param` cuentan como comodín. */
+const pathsMatch = (currentPath, patternPath) => {
+    const norm = (p) => p.replace(/^\/+|\/+$/g, "");
+    const cur = norm(currentPath).split("/").filter(Boolean);
+    const pat = norm(patternPath).split("/").filter(Boolean);
+    if (cur.length !== pat.length) return false;
+    return pat.every((seg, i) => seg.startsWith(":") || cur[i] === seg);
+};
 
 const ItemMenu = ({ item, parentPath = "" }) => {
     const location = useLocation();
-    const hasChildren = item.childrens?.length > 0;
+    const hasChildren = item.childrens.filter(child => child.visible).length > 0;
+    
+    const component = COMPONENT_MAP.find(c => c.id === item.component);
 
     const [isOpen, setIsOpen] = useState(false);
     const [isActive, setIsActive] = useState(false);
+    let rawPath = item?.path ?? item?.url ?? "";
 
-    const rawPath = item?.path ?? item?.url ?? "";
-
+    if(component?.options){
+        Object.keys(component.options).forEach(key => {
+            rawPath = rawPath.replace(`:${key}`, component.options[key]);
+        });
+    }
+    
     const itemPath = useMemo(
         () => buildFullPath(parentPath, rawPath).replace(/^\//, ""),
         [parentPath, rawPath]
@@ -21,9 +37,12 @@ const ItemMenu = ({ item, parentPath = "" }) => {
     const cleanItemPath = itemPath.replace(/^\//, "");
 
     useEffect(() => {
-        setIsActive(cleanLocation === cleanItemPath);
-        setIsOpen(hasChildren && isPathActive(item, parentPath, cleanLocation));
+        const inThisSubtree = isPathActive(item, parentPath, cleanLocation);
+        setIsActive(inThisSubtree);
+        setIsOpen(hasChildren && inThisSubtree);
     }, [cleanLocation, cleanItemPath, hasChildren, item, parentPath]);
+
+
 
     // const isActive = cleanLocation === cleanItemPath;
     // const isOpen =
@@ -56,7 +75,7 @@ const ItemMenu = ({ item, parentPath = "" }) => {
 
                     {hasChildren && (
                         <ul className="menu-sub">
-                            {item.childrens.map(child => (
+                            {item.childrens.filter(child => child.visible).map(child => (
                                 <ItemMenu
                                     key={child.id}
                                     item={child}
@@ -76,11 +95,11 @@ const isPathActive = (item, parentPath, currentPath) => {
     const rawPath = item.path ?? item.url ?? "";
     const fullPath = buildFullPath(parentPath, rawPath).replace(/^\//, "");
 
-    if (fullPath === currentPath) return true;
+    if (pathsMatch(currentPath, fullPath)) return true;
 
     if (!item.childrens?.length) return false;
 
-    return item.childrens.some(child =>
+    return item.childrens.some((child) =>
         isPathActive(child, fullPath, currentPath)
     );
 };
