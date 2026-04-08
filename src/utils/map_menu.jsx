@@ -59,6 +59,7 @@ import IndexSegmentation from "../pages/third-party/segmentation/index"
 
 // Cash and Banks
 import IndexCheques from "../pages/cash-and-banks/cheques/index";
+import IndexCheckbooks from "../pages/cash-and-banks/chequeras/index";
 import IndexBankBranches from "../pages/cash-and-banks/surcursales/index";
 import IndexBankAccounts from "../pages/cash-and-banks/bank-accounts/index";
 
@@ -189,6 +190,7 @@ export const COMPONENT_MAP = [
   { id: "CATALOGO_BANCOS", name: "Catalogo de Bancos", component: IndexCashAndBanks },
   { id: "SUCURSALES_BANCARIAS", name: "Sucursales Bancarias", component: IndexBankBranches },
   { id: "CHEQUES", name: "Cheques", component: IndexCheques },
+  { id: "CHEQUERAS", name: "Chequeras", component: IndexCheckbooks },
   { id: "COMPANIES", name: "Empresas", component: IndexCompanies },
   { id: "BANK_ACCOUNTS", name: "Cuentas Bancarias", component: IndexBankAccounts },
   { id: "CASH_LIST", name: "Lista de Cajas", component: IndexCashList },
