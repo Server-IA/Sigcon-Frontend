@@ -17,6 +17,8 @@ export const base_url = (array = [], get = {}) => {
 
     const urlFinal = path ? `${base}/${path}` : base;
 
+    
+
     return query ? `${urlFinal}?${query}` : urlFinal;
 }
 

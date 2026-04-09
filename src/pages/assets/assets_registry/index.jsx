@@ -269,12 +269,12 @@ const IndexAssets = () => {
       class: "btn-label-danger",
       title: "Eliminar",
     },
-    {
-      key: "view",
-      icon: "ri-eye-line",
-      class: "btn-label-info",
-      title: "Ver",
-    },
+    // {
+    //   key: "view",
+    //   icon: "ri-eye-line",
+    //   class: "btn-label-info",
+    //   title: "Ver",
+    // },
   ];
 
   const columns = [
@@ -327,9 +327,11 @@ const IndexAssets = () => {
       title: "Acciones",
       data: "id",
       searchable: false,
-      render: (id) => `
+      render: (id, _, asset) => `
          <div className="d-flex gap-1">
           ${actions
+            .filter((a) => a.key !== "view")
+            .filter((a) => a.key !== "delete" || asset.vouchers.length == 0)
             .map(
               (a) => `
              <button class="btn btn-sm ${a.class} action-btn"
@@ -419,36 +421,39 @@ const IndexAssets = () => {
             return;
           }
 
-          console.log("Activo seleccionado:", assetsRef);
-          setAssets({
-            id: assetsRef.id,
-            name: assetsRef.name || "",
-            description: assetsRef.description || "",
-            classification: assetsRef.classification || "",
-            type: assetsRef.type || "",
+          navigate(`edit/${assetsRef.id}`);
+          return;
 
-            accountingAccountId: assetsRef.accountingAccount?.id || "",
+          // console.log("Activo seleccionado:", assetsRef);
+          // setAssets({
+          //   id: assetsRef.id,
+          //   name: assetsRef.name || "",
+          //   description: assetsRef.description || "",
+          //   classification: assetsRef.classification || "",
+          //   type: assetsRef.type || "",
 
-            acquisitionValue: assetsRef.acquisitionValue || "",
-            acquisitionDate: assetsRef.acquisitionDate || "",
-            usefulLifeMonths: assetsRef.usefulLifeMonths || "",
+          //   accountingAccountId: assetsRef.accountingAccount?.id || "",
 
-            depreciationRuleId: assetsRef.depretationRule?.id || "",
+          //   acquisitionValue: assetsRef.acquisitionValue || "",
+          //   acquisitionDate: assetsRef.acquisitionDate || "",
+          //   usefulLifeMonths: assetsRef.usefulLifeMonths || "",
 
-            supplierId: assetsRef.supplier?.id || "",
+          //   depreciationRuleId: assetsRef.depretationRule?.id || "",
 
-            paymentTerms: assetsRef.paymentTerms || "",
-            accountsPayableReferenceId:
-              assetsRef.accountsPayableReferenceId || "",
+          //   supplierId: assetsRef.supplier?.id || "",
 
-            bankCashReferenceId: assetsRef.bankCashReferenceId || "",
+          //   paymentTerms: assetsRef.paymentTerms || "",
+          //   accountsPayableReferenceId:
+          //     assetsRef.accountsPayableReferenceId || "",
 
-            costCenterOrAccountingLocation:
-              assetsRef.costCenterOrAccountingLocation || "",
+          //   bankCashReferenceId: assetsRef.bankCashReferenceId || "",
 
-            status: assetsRef.status || "",
-            observations: assetsRef.observations || "",
-          });
+          //   costCenterOrAccountingLocation:
+          //     assetsRef.costCenterOrAccountingLocation || "",
+
+          //   status: assetsRef.status || "",
+          //   observations: assetsRef.observations || "",
+          // });
 
           openModalUpdate();
           break;

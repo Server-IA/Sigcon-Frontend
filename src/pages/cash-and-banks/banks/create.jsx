@@ -7,6 +7,7 @@ const BANK_TYPES = [
 ];
 
 const EXTRACT_FORMATS = [
+  { id: "NONE", label: "No se permite extracto" },
   { id: "CSV", label: "CSV" },
   { id: "TXT", label: "TXT" },
   { id: "EXCEL", label: "EXCEL" },
@@ -326,7 +327,7 @@ const CreateCashAndBanks = ({
             </div>
 
             <div className="row">
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+              <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                 <InputModal
                   type="text"
                   id="CODIGO_ACH"
@@ -340,46 +341,8 @@ const CreateCashAndBanks = ({
                   placeholder="Opcional"
                 />
               </div>
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                <InputModal
-                  type="text"
-                  id="CIUDAD_PRINCIPAL"
-                  label="Ciudad principal"
-                  value={bank.CIUDAD_PRINCIPAL}
-                  onChange={(e) => {
-                    setBank({ ...bank, CIUDAD_PRINCIPAL: sanitizeSimpleText(e.target.value, 100) });
-                  }}
-                  placeholder="Opcional"
-                />
-              </div>
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                <InputModal
-                  type="text"
-                  id="TELEFONO_PRINCIPAL"
-                  label="Telefono principal"
-                  value={bank.TELEFONO_PRINCIPAL}
-                  onChange={(e) => {
-                    setBank({ ...bank, TELEFONO_PRINCIPAL: sanitizeSimpleText(e.target.value, 20) });
-                  }}
-                  placeholder="Opcional"
-                />
-              </div>
-            </div>
-
-            <div className="row">
-              <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
-                <InputModal
-                  type="text"
-                  id="DIRECCION_PRINCIPAL"
-                  label="Direccion principal"
-                  value={bank.DIRECCION_PRINCIPAL}
-                  onChange={(e) => {
-                    setBank({ ...bank, DIRECCION_PRINCIPAL: sanitizeSimpleText(e.target.value, 100) });
-                  }}
-                  placeholder="Opcional"
-                />
-              </div>
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+              
+              <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                 <InputModal
                   type="number"
                   id="DIAS_CONCILIACION"
@@ -393,10 +356,49 @@ const CreateCashAndBanks = ({
                   placeholder="Opcional"
                 />
               </div>
+              {/* <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                <InputModal
+                  type="text"
+                  id="CIUDAD_PRINCIPAL"
+                  label="Ciudad principal"
+                  value={bank.CIUDAD_PRINCIPAL}
+                  onChange={(e) => {
+                    setBank({ ...bank, CIUDAD_PRINCIPAL: sanitizeSimpleText(e.target.value, 100) });
+                  }}
+                  placeholder="Opcional"
+                />
+              </div> */}
+              {/* <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                <InputModal
+                  type="text"
+                  id="TELEFONO_PRINCIPAL"
+                  label="Telefono principal"
+                  value={bank.TELEFONO_PRINCIPAL}
+                  onChange={(e) => {
+                    setBank({ ...bank, TELEFONO_PRINCIPAL: sanitizeSimpleText(e.target.value, 20) });
+                  }}
+                  placeholder="Opcional"
+                />
+              </div> */}
             </div>
 
             <div className="row">
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+              {/* <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
+                <InputModal
+                  type="text"
+                  id="DIRECCION_PRINCIPAL"
+                  label="Direccion principal"
+                  value={bank.DIRECCION_PRINCIPAL}
+                  onChange={(e) => {
+                    setBank({ ...bank, DIRECCION_PRINCIPAL: sanitizeSimpleText(e.target.value, 100) });
+                  }}
+                  placeholder="Opcional"
+                />
+              </div> */}
+            </div>
+
+            <div className="row">
+              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "4" : "12"} col-md-12 col-sm-12 mb-3`}>
                 <InputSelectModal
                   id="FORMATO_EXTRACTO"
                   label="Formato extracto"
@@ -412,7 +414,7 @@ const CreateCashAndBanks = ({
                   options={EXTRACT_FORMATS}
                 />
               </div>
-              <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
+              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "8" : "12 d-none"} col-md-12 col-sm-12 mb-3`}>
                 <InputModal
                   type="text"
                   id="URL_WEBSERVICE"
@@ -430,14 +432,14 @@ const CreateCashAndBanks = ({
               </div>
             </div>
 
-            <div className="row">
+            {/* <div className="row">
               <TextareaModal
                 id="estado_default"
                 label="Estado"
                 value="Activo (asignado por defecto al crear)"
                 onChange={() => {}}
               />
-            </div>
+            </div> */}
           </div>
           <div className="modal-footer justify-content-start">
             <button type="button" className="btn btn-primary" onClick={handleSubmit}>

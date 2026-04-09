@@ -42,6 +42,7 @@ import IndexCashList from "../pages/cash-and-banks/cash_list/index";
 
 // Assets
 import CreateAssets from "../pages/assets/assets_registry/create";
+import EditAssets from "../pages/assets/assets_registry/edit";
 import AssetDepreciationCalculation from "../pages/assets/depreciation-calculation/index";
 import BajasTransferencias from "../pages/assets/bajas_transferencias/index";
 import KardexAssets from "../pages/assets/kardex/index";
@@ -187,6 +188,7 @@ export const COMPONENT_MAP = [
   { id: "ACT_KARDEX", name: "Kardex", component: KardexAssets },
   { id: "THIRD_PARTY_LIST", name: "Lista de Terceros", component: IndexThirdPartyList },
   { id: "ASSETS_REGISTRY", name: "Registro de Activos", component: IndexAssets },
+  { id: "UPDATE_ASSETS", name: "Actualizar Activo", component: EditAssets },
   { id: "CATALOGO_BANCOS", name: "Catalogo de Bancos", component: IndexCashAndBanks },
   { id: "SUCURSALES_BANCARIAS", name: "Sucursales Bancarias", component: IndexBankBranches },
   { id: "CHEQUES", name: "Cheques", component: IndexCheques },

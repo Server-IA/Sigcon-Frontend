@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
@@ -11,7 +12,7 @@ import InputDate from "../../../components/molecules/InputDate";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
-const CreateAssets = (
+const EditAssets = (
 //   {
 //   modalRef,
 //   modalInstance,
@@ -24,6 +25,8 @@ const CreateAssets = (
 //   depreciationRules,
 // }
 ) => {
+
+  const { id } = useParams();
 
   const navigate = useNavigate();
 
@@ -87,6 +90,38 @@ const CreateAssets = (
 
   const loadData = async () => {
     try{
+      const assetResponse = await fetchHelper.get(base_url(["api", "v1", "assets", id]), {}, 0);
+
+      const voucher = assetResponse.data.vouchers?.find(v => v.voucherType.id == 1);
+      const asset = {
+        ...assetResponse.data,
+        supplierId: assetResponse.data.supplier.id,
+        accountingAccountId: assetResponse.data.accountingAccount.id,
+        depreciationRuleId: assetResponse.data.depretationRule.id,
+        taxesRetention: assetResponse.data.taxesRetention?.find(t => t.taxRule.name.includes("iva"))?.taxRule?.id ?? null,
+      }
+
+      if(voucher){
+        asset.paymentFormId = voucher.paymentForm.id;
+        if(voucher.bankAccount){
+          asset.originPaymentMethodId = voucher.bankAccount.id;
+          asset.paymentMethodId = 3;
+        }
+        if(voucher.check){
+          asset.originPaymentMethodId = voucher.check.id;
+          asset.paymentMethodId = 2;
+        }
+        if(voucher.cash){
+          asset.paymentMethodId = 1;
+          asset.originPaymentMethodId = voucher.cash.id;
+        }
+
+      }
+
+      console.log(asset, "Asset");
+
+      setAssets(asset);
+
       const [
         accountingAccountsResponse,
         thirdsResponse,
@@ -201,9 +236,9 @@ const CreateAssets = (
     e.preventDefault();
 
     try {
-      const url = base_url(["api", "v1", "assets", "store"]);
+      const url = base_url(["api", "v1", "assets", id]);
 
-      await fetchHelper.post(url, assets, {}, 1000);
+      await fetchHelper.put(url, assets, {}, 1000);
 
       // dataTableRef?.current?.ajax.reload();
       // modalInstance?.current?.hide();
@@ -211,8 +246,12 @@ const CreateAssets = (
       // setAssetsCreate(true);
 
       const path = window.location.pathname.replace(/\/$/, "");
-      const idx = path.lastIndexOf("/");
-      navigate(idx > 0 ? path.slice(0, idx) : "/");
+      const parts = path.split("/");
+
+      // quitar los últimos 2 segmentos
+      const newPath = parts.slice(0, -2).join("/") || "/";
+
+      navigate(newPath);
 
       setErrors({});
       setError({ message: "", type: "", show: false });
@@ -418,10 +457,7 @@ const CreateAssets = (
                     <InputSelectModal
                       id="originPaymentId"
                       label="Origen de pago"
-                      value={
-                        assets.paymentMethodId == 1 ? assets.cashAccountId :
-                        assets.paymentMethodId == 2 ? assets.checkId :
-                        assets.paymentMethodId == 3 ? assets.bankAccountId : null}
+                      value={assets.paymentMethodId}
                       onChange={(value) =>{
                           setAssets({ ...assets,
                             originPaymentMethodId: Number(value),
@@ -789,7 +825,7 @@ const CreateAssets = (
       {/* PAGO DE IMPUESTOS */}
       <div className="card py-2">
         <p className="text-muted fw-semibold border-bottom pb-1">
-          <i className="ri-file-list-3-line me-1"></i>Pago de impuestos
+          <i className="ri-file-list-3-line me-1"></i>Impuestos
         </p>
         <div className="row">
           {
@@ -870,7 +906,7 @@ const CreateAssets = (
       </div>
 
       {/* INFORMACION DEL PAGO DE IMPUESTOS */}
-      <div className="card py-2">
+      {/* <div className="card py-2">
         <p className="text-muted fw-semibold border-bottom pb-1">
           <i className="ri-file-list-3-line me-1"></i>Informacion del pago de impuestos
         </p>
@@ -936,7 +972,7 @@ const CreateAssets = (
             </tbody>
           </table>
         </div>
-      </div>
+      </div> */}
 
 
     </>
@@ -945,4 +981,4 @@ const CreateAssets = (
   );
 };
 
-export default CreateAssets;
+export default EditAssets;
