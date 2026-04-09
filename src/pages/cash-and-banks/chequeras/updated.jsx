@@ -243,34 +243,18 @@ const UpdatedCheckbook = ({
 
                         {/* ID Cuenta bancaria editable? en edición y bloqueada en vista. */}
                         <div className="row">
-                            <div className="col-12 mb-4 mt-2">
-                                {banksAccount.length > 0 ? (
-                                    <InputSelectModal
-                                        id={`${modalId}_bank_account`}
-                                        label="Cuenta bancaria"
-                                        value={String(record.bankAccountId || '')}
-                                        onChange={(value) => setRecord(prev => ({ ...prev, bankAccountId: value }))}
-                                        error={errors.bankAccountId}
-                                        placeholder="Seleccione cuenta bancaria"
-                                        options={banksAccount.map(item => ({ id: item.id, name: item.accountName }))}
-                                        required
-                                        disabled={readOnly}
-                                    />
-                                ) : (
-                                    <InputModal
-                                        type="number"
-                                        id={`${modalId}_bank_account_manual`}
-                                        label="cuenta bancaria"
-                                        value={record.bankAccountId}
-                                        onChange={(event) => setRecord(prev => ({ ...prev, bankAccountId: event.target.value }))}
-                                        error={errors.bankAccountId}
-                                        placeholder="Ingrese el ID interno de la cuenta"
-                                        min={1}
-                                        required
-                                        disabled={readOnly}
-                                        readOnly={readOnly}
-                                    />
-                                )}
+                            <div className="col-md-6 mb-4 mt-2">
+                                <InputSelectModal
+                                    id={`${modalId}_bank_account`}
+                                    label="Cuenta bancaria"
+                                    value={String(record.bankAccountId || '')}
+                                    onChange={(value) => setRecord(prev => ({ ...prev, bankAccountId: value }))}
+                                    error={errors.bankAccountId}
+                                    placeholder="Seleccione cuenta bancaria"
+                                    options={banksAccount.map(item => ({ id: item.id, name: `${item.accountName} - ${item?.bankDTO?.name}` }))}
+                                    required
+                                    disabled={readOnly}
+                                />
                             </div>
                             
                             <div className="col-md-6 mb-4 mt-2">

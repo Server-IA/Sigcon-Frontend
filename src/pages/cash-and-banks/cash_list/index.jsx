@@ -72,6 +72,11 @@ export default function IndexCashList() {
     const [viewMode, setViewMode] = useState(false);
     const [search, setSearch]     = useState({ value: '', checked: true });
 
+    const [accountingAccounts, setAccountingAccounts] = useState([]);
+    const [currencyTypes, setCurrencyTypes] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [costCenters, setCostCenters] = useState([]);
+
     const [cajaCreate, setCajaCreate] = useState(false);
     const [cajaEdit,   setCajaEdit]   = useState(false);
     const [cajaDelete, setCajaDelete] = useState(false);
@@ -103,6 +108,34 @@ export default function IndexCashList() {
         }
         modalDeleteInstance.current.show();
     };
+
+    const loadData = async () => {
+        const response = await fetchHelper.post(base_url([
+            "api/v1/accounting-accounts"
+        ]), { length: -1, columns:[
+            {data: "pucAccount.code", searchable: true, search: {value: "1105%", regex: true}}
+        ] }, {}, 0, false);
+        setAccountingAccounts(response.data);
+
+        const responseCurrencyTypes = await fetchHelper.post(base_url([
+            "api/v1/accounting-lists/currency-types/search"
+        ]), { length: -1 }, {}, 0, false);
+        setCurrencyTypes(responseCurrencyTypes.data);
+
+        const responseUsers = await fetchHelper.post(base_url([
+            "users/getUsers"
+        ]), { length: -1 }, {}, 0, false);
+        setUsers(responseUsers.data);
+
+        const responseCostCenters = await fetchHelper.post(base_url([
+            "api/v1/cost-centers/search"
+        ]), { length: -1 }, {}, 0, false);
+        setCostCenters(responseCostCenters.data);
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
 
     const handleDelete = async () => {
         if (deleteKeyword !== 'ELIMINAR') {
@@ -243,6 +276,10 @@ export default function IndexCashList() {
                 setCaja={setCaja}
                 dataTableRef={dataTableRef}
                 setCajaCreate={setCajaCreate}
+                accountingAccounts={accountingAccounts}
+                currencyTypes={currencyTypes}
+                users={users}
+                costCenters={costCenters}
             />
 
             <UpdatedCaja
@@ -253,6 +290,10 @@ export default function IndexCashList() {
                 dataTableRef={dataTableRef}
                 setCajaEdit={setCajaEdit}
                 readOnly={viewMode}
+                accountingAccounts={accountingAccounts}
+                currencyTypes={currencyTypes}
+                users={users}
+                costCenters={costCenters}
             />
 
             {/* Modal Confirmar Eliminación */}

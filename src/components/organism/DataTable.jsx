@@ -11,7 +11,7 @@ import { base_redirect_path, base_url } from "../../utils/functions";
 import { fetchHelper } from "../../utils/fetch";
 
 const DataTableReference = ({
-  url_api,
+  url_api = null,
   columns,
   method = "GET",
   tableRef,
@@ -35,6 +35,18 @@ const DataTableReference = ({
 
   useEffect(() => {
     if (!tableRef?.current || !dataTableRef) return;
+    
+    let api_back = url_api;
+    let url_buttons = url_api;
+    if(url_api !== null){
+      const hasArray = url_api.some(item => Array.isArray(item));
+      if(hasArray){
+        url_buttons = url_api[0];
+        api_back = base_url(...url_api);
+      }else{
+        api_back = base_url(url_api);
+      }
+    }
 
     const config = {
       dom: 'r<"row"<"col-sm-12 col-md-12 col-lg-4 mt-3 mt-md-0 d-flex justify-content-center justify-content-lg-start justify-content-md-center align-items-center"l><"col-sm-12 col-md-12 col-lg-8 d-flex justify-content-center justify-content-lg-end justify-content-md-center align-items-center"<"dt-action-buttons text-end pt-0 pt-md-0"B>>>t<"row"<"col-sm-12 col-md-6 text-wrap"i><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-lg-end align-items-center"p>>',
@@ -45,10 +57,10 @@ const DataTableReference = ({
       scrollX: true,
       scrollY: false,
       ordering: false,
-      processing: url_api !== null,
-      serverSide: url_api !== null,
+      processing: api_back !== null,
+      serverSide: api_back !== null,
       drawCallback: function (settings) {
-        if (setData && data.length <= 0 && url_api !== null) {
+        if (setData && data.length <= 0 && api_back !== null) {
           setData(settings.json.data);
         }
       },
@@ -102,7 +114,7 @@ const DataTableReference = ({
               },
             },
 
-            ...default_buttons(url_api, title, { method: exportMethod, params: exportParams }),
+            default_buttons(url_buttons, title, { method: exportMethod, params: exportParams }),
           ],
         },
 
@@ -110,13 +122,13 @@ const DataTableReference = ({
       ],
     };
 
-    if (data.length >= 0 && url_api === null) {
+    if (data.length >= 0 && api_back === null) {
       config.data = data;
     } else {
       config.ajax = async function (data, callback, settings) {
         try {
           const response = await fetchHelper.post(
-            base_url(url_api),
+            api_back,
             { ...data, columns: [...(data.columns || []), ...filterColumns] },
             {},
             0,

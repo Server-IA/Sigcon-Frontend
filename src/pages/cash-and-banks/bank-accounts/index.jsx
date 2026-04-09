@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
-import DataTableReference from '../../../components/organism/DataTable';
-import AlertPage from '../../../components/molecules/AlertPage';
+import AlertPage from '@/components/molecules/AlertPage';
+import DataTableReference from '@/components/organism/DataTable';
 
 import CreateBankAccount from './CreateBankAccount';
 import UpdateBankAccount from './UpdateBankAccount';
@@ -10,8 +11,8 @@ import ViewBankAccount from './ViewBankAccount';
 import DeleteBankAccount from './DeleteBankAccount';
 import StatusBankAccount from './StatusBankAccount';
 
-import { base_url } from '../../../utils/functions';
-import { fetchHelper } from '../../../utils/fetch';
+import { base_url, formatPrice } from '@/utils/functions';
+import { fetchHelper } from '@/utils/fetch';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
@@ -73,6 +74,7 @@ export const emptyRecord = {
 
 const IndexBankAccounts = () => {
 
+    const navigate = useNavigate();
     const isAdmin = useSelector((state) => state.user.user)?.isAdmin || false;
     const user    = useSelector((state) => state.user).user;
 
@@ -149,6 +151,10 @@ const IndexBankAccounts = () => {
         loadData();
     }, []);
 
+    useEffect(() => {
+        console.log("selectedRecord", selectedRecord);
+    }, [selectedRecord]);
+
     // ── Columnas DataTable ────────────────────────────────────────────────────
 
     const columns = [
@@ -159,6 +165,8 @@ const IndexBankAccounts = () => {
             render: (v) => ACCOUNT_TYPES.find(t => t.id === v)?.label || v || '-',
         },
         { title: 'Banco',        data: 'bankDTO.name',            name: 'bankName' },
+        { title: 'Saldo',        data: 'initialBalance',        name: 'initialBalance',
+            render: (v, _, row) => formatPrice(v, row.currencyTypeDTO?.isoCode) },
         { title: 'Moneda',       data: 'currencyTypeDTO.isoCode',        name: 'currencyCode' },
         {
             title: 'Estado', data: 'status', name: 'status',
@@ -170,10 +178,14 @@ const IndexBankAccounts = () => {
         {
             title: 'Acciones', data: 'id', searchable: false,
             render: (id) => `
-                <div class="d-flex gap-1">
+                <div class="d-flex gap-1 flex-wrap">
                     <button class="btn btn-sm btn-label-info action-btn"
                         data-action="view" data-id="${id}" title="Ver detalle">
                         <i class="ri-eye-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-label-success action-btn"
+                        data-action="reconcile" data-id="${id}" title="Conciliación bancaria">
+                        <i class="ri-scales-3-line"></i>
                     </button>
                     <button class="btn btn-sm btn-label-primary action-btn"
                         data-action="edit" data-id="${id}" title="Editar">
@@ -277,8 +289,7 @@ const IndexBankAccounts = () => {
                     notifyLowBalance:    ref.notifyLowBalance ?? false,
                     minimumBalance:      ref.minimumBalance   ?? 0,
                     handlesCheckbook:    ref.handlesCheckbook ?? false,
-                    costCenterId:        ref.costCenterId     ?? '',
-                    bankBranchId:        ref.bankBranchId     ?? '',
+                    costCenterId:        ref.costCenterDTO?.id     ?? '',
                     bookId:              ref.bookId           ?? '',
                     changeReason:        '',
                 });
@@ -291,13 +302,16 @@ const IndexBankAccounts = () => {
                 case 'edit':   setClickEdit(true);   break;
                 case 'delete': setClickDelete(true); break;
                 case 'status': setClickStatus(true); break;
+                case 'reconcile':
+                    navigate(`/cash-and-banks/bank-reconciliation/${id}`);
+                    break;
                 default: console.warn('Acción no reconocida', action);
             }
         };
 
         table.on('click', '.action-btn', handler);
         return () => { table.off('click', '.action-btn', handler); };
-    }, [data]);
+    }, [data, navigate]);
 
     // ── Botones DataTable ─────────────────────────────────────────────────────
 

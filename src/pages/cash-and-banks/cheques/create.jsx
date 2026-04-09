@@ -9,7 +9,7 @@ import TextareaModal    from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-const CHEQUERAS_URL = ['api', 'v1', 'checkbooks', 'search'];
+const CHEQUERAS_URL = ['api', 'v1', 'banks', 'checkbooks', 'search'];
 const CREAR_URL     = ['api', 'v1', 'banks', 'checks', 'store'];
 
 const emptyErrors = {
@@ -43,14 +43,16 @@ const CreateCheque = ({
             try {
                 const url = base_url(CHEQUERAS_URL);
                 const res = await fetchHelper.post(url, {
-                    draw: 1, start: 0, length: -1,
-                    search: { value: '', regex: false }, columns: [], order: [],
-                }, {}, 500, false);
+                    length: -1,
+                    columns: [
+                        {data: 'status', searchable: true, search: {"value": "ACTIVA", "regex": false}},
+                    ]
+                }, {}, 0, false);
 
                 const items = (res?.data ?? []).filter(c => c.status === 'ACTIVA');
                 setChequeras(items.map(c => ({
                     id:               c.id,
-                    name:             `${c.checkbookNumber} — ${c.issuingBank ?? ''}`,
+                    name:             `${c.checkbookNumber} (${c.bankAccount?.accountName ?? ''} - ${c.bankAccount?.bankDTO?.name ?? ''})`,
                     checkStartNumber: c.checkStartNumber,
                     checkEndNumber:   c.checkEndNumber,
                     availableChecks:  c.availableChecks,
@@ -213,7 +215,7 @@ const CreateCheque = ({
                     </div>
 
                     <div className="modal-body">
-                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} />
+                        <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} onChange={() => setErrorMessage('')} />
 
                         {/* Chequera */}
                         <div className="row">
@@ -240,9 +242,19 @@ const CreateCheque = ({
                                     label="Número de cheque"
                                     placeholder="Número del cheque"
                                     value={record.numeroCheque}
-                                    onChange={(e) => setRecord(prev => ({ ...prev, numeroCheque: e.target.value }))}
+                                    onChange={(e) => {
+                                        let value = e.target.value;
+                                        if (value < chequeraActual?.checkStartNumber) {
+                                            value = chequeraActual?.checkStartNumber;
+                                        } else if (value > chequeraActual?.checkEndNumber) {
+                                            value = chequeraActual?.checkEndNumber;
+                                        }
+                                        setRecord(prev => ({ ...prev, numeroCheque: value }))
+                                    }}
                                     error={errors.numeroCheque}
                                     required
+                                    min={chequeraActual?.checkStartNumber}
+                                    max={chequeraActual?.checkEndNumber}
                                 />
                                 {chequeraActual && !errors.numeroCheque && (
                                     <small className="text-muted d-block mt-1">

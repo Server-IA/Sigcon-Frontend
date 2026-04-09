@@ -43,7 +43,7 @@ const emptyCaja = {
     idCuentaContable: '', centroCosto: '', libroContable: '',
 };
 
-export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dataTableRef, setCajaCreate }) {
+export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dataTableRef, setCajaCreate, users, currencyTypes, accountingAccounts, costCenters }) {
     const [errors, setErrors]             = useState({});
     const [errorMessage, setErrorMessage] = useState('');
     const [activeTab, setActiveTab]       = useState('identificacion');
@@ -178,16 +178,22 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                                         placeholder="Ej: L-V 8:00-17:00 (opcional)" />
                                 </div>
                                 <div className="col-md-6 mb-3">
-                                    <InputModal id="cc_resp_p" label="ID Responsable Principal" type="number"
+                                    <InputSelectModal id="cc_resp_p" label="Responsable Principal" value={caja.idResponsablePrincipal}
+                                        onChange={v => set('idResponsablePrincipal', v)} error={errors.idResponsablePrincipal}
+                                        options={users} placeholder="Seleccione responsable principal" required={true} />
+                                    {/* <InputModal id="cc_resp_p" label="ID Responsable Principal" type="number"
                                         value={caja.idResponsablePrincipal}
                                         onChange={e => set('idResponsablePrincipal', e.target.value)}
-                                        error={errors.idResponsablePrincipal} required={true} />
+                                        error={errors.idResponsablePrincipal} required={true} /> */}
                                 </div>
                                 <div className="col-md-6 mb-3">
-                                    <InputModal id="cc_resp_s" label="ID Responsable Suplente" type="number"
+                                    <InputSelectModal id="cc_resp_s" label="Responsable Suplente" value={caja.idResponsableSuplente}
+                                        onChange={v => set('idResponsableSuplente', v)} error={errors.idResponsableSuplente}
+                                        options={users} placeholder="Seleccione responsable suplente" placeholder="Opcional" />
+                                    {/* <InputModal id="cc_resp_s" label="ID Responsable Suplente" type="number"
                                         value={caja.idResponsableSuplente}
                                         onChange={e => set('idResponsableSuplente', e.target.value)}
-                                        error={errors.idResponsableSuplente} placeholder="Opcional" />
+                                        error={errors.idResponsableSuplente} placeholder="Opcional" /> */}
                                 </div>
                             </div>
                         )}
@@ -196,9 +202,12 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                         {activeTab === 'financiero' && (
                             <div className="row">
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cc_moneda" label="ID Moneda" type="number" value={caja.monedaCodigo}
+                                    <InputSelectModal id="cc_moneda" label="Moneda" value={caja.monedaCodigo}
+                                        onChange={v => set('monedaCodigo', v)} error={errors.monedaCodigo}
+                                        options={currencyTypes} placeholder="Seleccione moneda" required={true} />
+                                    {/* <InputModal id="cc_moneda" label="ID Moneda" type="number" value={caja.monedaCodigo}
                                         onChange={e => set('monedaCodigo', e.target.value)} error={errors.monedaCodigo}
-                                        placeholder="ID numérico de la moneda" required={true} />
+                                        placeholder="ID numérico de la moneda" required={true} /> */}
                                 </div>
                                 <div className="col-md-4 mb-3">
                                     <InputModal id="cc_saldo" label="Saldo Inicial" type="number"
@@ -276,14 +285,25 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                         {activeTab === 'contabilidad' && (
                             <div className="row">
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cc_cuenta" label="ID Cuenta Contable" type="number"
+                                    <InputSelectModal id="cc_cuenta" label="Cuenta Contable" value={caja.idCuentaContable}
+                                        onChange={v => set('idCuentaContable', v)} error={errors.idCuentaContable}
+                                        options={accountingAccounts.map(aa => {
+                                            return {
+                                                id: aa.id,
+                                                label: aa.pucAccount.code + ' - ' + aa.customName
+                                            }
+                                        })} placeholder="Seleccione cuenta contable" required={true} />
+                                    {/* <InputModal id="cc_cuenta" label="ID Cuenta Contable" type="number"
                                         value={caja.idCuentaContable}
-                                        onChange={e => set('idCuentaContable', e.target.value)} error={errors.idCuentaContable} required={true} />
+                                        onChange={e => set('idCuentaContable', e.target.value)} error={errors.idCuentaContable} required={true} /> */}
                                 </div>
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cc_centro" label="ID Centro de Costo" type="number" value={caja.centroCosto}
+                                    <InputSelectModal id="cc_centro" label="Centro de Costo" value={caja.centroCosto}
+                                        onChange={v => set('centroCosto', v)} error={errors.centroCosto}
+                                        options={costCenters} placeholder="Seleccione centro de costo" placeholder="Opcional" />
+                                    {/* <InputModal id="cc_centro" label="ID Centro de Costo" type="number" value={caja.centroCosto}
                                         onChange={e => set('centroCosto', e.target.value)} error={errors.centroCosto}
-                                        placeholder="Opcional" />
+                                        placeholder="Opcional" /> */}
                                 </div>
                                 <div className="col-md-4 mb-3">
                                     <InputSelectModal id="cc_libro" label="Libro Contable" value={caja.libroContable}

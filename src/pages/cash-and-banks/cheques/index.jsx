@@ -54,9 +54,10 @@ const TIPO_BADGE = {
 };
 
 export const emptyRecord = {
-    id:               '',
-    idChequera:       '',
-    numeroCheque:     '',
+    id:                 '',
+    idChequera:         '',
+    idCuentaBancaria:   '',
+    numeroCheque:       '',
     beneficiario:     '',
     valorCheque:      '',
     concepto:         '',
@@ -260,9 +261,10 @@ const IndexCheques = () => {
             }
 
             setSelectedRecord({
-                id:               ref.id                       ?? '',
-                idChequera:       ref.checkbook?.id            ?? '',
-                numeroCheque:     ref.numberCheck              ?? '',
+                id:                 ref.id                       ?? '',
+                idChequera:         ref.checkbook?.id            ?? '',
+                idCuentaBancaria:   ref.checkbook?.bankAccountId ?? '',
+                numeroCheque:       ref.numberCheck              ?? '',
                 beneficiario:     ref.beneficiary              ?? '',
                 valorCheque:      ref.value                    ?? '',
                 concepto:         ref.concept                  ?? '',
@@ -283,7 +285,7 @@ const IndexCheques = () => {
                 case 'delete': {
                     window.Swal.fire({
                         title: '¿Eliminar cheque?',
-                        html: `¿Está seguro de eliminar el cheque <strong>N° ${mapped.numeroCheque}</strong>?<br/><br/><em>Esta acción no se puede deshacer.</em>`,
+                        html: `¿Está seguro de eliminar el cheque <strong>N° ${ref.numeroCheque}</strong>?<br/><br/><em>Esta acción no se puede deshacer.</em>`,
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonText: 'Sí, eliminar',
@@ -292,10 +294,10 @@ const IndexCheques = () => {
                     }).then(async (result) => {
                         if (!result.isConfirmed) return;
                         try {
-                            const url = base_url(['api', 'v1', 'banks', 'checks', mapped.id]);
+                            const url = base_url(['api', 'v1', 'banks', 'checks', ref.id]);
                             await fetchHelper.delete(url, {}, 1000);
                             dataTableRef?.current?.ajax.reload();
-                            setMessage({ message: `Cheque N° ${mapped.numeroCheque} eliminado exitosamente`, type: 'success', show: true });
+                            setMessage({ message: `Cheque N° ${ref.numeroCheque} eliminado exitosamente`, type: 'success', show: true });
                         } catch (error) {
                             setMessage({ message: error?.msg || 'Error al eliminar el cheque', type: 'danger', show: true });
                         }
@@ -380,7 +382,6 @@ const IndexCheques = () => {
                 modalRef={modalReconcileRef}
                 modalInstance={modalReconcileInstance}
                 record={selectedRecord}
-                setRecord={setSelectedRecord}
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 metodos={METODOS_CONCILIACION}

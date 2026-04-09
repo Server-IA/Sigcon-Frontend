@@ -55,6 +55,7 @@ const TYPE_BANK_LABELS = {
 };
 
 const TYPE_BANK_UI_MAP = {
+  NONE: "Ninguno",
   COMMERCIAL: "COMERCIAL",
   COOPERATIVE: "COOPERATIVO",
   PUBLIC: "PUBLICO",
@@ -83,7 +84,7 @@ const normalizeBankFromRow = (row = {}) => ({
   CODIGO_BANCO: row.code ?? row.CODIGO_BANCO ?? "",
   NOMBRE_BANCO: row.name ?? row.NOMBRE_BANCO ?? "",
   NOMBRE_CORTO: row.nameShort ?? row.NOMBRE_CORTO ?? "",
-  TIPO_BANCO: TYPE_BANK_UI_MAP[row.typeBank] || row.typeBank || row.TIPO_BANCO || "",
+  TIPO_BANCO: row.typeBank || row.TIPO_BANCO || "",
   NIT_BANCO: row.nit ?? row.NIT_BANCO ?? "",
   PAIS_ID: row.country?.id ?? row.countryId ?? row.PAIS_ID ?? null,
   CODIGO_SWIFT: row.swift ?? row.CODIGO_SWIFT ?? "",

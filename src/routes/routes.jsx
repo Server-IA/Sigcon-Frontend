@@ -9,6 +9,7 @@ const Login = lazy(() => import("../pages/auth/LoginPage"));
 const RecoveryPassword = lazy(() => import("../pages/auth/RecoveryPasswordPage"));
 const Page404 = lazy(() => import("../pages/errors/page_404"));
 const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
+const BankReconciliation = lazy(() => import("../pages/cash-and-banks/bank-reconciliation/index.jsx"));
 
 import PageLoad from '../pages/errors/page_load';
 
@@ -90,6 +91,14 @@ export const RenderRoutes = () => {
                         {modules.flatMap(module =>
                             module.menus.flatMap(menu => renderMenuRoutesFlat(menu, module.url))
                         )}
+                        <Route
+                            path="cash-and-banks/bank-reconciliation/:bankAccountId"
+                            element={
+                                <Suspense fallback={<PageLoad />}>
+                                    <BankReconciliation />
+                                </Suspense>
+                            }
+                        />
                     </Route>
                 )
             }
@@ -117,6 +126,9 @@ const renderMenuRoutesFlat = (menu, parentPath = "") => {
     const ComponentResolved =
         component?.component
         || PageMaintenance;
+
+    console.log("menu", menu);
+    console.log("fullPath", fullPath);
 
     const routes = [
         <Route

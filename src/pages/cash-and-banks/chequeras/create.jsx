@@ -259,7 +259,7 @@ const CreateCheckbook = ({
                         {/* Cuenta bancaria: si hay opciones, se usa select; si no, ID manual. */}
                         <div className="row">
                             <div className="col-md-6 mb-4 mt-2">
-                                {banksAccount.length > 0 ? (
+                                {/* {banksAccount.length > 0 ? ( */}
                                     <InputSelectModal
                                         id="checkbook_bank_account_create"
                                         label="Cuenta bancaria"
@@ -270,8 +270,8 @@ const CreateCheckbook = ({
                                         options={banksAccount.map(item => ({ id: item.id, name: `${item.accountName} - ${item?.bankDTO?.name}` }))}
                                         required
                                     />
-                                ) : (
-                                    <InputModal
+                                {/* ) : ( */}
+                                    {/* <InputModal
                                         type="number"
                                         id="checkbook_bank_account_create_manual"
                                         label="ID cuenta bancaria"
@@ -281,8 +281,8 @@ const CreateCheckbook = ({
                                         placeholder="Ingrese el ID interno de la cuenta"
                                         min={1}
                                         required
-                                    />
-                                )}
+                                    /> */}
+                                {/* )} */}
                             </div>
                             
                             <div className="col-md-6 mb-4 mt-2">
