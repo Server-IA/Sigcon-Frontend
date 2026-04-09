@@ -11,6 +11,7 @@ const BANK_TYPES = [
 ];
 
 const EXTRACT_FORMATS = [
+  { id: "NONE", label: "No se permite extracto" },
   { id: "CSV", label: "CSV" },
   { id: "TXT", label: "TXT" },
   { id: "EXCEL", label: "EXCEL" },
@@ -307,7 +308,7 @@ const UpdatedCashAndBanks = ({
             </div>
 
             <div className="row">
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+              <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                 <InputModal
                   type="text"
                   id={`CODIGO_ACH_${sfx}`}
@@ -322,49 +323,7 @@ const UpdatedCashAndBanks = ({
                   readOnly={readOnly}
                 />
               </div>
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                <InputModal
-                  type="text"
-                  id={`CIUDAD_PRINCIPAL_${sfx}`}
-                  label="Ciudad principal"
-                  value={bank.CIUDAD_PRINCIPAL ?? ""}
-                  onChange={(e) => {
-                    if (readOnly) return;
-                    setBank({ ...bank, CIUDAD_PRINCIPAL: sanitizeSimpleText(e.target.value, 100) });
-                  }}
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
-                <InputModal
-                  type="text"
-                  id={`TELEFONO_PRINCIPAL_${sfx}`}
-                  label="Telefono principal"
-                  value={bank.TELEFONO_PRINCIPAL ?? ""}
-                  onChange={(e) => {
-                    if (readOnly) return;
-                    setBank({ ...bank, TELEFONO_PRINCIPAL: sanitizeSimpleText(e.target.value, 20) });
-                  }}
-                  readOnly={readOnly}
-                />
-              </div>
-            </div>
-
-            <div className="row">
-              <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
-                <InputModal
-                  type="text"
-                  id={`DIRECCION_PRINCIPAL_${sfx}`}
-                  label="Direccion principal"
-                  value={bank.DIRECCION_PRINCIPAL ?? ""}
-                  onChange={(e) => {
-                    if (readOnly) return;
-                    setBank({ ...bank, DIRECCION_PRINCIPAL: sanitizeSimpleText(e.target.value, 100) });
-                  }}
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+              <div className="col-lg-6 col-md-12 col-sm-12 mb-3">
                 <InputModal
                   type="number"
                   id={`DIAS_CONCILIACION_${sfx}`}
@@ -379,10 +338,52 @@ const UpdatedCashAndBanks = ({
                   readOnly={readOnly}
                 />
               </div>
+              {/* <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                <InputModal
+                  type="text"
+                  id={`CIUDAD_PRINCIPAL_${sfx}`}
+                  label="Ciudad principal"
+                  value={bank.CIUDAD_PRINCIPAL ?? ""}
+                  onChange={(e) => {
+                    if (readOnly) return;
+                    setBank({ ...bank, CIUDAD_PRINCIPAL: sanitizeSimpleText(e.target.value, 100) });
+                  }}
+                  readOnly={readOnly}
+                />
+              </div> */}
+              {/* <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                <InputModal
+                  type="text"
+                  id={`TELEFONO_PRINCIPAL_${sfx}`}
+                  label="Telefono principal"
+                  value={bank.TELEFONO_PRINCIPAL ?? ""}
+                  onChange={(e) => {
+                    if (readOnly) return;
+                    setBank({ ...bank, TELEFONO_PRINCIPAL: sanitizeSimpleText(e.target.value, 20) });
+                  }}
+                  readOnly={readOnly}
+                />
+              </div> */}
             </div>
 
+            {/* <div className="row"> */}
+              {/* <div className="col-lg-8 col-md-12 col-sm-12 mb-3">
+                <InputModal
+                  type="text"
+                  id={`DIRECCION_PRINCIPAL_${sfx}`}
+                  label="Direccion principal"
+                  value={bank.DIRECCION_PRINCIPAL ?? ""}
+                  onChange={(e) => {
+                    if (readOnly) return;
+                    setBank({ ...bank, DIRECCION_PRINCIPAL: sanitizeSimpleText(e.target.value, 100) });
+                  }}
+                  readOnly={readOnly}
+                />
+              </div> */}
+            {/* </div> */}
+
             <div className="row">
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "4" : "6"} col-md-12 col-sm-12 mb-3`}>
                 <InputSelectModal
                   id={`FORMATO_EXTRACTO_${sfx}`}
                   label="Formato extracto"
@@ -400,7 +401,7 @@ const UpdatedCashAndBanks = ({
                   disabled={readOnly}
                 />
               </div>
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "4" : " d-none"} col-md-12 col-sm-12 mb-3`}>
                 <InputModal
                   type="text"
                   id={`URL_WEBSERVICE_${sfx}`}
@@ -417,7 +418,7 @@ const UpdatedCashAndBanks = ({
                   required={!readOnly && bank.FORMATO_EXTRACTO === "API"}
                 />
               </div>
-              <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "4" : "6"} col-md-12 col-sm-12 mb-3`}>
                 <InputSelectModal
                   id={`ESTADO_${sfx}`}
                   label="Estado"

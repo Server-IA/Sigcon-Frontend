@@ -9,15 +9,19 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
         }
     }
 
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+
     const options = {
         method,
         headers: {
-            'Content-Type': 'application/json',
             ...headers
         },
     };
+    if (!isFormData) {
+        options.headers['Content-Type'] = 'application/json';
+    }
     if (data) {
-        options.body = JSON.stringify(data);
+        options.body = isFormData ? data : JSON.stringify(data);
     }
 
     if (time != 0) {
@@ -217,6 +221,9 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
 export const fetchHelper = {
     get: (url, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, null, 'GET', time, headers, showErrorAlert, useToken),
     post: (url, data, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, data, 'POST', time, headers, showErrorAlert, useToken),
+    /** POST multipart (pase FormData como data; no fija Content-Type para que el navegador envíe boundary) */
+    postForm: (url, formData, headers = {}, time = 1, showErrorAlert = false, useToken = true) =>
+        request(url, formData, 'POST', time, headers, showErrorAlert, useToken),
     put: (url, data, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, data, 'PUT', time, headers, showErrorAlert, useToken),
     delete: (url, data, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, data, 'DELETE', time, headers, showErrorAlert, useToken),
 };

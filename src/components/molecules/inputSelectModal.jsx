@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { base_url } from '../../utils/functions';
 
 const InputSelectModal = ({
-    id, label, value, onChange, error, options, placeholder,
+    id, label, value, onChange, error, options, placeholder, readOnly = false,
     clearable = false, multiple = false, required = false, disabled = false,
     url = null,
     searchFields = ['code', 'name']
@@ -37,6 +37,9 @@ const InputSelectModal = ({
                             const token = localStorage.getItem('token'); // o donde lo guardes
                             xhr.setRequestHeader('Authorization', 'Bearer ' + token);
                         },
+                        ...(readOnly == true ? {
+                            disabled: true
+                        } : {}),
                         delay: 500,
                         data: function (params) {
                             return JSON.stringify({

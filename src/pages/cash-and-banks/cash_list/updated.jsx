@@ -41,7 +41,9 @@ const TABS = [
     { id: 'contabilidad',   label: 'Contabilidad',             icon: 'ri-book-2-line' },
 ];
 
-export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, dataTableRef, setCajaEdit, readOnly }) {
+export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, dataTableRef, setCajaEdit, readOnly,
+    accountingAccounts, currencyTypes, costCenters, users
+ }) {
     const [cajaUpdated, setCajaUpdated]       = useState(caja);
     const [errors, setErrors]                 = useState({});
     const [errorMessage, setErrorMessage]     = useState('');
@@ -172,16 +174,16 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                         {/* Identificación */}
                         {activeTab === 'identificacion' && (
                             <div className="row">
-                                <div className="col-md-2 mb-3">
+                                {/* <div className="col-md-2 mb-3">
                                     <InputModal id="cu_id" label="ID Caja" value={cajaUpdated.id}
                                         onChange={() => {}} disabled={true} />
-                                </div>
+                                </div> */}
                                 <div className="col-md-3 mb-3">
                                     <InputModal id="cu_codigo" label="Código de Caja" value={cajaUpdated.codigoCaja}
                                         onChange={e => set('codigoCaja', e.target.value)} error={errors.codigoCaja}
                                         required={true} disabled={readOnly} />
                                 </div>
-                                <div className="col-md-4 mb-3">
+                                <div className="col-md-3 mb-3">
                                     <InputModal id="cu_nombre" label="Nombre de Caja" value={cajaUpdated.nombreCaja}
                                         onChange={e => set('nombreCaja', e.target.value)} error={errors.nombreCaja}
                                         required={true} disabled={readOnly} />
@@ -233,16 +235,22 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                         placeholder="Ej: L-V 8:00-17:00 (opcional)" disabled={readOnly} />
                                 </div>
                                 <div className="col-md-6 mb-3">
-                                    <InputModal id="cu_resp_p" label="ID Responsable Principal" type="number"
+                                    <InputSelectModal id="cu_resp_p" label="Responsable Principal" value={cajaUpdated.idResponsablePrincipal}
+                                        onChange={v => set('idResponsablePrincipal', v)} error={errors.idResponsablePrincipal}
+                                        options={users} placeholder="Seleccione responsable principal" required={true} />
+                                    {/* <InputModal id="cu_resp_p" label="ID Responsable Principal" type="number"
                                         value={cajaUpdated.idResponsablePrincipal}
                                         onChange={e => set('idResponsablePrincipal', e.target.value)}
-                                        error={errors.idResponsablePrincipal} required={true} disabled={readOnly} />
+                                        error={errors.idResponsablePrincipal} required={true} disabled={readOnly} /> */}
                                 </div>
                                 <div className="col-md-6 mb-3">
-                                    <InputModal id="cu_resp_s" label="ID Responsable Suplente" type="number"
+                                    <InputSelectModal id="cu_resp_s" label="Responsable Suplente" value={cajaUpdated.idResponsableSuplente}
+                                        onChange={v => set('idResponsableSuplente', v)} error={errors.idResponsableSuplente}
+                                        options={users} placeholder="Seleccione responsable suplente" placeholder="Opcional" />
+                                    {/* <InputModal id="cu_resp_s" label="ID Responsable Suplente" type="number"
                                         value={cajaUpdated.idResponsableSuplente}
                                         onChange={e => set('idResponsableSuplente', e.target.value)}
-                                        error={errors.idResponsableSuplente} placeholder="Opcional" disabled={readOnly} />
+                                        error={errors.idResponsableSuplente} placeholder="Opcional" disabled={readOnly} /> */}
                                 </div>
                             </div>
                         )}
@@ -251,9 +259,12 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                         {activeTab === 'financiero' && (
                             <div className="row">
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cu_moneda" label="ID Moneda" type="number" value={cajaUpdated.monedaCodigo}
+                                    <InputSelectModal id="cu_moneda" label="Moneda" value={cajaUpdated.monedaCodigo}
+                                        onChange={v => set('monedaCodigo', v)} error={errors.monedaCodigo}
+                                        options={currencyTypes} placeholder="Seleccione moneda" required={true} />
+                                    {/* <InputModal id="cu_moneda" label="ID Moneda" type="number" value={cajaUpdated.monedaCodigo}
                                         onChange={e => set('monedaCodigo', e.target.value)} error={errors.monedaCodigo}
-                                        placeholder="ID numérico de la moneda" required={true} disabled={readOnly} />
+                                        placeholder="ID numérico de la moneda" required={true} disabled={readOnly} /> */}
                                 </div>
                                 <div className="col-md-4 mb-3">
                                     <InputModal id="cu_saldo" label="Saldo Inicial" type="number"
@@ -336,15 +347,26 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                         {activeTab === 'contabilidad' && (
                             <div className="row">
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cu_cuenta" label="ID Cuenta Contable" type="number"
+                                    <InputSelectModal id="cu_cuenta" label="Cuenta Contable" value={cajaUpdated.idCuentaContable}
+                                        onChange={v => set('idCuentaContable', v)} error={errors.idCuentaContable}
+                                        options={accountingAccounts.map(aa => {
+                                            return {
+                                                id: aa.id,
+                                                label: aa.pucAccount.code + ' - ' + aa.customName
+                                            }
+                                        })} placeholder="Seleccione cuenta contable" required={true} />
+                                    {/* <InputModal id="cu_cuenta" label="ID Cuenta Contable" type="number"
                                         value={cajaUpdated.idCuentaContable}
                                         onChange={e => set('idCuentaContable', e.target.value)} error={errors.idCuentaContable}
-                                        required={!readOnly} disabled={readOnly} />
+                                        required={!readOnly} disabled={readOnly} /> */}
                                 </div>
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cu_centro" label="ID Centro de Costo" type="number" value={cajaUpdated.centroCosto}
+                                    <InputSelectModal id="cu_centro" label="Centro de Costo" value={cajaUpdated.centroCosto}
+                                        onChange={v => set('centroCosto', v)} error={errors.centroCosto}
+                                        options={costCenters} placeholder="Seleccione centro de costo" placeholder="Opcional" />
+                                    {/* <InputModal id="cu_centro" label="ID Centro de Costo" type="number" value={cajaUpdated.centroCosto}
                                         onChange={e => set('centroCosto', e.target.value)} error={errors.centroCosto}
-                                        placeholder="Opcional" disabled={readOnly} />
+                                        placeholder="Opcional" disabled={readOnly} /> */}
                                 </div>
                                 <div className="col-md-4 mb-3">
                                     <InputSelectModal id="cu_libro" label="Libro Contable" value={cajaUpdated.libroContable}

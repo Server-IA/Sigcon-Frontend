@@ -94,8 +94,14 @@ const UpdateBankAccount = ({
     const handleSave = async () => {
         try {
             const body = {
+                code:             record.code,
+                accountNumber:    record.accountNumber,
+                accountNumberMasked: record.accountNumberMasked,
+                bankId:           record.bankId,
+                currencyTypeId:   record.currencyTypeId,
                 accountName:      record.accountName,
                 branchName:       record.branchName       || '',
+                bankBranchId:     Number(record.bankBranchId)     || 0,
                 accountExecutive: record.accountExecutive || '',
                 bankPhone:        record.bankPhone        || '',
                 description:      record.description      || '',
@@ -256,7 +262,7 @@ const UpdateBankAccount = ({
                                     <i className="ri-map-pin-line me-1"></i>Sucursal y contacto
                                 </p>
                                 <div className="row mb-4">
-                                    <div className="col-md-4 mb-4">
+                                    <div className="col-md-6 mb-4">
                                         <InputSelectModal
                                             id="upd_bankBranchId" label="Sucursal"
                                             value={record?.bankBranch?.id ?? ''}
@@ -267,7 +273,7 @@ const UpdateBankAccount = ({
                                             error={errors.bankBranchId}
                                         />
                                     </div>
-                                    <div className="col-md-4 mb-4">
+                                    <div className="col-md-6 mb-4">
                                         <InputModal
                                             type="text" id="upd_accountExecutive" label="Ejecutivo de cuenta"
                                             placeholder="Nombre del ejecutivo"
@@ -276,7 +282,7 @@ const UpdateBankAccount = ({
                                             error={errors.accountExecutive}
                                         />
                                     </div>
-                                    <div className="col-md-4 mb-4">
+                                    {/* <div className="col-md-4 mb-4">
                                         <InputModal
                                             type="text" id="upd_bankPhone" label="Teléfono banco"
                                             placeholder="Ej: 6016543210"
@@ -284,7 +290,7 @@ const UpdateBankAccount = ({
                                             onChange={e => field('bankPhone', e.target.value)}
                                             error={errors.bankPhone}
                                         />
-                                    </div>
+                                    </div> */}
                                 </div>
 
                                 <div className="row mb-4">

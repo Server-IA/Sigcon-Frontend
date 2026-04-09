@@ -154,7 +154,8 @@ const IndexCheckbooks = () => {
             const {data} = await fetchHelper.post(base_url(['api', 'v1', 'bank-accounts', 'search']), {
                 length: -1,
                 columns: [
-                    {data: 'handlesCheckbook', name: 'handlesCheckbook', searchable: true, search: {"value": true, "regex": false}}, 
+                    {data: 'handlesCheckbook', name: 'handlesCheckbook', searchable: true, search: {"value": true, "regex": false}},
+                    {data: 'status', name: 'status', searchable: true, search: {"value": "ACTIVA", "regex": false}},
                 ]
             },{}, 0);
             
