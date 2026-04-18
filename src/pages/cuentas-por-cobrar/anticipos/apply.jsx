@@ -37,7 +37,7 @@ const ApplyArAdvance = ({ modalRef, modalInstance, dataTableRef, advance, setMes
     const loadInvoices = async (thirdPartyId) => {
         try {
             const { data } = await fetchHelper.post(
-                base_url(['api', 'v1', 'ar', 'sales-invoices', 'search']),
+                base_url(['api', 'v1', 'sales-invoices', 'search']),
                 { length: -1, columns: [], thirdPartyId },
                 {},
                 0

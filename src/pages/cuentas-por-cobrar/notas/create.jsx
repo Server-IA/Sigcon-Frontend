@@ -43,7 +43,7 @@ const CreateArNote = ({ modalRef, modalInstance, dataTableRef, setMessage }) => 
     const loadInvoices = async () => {
         try {
             const { data } = await fetchHelper.post(
-                base_url(['api', 'v1', 'ar', 'sales-invoices', 'search']),
+                base_url(['api', 'v1', 'sales-invoices', 'search']),
                 { length: -1, columns: [] },
                 {},
                 0
