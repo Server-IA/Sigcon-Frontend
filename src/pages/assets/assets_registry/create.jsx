@@ -450,6 +450,12 @@ const CreateAssets = (
                         .map(b => ({ id: b.id, label: `${b.accountName} - ${b.accountNumberMasked}` })) :
                         []
                       }
+                      emptyMessage={
+                        assets.paymentMethodId == 1 ? 'No hay cajas activas. Cree una en Bancos y Cajas → Cajas' :
+                        assets.paymentMethodId == 2 ? 'No hay cheques disponibles. Cree uno en Bancos y Cajas → Cheques' :
+                        assets.paymentMethodId == 3 ? 'No hay cuentas bancarias activas. Cree una en Bancos y Cajas → Cuentas Bancarias' :
+                        'Primero seleccione un método de pago'
+                      }
                     />
                 </div>
               </>
@@ -606,6 +612,14 @@ const CreateAssets = (
                 .map(d => ({ id: d.id, label: d.name }))}
               required
               error={errors.depreciationRuleId}
+              placeholder={
+                !assets.accountingAccountId
+                  ? 'Primero seleccione una cuenta contable'
+                  : (depreciationRules.filter(d => d.accountingAccountId == assets.accountingAccountId).length === 0
+                      ? 'Sin reglas para esta cuenta'
+                      : 'Seleccione método')
+              }
+              disabled={!assets.accountingAccountId}
             />
           </div>
 

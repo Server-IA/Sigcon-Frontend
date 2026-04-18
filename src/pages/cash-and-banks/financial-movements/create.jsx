@@ -126,7 +126,7 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
                                     <InputSelectModal
                                         label="Cuenta Bancaria *"
                                         value={form.bankAccountId}
-                                        onChange={(e) => handleChange('bankAccountId', e.target.value)}
+                                        onChange={(val) => handleChange('bankAccountId', val)}
                                         options={bankAccounts}
                                         error={errors.bankAccountId}
                                     />
@@ -154,7 +154,7 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
                                     <InputSelectModal
                                         label="Actividad Flujo (NIC 7)"
                                         value={form.flowActivity}
-                                        onChange={(e) => handleChange('flowActivity', e.target.value)}
+                                        onChange={(val) => handleChange('flowActivity', val)}
                                         options={flowActivityOptions}
                                         error={errors.flowActivity}
                                     />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import { base_url } from '../../../utils/functions';
@@ -29,6 +29,24 @@ const TYPE_OPTIONS = [
 const CreateProjection = ({ modalRef, modalInstance, projection, setProjection, dataTableRef, setItemCreate }) => {
     const [errors, setErrors]             = useState({});
     const [errorMessage, setErrorMessage] = useState('');
+    const [currencies, setCurrencies]     = useState([]);
+
+    // Cargar monedas para el dropdown
+    useEffect(() => {
+        fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']),
+                { start: 0, length: -1, draw: 1 }, {}, 0, true)
+            .then(resp => {
+                const list = resp?.data?.data ?? resp?.data ?? resp ?? [];
+                const arr = Array.isArray(list) ? list : (list?.data || []);
+                if (Array.isArray(arr)) {
+                    setCurrencies(arr.map(c => ({
+                        id: c.isoCode || c.code || c.id,
+                        label: `${c.isoCode || c.code || ''} - ${c.name || ''}`.trim(),
+                    })));
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     const set = (field, value) => setProjection(prev => ({ ...prev, [field]: value }));
 
@@ -85,10 +103,12 @@ const CreateProjection = ({ modalRef, modalInstance, projection, setProjection, 
                                 />
                             </div>
                             <div className="col-md-6 mb-3">
-                                <InputModal
+                                <InputSelectModal
                                     id="proj_currency" label="Moneda" value={projection.currency}
-                                    onChange={e => set('currency', e.target.value)}
+                                    onChange={(val) => set('currency', val)}
                                     error={errors.currency}
+                                    options={currencies}
+                                    placeholder="Seleccione moneda"
                                 />
                             </div>
                             <div className="col-md-12 mb-3">

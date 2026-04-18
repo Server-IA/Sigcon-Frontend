@@ -5,7 +5,8 @@ const InputSelectModal = ({
     id, label, value, onChange, error, options, placeholder, readOnly = false,
     clearable = false, multiple = false, required = false, disabled = false,
     url = null,
-    searchFields = ['code', 'name']
+    searchFields = ['code', 'name'],
+    emptyMessage = null
 }) => {
 
     const selectRef = useRef(null);
@@ -69,7 +70,9 @@ const InputSelectModal = ({
             width: '100%',
             allowClear: required ? false : clearable,
             language: {
-                noResults: () => 'No se encontraron resultados',
+                noResults: () => (emptyMessage && (!options || options.length === 0))
+                    ? emptyMessage
+                    : 'No se encontraron resultados',
             }
         });
 

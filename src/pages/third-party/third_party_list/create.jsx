@@ -11,6 +11,9 @@ const API_MUNICIPIOS    = ['api', 'v1', 'resources', 'municipalities'];
 const API_PAYMENT_TERMS = ['api', 'v1', 'resources', 'payment-terms'];
 const API_STATUSES      = ['api', 'v1', 'third-parties', 'statuses'];
 const API_ROLES         = ['api', 'v1', 'third-parties', 'roles'];
+const API_REGIMES       = ['api', 'v1', 'resources', 'types-regimes'];
+const API_ORGANIZATIONS = ['api', 'v1', 'resources', 'types-organizations'];
+const API_WITHHOLDINGS  = ['api', 'v1', 'resources', 'withholdings'];
 
 const CATALOG_BODY = { draw: 1, start: 0, length: 10000, columns: [], search: { value: '', regex: false } };
 
@@ -39,6 +42,9 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
     const [municipalities, setMunicipalities]     = useState([]);
     const [paymentTermsOpts, setPaymentTermsOpts] = useState([]);
     const [selectedCountry, setSelectedCountry]   = useState('');
+    const [regimesOpts, setRegimesOpts]           = useState([]);
+    const [organizationsOpts, setOrganizationsOpts] = useState([]);
+    const [withholdingsOpts, setWithholdingsOpts] = useState([]);
     // Opciones hardcodeadas con codes fijos — la condición status==='BLOCKED' siempre funciona
     const statusOpts = [
         { id: 'ACTIVE',   label: 'Activo' },
@@ -67,6 +73,15 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
             .catch(() => {});
         fetchHelper.post(base_url(API_PAYMENT_TERMS), CATALOG_BODY, {}, 0)
             .then(res => setPaymentTermsOpts((res?.data ?? []).map(p => ({ id: p.name ?? String(p.id), label: p.name ?? String(p.id) }))))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_REGIMES), CATALOG_BODY, {}, 0)
+            .then(res => setRegimesOpts((res?.data ?? []).map(r => ({ id: r.id, name: r.name }))))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_ORGANIZATIONS), CATALOG_BODY, {}, 0)
+            .then(res => setOrganizationsOpts((res?.data ?? []).map(o => ({ id: o.id, name: o.name }))))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_WITHHOLDINGS), CATALOG_BODY, {}, 0)
+            .then(res => setWithholdingsOpts((res?.data ?? []).map(w => ({ id: w.id, name: w.name || w.code || `Retencion ${w.id}` }))))
             .catch(() => {});
         // Solo cargamos los IDmaps desde la API (para construir payloads correctos)
         fetchHelper.get(base_url(API_STATUSES), {}, 0, false)
@@ -146,9 +161,11 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                 municipalityId:     thirdParty.municipalityId ? Number(thirdParty.municipalityId) : null,
                 typeOrganizationId: thirdParty.typeOrganizationId ? Number(thirdParty.typeOrganizationId) : null,
                 typeRegimenId:      thirdParty.typeRegimenId ? Number(thirdParty.typeRegimenId) : null,
-                withholdingIds:     thirdParty.withholdingIds
-                    ? thirdParty.withholdingIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0)
-                    : [],
+                withholdingIds:     Array.isArray(thirdParty.withholdingIds)
+                    ? thirdParty.withholdingIds.map(Number).filter(n => !isNaN(n) && n > 0)
+                    : (typeof thirdParty.withholdingIds === 'string' && thirdParty.withholdingIds
+                        ? thirdParty.withholdingIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0)
+                        : []),
                 creditLimit:        thirdParty.creditLimit ? Number(thirdParty.creditLimit) : null,
                 paymentTerms:       thirdParty.paymentConditions,
                 marketSegment:      thirdParty.marketSegment,
@@ -161,7 +178,7 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
 
             setThirdParty({
                 id: '', nit: '', dv: '', businessName: '',
-                typeOrganizationId: '', typeRegimenId: '', withholdingIds: '',
+                typeOrganizationId: '', typeRegimenId: '', withholdingIds: [],
                 roles: [], municipalityId: '',
                 creditLimit: '', paymentConditions: '', marketSegment: '',
                 contacts: [],
@@ -247,14 +264,14 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                         />
                                     </div>
                                     <div className="col-md-5 mb-4 mt-2">
-                                        <InputModal
-                                            type="number"
+                                        <InputSelectModal
                                             id="tp_typeOrganizationId_create"
-                                            label="Tipo de Organización ID"
+                                            label="Tipo de Organización"
                                             value={thirdParty.typeOrganizationId}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, typeOrganizationId: e.target.value })}
+                                            onChange={(val) => setThirdParty({ ...thirdParty, typeOrganizationId: val })}
                                             error={errors.typeOrganizationId}
-                                            placeholder="Ej. 1"
+                                            placeholder="Seleccione el tipo de organización"
+                                            options={organizationsOpts}
                                             required={true}
                                         />
                                     </div>
@@ -350,26 +367,27 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                             <div>
                                 <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal
-                                            type="number"
+                                        <InputSelectModal
                                             id="tp_typeRegimenId_create"
-                                            label="Tipo de Régimen ID"
+                                            label="Tipo de Régimen"
                                             value={thirdParty.typeRegimenId}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, typeRegimenId: e.target.value })}
+                                            onChange={(val) => setThirdParty({ ...thirdParty, typeRegimenId: val })}
                                             error={errors.typeRegimenId}
-                                            placeholder="Ej. 2"
+                                            placeholder="Seleccione el tipo de régimen"
+                                            options={regimesOpts}
                                             required={true}
                                         />
                                     </div>
                                     <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal
-                                            type="text"
+                                        <InputSelectModal
                                             id="tp_withholdingIds_create"
-                                            label="IDs de Retenciones (separados por coma)"
+                                            label="Retenciones aplicables"
                                             value={thirdParty.withholdingIds}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, withholdingIds: e.target.value })}
+                                            onChange={(val) => setThirdParty({ ...thirdParty, withholdingIds: val })}
                                             error={errors.withholdingIds}
-                                            placeholder="Ej. 1,3"
+                                            placeholder="Seleccione una o más retenciones"
+                                            options={withholdingsOpts}
+                                            multiple={true}
                                         />
                                     </div>
                                 </div>

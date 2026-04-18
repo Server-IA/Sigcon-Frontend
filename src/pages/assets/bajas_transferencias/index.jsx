@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import AlertPage from '../../../components/molecules/AlertPage';
 import FormField from '../../../components/molecules/FormField';
+import { base_url } from '../../../utils/functions';
+import { fetchHelper } from '../../../utils/fetch';
 
 const TAX_RULES = [
   { id: 'NO_APLICA', name: 'No aplica' },
@@ -87,6 +89,22 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
   const [errors, setErrors] = useState({});
   const [alert, setAlert] = useState({ show: false, type: '', message: '' });
   const [transactionId, setTransactionId] = useState('');
+  const [bankMovements, setBankMovements] = useState([]);
+
+  // Cargar movimientos bancarios para el dropdown de referencia BNK/CAJ
+  useEffect(() => {
+      fetchHelper.get(base_url(['api', 'v1', 'financial-movements']), {}, 0, false)
+          .then(resp => {
+              const list = Array.isArray(resp) ? resp : (resp?.data ?? []);
+              if (Array.isArray(list)) {
+                  setBankMovements(list.map(m => ({
+                      id: m.id,
+                      name: `#${m.id} - ${m.movementDate || ''} ${m.description || m.externalReference || ''} ($${m.amount || 0})`.trim(),
+                  })));
+              }
+          })
+          .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!initialAssetId) return;
@@ -390,13 +408,14 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
               />
 
               <FormField
-                type="text"
+                type="select"
                 id="referenciaBancoCaja"
                 label="Referencia BNK/CAJ"
                 value={formData.referenciaBancoCaja}
                 onChange={handleFieldChange('referenciaBancoCaja')}
                 error={errors.referenciaBancoCaja}
-                placeholder="ID movimiento bancario"
+                options={bankMovements}
+                placeholder="Seleccione un movimiento bancario"
                 required
                 colClass="col-md-3"
               />

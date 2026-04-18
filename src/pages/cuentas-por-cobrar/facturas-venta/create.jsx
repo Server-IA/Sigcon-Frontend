@@ -188,7 +188,7 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                     <InputSelectModal label="Cliente" name="thirdPartyId"
                                         value={record.thirdPartyId}
                                         options={clients}
-                                        onChange={(e) => setRecord({ ...record, thirdPartyId: e.target.value })} />
+                                        onChange={(val) => setRecord({ ...record, thirdPartyId: val })} />
                                 </div>
                                 <div className="col-md-3">
                                     <InputModal label="Fecha factura" name="invoiceDate" type="date"
@@ -205,7 +205,7 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                     <InputSelectModal label="Moneda" name="currencyId"
                                         value={record.currencyId}
                                         options={currencies}
-                                        onChange={(e) => setRecord({ ...record, currencyId: e.target.value })} />
+                                        onChange={(val) => setRecord({ ...record, currencyId: val })} />
                                 </div>
                                 <div className="col-md-4">
                                     <InputModal label="Tasa de cambio" name="exchangeRate" type="number"
@@ -216,7 +216,7 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                     <InputSelectModal label="Forma de pago" name="paymentFormId"
                                         value={record.paymentFormId}
                                         options={paymentForms}
-                                        onChange={(e) => setRecord({ ...record, paymentFormId: e.target.value })} />
+                                        onChange={(val) => setRecord({ ...record, paymentFormId: val })} />
                                 </div>
 
                                 <div className="col-md-6">

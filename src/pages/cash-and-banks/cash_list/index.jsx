@@ -125,7 +125,12 @@ export default function IndexCashList() {
         const responseUsers = await fetchHelper.post(base_url([
             "users/getUsers"
         ]), { length: -1 }, {}, 0, false);
-        setUsers(responseUsers.data);
+        const rawUsers = Array.isArray(responseUsers?.data) ? responseUsers.data
+                           : (responseUsers?.data?.data || []);
+        setUsers(rawUsers.map(u => ({
+            id: u.id,
+            name: `${u.name || ''} ${u.lastname || ''}`.trim() || u.email || `Usuario ${u.id}`,
+        })));
 
         const responseCostCenters = await fetchHelper.post(base_url([
             "api/v1/cost-centers/search"

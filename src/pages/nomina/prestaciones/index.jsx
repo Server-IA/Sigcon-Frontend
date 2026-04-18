@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
@@ -23,6 +23,24 @@ const IndexPrestaciones = () => {
     const [alert, setAlert] = useState({ show: false, type: '', message: '' });
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [employees, setEmployees] = useState([]);
+
+    // Cargar empleados para dropdown
+    useEffect(() => {
+        fetchHelper.post(base_url(['api', 'nomina', 'empleados', 'search']),
+                { start: 0, length: -1, draw: 1 }, {}, 0)
+            .then(resp => {
+                const list = resp?.data ?? resp ?? [];
+                const arr = Array.isArray(list) ? list : (list?.data || []);
+                if (Array.isArray(arr)) {
+                    setEmployees(arr.map(e => ({
+                        id: e.id,
+                        name: `${e.documentNumber || ''} - ${e.fullName || ''}`.trim(),
+                    })));
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     // Cesantias
     const [sevForm, setSevForm] = useState({ employeeId: '', year: now.getFullYear() });
@@ -108,9 +126,14 @@ const IndexPrestaciones = () => {
                     <div>
                         <div className="row g-3 mb-3">
                             <div className="col-md-4">
-                                <label className="form-label">ID Empleado</label>
-                                <input type="number" className="form-control" value={sevForm.employeeId}
-                                        onChange={e => setSevForm({ ...sevForm, employeeId: e.target.value })} />
+                                <label className="form-label">Empleado</label>
+                                <select className="form-select" value={sevForm.employeeId}
+                                        onChange={e => setSevForm({ ...sevForm, employeeId: e.target.value })}>
+                                    <option value="">Seleccione empleado</option>
+                                    {employees.map(emp => (
+                                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="col-md-3">
                                 <label className="form-label">Año</label>
@@ -135,9 +158,14 @@ const IndexPrestaciones = () => {
                     <div>
                         <div className="row g-3 mb-3">
                             <div className="col-md-4">
-                                <label className="form-label">ID Empleado</label>
-                                <input type="number" className="form-control" value={bonusForm.employeeId}
-                                        onChange={e => setBonusForm({ ...bonusForm, employeeId: e.target.value })} />
+                                <label className="form-label">Empleado</label>
+                                <select className="form-select" value={bonusForm.employeeId}
+                                        onChange={e => setBonusForm({ ...bonusForm, employeeId: e.target.value })}>
+                                    <option value="">Seleccione empleado</option>
+                                    {employees.map(emp => (
+                                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="col-md-3">
                                 <label className="form-label">Año</label>
@@ -169,9 +197,14 @@ const IndexPrestaciones = () => {
                     <div>
                         <div className="row g-3 mb-3">
                             <div className="col-md-3">
-                                <label className="form-label">ID Empleado</label>
-                                <input type="number" className="form-control" value={termForm.employeeId}
-                                        onChange={e => setTermForm({ ...termForm, employeeId: e.target.value })} />
+                                <label className="form-label">Empleado</label>
+                                <select className="form-select" value={termForm.employeeId}
+                                        onChange={e => setTermForm({ ...termForm, employeeId: e.target.value })}>
+                                    <option value="">Seleccione empleado</option>
+                                    {employees.map(emp => (
+                                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="col-md-3">
                                 <label className="form-label">Fecha de retiro</label>

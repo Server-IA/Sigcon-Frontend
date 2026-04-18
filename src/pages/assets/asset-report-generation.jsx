@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FormField from '../../components/molecules/FormField';
 import AlertPage from '../../components/molecules/AlertPage';
@@ -69,6 +69,25 @@ const AssetReportGeneration = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [showPreview, setShowPreview] = useState(false);
     const [reportData, setReportData] = useState([]);
+    const [providers, setProviders] = useState([]);
+
+    // Cargar terceros con rol PROVEEDOR para selector
+    useEffect(() => {
+        fetchHelper.post(base_url(['api', 'v1', 'third-parties', 'search']),
+                { length: -1, columns: [] }, {}, 0)
+            .then(resp => {
+                const list = resp?.data ?? resp ?? [];
+                if (Array.isArray(list)) {
+                    setProviders(list
+                        .filter(t => (t.roles || []).some(r => r.name === 'PROVEEDOR'))
+                        .map(t => ({
+                            id: t.id,
+                            name: `${t.nit || ''}${t.dv ? '/' + t.dv : ''} - ${t.businessName || t.firstName || ''}`.trim(),
+                        })));
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     const handleFieldChange = (field) => (value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -317,12 +336,13 @@ const AssetReportGeneration = () => {
                                 colClass="col-md-6"
                             />
                             <FormField
-                                type="search"
+                                type="select"
                                 id="proveedor"
-                                label="Proveedor (ID tercero)"
+                                label="Proveedor"
                                 value={formData.proveedor}
                                 onChange={handleFieldChange('proveedor')}
-                                placeholder="ID tercero"
+                                options={[{ id: '', name: '(Todos)' }, ...providers]}
+                                placeholder="Seleccione un proveedor"
                                 colClass="col-md-6"
                             />
                         </div>

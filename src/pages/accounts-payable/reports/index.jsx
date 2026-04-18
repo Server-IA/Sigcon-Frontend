@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import AlertPage from '../../../components/molecules/AlertPage';
-import InputModal from '../../../components/molecules/InputModal';
+import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
@@ -26,6 +26,30 @@ const IndexApReports = () => {
     const [message, setMessage] = useState({ message: '', type: '', show: false });
     const [loading, setLoading] = useState(false);
     const [supplierId, setSupplierId] = useState('');
+    const [suppliers, setSuppliers] = useState([]);
+
+    // Cargar catalogo de terceros con rol PROVEEDOR para el dropdown
+    useEffect(() => {
+        const loadSuppliers = async () => {
+            try {
+                const resp = await fetchHelper.post(
+                    base_url(['api', 'v1', 'third-parties', 'search']),
+                    { length: -1, columns: [] }, {}, 0
+                );
+                const list = resp?.data ?? resp;
+                if (Array.isArray(list)) {
+                    setSuppliers(list
+                        .filter((t) => (t.roles || []).some((r) => r.name === 'PROVEEDOR'))
+                        .map((t) => ({
+                            id: t.id,
+                            name: `${t.nit || ''}${t.dv ? '/' + t.dv : ''} - ${t.businessName || t.firstName || ''}`.trim(),
+                        }))
+                    );
+                }
+            } catch (e) { /* noop */ }
+        };
+        loadSuppliers();
+    }, []);
 
     /** Datos del reporte de aging. */
     const [agingData, setAgingData] = useState(null);
@@ -45,7 +69,7 @@ const IndexApReports = () => {
                 0
             );
             const data = response?.data ?? response;
-            setAgingData(Array.isArray(data) ? data : [data]);
+            setAgingData(data);
             setMessage({ type: 'success', show: true, message: 'Reporte de aging generado.' });
         } catch (error) {
             setMessage({
@@ -76,7 +100,7 @@ const IndexApReports = () => {
                 0
             );
             const data = response?.data ?? response;
-            setSupplierData(Array.isArray(data) ? data : [data]);
+            setSupplierData(data);
             setMessage({ type: 'success', show: true, message: 'Estado de cuenta generado.' });
         } catch (error) {
             setMessage({
@@ -126,15 +150,13 @@ const IndexApReports = () => {
                                 <i className="ri-file-user-line ri-48px text-info mb-2"></i>
                                 <h6>Estado de Cuenta Proveedor</h6>
                                 <p className="text-muted small">Movimientos y saldos de un proveedor especifico.</p>
-                                <div className="d-flex justify-content-center gap-2 mb-2">
-                                    <InputModal
-                                        type="number"
-                                        id="ap_report_supplier_id"
-                                        label=""
+                                <div className="mb-2 text-start">
+                                    <InputSelectModal
+                                        label="Proveedor"
                                         value={supplierId}
-                                        onChange={(e) => setSupplierId(e.target.value)}
-                                        placeholder="ID Proveedor"
-                                        min={1}
+                                        options={suppliers}
+                                        onChange={(val) => setSupplierId(val)}
+                                        placeholder="Seleccione un proveedor"
                                     />
                                 </div>
                                 <button
@@ -151,65 +173,107 @@ const IndexApReports = () => {
 
                 {/* Resultados del reporte de aging */}
                 {agingData && (
-                    <div className="table-responsive">
+                    <div>
                         <h6 className="mb-3">Resultado - Aging de Cuentas por Pagar</h6>
-                        <table className="table table-bordered table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Proveedor</th>
-                                    <th>Corriente</th>
-                                    <th>1-30 dias</th>
-                                    <th>31-60 dias</th>
-                                    <th>61-90 dias</th>
-                                    <th>+90 dias</th>
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {agingData.map((row, idx) => (
-                                    <tr key={idx}>
-                                        <td>{row.supplierName || row.thirdPartyName || '-'}</td>
-                                        <td>{formatCurrency(row.current)}</td>
-                                        <td>{formatCurrency(row.days1to30)}</td>
-                                        <td>{formatCurrency(row.days31to60)}</td>
-                                        <td>{formatCurrency(row.days61to90)}</td>
-                                        <td>{formatCurrency(row.daysOver90)}</td>
-                                        <td><strong>{formatCurrency(row.total)}</strong></td>
+
+                        {/* Resumen por rango */}
+                        <div className="table-responsive mb-4">
+                            <table className="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        {(agingData.buckets || []).map((b, i) => (
+                                            <th key={i}>{b.range}</th>
+                                        ))}
+                                        <th>Total Pendiente</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        {(agingData.buckets || []).map((b, i) => (
+                                            <td key={i}>
+                                                {formatCurrency(b.amount)}
+                                                <small className="text-muted d-block">{b.count} factura(s)</small>
+                                            </td>
+                                        ))}
+                                        <td><strong>{formatCurrency(agingData.totalPending)}</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Detalle por factura */}
+                        <div className="table-responsive">
+                            <h6 className="mb-2">Detalle por factura</h6>
+                            <table className="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Factura</th>
+                                        <th>Proveedor</th>
+                                        <th>Saldo</th>
+                                        <th>Dias vencidos</th>
+                                        <th>Rango</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(agingData.invoices || []).length === 0 ? (
+                                        <tr><td colSpan="5" className="text-center text-muted">Sin facturas pendientes.</td></tr>
+                                    ) : (
+                                        (agingData.invoices || []).map((row, idx) => (
+                                            <tr key={idx}>
+                                                <td>{row.invoiceNumber || '-'}</td>
+                                                <td>{row.supplierName || '-'}</td>
+                                                <td>{formatCurrency(row.balanceDue)}</td>
+                                                <td>{row.daysOverdue}</td>
+                                                <td>{row.range}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 
                 {/* Resultados del estado de cuenta proveedor */}
                 {supplierData && (
-                    <div className="table-responsive">
+                    <div>
                         <h6 className="mb-3">Resultado - Estado de Cuenta Proveedor</h6>
-                        <table className="table table-bordered table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Factura</th>
-                                    <th>Fecha</th>
-                                    <th>Total</th>
-                                    <th>Pagado</th>
-                                    <th>Saldo</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {supplierData.map((row, idx) => (
-                                    <tr key={idx}>
-                                        <td>{row.invoiceNumber || row.supplierInvoiceNumber || '-'}</td>
-                                        <td>{row.invoiceDate || row.date || '-'}</td>
-                                        <td>{formatCurrency(row.totalAmount || row.total)}</td>
-                                        <td>{formatCurrency(row.paidAmount || row.paid)}</td>
-                                        <td>{formatCurrency(row.balance || row.remaining)}</td>
-                                        <td>{row.status || '-'}</td>
+                        <div className="mb-3">
+                            <p className="mb-1"><strong>Proveedor:</strong> {supplierData.supplierName || '-'} {supplierData.supplierNit ? `(NIT: ${supplierData.supplierNit})` : ''}</p>
+                            <div className="row g-2">
+                                <div className="col-md-4"><strong>Total Facturado:</strong> {formatCurrency(supplierData.totalInvoiced)}</div>
+                                <div className="col-md-4"><strong>Total Pagado:</strong> {formatCurrency(supplierData.totalPaid)}</div>
+                                <div className="col-md-4"><strong>Saldo Pendiente:</strong> {formatCurrency(supplierData.totalBalance)}</div>
+                            </div>
+                        </div>
+                        <div className="table-responsive">
+                            <table className="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th>Documento</th>
+                                        <th>Fecha</th>
+                                        <th>Monto</th>
+                                        <th>Saldo</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {(supplierData.lines || []).length === 0 ? (
+                                        <tr><td colSpan="5" className="text-center text-muted">Sin movimientos.</td></tr>
+                                    ) : (
+                                        (supplierData.lines || []).map((row, idx) => (
+                                            <tr key={idx}>
+                                                <td>{row.type || '-'}</td>
+                                                <td>{row.documentNumber || '-'}</td>
+                                                <td>{row.date || '-'}</td>
+                                                <td>{formatCurrency(row.amount)}</td>
+                                                <td>{row.balance != null ? formatCurrency(row.balance) : '-'}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>

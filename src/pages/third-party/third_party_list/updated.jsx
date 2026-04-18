@@ -15,6 +15,9 @@ const API_ROLES               = ['api', 'v1', 'third-parties', 'roles'];
 const API_COMMERCIAL_GET      = (id) => ['api', 'v1', 'commercial-data', id];
 const API_COMMERCIAL_POST     = ['api', 'v1', 'commercial-data'];
 const API_COMMERCIAL_PUT      = (id) => ['api', 'v1', 'commercial-data', id];
+const API_REGIMES             = ['api', 'v1', 'resources', 'types-regimes'];
+const API_ORGANIZATIONS       = ['api', 'v1', 'resources', 'types-organizations'];
+const API_WITHHOLDINGS        = ['api', 'v1', 'resources', 'withholdings'];
 
 const CATALOG_BODY = { draw: 1, start: 0, length: 10000, columns: [], search: { value: '', regex: false } };
 
@@ -46,7 +49,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
 
     const [thirdPartyUpdated, setThirdPartyUpdated] = useState({
         id: '', nit: '', dv: '', businessName: '',
-        typeOrganizationId: '', typeRegimenId: '', withholdingIds: '',
+        typeOrganizationId: '', typeRegimenId: '', withholdingIds: [],
         roles: [], municipalityId: '', countryId: '',
         contacts: [],
         status: 'ACTIVE', blockReason: '',
@@ -79,6 +82,11 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
     const [commercialId, setCommercialId]   = useState(null); // null = no existe aún
     const [commercialLoading, setCommercialLoading] = useState(false);
 
+    // Catalogos FK para tipos de organizacion, regimen y retenciones
+    const [regimesOpts, setRegimesOpts]           = useState([]);
+    const [organizationsOpts, setOrganizationsOpts] = useState([]);
+    const [withholdingsOpts, setWithholdingsOpts] = useState([]);
+
     // Cargar catálogos al montar
     useEffect(() => {
         fetchHelper.post(base_url(API_COUNTRIES), CATALOG_BODY, {}, 0)
@@ -89,6 +97,15 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             .catch(() => {});
         fetchHelper.post(base_url(API_PAYMENT_TERMS), CATALOG_BODY, {}, 0)
             .then(res => setPaymentTermsOpts((res?.data ?? []).map(p => ({ id: p.id, label: p.name ?? String(p.id) }))))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_REGIMES), CATALOG_BODY, {}, 0)
+            .then(res => setRegimesOpts((res?.data ?? []).map(r => ({ id: r.id, name: r.name }))))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_ORGANIZATIONS), CATALOG_BODY, {}, 0)
+            .then(res => setOrganizationsOpts((res?.data ?? []).map(o => ({ id: o.id, name: o.name }))))
+            .catch(() => {});
+        fetchHelper.post(base_url(API_WITHHOLDINGS), CATALOG_BODY, {}, 0)
+            .then(res => setWithholdingsOpts((res?.data ?? []).map(w => ({ id: w.id, name: w.name || w.code || `Retencion ${w.id}` }))))
             .catch(() => {});
         // Solo cargamos los IDmaps desde la API (para construir payloads correctos)
         // Las opciones de UI son fijas (statusOpts/roleOpts) para garantizar estabilidad
@@ -133,7 +150,8 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             businessName:       thirdParty.businessName       ?? '',
             typeOrganizationId: thirdParty.typeOrganizationId ?? '',
             typeRegimenId:      thirdParty.typeRegimenId      ?? '',
-            withholdingIds:     thirdParty.withholdingIds     ?? '',
+            withholdingIds:     Array.isArray(thirdParty.withholdingIds) ? thirdParty.withholdingIds
+                                  : (thirdParty.withholdings ? thirdParty.withholdings.map(w => w.id || w) : []),
             roles:              thirdParty.roles              ?? [],
             municipalityId:     thirdParty.municipalityId     ?? '',
             countryId:          thirdParty.countryId          ?? '',
@@ -203,9 +221,11 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             const payload = {
                 businessName:   thirdPartyUpdated.businessName,
                 municipalityId: thirdPartyUpdated.municipalityId ? Number(thirdPartyUpdated.municipalityId) : null,
-                withholdingId: thirdPartyUpdated.withholdingIds
-                    ? thirdPartyUpdated.withholdingIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0)
-                    : [],
+                withholdingId: Array.isArray(thirdPartyUpdated.withholdingIds)
+                    ? thirdPartyUpdated.withholdingIds.map(Number).filter(n => !isNaN(n) && n > 0)
+                    : (typeof thirdPartyUpdated.withholdingIds === 'string' && thirdPartyUpdated.withholdingIds
+                        ? thirdPartyUpdated.withholdingIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0)
+                        : []),
                 contacts: thirdPartyUpdated.contacts ?? [],
             };
             await fetchHelper.put(url, payload, {}, 1000);
@@ -245,7 +265,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
 
             setThirdParty({
                 id: '', nit: '', dv: '', businessName: '',
-                typeOrganizationId: '', typeRegimenId: '', withholdingIds: '',
+                typeOrganizationId: '', typeRegimenId: '', withholdingIds: [],
                 roles: [], municipalityId: '',
                 contacts: [],
                 status: 'ACTIVE', blockReason: '',
@@ -397,15 +417,40 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                             <div>
                                 <div className="row">
                                     <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal
-                                            type="text"
+                                        <InputSelectModal
+                                            id="tp_typeOrganizationId_update"
+                                            label="Tipo de Organización"
+                                            value={thirdPartyUpdated.typeOrganizationId}
+                                            onChange={(val) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, typeOrganizationId: val })}
+                                            error={errors.typeOrganizationId}
+                                            placeholder="Seleccione el tipo de organización"
+                                            options={organizationsOpts}
+                                            disabled={readOnly}
+                                        />
+                                    </div>
+                                    <div className="col-md-6 mb-4 mt-2">
+                                        <InputSelectModal
+                                            id="tp_typeRegimenId_update"
+                                            label="Tipo de Régimen"
+                                            value={thirdPartyUpdated.typeRegimenId}
+                                            onChange={(val) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, typeRegimenId: val })}
+                                            error={errors.typeRegimenId}
+                                            placeholder="Seleccione el tipo de régimen"
+                                            options={regimesOpts}
+                                            disabled={readOnly}
+                                        />
+                                    </div>
+                                    <div className="col-md-12 mb-4 mt-2">
+                                        <InputSelectModal
                                             id="tp_withholdingIds_update"
-                                            label="IDs de Retenciones (separados por coma)"
+                                            label="Retenciones aplicables"
                                             value={thirdPartyUpdated.withholdingIds}
-                                            onChange={(e) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, withholdingIds: e.target.value })}
+                                            onChange={(val) => !readOnly && setThirdPartyUpdated({ ...thirdPartyUpdated, withholdingIds: val })}
                                             error={errors.withholdingIds}
-                                            placeholder="Ej. 1,3"
-                                            disabled={readOnly} readOnly={readOnly}
+                                            placeholder="Seleccione una o más retenciones"
+                                            options={withholdingsOpts}
+                                            multiple={true}
+                                            disabled={readOnly}
                                         />
                                     </div>
                                 </div>

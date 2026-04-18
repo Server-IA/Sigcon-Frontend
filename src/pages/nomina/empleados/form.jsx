@@ -29,6 +29,23 @@ const EmpleadoForm = ({ modalRef, modalInstance, empleado, onSaved }) => {
     const [originalSalary, setOriginalSalary] = useState(null);
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
+    const [costCenters, setCostCenters] = useState([]);
+
+    // Cargar catalogo de centros de costo
+    useEffect(() => {
+        fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']),
+                { start: 0, length: -1, draw: 1 }, {}, 0)
+            .then(resp => {
+                const list = resp?.data ?? resp ?? [];
+                if (Array.isArray(list)) {
+                    setCostCenters(list.map(cc => ({
+                        id: cc.id,
+                        name: `${cc.code || cc.id} - ${cc.name || ''}`.trim(),
+                    })));
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         if (empleado) {
@@ -181,9 +198,14 @@ const EmpleadoForm = ({ modalRef, modalInstance, empleado, onSaved }) => {
                                             onChange={e => set('compensationBox', e.target.value)} />
                                 </div>
                                 <div className="col-md-4">
-                                    <label className="form-label">Centro de costo (ID)</label>
-                                    <input type="number" className="form-control" value={form.costCenterId}
-                                            onChange={e => set('costCenterId', e.target.value)} />
+                                    <label className="form-label">Centro de costo</label>
+                                    <select className="form-select" value={form.costCenterId}
+                                            onChange={e => set('costCenterId', e.target.value)}>
+                                        <option value="">Seleccione un centro de costo</option>
+                                        {costCenters.map(cc => (
+                                            <option key={cc.id} value={cc.id}>{cc.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 {salaryChanged && (
