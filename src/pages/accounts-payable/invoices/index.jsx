@@ -76,15 +76,18 @@ const IndexApInvoices = () => {
         },
         { title: 'Fecha', data: 'invoiceDate', name: 'invoiceDate' },
         {
+            // Muestra el total real a pagar (Subtotal + IVA - Retenciones), no el
+            // subtotal. El backend expone ambos: totalAmount=subtotal,
+            // totalPayment=neto a pagar. La columna del listado debe ser el neto.
             title: 'Total',
-            data: 'totalAmount',
-            name: 'totalAmount',
+            data: 'totalPayment',
+            name: 'totalPayment',
             render: (val) => formatCurrency(val),
         },
         {
             title: 'Saldo',
-            data: 'balance',
-            name: 'balance',
+            data: 'balanceDue',
+            name: 'balanceDue',
             render: (val) => formatCurrency(val),
         },
         {
@@ -197,8 +200,8 @@ const IndexApInvoices = () => {
                         <div class="text-start">
                             <p><strong>Proveedor:</strong> ${selected.thirdPartyName || '-'}</p>
                             <p><strong>Fecha:</strong> ${selected.invoiceDate || '-'}</p>
-                            <p><strong>Total:</strong> ${formatCurrency(selected.totalAmount)}</p>
-                            <p><strong>Saldo:</strong> ${formatCurrency(selected.balance)}</p>
+                            <p><strong>Total:</strong> ${formatCurrency(selected.totalPayment)}</p>
+                            <p><strong>Saldo:</strong> ${formatCurrency(selected.balanceDue)}</p>
                             <p><strong>Estado:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
                         </div>`,
