@@ -121,8 +121,11 @@ const LoteDetail = ({ modalRef, modalInstance, batch, onRetry }) => {
                                     </div>
                                 </div>
 
+                                {/* El bloque "payroll" del estandar AAEF fue retirado del alcance el
+                                    2026-04-16 (ver CLAUDE.md). Solo se muestran las tres tarjetas
+                                    vigentes: total documentos, facturas y transacciones. */}
                                 <div className="row g-3 mb-4">
-                                    <div className="col-md-3">
+                                    <div className="col-md-4">
                                         <div className="card bg-label-primary">
                                             <div className="card-body text-center">
                                                 <div className="small">Total documentos</div>
@@ -130,7 +133,7 @@ const LoteDetail = ({ modalRef, modalInstance, batch, onRetry }) => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="col-md-3">
+                                    <div className="col-md-4">
                                         <div className="card bg-label-info">
                                             <div className="card-body text-center">
                                                 <div className="small">Facturas</div>
@@ -138,19 +141,11 @@ const LoteDetail = ({ modalRef, modalInstance, batch, onRetry }) => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="col-md-3">
+                                    <div className="col-md-4">
                                         <div className="card bg-label-warning">
                                             <div className="card-body text-center">
                                                 <div className="small">Transacciones</div>
                                                 <h4 className="mb-0">{batch.totalTransactions || 0}</h4>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="col-md-3">
-                                        <div className="card bg-label-success">
-                                            <div className="card-body text-center">
-                                                <div className="small">Payroll</div>
-                                                <h4 className="mb-0">{batch.totalPayroll || 0}</h4>
                                             </div>
                                         </div>
                                     </div>
