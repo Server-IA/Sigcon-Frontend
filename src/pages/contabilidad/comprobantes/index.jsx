@@ -204,20 +204,35 @@ const IndexCgComprobantes = () => {
                     break;
                 }
                 case 'reverse': {
+                    // El backend exige 'description' obligatorio (@NotBlank en
+                    // ReverseEntryRequest). Pedimos el motivo al usuario con un input.
                     window.Swal.fire({
                         title: 'Reversar comprobante',
-                        html: `¿Esta seguro de reversar el comprobante <strong>#${row.entryNumber || row.id}</strong>? Se creara un comprobante de reversion.`,
-                        icon: 'warning',
+                        html: `<p>Reversar comprobante <strong>#${row.entryNumber || row.id}</strong>. Se creara un comprobante de reversion.</p>`,
+                        input: 'text',
+                        inputLabel: 'Motivo de la reversion (obligatorio)',
+                        inputPlaceholder: 'Ej: error en la cuenta contable seleccionada',
+                        inputAttributes: { maxlength: 500 },
+                        inputValidator: (value) => {
+                            if (!value || !value.trim()) {
+                                return 'El motivo es obligatorio.';
+                            }
+                            if (value.trim().length < 10) {
+                                return 'El motivo debe tener al menos 10 caracteres.';
+                            }
+                            return null;
+                        },
                         showCancelButton: true,
                         confirmButtonText: 'Si, reversar',
                         cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#d33',
+                        icon: 'warning',
                     }).then(async (result) => {
                         if (!result.isConfirmed) return;
                         try {
                             await fetchHelper.post(
                                 base_url(['api', 'v1', 'journal-entries', row.id, 'reverse']),
-                                {}, {}, 1000, true
+                                { description: result.value.trim() }, {}, 1000, true
                             );
                             dataTableRef?.current?.ajax?.reload?.();
                             setMessage({ type: 'success', show: true, message: 'Comprobante reversado exitosamente.' });

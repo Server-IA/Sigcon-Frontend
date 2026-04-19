@@ -227,12 +227,16 @@ const CreateComprobante = ({ modalRef, modalInstance, dataTableRef, setMessage }
                                                 </select>
                                             </td>
                                             <td>
+                                                {/* HU-CG-09C: una linea solo puede tener debito O credito, no ambos.
+                                                    Si ya hay credito > 0, el campo debito queda disabled para forzar
+                                                    al usuario a usar lineas separadas. Evita errores 400 del backend. */}
                                                 <input
                                                     type="number" min="0" step="0.01"
                                                     className="form-control form-control-sm text-end"
                                                     value={l.debitAmount}
                                                     onChange={e => setLine(idx, 'debitAmount', e.target.value)}
                                                     placeholder="0"
+                                                    disabled={Number(l.creditAmount) > 0}
                                                 />
                                             </td>
                                             <td>
@@ -242,6 +246,7 @@ const CreateComprobante = ({ modalRef, modalInstance, dataTableRef, setMessage }
                                                     value={l.creditAmount}
                                                     onChange={e => setLine(idx, 'creditAmount', e.target.value)}
                                                     placeholder="0"
+                                                    disabled={Number(l.debitAmount) > 0}
                                                 />
                                             </td>
                                             <td>

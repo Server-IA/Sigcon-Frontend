@@ -37,7 +37,7 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
     const loadBankAccounts = async () => {
         try {
             const { data, error } = await fetchHelper.post(
-                base_url(['api', 'bank-accounts']),
+                base_url(['api', 'v1', 'bank-accounts', 'search']),
                 { draw: 1, start: 0, length: -1, search: { value: '', regex: false }, columns: [], order: [] },
                 {},
                 0
