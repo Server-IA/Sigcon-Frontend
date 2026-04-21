@@ -7,6 +7,9 @@ export default function userReducer(state = initialState, action) {
     switch (action.type) {
         case "SET_USER":
             action.payload.isAdmin = action.payload.roles?.some(r => r === 'ADMIN' || r === 'SUPERADMIN') || false;
+            // Bloque F multi-tenant: PLATFORM_ADMIN es super-usuario cross-empresa.
+            // companyId / companyName / platformRole vienen del backend en /auth/login.
+            action.payload.isPlatformAdmin = action.payload.platformRole === 'PLATFORM_ADMIN';
             localStorage.setItem('user', JSON.stringify(action.payload));
             return {
                 ...state,

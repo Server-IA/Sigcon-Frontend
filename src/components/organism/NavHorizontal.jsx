@@ -76,6 +76,18 @@ const NavHorizontal = () => {
 
             <div className="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
 
+                {/* Bloque F: empresa activa visible en el header */}
+                {user?.isPlatformAdmin ? (
+                    <span className="badge bg-dark text-white px-3 py-2 me-3" title="Cuenta cross-empresa">
+                        <i className="ri-building-4-line me-2"></i>Plataforma
+                    </span>
+                ) : user?.companyName ? (
+                    <span className="badge bg-primary text-white px-3 py-2 me-3"
+                          title={`Empresa activa · ID ${user.companyId}`}>
+                        <i className="ri-building-line me-2"></i>{user.companyName}
+                    </span>
+                ) : null}
+
                 <ul className="navbar-nav flex-row align-items-center ms-auto">
                     
                     {/* <li className="nav-item dropdown-style-switcher dropdown me-1 me-xl-0">

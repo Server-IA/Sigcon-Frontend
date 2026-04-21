@@ -237,9 +237,21 @@ import IndexRetention from "../pages/auditoria/retencion/index";
 // Si el usuario no es admin, AdminRoute renderiza Page403 en lugar del componente.
 import AdminRoute from "../components/organism/AdminRoute";
 
+// Bloque F (multi-tenant): gatekeeper para rutas /platform/* (solo PLATFORM_ADMIN).
+import PlatformRoute from "../components/organism/PlatformRoute";
+
+// Plataforma (HU-PLAT-01/02/05/06)
+import IndexEmpresas from "../pages/platform/empresas/index";
+import PlatformDashboard from "../pages/platform/dashboard/index";
+
 /** Helper: envuelve un componente con AdminRoute para crear una pagina solo-admin. */
 const adminOnly = (Component) => () => (
     <AdminRoute><Component /></AdminRoute>
+);
+
+/** Helper: envuelve un componente con PlatformRoute (solo PLATFORM_ADMIN cross-empresa). */
+const platformOnly = (Component) => () => (
+    <PlatformRoute><Component /></PlatformRoute>
 );
 
 export const COMPONENT_MAP = [
@@ -330,4 +342,8 @@ export const COMPONENT_MAP = [
   { id: "AU_EXPORT", name: "Exportación Auditoría", component: adminOnly(IndexAuditExport) },
   { id: "AU_RISK_RULES", name: "Reglas de Riesgo", component: adminOnly(IndexRiskRules) },
   { id: "AU_RETENTION", name: "Retención y Purga", component: adminOnly(IndexRetention) },
+
+  // Bloque F - Plataforma (solo PLATFORM_ADMIN cross-empresa)
+  { id: "PLATFORM_EMPRESAS", name: "Empresas (plataforma)", component: platformOnly(IndexEmpresas) },
+  { id: "PLATFORM_DASHBOARD", name: "Dashboard (plataforma)", component: platformOnly(PlatformDashboard) },
 ];

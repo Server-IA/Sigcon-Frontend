@@ -56,7 +56,15 @@ const LoginPage = () => {
       const userResponse = await fetchHelper.get(userUrl, {}, 1000); 
       console.log('User response:', userResponse);
       if(userResponse.data){
-        dispatch({ type: "SET_USER", payload: userResponse.data });
+        // Bloque F: el endpoint /auth/login devuelve companyId/companyName/platformRole
+        // que se mergea con el resto de info del usuario para alimentar Redux + header.
+        const enriched = {
+          ...userResponse.data,
+          companyId: responseData.companyId ?? null,
+          companyName: responseData.companyName ?? null,
+          platformRole: responseData.platformRole ?? null,
+        };
+        dispatch({ type: "SET_USER", payload: enriched });
       }
       //Redirigir al DashBoard 
       window.location.href = base_redirect_path(false);

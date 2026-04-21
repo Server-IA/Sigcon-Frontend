@@ -38,18 +38,51 @@ const Home = () => {
         }
     };
 
+    // Titulo principal del dashboard:
+    //  - PLATFORM_ADMIN: muestra "SIGCON" con inicial "S" (marca del sistema)
+    //  - Usuario tenant: muestra el nombre de la empresa con su inicial
+    const isPlatformAdmin = user?.isPlatformAdmin === true;
+    const companyName = user?.companyName || '';
+    const brandTitle = isPlatformAdmin ? 'SIGCON' : (companyName || 'SIGCON');
+    const brandInitial = (brandTitle.trim()[0] || 'S').toUpperCase();
+    const brandSubtitle = isPlatformAdmin
+        ? 'Administración de la plataforma'
+        : (companyName ? 'SIGCON · Sistema de Gestión Contable' : '');
+
     return (
-        <div className="d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '80vh' }}>
-            <div className="text-center mb-5">
-                <div className="mb-3">
+        <div className="d-flex flex-column align-items-center w-100" style={{ paddingTop: '1.5rem' }}>
+            <div className="text-center mb-5 w-100" style={{ maxWidth: '600px' }}>
+                <div className="mb-3 d-flex justify-content-center">
                     <div
-                        className="d-inline-flex align-items-center justify-content-center rounded-circle"
-                        style={{ width: '70px', height: '70px', backgroundColor: 'var(--bs-primary)', color: '#fff', fontSize: '1.8rem', fontWeight: 'bold' }}
+                        className="rounded-circle flex-shrink-0"
+                        style={{
+                            width: '90px',
+                            height: '90px',
+                            minWidth: '90px',
+                            minHeight: '90px',
+                            backgroundColor: 'var(--bs-primary)',
+                            color: '#fff',
+                            fontSize: '2.6rem',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'visible',
+                        }}
                     >
-                        S
+                        <span style={{ lineHeight: 1, display: 'inline-block' }}>{brandInitial}</span>
                     </div>
                 </div>
-                <h2 className="fw-bold mb-1">SIGCON</h2>
+                <h2
+                    className="fw-bold mb-1"
+                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                    title={brandTitle}
+                >
+                    {brandTitle}
+                </h2>
+                {brandSubtitle && (
+                    <p className="text-muted small mb-2">{brandSubtitle}</p>
+                )}
                 <h5 className="fw-normal text-muted">
                     Bienvenido, {user?.name ?? ''} {user?.last_name ?? ''}
                 </h5>
@@ -62,43 +95,56 @@ const Home = () => {
                     <p className="mt-3 text-muted">No tiene modulos asignados</p>
                 </div>
             ) : (
-                <div className="row g-4 justify-content-center" style={{ maxWidth: '900px' }}>
+                // Grid responsivo con ancho minimo fijo por tarjeta para evitar
+                // que un solo modulo (p.ej. PLATFORM_ADMIN) quede con texto partido.
+                // Cada tarjeta reserva 220px y el contenedor se adapta con flex-wrap.
+                <div className="d-flex flex-wrap justify-content-center gap-4" style={{ maxWidth: '1000px' }}>
                     {modules.map((mod) => (
-                        <div className="col-6 col-md-4" key={mod.id}>
-                            <div
-                                className="card h-100 shadow-sm border-0"
-                                style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
-                                onClick={() => handleModuleClick(mod)}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-5px)';
-                                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '';
-                                }}
-                            >
-                                <div className="card-body text-center py-4">
-                                    <div
-                                        className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                                        style={{
-                                            width: '56px',
-                                            height: '56px',
-                                            backgroundColor: '#e8f0fe',
-                                            color: '#1a73e8'
-                                        }}
-                                    >
-                                        <i className={mod.icon || 'ri-grid-line'} style={{ fontSize: '1.4rem' }}></i>
-                                    </div>
-                                    <h6 className="card-title fw-semibold mb-1" style={{ fontSize: '0.95rem' }}>
-                                        {mod.name}
-                                    </h6>
-                                    {mod.description && (
-                                        <p className="card-text text-muted mb-0" style={{ fontSize: '0.78rem' }}>
-                                            {mod.description}
-                                        </p>
-                                    )}
+                        <div
+                            key={mod.id}
+                            className="card shadow-sm border-0"
+                            style={{
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                width: '220px',
+                                minHeight: '200px',
+                            }}
+                            onClick={() => handleModuleClick(mod)}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-5px)';
+                                e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '';
+                            }}
+                        >
+                            <div className="card-body text-center py-4 px-3 d-flex flex-column align-items-center">
+                                <div
+                                    className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                                    style={{
+                                        width: '56px',
+                                        height: '56px',
+                                        backgroundColor: '#e8f0fe',
+                                        color: '#1a73e8',
+                                    }}
+                                >
+                                    <i className={mod.icon || 'ri-grid-line'} style={{ fontSize: '1.4rem' }}></i>
                                 </div>
+                                <h6
+                                    className="card-title fw-semibold mb-2"
+                                    style={{ fontSize: '0.95rem', wordBreak: 'normal', overflowWrap: 'break-word' }}
+                                >
+                                    {mod.name}
+                                </h6>
+                                {mod.description && (
+                                    <p
+                                        className="card-text text-muted mb-0 text-center"
+                                        style={{ fontSize: '0.78rem', lineHeight: 1.3 }}
+                                    >
+                                        {mod.description}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     ))}
