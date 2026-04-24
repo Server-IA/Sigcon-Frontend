@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
@@ -35,6 +36,8 @@ const IndexDianResolutions = () => {
     const modalCreateInstance = useRef(null);
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -134,6 +137,14 @@ const IndexDianResolutions = () => {
 
     const buttons = [
         {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
+        {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Resolucion</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: () => openCreate(),
@@ -215,6 +226,22 @@ const IndexDianResolutions = () => {
                 record={selected}
                 setMessage={setMessage}
                 reloadAlerts={loadAlerts}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Resoluciones DIAN"
+                columns={[
+                    { column: 'resolutionNumber:name', label: '# Resolucion' },
+                    { column: 'prefix:name', label: 'Prefijo' },
+                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                        { id: 'ACTIVE', label: 'Vigente' },
+                        { id: 'EXPIRED', label: 'Vencida' },
+                        { id: 'EXHAUSTED', label: 'Agotada' },
+                    ]},
+                ]}
             />
         </>
     );

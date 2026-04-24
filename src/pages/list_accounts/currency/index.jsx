@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import DataTableReference from "../../../components/organism/DataTable";
+import GenericFilterModal from "../../../components/organism/GenericFilterModal";
 import AlertPage from "../../../components/molecules/AlertPage";
 import { base_url } from "../../../utils/functions";
 import { useSelector } from "react-redux";
@@ -33,6 +34,8 @@ const CurrencyIndex = () => {
     const modalCreateInstance = useRef(null);
     const modalEditRef = useRef(null);
     const modalEditInstance = useRef(null);
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
     
     const openModalCreate = () => {
         if (!modalCreateInstance.current) {
@@ -53,6 +56,14 @@ const CurrencyIndex = () => {
 
     // Datos DataTable
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
             ...(userPermissions.some(p => p.code === 'CREATE_CURRENCY_TYPE' && p.type === 'CREATE') || isAdmin ?  [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear tipo de moneda</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
@@ -70,9 +81,9 @@ const CurrencyIndex = () => {
         ] : [])
     ];
     const columns = [
-        {title: 'Código', data: 'isoCode'},
-        {title: 'Nombre', data: 'name'},
-        {title: 'Estado', data: 'status', render: (status) => status === 'ACTIVE'
+        {title: 'Código', data: 'isoCode', name: 'isoCode'},
+        {title: 'Nombre', data: 'name', name: 'name'},
+        {title: 'Estado', data: 'status', name: 'status', render: (status) => status === 'ACTIVE'
             ? `<span class="badge bg-label-success">Activa</span>`
             : `<span class="badge bg-label-danger">Inactiva</span>`
         },
@@ -198,6 +209,21 @@ const CurrencyIndex = () => {
                         currency={currency}
                         setCurrency={setCurrency}
                         setMessage={setMessage}
+                    />
+
+                    <GenericFilterModal
+                        filterRef={filterRef}
+                        filterInstance={filterInstance}
+                        dataTableRef={dataTableRef}
+                        title="Filtrar Tipos de Moneda"
+                        columns={[
+                            { column: 'isoCode:name', label: 'Código ISO' },
+                            { column: 'name:name',    label: 'Nombre' },
+                            { column: 'status:name',  label: 'Estado', type: 'select', options: [
+                                { id: 'ACTIVE',   label: 'Activa' },
+                                { id: 'INACTIVE', label: 'Inactiva' },
+                            ]},
+                        ]}
                     />
         </>
     )

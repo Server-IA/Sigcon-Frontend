@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import DataTableReference from '../../../components/organism/DataTable';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 import AlertPage from '../../../components/molecules/AlertPage';
@@ -53,6 +54,8 @@ const IndexCgComprobantes = () => {
     const modalCreateInstance = useRef(null);
     const modalUpdateRef      = useRef(null);
     const modalUpdateInstance = useRef(null);
+    const filterRef           = useRef(null);
+    const filterInstance      = useRef(null);
 
     const [data, setData]     = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -165,6 +168,14 @@ const IndexCgComprobantes = () => {
 
     /** Botones de cabecera del DataTable. */
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            },
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Nuevo Comprobante</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -440,6 +451,32 @@ const IndexCgComprobantes = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 entryId={editEntryId}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Comprobantes Contables"
+                columns={[
+                    { column: 'entryNumber:name',  label: '# Comprobante', type: 'number' },
+                    { column: 'entryDate:name',    label: 'Fecha',         type: 'date' },
+                    { column: 'description:name',  label: 'Descripción' },
+                    { column: 'sourceModule:name', label: 'Módulo Origen', type: 'select', options: [
+                        { id: 'AP',     label: 'Cuentas por Pagar' },
+                        { id: 'AR',     label: 'Cuentas por Cobrar' },
+                        { id: 'BNK',    label: 'Bancos y Cajas' },
+                        { id: 'ACT',    label: 'Activos' },
+                        { id: 'NOM',    label: 'Nómina' },
+                        { id: 'CG',     label: 'Contabilidad General' },
+                        { id: 'MANUAL', label: 'Manual' },
+                    ]},
+                    { column: 'status:name',       label: 'Estado', type: 'select', options: [
+                        { id: 'DRAFT',    label: 'Borrador' },
+                        { id: 'POSTED',   label: 'Contabilizado' },
+                        { id: 'REVERSED', label: 'Reversado' },
+                    ]},
+                ]}
             />
         </>
     );

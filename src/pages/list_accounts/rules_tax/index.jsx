@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import AlertPage from "../../../components/molecules/AlertPage";
 import DataTableReference from "../../../components/organism/DataTable";
+import GenericFilterModal from "../../../components/organism/GenericFilterModal";
 
 import CreateRulesTax from "./create";
 import UpdateRulesTax from "./update";
@@ -47,6 +48,9 @@ const RulesTaxIndex = () => {
 
     const modalAssignAccountRef = useRef(null);
     const modalAssignAccountInstance = useRef(null);
+
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const typeRulerTaxOptions = [
         { value: 'TAX', label: 'Impuesto' },
@@ -125,10 +129,12 @@ const RulesTaxIndex = () => {
         {
             title: 'Nombre',
             data: 'name',
+            name: 'name',
         },
         {
             title: 'Tarifa',
             data: 'percentage',
+            name: 'percentage',
             render: (percentage) => {
                 return `<span>${percentage != null ? `${Number(percentage).toFixed(2)}%` : '-'}</span>`
             }
@@ -136,18 +142,20 @@ const RulesTaxIndex = () => {
         {
             title: 'Descripción',
             data: 'description',
+            name: 'description',
         },
         {
             title: 'Tipo de regla',
             data: 'typeRulerTax',
-            searchable: false,
+            name: 'typeRulerTax',
             render: (row) => {
                 return `<span>${typeRulerTaxOptions.find(t => t.value === row)?.label}</span>`
-            }   
+            }
         },
         {
             title: 'Alcance',
             data: 'scope',
+            name: 'scope',
         },
         {
             title: 'Fecha de inicio',
@@ -162,7 +170,7 @@ const RulesTaxIndex = () => {
         {
             title: 'Estado',
             data: 'statusRulerTax',
-            searchable: false,
+            name: 'statusRulerTax',
             render: (status) => {
                 return `<span class="badge bg-label-${status === 'ACTIVE' ? 'success' : 'danger'}">${status === 'ACTIVE' ? 'Activo' : 'Inactivo'}</span>`
             }
@@ -193,6 +201,14 @@ const RulesTaxIndex = () => {
     ]); // Info para los botones del datatable
 
     const [buttons, setButtons] = useState([
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
         ...(userPermissions.some(p => p.code === 'CREATE_RULER_TAX' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear regla de impuesto</span>    ',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
@@ -352,6 +368,20 @@ const RulesTaxIndex = () => {
                     dataTableRef={dataTableRef}
                     setRulesTaxMessage={setRulesTaxMessage}
                 />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Reglas Tributarias"
+                columns={[
+                    { column: 'name:name',           label: 'Nombre' },
+                    { column: 'percentage:name',     label: 'Tarifa (%)', type: 'number' },
+                    { column: 'scope:name',          label: 'Alcance' },
+                    { column: 'typeRulerTax:name',   label: 'Tipo', type: 'select', options: typeRulerTaxOptions.map(o => ({ id: o.value, label: o.label })) },
+                    { column: 'statusRulerTax:name', label: 'Estado', type: 'select', options: statusRulerTaxOptions.map(o => ({ id: o.value, label: o.label })) },
+                ]}
+            />
         </div>
 
     )

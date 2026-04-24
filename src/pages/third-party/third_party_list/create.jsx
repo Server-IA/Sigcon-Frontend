@@ -21,12 +21,14 @@ const STATUS_LABEL_MAP = { ACTIVE: 'Activo', BLOCKED: 'Bloqueado', INACTIVE: 'In
 const ROLE_LABEL_MAP   = { CLIENT: 'Cliente', SUPPLIER: 'Proveedor', EMPLOYEE: 'Empleado', CREDITOR: 'Acreedor', DEBTOR: 'Deudor', OTHER: 'Otro' };
 const ROLE_ICON_MAP    = { CLIENT: 'ri-user-line', SUPPLIER: 'ri-store-line', EMPLOYEE: 'ri-briefcase-line', CREDITOR: 'ri-bank-line', DEBTOR: 'ri-money-dollar-circle-line', OTHER: 'ri-more-line' };
 
+// La pestaña "Comercial" se eliminó del flujo de creación de tercero porque duplicaba
+// la funcionalidad del submódulo Terceros → Datos Comerciales, que ya gestiona
+// (con vigencia temporal e historial) los datos comerciales por tercero.
 const TABS = [
     { id: 'general',    label: 'Datos Generales', icon: 'ri-user-3-line' },
     { id: 'roles',      label: 'Roles',           icon: 'ri-shield-user-line' },
     { id: 'fiscal',     label: 'Datos Fiscales',  icon: 'ri-file-text-line' },
     { id: 'contact',    label: 'Contacto',        icon: 'ri-phone-line' },
-    { id: 'commercial', label: 'Comercial',       icon: 'ri-store-2-line' },
 ];
 
 const emptyContact = { position: '', phone: '', email: '', contactPerson: '' };
@@ -166,9 +168,10 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                     : (typeof thirdParty.withholdingIds === 'string' && thirdParty.withholdingIds
                         ? thirdParty.withholdingIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0)
                         : []),
-                creditLimit:        thirdParty.creditLimit ? Number(thirdParty.creditLimit) : null,
-                paymentTerms:       thirdParty.paymentConditions,
-                marketSegment:      thirdParty.marketSegment,
+                // Datos comerciales se registran aparte en el submodulo Datos Comerciales.
+                creditLimit:        null,
+                paymentTerms:       null,
+                marketSegment:      null,
                 contacts:           thirdParty.contacts ?? [],
                 ...(thirdParty.status === 'BLOCKED' && {
                     blockingReason: thirdParty.blockReason,
@@ -495,49 +498,9 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                             </div>
                         )}
 
-                        {/* ── Tab: Comercial ── */}
-                        {activeTab === 'commercial' && (
-                            <div>
-                                <p className="text-muted mb-3">Información comercial (opcional).</p>
-                                <div className="row">
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal
-                                            type="number"
-                                            id="tp_creditLimit_create"
-                                            label="Límite de crédito"
-                                            value={thirdParty.creditLimit}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, creditLimit: e.target.value })}
-                                            error={errors.creditLimit}
-                                            placeholder="Ej. 5000000"
-                                        />
-                                    </div>
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <InputModal
-                                            type="text"
-                                            id="tp_marketSegment_create"
-                                            label="Segmento de mercado"
-                                            value={thirdParty.marketSegment}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, marketSegment: e.target.value })}
-                                            error={errors.marketSegment}
-                                            placeholder="Ej. Corporativo"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="row">
-                                    <div className="col-md-6 mb-4 mt-2">
-                                        <InputSelectModal
-                                            id="tp_paymentConditions_create"
-                                            label="Condiciones de pago"
-                                            value={thirdParty.paymentConditions}
-                                            onChange={(v) => setThirdParty({ ...thirdParty, paymentConditions: v })}
-                                            error={errors.paymentConditions}
-                                            options={paymentTermsOpts}
-                                            placeholder="Seleccione condición de pago"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {/* Tab "Comercial" eliminado: los datos comerciales (credito, termino,
+                            segmento) se gestionan en Terceros -> Datos Comerciales para evitar
+                            duplicidad y aprovechar la vigencia temporal + historial de esa vista. */}
 
                     </div>{/* /modal-body */}
 

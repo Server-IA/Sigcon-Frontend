@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
@@ -49,6 +50,8 @@ const IndexSalesInvoices = () => {
     const modalCreateInstance = useRef(null);
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -190,6 +193,14 @@ const IndexSalesInvoices = () => {
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Factura</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -342,6 +353,27 @@ const IndexSalesInvoices = () => {
                 dataTableRef={dataTableRef}
                 record={selectedRecord}
                 setMessage={setMessage}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Facturas de Venta"
+                columns={[
+                    { column: 'invoiceNumber:name', label: '# Factura' },
+                    { column: 'thirdPartyName:name', label: 'Cliente' },
+                    { column: 'invoiceDate:name', label: 'Fecha', type: 'date' },
+                    { column: 'dueDate:name', label: 'Vence', type: 'date' },
+                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                        { id: 'DRAFT', label: 'Borrador' },
+                        { id: 'ISSUED', label: 'Emitida' },
+                        { id: 'PARTIALLY_PAID', label: 'Pago Parcial' },
+                        { id: 'PAID', label: 'Pagada' },
+                        { id: 'VOIDED', label: 'Anulada' },
+                        { id: 'SETTLED', label: 'Liquidada' },
+                    ]},
+                ]}
             />
         </>
     );

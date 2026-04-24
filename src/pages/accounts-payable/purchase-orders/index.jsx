@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
@@ -45,6 +46,8 @@ const IndexApPurchaseOrders = () => {
     const dataTableRef = useRef(null);
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -124,6 +127,14 @@ const IndexApPurchaseOrders = () => {
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Nueva Orden</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -317,6 +328,27 @@ const IndexApPurchaseOrders = () => {
                 modalInstance={modalCreateInstance}
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Ordenes de Compra"
+                columns={[
+                    { column: 'orderNumber:name', label: '# Orden' },
+                    { column: 'thirdPartyName:name', label: 'Proveedor' },
+                    { column: 'orderDate:name', label: 'Fecha', type: 'date' },
+                    { column: 'totalAmount:name', label: 'Total', type: 'number' },
+                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                        { id: 'DRAFT', label: 'Borrador' },
+                        { id: 'PENDING', label: 'Pendiente' },
+                        { id: 'APPROVED', label: 'Aprobada' },
+                        { id: 'REJECTED', label: 'Rechazada' },
+                        { id: 'RECEIVED', label: 'Recibida' },
+                        { id: 'CANCELLED', label: 'Cancelada' },
+                    ]},
+                ]}
             />
         </>
     );

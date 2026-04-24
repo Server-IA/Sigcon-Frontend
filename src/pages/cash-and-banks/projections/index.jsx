@@ -3,6 +3,7 @@ import DataTableReference from '../../../components/organism/DataTable';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 import CreateProjection from './create';
 import UpdatedProjection from './updated';
 
@@ -74,6 +75,8 @@ const IndexProjections = () => {
     const modalCreateInstance = useRef(null);
     const modalUpdateRef      = useRef(null);
     const modalUpdateInstance = useRef(null);
+    const filterRef           = useRef(null);
+    const filterInstance      = useRef(null);
 
     const [data, setData]                   = useState([]);
     const [projection, setProjection]       = useState({ ...emptyProjection });
@@ -137,6 +140,14 @@ const IndexProjections = () => {
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Crear Proyeccion</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -252,6 +263,37 @@ const IndexProjections = () => {
                 setProjection={setProjection}
                 dataTableRef={dataTableRef}
                 setItemEdit={setItemEdit}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Proyecciones"
+                columns={[
+                    { column: 'name:name', label: 'Nombre' },
+                    { column: 'projectionType:name', label: 'Tipo', type: 'select', options: [
+                        { id: 'INGRESOS', label: 'Ingresos' },
+                        { id: 'EGRESOS', label: 'Egresos' },
+                        { id: 'NETA', label: 'Neta' },
+                    ]},
+                    { column: 'periodicity:name', label: 'Periodicidad', type: 'select', options: [
+                        { id: 'DIARIA', label: 'Diaria' },
+                        { id: 'SEMANAL', label: 'Semanal' },
+                        { id: 'QUINCENAL', label: 'Quincenal' },
+                        { id: 'MENSUAL', label: 'Mensual' },
+                        { id: 'BIMESTRAL', label: 'Bimestral' },
+                        { id: 'TRIMESTRAL', label: 'Trimestral' },
+                        { id: 'SEMESTRAL', label: 'Semestral' },
+                        { id: 'ANUAL', label: 'Anual' },
+                    ]},
+                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                        { id: 'BORRADOR', label: 'Borrador' },
+                        { id: 'APROBADA', label: 'Aprobada' },
+                        { id: 'EJECUTADA', label: 'Ejecutada' },
+                        { id: 'INACTIVA', label: 'Inactiva' },
+                    ]},
+                ]}
             />
         </>
     );

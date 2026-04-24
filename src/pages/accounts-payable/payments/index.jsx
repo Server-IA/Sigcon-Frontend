@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
@@ -41,6 +42,8 @@ const IndexApPayments = () => {
     const dataTableRef = useRef(null);
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -111,6 +114,14 @@ const IndexApPayments = () => {
 
     /** Botones de cabecera. */
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Pago</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -193,6 +204,24 @@ const IndexApPayments = () => {
                 modalInstance={modalCreateInstance}
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Pagos y Abonos"
+                columns={[
+                    { column: 'invoiceId:name', label: 'Factura', type: 'number' },
+                    { column: 'amount:name', label: 'Monto', type: 'number' },
+                    { column: 'paymentDate:name', label: 'Fecha Pago', type: 'date' },
+                    { column: 'paymentReference:name', label: 'Referencia' },
+                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                        { id: 'APPLIED', label: 'Aplicado' },
+                        { id: 'PENDING', label: 'Pendiente' },
+                        { id: 'REVERSED', label: 'Reversado' },
+                    ]},
+                ]}
             />
         </>
     );

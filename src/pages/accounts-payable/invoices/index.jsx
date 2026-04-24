@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
@@ -49,6 +50,8 @@ const IndexApInvoices = () => {
     const modalCreateInstance = useRef(null);
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -169,6 +172,14 @@ const IndexApInvoices = () => {
     /** Botones de cabecera del DataTable. */
     const buttons = [
         {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
+        {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Factura</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: () => openModalCreate(),
@@ -288,6 +299,26 @@ const IndexApInvoices = () => {
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
                 selected={selectedInvoice}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Facturas de Compra"
+                columns={[
+                    { column: 'supplierInvoiceNumber:name', label: '# Factura Proveedor' },
+                    { column: 'thirdPartyName:name', label: 'Proveedor' },
+                    { column: 'invoiceDate:name', label: 'Fecha', type: 'date' },
+                    { column: 'totalPayment:name', label: 'Total', type: 'number' },
+                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                        { id: 'PENDING', label: 'Pendiente' },
+                        { id: 'PAID', label: 'Pagada' },
+                        { id: 'PARTIALLY_PAID', label: 'Pago Parcial' },
+                        { id: 'OVERDUE', label: 'Vencida' },
+                        { id: 'CANCELLED', label: 'Anulada' },
+                    ]},
+                ]}
             />
         </>
     );

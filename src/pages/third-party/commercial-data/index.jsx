@@ -18,6 +18,17 @@ const CATALOG_BODY = { draw: 1, start: 0, length: 10000, columns: [], search: { 
 
 const RISK_LABELS = { LOW: 'Bajo', MEDIUM: 'Medio', HIGH: 'Alto' };
 
+// Traduccion de los nombres de campo que envia el backend
+// (corresponden a los atributos de CommercialData auditados en trackChanges).
+const FIELD_LABELS = {
+    paymentTermId: 'Término de Pago',
+    limitCredit:   'Límite de Crédito',
+    riskLevel:     'Nivel de Riesgo',
+    currencyId:    'Moneda',
+    validityFrom:  'Vigencia Desde',
+    validityTo:    'Vigencia Hasta',
+};
+
 /**
  * Pagina principal de Datos Comerciales de Terceros.
  * Permite seleccionar un tercero y ver/crear/editar/eliminar sus datos comerciales.
@@ -232,6 +243,27 @@ const IndexCommercialData = () => {
         return found ? found.label : (id ?? '-');
     };
 
+    /**
+     * Formatea un valor del historial segun el campo: resuelve IDs a labels
+     * (paymentTermId -> nombre; currencyId -> codigo ISO; riskLevel -> label en espanol)
+     * y aplica formato numerico a limitCredit.
+     */
+    const formatHistoryValue = (fieldName, value) => {
+        if (value === null || value === undefined || value === '') return '-';
+        switch (fieldName) {
+            case 'limitCredit':
+                return Number(value).toLocaleString('es-CO', { minimumFractionDigits: 2 });
+            case 'paymentTermId':
+                return getPaymentTermLabel(value);
+            case 'currencyId':
+                return getCurrencyLabel(value);
+            case 'riskLevel':
+                return RISK_LABELS[value] ?? value;
+            default:
+                return String(value);
+        }
+    };
+
     return (
         <>
             <div className="card">
@@ -385,30 +417,27 @@ const IndexCommercialData = () => {
                                         <thead>
                                             <tr>
                                                 <th>Fecha</th>
-                                                <th>Termino de Pago</th>
-                                                <th>Limite Credito</th>
-                                                <th>Nivel Riesgo</th>
-                                                <th>Moneda</th>
-                                                <th>Vigencia Desde</th>
-                                                <th>Vigencia Hasta</th>
+                                                <th>Campo Modificado</th>
+                                                <th>Valor Anterior</th>
+                                                <th>Valor Nuevo</th>
+                                                <th>Usuario</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {historyData.map((entry, idx) => (
-                                                <tr key={idx}>
-                                                    <td>{entry.createdAt ?? entry.changedAt ?? '-'}</td>
-                                                    <td>{getPaymentTermLabel(entry.paymentTermId)}</td>
-                                                    <td>
-                                                        {entry.limitCredit != null
-                                                            ? Number(entry.limitCredit).toLocaleString('es-CO', { minimumFractionDigits: 2 })
-                                                            : '-'}
-                                                    </td>
-                                                    <td>{RISK_LABELS[entry.riskLevel] ?? entry.riskLevel ?? '-'}</td>
-                                                    <td>{getCurrencyLabel(entry.currencyId)}</td>
-                                                    <td>{entry.validityFrom ?? '-'}</td>
-                                                    <td>{entry.validityTo ?? '-'}</td>
-                                                </tr>
-                                            ))}
+                                            {historyData.map((entry, idx) => {
+                                                // Fecha: soporta backend que envia changedAt (actual) o createdAt (legacy)
+                                                const fecha = entry.changedAt ?? entry.createdAt ?? '-';
+                                                const fechaFmt = fecha !== '-' ? new Date(fecha).toLocaleString('es-CO') : '-';
+                                                return (
+                                                    <tr key={entry.id ?? idx}>
+                                                        <td>{fechaFmt}</td>
+                                                        <td>{FIELD_LABELS[entry.fieldName] ?? entry.fieldName ?? '-'}</td>
+                                                        <td>{formatHistoryValue(entry.fieldName, entry.oldValue)}</td>
+                                                        <td>{formatHistoryValue(entry.fieldName, entry.newValue)}</td>
+                                                        <td>{entry.changedBy ?? '-'}</td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

@@ -3,6 +3,7 @@ import DataTableReference from '../../../components/organism/DataTable';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 import CreateFinancialMovement from './create';
 
 /**
@@ -40,6 +41,8 @@ const IndexFinancialMovements = () => {
     const dataTableRef        = useRef(null);
     const modalCreateRef      = useRef(null);
     const modalCreateInstance = useRef(null);
+    const filterRef           = useRef(null);
+    const filterInstance      = useRef(null);
 
     const [data, setData]             = useState([]);
     const [search, setSearch]         = useState({ value: '', checked: true });
@@ -91,6 +94,14 @@ const IndexFinancialMovements = () => {
 
     const buttons = [
         {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
+        {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Nuevo Movimiento</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: () => openModalCreate(),
@@ -128,6 +139,21 @@ const IndexFinancialMovements = () => {
                 modalInstance={modalCreateInstance}
                 dataTableRef={dataTableRef}
                 setItemCreate={setItemCreate}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Movimientos Financieros"
+                columns={[
+                    { column: 'description:name', label: 'Descripcion' },
+                    { column: 'sourceType:name', label: 'Tipo', type: 'select', options: [
+                        { id: 'MANUAL', label: 'Manual' },
+                        { id: 'BANK_IMPORT', label: 'Importacion' },
+                        { id: 'SYSTEM', label: 'Sistema' },
+                    ]},
+                ]}
             />
         </>
     );

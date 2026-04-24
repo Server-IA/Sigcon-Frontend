@@ -31,12 +31,14 @@ const RISK_LEVELS = [
     { id: 'HIGH',   label: 'Alto' },
 ];
 
+// Pestaña "Comercial" eliminada para consistencia con el flujo de creacion.
+// Los datos comerciales se gestionan en Terceros -> Datos Comerciales (con vigencia
+// temporal e historial). Evita doble punto de entrada para los mismos campos.
 const TABS = [
     { id: 'general',    label: 'Datos Generales', icon: 'ri-user-3-line' },
     { id: 'roles',      label: 'Roles',           icon: 'ri-shield-user-line' },
     { id: 'fiscal',     label: 'Datos Fiscales',  icon: 'ri-file-text-line' },
     { id: 'contact',    label: 'Contacto',        icon: 'ri-phone-line' },
-    { id: 'commercial', label: 'Comercial',       icon: 'ri-store-2-line' },
 ];
 
 const emptyContact = { position: '', phone: '', email: '', contactPerson: '' };
@@ -242,26 +244,10 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             };
             await fetchHelper.put(urlRolesStatus, rolesStatusPayload, {}, 1000);
 
-            // ── 3. Guardar datos comerciales (POST si no existe, PUT si existe) ──
-            // Se maneja en bloque separado para no bloquear el éxito del update principal
-            const hasCommercialData = commercial.paymentTermId || commercial.limitCredit || commercial.riskLevel;
-            if (hasCommercialData) {
-                try {
-                    const commercialPayload = {
-                        thirdPartyId:  Number(thirdPartyUpdated.id),
-                        paymentTermId: commercial.paymentTermId ? Number(commercial.paymentTermId) : null,
-                        limitCredit:   commercial.limitCredit   ? Number(commercial.limitCredit)   : null,
-                        riskLevel:     commercial.riskLevel     || null,
-                    };
-                    if (commercialId) {
-                        await fetchHelper.put(base_url(API_COMMERCIAL_PUT(commercialId)), commercialPayload, {}, 1000);
-                    } else {
-                        await fetchHelper.post(base_url(API_COMMERCIAL_POST), commercialPayload, {}, 1000);
-                    }
-                } catch (commercialError) {
-                    console.warn('Advertencia: error al guardar datos comerciales:', commercialError);
-                }
-            }
+            // Los datos comerciales (creditLimit, paymentTerm, riskLevel) ya NO se
+            // guardan desde este modal — se gestionan en el submodulo dedicado
+            // Terceros -> Datos Comerciales, que ademas mantiene vigencia temporal
+            // e historial de cambios.
 
             setThirdParty({
                 id: '', nit: '', dv: '', businessName: '',
@@ -564,59 +550,8 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                             </div>
                         )}
 
-                        {/* ── Tab: Comercial ── */}
-                        {activeTab === 'commercial' && (
-                            <div>
-                                {commercialLoading ? (
-                                    <div className="text-center py-4">
-                                        <div className="spinner-border text-primary" role="status" />
-                                    </div>
-                                ) : (
-                                    <>
-                                        <p className="text-muted mb-3">
-                                            {commercialId
-                                                ? 'Datos comerciales existentes. Los cambios se aplicarán al guardar.'
-                                                : 'No hay datos comerciales registrados aún. Se crearán al guardar.'}
-                                        </p>
-                                        <div className="row">
-                                            <div className="col-md-6 mb-4 mt-2">
-                                                <InputSelectModal
-                                                    id="tp_paymentTermId_update"
-                                                    label="Condición de pago"
-                                                    value={commercial.paymentTermId}
-                                                    onChange={(v) => !readOnly && setCommercial({ ...commercial, paymentTermId: v })}
-                                                    options={paymentTermsOpts}
-                                                    placeholder="Seleccione condición de pago"
-                                                    disabled={readOnly}
-                                                />
-                                            </div>
-                                            <div className="col-md-3 mb-4 mt-2">
-                                                <InputModal
-                                                    type="number"
-                                                    id="tp_limitCredit_update"
-                                                    label="Límite de crédito"
-                                                    value={commercial.limitCredit}
-                                                    onChange={(e) => !readOnly && setCommercial({ ...commercial, limitCredit: e.target.value })}
-                                                    placeholder="Ej. 5000000"
-                                                    disabled={readOnly} readOnly={readOnly}
-                                                />
-                                            </div>
-                                            <div className="col-md-3 mb-4 mt-2">
-                                                <InputSelectModal
-                                                    id="tp_riskLevel_update"
-                                                    label="Nivel de riesgo"
-                                                    value={commercial.riskLevel}
-                                                    onChange={(v) => !readOnly && setCommercial({ ...commercial, riskLevel: v })}
-                                                    options={RISK_LEVELS}
-                                                    placeholder="Seleccione nivel"
-                                                    disabled={readOnly}
-                                                />
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )}
+                        {/* Tab "Comercial" eliminado para consistencia con create.jsx.
+                            Gestionar desde Terceros -> Datos Comerciales. */}
 
                     </div>{/* /modal-body */}
 

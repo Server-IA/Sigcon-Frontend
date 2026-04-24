@@ -3,6 +3,7 @@ import DataTableReference from '../../../components/organism/DataTable';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 import CreateCashAudit from './create';
 
 /**
@@ -40,6 +41,8 @@ const IndexCashAudits = () => {
     const dataTableRef        = useRef(null);
     const modalCreateRef      = useRef(null);
     const modalCreateInstance = useRef(null);
+    const filterRef           = useRef(null);
+    const filterInstance      = useRef(null);
 
     const [data, setData]               = useState([]);
     const [search, setSearch]           = useState({ value: '', checked: true });
@@ -111,6 +114,14 @@ const IndexCashAudits = () => {
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Nuevo Arqueo</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -219,6 +230,23 @@ const IndexCashAudits = () => {
                 modalInstance={modalCreateInstance}
                 dataTableRef={dataTableRef}
                 setItemCreate={setItemCreate}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Arqueos de Caja"
+                columns={[
+                    { column: 'cash.cashName:name', label: 'Caja' },
+                    { column: 'auditDate:name', label: 'Fecha', type: 'date' },
+                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                        { id: 'ABIERTO', label: 'Abierto' },
+                        { id: 'EN_REVISION', label: 'En Revision' },
+                        { id: 'APROBADO', label: 'Aprobado' },
+                        { id: 'CERRADO', label: 'Cerrado' },
+                    ]},
+                ]}
             />
         </>
     );

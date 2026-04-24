@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import EmpleadoForm from './form';
@@ -21,6 +22,8 @@ const IndexEmpleados = () => {
     const dataTableRef = useRef(null);
     const modalRef = useRef(null);
     const modalInstance = useRef(null);
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -80,6 +83,14 @@ const IndexEmpleados = () => {
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Crear empleado</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -207,6 +218,23 @@ const IndexEmpleados = () => {
 
             <EmpleadoForm modalRef={modalRef} modalInstance={modalInstance}
                     empleado={selected} onSaved={onSaved} />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Empleados"
+                columns={[
+                    { column: 'documentNumber:name', label: 'Documento' },
+                    { column: 'fullName:name', label: 'Nombre' },
+                    { column: 'position:name', label: 'Cargo' },
+                    { column: 'baseSalary:name', label: 'Salario base', type: 'number' },
+                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                        { id: 'ACTIVE', label: 'Activo' },
+                        { id: 'TERMINATED', label: 'Terminado' },
+                    ]},
+                ]}
+            />
         </>
     );
 };

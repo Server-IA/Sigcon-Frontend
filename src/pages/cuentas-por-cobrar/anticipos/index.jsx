@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react';
 
 import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
+import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 
 import CreateArAdvance from './create';
 import ApplyArAdvance from './apply';
@@ -39,6 +40,8 @@ const IndexArAdvances = () => {
     const modalCreateInstance = useRef(null);
     const modalApplyRef = useRef(null);
     const modalApplyInstance = useRef(null);
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -106,6 +109,14 @@ const IndexArAdvances = () => {
     };
 
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Anticipo</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -197,6 +208,23 @@ const IndexArAdvances = () => {
                 dataTableRef={dataTableRef}
                 advance={selectedAdvance}
                 setMessage={setMessage}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Anticipos de Clientes"
+                columns={[
+                    { column: 'thirdPartyName:name', label: 'Cliente' },
+                    { column: 'amount:name', label: 'Monto', type: 'number' },
+                    { column: 'advanceDate:name', label: 'Fecha', type: 'date' },
+                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                        { id: 'PENDING', label: 'Pendiente' },
+                        { id: 'PARTIALLY_APPLIED', label: 'Parcial' },
+                        { id: 'FULLY_APPLIED', label: 'Aplicado' },
+                    ]},
+                ]}
             />
         </>
     );

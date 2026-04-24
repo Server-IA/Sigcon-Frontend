@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import AlertPage from "../../../components/molecules/AlertPage";
 import DataTableReference from "../../../components/organism/DataTable";
+import GenericFilterModal from "../../../components/organism/GenericFilterModal";
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 import CreateExchangeRate from "./create";
@@ -21,6 +22,9 @@ const ExchangeRateIndex = () => {
 
     const modalUpdateRef = useRef(null);
     const modalUpdateInstance = useRef(null);
+
+    const filterRef = useRef(null);
+    const filterInstance = useRef(null);
 
     const exchangeRateBase = {
         currencyId: null,
@@ -72,20 +76,22 @@ const ExchangeRateIndex = () => {
         {
             title: 'Tasa de cambio',
             data: 'value',
+            name: 'value',
         },
         {
             title: 'Fecha de inicio',
             data: 'startDate',
-            searchable: false
+            name: 'startDate',
         },
         {
             title: 'Fecha de fin',
             data: 'endDate',
-            searchable: false
+            name: 'endDate',
         },
         {
             title: 'Estado',
             data: 'status',
+            name: 'status',
         },
         {title: 'Acciones', width: '100px', data: 'id', render: (id) => `
             <div class="d-flex gap-1">
@@ -103,6 +109,14 @@ const ExchangeRateIndex = () => {
 
     // Botones para el datatable
     const buttons = [
+        {
+            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+            action: () => {
+                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                filterInstance.current.show();
+            }
+        },
         ...(userPermissions.some(p => p.code === 'CREATE_EXCHANGE_RATES' && p.type === 'CREATE') || isAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear tasa de cambio</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2 ',
@@ -270,6 +284,22 @@ const ExchangeRateIndex = () => {
                 setExchangeRate={setExchangeRate}
                 setExchangeRateMessage={setExchangeRateMessage}
                 currencies={currencies}
+            />
+
+            <GenericFilterModal
+                filterRef={filterRef}
+                filterInstance={filterInstance}
+                dataTableRef={dataTableRef}
+                title="Filtrar Tasas de Cambio"
+                columns={[
+                    { column: 'value:name',     label: 'Tasa de cambio', type: 'number' },
+                    { column: 'startDate:name', label: 'Fecha de inicio', type: 'date' },
+                    { column: 'endDate:name',   label: 'Fecha de fin',    type: 'date' },
+                    { column: 'status:name',    label: 'Estado', type: 'select', options: [
+                        { id: 'ACTIVE',   label: 'Activo' },
+                        { id: 'INACTIVE', label: 'Inactivo' },
+                    ]},
+                ]}
             />
 
         </div>
