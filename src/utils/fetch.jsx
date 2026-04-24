@@ -63,8 +63,12 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
         if (!response.ok) {
             const errorData = await response.json();
 
+            // Algunos endpoints (ej. JournalEntryController) devuelven solo {"error": "..."}
+            // sin msg/message. Aceptamos cualquiera de los tres para no mostrar
+            // "Error desconocido" cuando el backend si dio un mensaje claro.
+            const backendMsg = errorData.msg || errorData.message || errorData.error;
             throw new Error(JSON.stringify({
-                msg: errorData.msg || errorData.message || 'Error desconocido',
+                msg: backendMsg || 'Error desconocido',
                 title: errorData.title || 'Error en la consulta',
                 error: errorData.error || 'Error general',
                 status: response.status,

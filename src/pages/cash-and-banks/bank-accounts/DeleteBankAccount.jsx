@@ -28,8 +28,13 @@ const DeleteBankAccount = ({
     }, [modalRef]);
 
     const handleDelete = async () => {
-        if (!motivo.trim()) {
+        const trimmed = motivo.trim();
+        if (!trimmed) {
             setErrors({ motivo: 'El motivo de eliminación es requerido.' });
+            return;
+        }
+        if (trimmed.length < 5) {
+            setErrors({ motivo: `El motivo debe tener al menos 5 caracteres (actual: ${trimmed.length}).` });
             return;
         }
 

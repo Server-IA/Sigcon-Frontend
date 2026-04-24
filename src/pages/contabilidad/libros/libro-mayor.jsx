@@ -97,9 +97,13 @@ const CgLibroMayor = () => {
         }
     };
 
-    /** Calcula totales. */
-    const totalDebits  = accounts.reduce((sum, a) => sum + (Number(a.totalDebits) || 0), 0);
-    const totalCredits = accounts.reduce((sum, a) => sum + (Number(a.totalCredits) || 0), 0);
+    /**
+     * Totales del periodo.
+     * Backend envia totalDebit/totalCredit (singular) — la version anterior leia
+     * totalDebits/totalCredits y por eso se mostraban los recuadros vacios.
+     */
+    const totalDebits  = accounts.reduce((sum, a) => sum + (Number(a.totalDebit)  || 0), 0);
+    const totalCredits = accounts.reduce((sum, a) => sum + (Number(a.totalCredit) || 0), 0);
     const totalBalance = accounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
 
     return (
@@ -183,10 +187,10 @@ const CgLibroMayor = () => {
                                 <tbody>
                                     {accounts.map((a, idx) => (
                                         <tr key={idx}>
-                                            <td>{a.accountCode || a.pucCode || '-'}</td>
+                                            <td>{a.pucCode || a.accountCode || '-'}</td>
                                             <td>{a.accountName || a.pucName || '-'}</td>
-                                            <td className="text-end">{formatCurrency(a.totalDebits)}</td>
-                                            <td className="text-end">{formatCurrency(a.totalCredits)}</td>
+                                            <td className="text-end">{formatCurrency(a.totalDebit)}</td>
+                                            <td className="text-end">{formatCurrency(a.totalCredit)}</td>
                                             <td className="text-end fw-bold">{formatCurrency(a.balance)}</td>
                                         </tr>
                                     ))}

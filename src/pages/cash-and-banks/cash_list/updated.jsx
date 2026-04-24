@@ -88,6 +88,11 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
         if (statusChanged && cajaUpdated.estadoCaja === 'CLOSED') {
             if (!cajaUpdated.closingDate) e.closingDate = 'Fecha de cierre requerida para CLOSED';
         }
+        // Si el usuario escribió motivo de cambio, debe ser mínimo 10 caracteres
+        if (cajaUpdated.motivoCambio && cajaUpdated.motivoCambio.trim().length > 0
+                && cajaUpdated.motivoCambio.trim().length < 10) {
+            e.motivoCambio = `El motivo del cambio debe tener mínimo 10 caracteres (actual: ${cajaUpdated.motivoCambio.trim().length}).`;
+        }
         return e;
     };
 

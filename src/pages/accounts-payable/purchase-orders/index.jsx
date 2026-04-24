@@ -216,7 +216,7 @@ const IndexApPurchaseOrders = () => {
         try {
             await fetchHelper.post(
                 base_url(['api', 'v1', 'ap', 'purchase-orders', selected.id, 'reject']),
-                { reason: result.value.trim() },
+                { rejectionReason: result.value.trim() },
                 {},
                 1000
             );

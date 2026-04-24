@@ -366,9 +366,13 @@ const NiifResultsTable = ({ results, columns, tableRef, dataTableRef, search, se
         return () => table.removeEventListener('click', handler);
     }, [results]);
 
+    // HU-ACT-05: la tabla se alimenta exclusivamente del estado `results`
+    // (client-side). Pasamos url_api=null para que DataTableReference no haga
+    // ajax al endpoint /verify (que requiere body con assetIds) y use el prop
+    // `data` como fuente de filas.
     return (
         <DataTableReference
-            url_api={['api', 'v1', 'niif-alerts', 'verify']}
+            url_api={null}
             columns={columns}
             tableRef={tableRef}
             dataTableRef={dataTableRef}
@@ -378,7 +382,7 @@ const NiifResultsTable = ({ results, columns, tableRef, dataTableRef, search, se
             exportMethod="POST"
             search={search}
             setSearch={setSearch}
-            filtered={true}
+            filtered={false}
             data={results}
         />
     );

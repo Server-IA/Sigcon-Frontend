@@ -85,6 +85,8 @@ const IndexThirdPartyList = () => {
     const [thirdPartyBulk, setThirdPartyBulk] = useState(false);
     const [search, setSearch] = useState({ value: '', checked: true });
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteJustification, setDeleteJustification] = useState('');
+    const [deleteError, setDeleteError] = useState('');
 
     const [thirdParty, setThirdParty] = useState(emptyThirdParty);
     const [viewMode, setViewMode] = useState(false);
@@ -102,7 +104,7 @@ const IndexThirdPartyList = () => {
             render: (val, _, row) => val != null ? `${val}/${row?.dv ?? '-'}` : '-'
         },
         { title: 'Razón Social', data: 'businessName', name: 'businessName', render: (val) => val ?? '-' },
-        { title: 'Tipo', data: 'personType', name: 'personType', render: (v) => v === 'NATURAL' ? 'Natural' : v === 'JURIDICA' ? 'Jurídica' : v ?? '-' },
+        { title: 'Tipo', data: 'typeOrganization.code', name: 'typeOrganization', render: (v) => v === 'PERSONA_NATURAL' ? 'Natural' : v === 'PERSONA_JURIDICA' ? 'Jurídica' : v ?? '-' },
         {
             title: 'Rol', data: 'roles', name: 'roles',
             render: (roles) => {
@@ -159,6 +161,8 @@ const IndexThirdPartyList = () => {
 
     const openConfirmDelete = (id, nit, businessName) => {
         setDeleteTarget({ id, nit, businessName });
+        setDeleteJustification('');
+        setDeleteError('');
         if (!modalConfirmDeleteInstance.current) {
             modalConfirmDeleteInstance.current = new window.bootstrap.Modal(modalConfirmDeleteRef.current);
         }
@@ -167,19 +171,25 @@ const IndexThirdPartyList = () => {
 
     const onConfirmDelete = async () => {
         if (!deleteTarget) return;
+        const trimmed = (deleteJustification || '').trim();
+        if (trimmed.length < 50) {
+            setDeleteError(`La justificación debe tener al menos 50 caracteres (actual: ${trimmed.length}).`);
+            return;
+        }
+        setDeleteError('');
         const url = base_url(API_DELETE(deleteTarget.id));
         try {
-            await fetchHelper.delete(url, {}, {}, 500, false);
+            await fetchHelper.delete(url, { justification: trimmed }, {}, 500, false);
             modalConfirmDeleteInstance.current?.hide();
             dataTableRef?.current?.ajax.reload();
             setThirdPartyDelete(true);
             setThirdPartyError(false);
             setDeleteTarget(null);
+            setDeleteJustification('');
         } catch (error) {
             console.error(error);
-            modalConfirmDeleteInstance.current?.hide();
-            setThirdPartyError(true);
-            setThirdPartyDelete(false);
+            const backendMsg = error?.errors?.[0]?.message || error?.msg || error?.message;
+            setDeleteError(backendMsg || 'Error al eliminar el tercero. Verifique los datos e intente nuevamente.');
         }
     };
 
@@ -327,10 +337,32 @@ const IndexThirdPartyList = () => {
                                 <strong>{deleteTarget?.businessName ?? ''}</strong> con NIT{' '}
                                 <strong>{deleteTarget?.nit ?? ''}</strong>? Esta acción es irreversible.
                             </p>
+                            <div className="mb-2">
+                                <label htmlFor="deleteJustification" className="form-label fw-semibold">
+                                    Justificación <span className="text-danger">*</span>
+                                </label>
+                                <textarea
+                                    id="deleteJustification"
+                                    className={`form-control ${deleteError ? 'is-invalid' : ''}`}
+                                    rows={3}
+                                    placeholder="Explique el motivo de la eliminación (mínimo 50 caracteres)..."
+                                    value={deleteJustification}
+                                    onChange={(e) => {
+                                        setDeleteJustification(e.target.value);
+                                        if (deleteError) setDeleteError('');
+                                    }}
+                                />
+                                <small className={`text-${deleteJustification.trim().length >= 50 ? 'success' : 'muted'}`}>
+                                    {deleteJustification.trim().length} / 50 caracteres mínimos
+                                </small>
+                                {deleteError && (
+                                    <div className="invalid-feedback d-block">{deleteError}</div>
+                                )}
+                            </div>
                         </div>
                         <div className="modal-footer justify-content-end">
-                            <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-                            <button type="button" className="btn btn-danger" onClick={onConfirmDelete}>Eliminar</button>
+                            <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal" onClick={() => { setDeleteTarget(null); setDeleteJustification(''); setDeleteError(''); }}>Cancelar</button>
+                            <button type="button" className="btn btn-danger" onClick={onConfirmDelete} disabled={deleteJustification.trim().length < 50}>Eliminar</button>
                         </div>
                     </div>
                 </div>

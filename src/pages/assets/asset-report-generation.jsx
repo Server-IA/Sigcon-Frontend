@@ -140,28 +140,87 @@ const AssetReportGeneration = () => {
         setShowPreview(true);
     };
 
+    // HU-ACT-04: traduce nivelAgrupacion del form al parametro `groupBy` que
+    // espera el backend (asset | classification | period).
+    const mapGroupBy = (nivel) => {
+        switch (nivel) {
+            case 'por_clase_contable': return 'classification';
+            case 'periodo_mensual':
+            case 'periodo_trimestral':
+            case 'periodo_anual':      return 'period';
+            case 'por_activo':
+            default:                   return 'asset';
+        }
+    };
+
     const handleGenerate = async () => {
         if (!validate()) return;
 
         setIsGenerating(true);
         setErrorMessage('');
 
-        try {
-            // Llamada real a la API para obtener activos
-            const response = await fetchHelper.post(
-                base_url(['api', 'v1', 'assets', 'search']),
-                { draw: 1, start: 0, length: -1 },
-                {}, 0
-            );
+        const payload = {
+            startDate: formData.fechaInicio,
+            endDate:   formData.fechaFin,
+            groupBy:   mapGroupBy(formData.nivelAgrupacion),
+        };
 
-            if (response?.data && response.data.length > 0) {
-                setReportData(response.data);
+        try {
+            if (formData.formatoSalida === 'pdf') {
+                // Descarga del PDF: pedimos blob a traves de fetch nativo para
+                // poder disparar download en el navegador.
+                const token = localStorage.getItem('token');
+                const resp = await fetch(
+                    base_url(['api', 'v1', 'assets', 'reports', 'generate', 'pdf']),
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                        },
+                        body: JSON.stringify(payload),
+                    }
+                );
+
+                if (!resp.ok) {
+                    const txt = await resp.text();
+                    throw new Error(txt || `Error HTTP ${resp.status}`);
+                }
+
+                const blob = await resp.blob();
+                const url  = window.URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href = url;
+                a.download = `reporte_activos_${payload.startDate}_${payload.endDate}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
                 setReportGenerated(true);
             } else {
-                setErrorMessage('No se encontraron activos para los filtros seleccionados.');
+                // JSON (para previsualizacion y posterior export XLSX/CSV client-side).
+                const response = await fetchHelper.post(
+                    base_url(['api', 'v1', 'assets', 'reports', 'generate']),
+                    payload, {}, 0
+                );
+
+                const data = response?.data ?? response ?? [];
+                const rows = Array.isArray(data) ? data
+                    : (data && typeof data === 'object'
+                        ? Object.values(data).flat()
+                        : []);
+
+                if (rows.length > 0) {
+                    setReportData(rows);
+                    setReportGenerated(true);
+                } else {
+                    setErrorMessage('No se encontraron activos para los filtros seleccionados.');
+                }
             }
         } catch (error) {
-            setErrorMessage(error?.msg || 'Error al generar el informe. Intente nuevamente.');
+            console.error(error);
+            setErrorMessage(error?.msg || error?.message || 'Error al generar el informe. Intente nuevamente.');
         } finally {
             setIsGenerating(false);
         }

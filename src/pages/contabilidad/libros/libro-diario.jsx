@@ -5,9 +5,21 @@ import AlertPage from '../../../components/molecules/AlertPage';
 
 /**
  * Pagina de Libro Diario (CG).
- * Permite consultar los asientos contables por año y mes.
- * Las lineas se agrupan por comprobante para visualizacion contable estandar.
- * Llama a GET /api/v1/cg/books/diario?year=&month=
+ *
+ * Consume GET /api/v1/cg/books/diario?year=&month=
+ *
+ * Contrato de respuesta (backend):
+ *   [
+ *     {
+ *       entryId, entryNumber, date, description, status, totalDebit, totalCredit,
+ *       lines: [ { lineId, lineOrder, accountCode, accountName, debitAmount,
+ *                  creditAmount, description, thirdPartyNit, costCenterName } ]
+ *     }, ...
+ *   ]
+ *
+ * Fix HU-CG-01B E1 / HU-CG-06B E1: la version anterior trataba cada entry como si
+ * fuera una linea y leia campos inexistentes (e.debit en vez de line.debitAmount),
+ * por eso el libro se veia vacio. Ahora itera las entries y renderiza sus lines.
  */
 
 /** Formatea valores monetarios en formato colombiano. */
@@ -71,17 +83,15 @@ const CgLibroDiario = () => {
         }
     };
 
-    /** Calcula totales debito y credito. */
-    const totalDebit  = entries.reduce((sum, e) => sum + (Number(e.debit) || 0), 0);
-    const totalCredit = entries.reduce((sum, e) => sum + (Number(e.credit) || 0), 0);
+    /**
+     * Totales del periodo: suman los totalDebit/totalCredit de CADA comprobante
+     * (no de las lineas, porque el backend ya trae los totales agregados).
+     */
+    const totalDebit  = entries.reduce((sum, e) => sum + (Number(e.totalDebit) || 0), 0);
+    const totalCredit = entries.reduce((sum, e) => sum + (Number(e.totalCredit) || 0), 0);
 
-    /** Agrupa lineas por comprobante (entryNumber + fecha). */
-    const groupedByEntry = entries.reduce((acc, line) => {
-        const key = line.entryNumber || line.voucherNumber || `E-${line.entryDate || 'X'}`;
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(line);
-        return acc;
-    }, {});
+    /** Conteo de lineas total (para el badge "Registros"). */
+    const totalLines = entries.reduce((sum, e) => sum + (Array.isArray(e.lines) ? e.lines.length : 0), 0);
 
     return (
         <div className="card">
@@ -128,8 +138,8 @@ const CgLibroDiario = () => {
                 {generated && entries.length > 0 && (
                     <>
                         <div className="mb-3 d-flex gap-2 flex-wrap">
-                            <span className="badge bg-label-primary">Registros: {entries.length}</span>
-                            <span className="badge bg-label-secondary">Comprobantes: {Object.keys(groupedByEntry).length}</span>
+                            <span className="badge bg-label-primary">Registros: {totalLines}</span>
+                            <span className="badge bg-label-secondary">Comprobantes: {entries.length}</span>
                             <span className="badge bg-label-success">Debito: {formatCurrency(totalDebit)}</span>
                             <span className="badge bg-label-info">Credito: {formatCurrency(totalCredit)}</span>
                             <span className={`badge ${totalDebit === totalCredit ? 'bg-label-success' : 'bg-label-danger'}`}>
@@ -137,42 +147,53 @@ const CgLibroDiario = () => {
                             </span>
                         </div>
 
-                        {/* Resultados agrupados por comprobante */}
-                        {Object.entries(groupedByEntry).map(([entryKey, lines]) => {
-                            const header = lines[0];
-                            const subDebit  = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
-                            const subCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+                        {/* Un bloque por comprobante */}
+                        {entries.map((entry) => {
+                            const lines = Array.isArray(entry.lines) ? entry.lines : [];
+                            const subDebit  = lines.reduce((s, l) => s + (Number(l.debitAmount) || 0), 0);
+                            const subCredit = lines.reduce((s, l) => s + (Number(l.creditAmount) || 0), 0);
                             return (
-                                <div key={entryKey} className="mb-3 border rounded p-2">
+                                <div key={entry.entryId || entry.entryNumber} className="mb-3 border rounded p-2">
                                     <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap">
                                         <strong>
                                             <i className="ri-file-list-3-line me-1" />
-                                            #{header.entryNumber || header.voucherNumber || entryKey}
-                                            <span className="text-muted ms-2 small">{header.entryDate || header.date || ''}</span>
+                                            {entry.voucherCode || `#${entry.entryNumber || entry.entryId}`}
+                                            <span className="text-muted ms-2 small">{entry.date || ''}</span>
                                         </strong>
-                                        <span className="text-muted small">{header.description || ''}</span>
+                                        <span className="text-muted small">{entry.description || ''}</span>
                                     </div>
                                     <div className="table-responsive">
                                         <table className="table table-sm mb-0">
                                             <thead className="table-light">
                                                 <tr>
-                                                    <th style={{ width: '25%' }}>Cuenta</th>
+                                                    <th style={{ width: '20%' }}>Cuenta</th>
                                                     <th>Descripcion</th>
-                                                    <th className="text-end" style={{ width: '15%' }}>Debito</th>
-                                                    <th className="text-end" style={{ width: '15%' }}>Credito</th>
+                                                    <th style={{ width: '12%' }}>Tercero (NIT)</th>
+                                                    <th style={{ width: '12%' }}>Centro Costo</th>
+                                                    <th className="text-end" style={{ width: '13%' }}>Debito</th>
+                                                    <th className="text-end" style={{ width: '13%' }}>Credito</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {lines.map((l, i) => (
-                                                    <tr key={i}>
-                                                        <td><code>{l.accountCode || l.pucCode || '-'}</code> {l.accountName || l.pucName || ''}</td>
-                                                        <td className="text-muted small">{l.description || '-'}</td>
-                                                        <td className="text-end">{formatCurrency(l.debit)}</td>
-                                                        <td className="text-end">{formatCurrency(l.credit)}</td>
+                                                {lines.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan="6" className="text-center text-muted small">
+                                                            Este comprobante no tiene lineas registradas.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                {lines.map((l) => (
+                                                    <tr key={l.lineId}>
+                                                        <td><code>{l.accountCode || '-'}</code> {l.accountName || ''}</td>
+                                                        <td className="text-muted small">{l.description || entry.description || '-'}</td>
+                                                        <td className="small">{l.thirdPartyNit || '-'}</td>
+                                                        <td className="small">{l.costCenterName || '-'}</td>
+                                                        <td className="text-end">{formatCurrency(l.debitAmount)}</td>
+                                                        <td className="text-end">{formatCurrency(l.creditAmount)}</td>
                                                     </tr>
                                                 ))}
                                                 <tr className="table-light fw-bold">
-                                                    <td colSpan="2" className="text-end">Subtotal</td>
+                                                    <td colSpan="4" className="text-end">Subtotal</td>
                                                     <td className="text-end">{formatCurrency(subDebit)}</td>
                                                     <td className="text-end">{formatCurrency(subCredit)}</td>
                                                 </tr>

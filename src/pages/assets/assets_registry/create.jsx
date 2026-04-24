@@ -200,22 +200,40 @@ const CreateAssets = (
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // HU-ACT-01 E8: validacion cliente para forma de pago
+    const clientErrors = {};
+    if (!assets.paymentFormId) {
+      clientErrors.paymentFormId = "Debe seleccionar una forma de pago válida (contado o crédito).";
+    }
+    if (Object.keys(clientErrors).length > 0) {
+      setErrors(clientErrors);
+      setError({
+        message: "Debe seleccionar una forma de pago válida (contado o crédito).",
+        type: "danger",
+        show: true,
+        timeout: 5000,
+      });
+      return;
+    }
+
     try {
       const url = base_url(["api", "v1", "assets", "store"]);
 
       await fetchHelper.post(url, assets, {}, 1000);
 
-      // dataTableRef?.current?.ajax.reload();
-      // modalInstance?.current?.hide();
-
-      // setAssetsCreate(true);
-
-      const path = window.location.pathname.replace(/\/$/, "");
-      const idx = path.lastIndexOf("/");
-      navigate(idx > 0 ? path.slice(0, idx) : "/");
-
       setErrors({});
-      setError({ message: "", type: "", show: false });
+      setError({
+        message: "Activo creado correctamente.",
+        type: "success",
+        show: true,
+        timeout: 2500,
+      });
+
+      // HU-ACT-01 E1: navegar al listado de activos (ruta fija, evita depender
+      // del path actual del navegador que puede variar).
+      setTimeout(() => {
+        navigate("/assets/assets");
+      }, 800);
     } catch (error) {
       console.error(error);
 
@@ -382,10 +400,16 @@ const CreateAssets = (
               id="paymentFormId"
               label="Forma de pago"
               value={assets.paymentFormId}
-              onChange={(value) =>
-                setAssets({ ...assets, paymentFormId: Number(value) })
-              }
+              onChange={(value) =>{
+                setAssets({ ...assets, paymentFormId: Number(value) });
+                if(errors.paymentFormId){
+                  const {paymentFormId: _, ...rest} = errors;
+                  setErrors(rest);
+                }
+              }}
               options={paymentForms.map(p => ({ id: p.id, label: p.name }))}
+              required
+              error={errors.paymentFormId}
             />
           </div>
 

@@ -111,7 +111,7 @@ const IndexFinancialMovements = () => {
                         columns={columns}
                         tableRef={tableRef}
                         dataTableRef={dataTableRef}
-                        method="GET"
+                        method="POST"
                         buttons={buttons}
                         title="Movimientos Financieros"
                         setData={setData}

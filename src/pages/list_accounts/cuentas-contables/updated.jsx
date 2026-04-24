@@ -34,7 +34,7 @@ const UpdatedCuentaContable = ({
     // POST /api/v1/chart-of-accounts/search
     // POST /api/v1/accounting-lists/currency-types/search
     // POST /api/v1/cost-centers/search
-    // POST /api/v1/depretation-rules/search
+    // POST /api/v1/depreciation-rules/search
     useEffect(() => {
         const dtBody = { length: -1, columns: [{data:'status', search: {value: 'ACTIVE', regex: false}}] };
         const loadData = async () => {
@@ -43,7 +43,7 @@ const UpdatedCuentaContable = ({
                 fetchHelper.post(base_url(['api', 'v1', 'chart-of-accounts', 'search']), dtBody, {}, 0),
                 fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']), dtBody, {}, 0),
                 fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']), dtBody, {}, 0),
-                fetchHelper.post(base_url(['api', 'v1', 'depretation-rules', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'depreciation-rules', 'search']), dtBody, {}, 0),
             ]);
             if (pucRes.status === 'fulfilled')  setPucs(pucRes.value.data || []);
             if (currRes.status === 'fulfilled') setCurrencies(currRes.value.data || []);

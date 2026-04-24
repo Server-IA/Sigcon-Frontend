@@ -42,13 +42,19 @@ const IndexCgPeriodos = () => {
     const loadPeriods = async () => {
         setLoading(true);
         try {
-            const { data, error } = await fetchHelper.get(
+            // Backend GET /accounting-periods devuelve array directo [{...}, ...]
+            // Algunos endpoints envuelven en {data: [...]} — soporta ambas formas.
+            const response = await fetchHelper.get(
                 base_url(['api', 'v1', 'accounting-periods']), {}, 0
             );
-            if (!error && Array.isArray(data)) {
-                setPeriods(data);
-            } else if (!error && data?.data && Array.isArray(data.data)) {
-                setPeriods(data.data);
+            if (Array.isArray(response)) {
+                setPeriods(response);
+            } else if (Array.isArray(response?.data)) {
+                setPeriods(response.data);
+            } else if (Array.isArray(response?.content)) {
+                setPeriods(response.content);
+            } else {
+                setPeriods([]);
             }
         } catch (err) {
             setMessage({ type: 'danger', show: true, message: 'Error al cargar los periodos contables.' });

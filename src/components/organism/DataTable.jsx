@@ -114,7 +114,7 @@ const DataTableReference = ({
               },
             },
 
-            default_buttons(url_buttons, title, { method: exportMethod, params: exportParams }),
+            ...default_buttons(url_buttons, title, { method: exportMethod, params: exportParams }),
           ],
         },
 

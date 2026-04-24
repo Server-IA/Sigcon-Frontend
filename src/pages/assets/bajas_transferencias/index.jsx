@@ -41,20 +41,9 @@ const DEFAULT_ASSET_INFO = {
   depreciacionAcumulada: 0,
 };
 
-const MOCK_ASSETS = {
-  'ACT-1001': {
-    assetCode: 'ACT-1001',
-    description: 'Computador de mesa - Estado: En uso - Activo: Si',
-    costoHistorico: 1200000,
-    depreciacionAcumulada: 120000,
-  },
-  'ACT-1002': {
-    assetCode: 'ACT-1002',
-    description: 'Impresora laser - Estado: En uso - Activo: Si',
-    costoHistorico: 800000,
-    depreciacionAcumulada: 220000,
-  },
-};
+// HU-ACT-03: lookup real contra el backend. Se deja la constante como fallback
+// vacia para evitar romper referencias existentes.
+const MOCK_ASSETS = {};
 
 const initialFormState = {
   tipoOperacion: '',
@@ -142,35 +131,81 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
     }
   };
 
-  const handleAssetLookup = () => {
-    const lookupKey = formData.assetId.trim().toUpperCase();
-    const info = MOCK_ASSETS[lookupKey];
+  const handleAssetLookup = async () => {
+    const lookupKey = formData.assetId.trim();
 
     if (!lookupKey) {
       setAlert({
         show: true,
         type: 'warning',
-        message: 'Ingrese un Asset ID para consultar el activo.',
+        message: 'Ingrese un ID de activo para consultar.',
       });
       return;
     }
 
-    if (!info) {
+    // HU-ACT-03: el form pide el ID numerico del activo. Aceptamos tanto
+    // el id entero (preferido) como un assetCode; si parece codigo, se
+    // busca via /search filtrando por assetCode.
+    try {
+      const isNumeric = /^\d+$/.test(lookupKey);
+      let asset = null;
+
+      if (isNumeric) {
+        const resp = await fetchHelper.get(
+          base_url(['api', 'v1', 'assets', lookupKey]),
+          {},
+          0
+        );
+        asset = resp?.data ?? resp;
+      } else {
+        const resp = await fetchHelper.post(
+          base_url(['api', 'v1', 'assets', 'search']),
+          {
+            draw: 1, start: 0, length: 1,
+            columns: [{ data: 'assetCode', name: 'assetCode',
+                        searchable: true,
+                        search: { value: lookupKey, regex: false } }],
+          }, {}, 0
+        );
+        asset = (resp?.data || [])[0] || null;
+      }
+
+      if (!asset || !asset.id) {
+        setAssetInfo({ ...DEFAULT_ASSET_INFO, assetCode: lookupKey });
+        setAlert({
+          show: true,
+          type: 'danger',
+          message: 'Activo no registrado o no encontrado.',
+        });
+        return;
+      }
+
+      const costo = Number(asset.acquisitionValue) || 0;
+      const bookValue = Number(asset.currentBookValue ?? asset.acquisitionValue) || 0;
+      const depAcum = Math.max(costo - bookValue, 0);
+
+      setAssetInfo({
+        assetCode: asset.assetCode || `ID ${asset.id}`,
+        description: `${asset.name || asset.assetName || '-'} - Estado: ${asset.status || '-'}`,
+        costoHistorico: costo,
+        depreciacionAcumulada: depAcum,
+      });
+      // Mantener el ID numerico en el form para el payload del POST /disposals
+      setFormData(prev => ({ ...prev, assetId: String(asset.id) }));
+      setAlert({
+        show: true,
+        type: 'success',
+        message: `Activo ${asset.assetCode || asset.id} cargado correctamente.`,
+      });
+    } catch (err) {
+      console.error(err);
       setAssetInfo({ ...DEFAULT_ASSET_INFO, assetCode: lookupKey });
       setAlert({
         show: true,
         type: 'danger',
-        message: 'Activo no registrado o no encontrado.',
+        message: err?.msg || err?.message || 'Activo no registrado o no encontrado.',
       });
-      return;
     }
-
-    setAssetInfo(info);
-    setAlert({
-      show: true,
-      type: 'success',
-      message: `Activo ${info.assetCode} cargado correctamente.`,
-    });
   };
 
   const validateForm = () => {
@@ -256,7 +291,7 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
     });
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     setAlert({ show: false, type: '', message: '' });
 
     if (!validateForm()) {
@@ -274,17 +309,43 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
       return;
     }
 
-    const nextTransactionId = `ACT-${formData.tipoOperacion === 'BAJA' ? 'BJA' : 'TRF'}-${new Date()
-      .toISOString()
-      .slice(0, 10)
-      .replace(/-/g, '')}-01`;
+    // ACT-03: enviar al backend POST /api/v1/assets/disposals
+    const payload = {
+      assetId: Number(formData.assetId),
+      disposalType: formData.tipoOperacion === 'BAJA' ? 'BAJA' : 'TRANSFERENCIA',
+      disposalDate: formData.fechaOperacion,
+      disposalAmount: formData.tipoOperacion === 'BAJA' && formData.montoEnajenacion !== ''
+        ? Number(formData.montoEnajenacion) : null,
+      reason: formData.motivo?.trim() || '',
+      destinationInfo: formData.tipoOperacion === 'TRANSFERENCIA'
+        ? [formData.entidadReceptora, formData.ubicacionDestino, formData.documentoTransferencia]
+            .filter(Boolean).join(' | ') || null
+        : null,
+    };
 
-    setTransactionId(nextTransactionId);
-    setAlert({
-      show: true,
-      type: 'success',
-      message: `Baja/transferencia procesada exitosamente. Transaccion ${nextTransactionId}.`,
-    });
+    try {
+      const response = await fetchHelper.post(
+        base_url(['api', 'v1', 'assets', 'disposals']),
+        payload,
+        {},
+        1000,
+        true
+      );
+      const createdId = response?.data?.id ?? response?.id;
+      const label = createdId
+        ? `Disposicion #${createdId} registrada correctamente.`
+        : 'Disposicion registrada correctamente.';
+      if (createdId) setTransactionId(String(createdId));
+      setAlert({ show: true, type: 'success', message: label });
+    } catch (error) {
+      console.error(error);
+      const backendMsg = error?.errors?.[0]?.message || error?.msg || error?.message;
+      setAlert({
+        show: true,
+        type: 'danger',
+        message: backendMsg || 'Error al registrar la operacion.',
+      });
+    }
   };
 
   return (
