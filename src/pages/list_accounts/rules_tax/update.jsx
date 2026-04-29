@@ -176,6 +176,51 @@ const UpdateRulesTax = ({ rulesTax, setRulesTax, typeRulerTaxOptions, statusRule
                             </div>
                         </div>
 
+                        {/*
+                          Base gravable (motor UVT - Estatuto Tributario):
+                          - minAmountUvt: tope minimo en UVT para aplicar la retencion.
+                          - uvtValueYear: valor en pesos de la UVT del anio fiscal.
+                          Solo aplica para retenciones (TypeRulerTax = WITHHOLDING).
+                        */}
+                        <div className="row">
+                            <div className="col-lg-6 col-md-6 col-sm-12 mb-6 mt-2">
+                                <InputModal
+                                    id="minAmountUvtUpdate"
+                                    label="Base gravable (UVT)"
+                                    value={rulesTax.minAmountUvt ?? ''}
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+                                        setRulesTax({ ...rulesTax, minAmountUvt: v === '' ? null : Number(v) });
+                                    }}
+                                    error={errors.minAmountUvt}
+                                    placeholder="Ej. 4 (para retencion fuente servicios)"
+                                    type="number"
+                                    min={0}
+                                />
+                                <small className="text-muted">
+                                    Tope minimo en UVT para aplicar la retencion.
+                                </small>
+                            </div>
+                            <div className="col-lg-6 col-md-6 col-sm-12 mb-6 mt-2">
+                                <InputModal
+                                    id="uvtValueYearUpdate"
+                                    label="Valor UVT del año (COP)"
+                                    value={rulesTax.uvtValueYear ?? ''}
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+                                        setRulesTax({ ...rulesTax, uvtValueYear: v === '' ? null : Number(v) });
+                                    }}
+                                    error={errors.uvtValueYear}
+                                    placeholder="Ej. 47065 para 2026"
+                                    type="number"
+                                    min={0}
+                                />
+                                <small className="text-muted">
+                                    Valor en pesos de la UVT publicada por la DIAN.
+                                </small>
+                            </div>
+                        </div>
+
                         <div className="row">
                             <div className="col mb-6 mt-2">
                                 <InputDateRange

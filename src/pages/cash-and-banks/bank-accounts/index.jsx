@@ -165,10 +165,12 @@ const IndexBankAccounts = () => {
         { title: 'Tipo',         data: 'accountType',         name: 'accountType',
             render: (v) => ACCOUNT_TYPES.find(t => t.id === v)?.label || v || '-',
         },
-        { title: 'Banco',        data: 'bankDTO.name',            name: 'bankName' },
+        // QA HU-005 E1: el `name` apunta al atributo JPA real (bank.name).
+        // Antes era `bankName` (no existe) -> crash *"Could not resolve attribute 'bankDTO'..."*.
+        { title: 'Banco',        data: 'bankDTO.name',            name: 'bank.name' },
         { title: 'Saldo',        data: 'initialBalance',        name: 'initialBalance',
             render: (v, _, row) => formatPrice(v, row.currencyTypeDTO?.isoCode) },
-        { title: 'Moneda',       data: 'currencyTypeDTO.isoCode',        name: 'currencyCode' },
+        { title: 'Moneda',       data: 'currencyTypeDTO.isoCode',        name: 'currencyType.isoCode' },
         {
             title: 'Estado', data: 'status', name: 'status',
             render: (v) => v

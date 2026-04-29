@@ -11,10 +11,22 @@ const CurrencyEdit = ({ dataTableRef, modalRef, modalInstance, currency, setCurr
     const [errors, setErrors] = useState({});
 
     const handleSave = async() => {
-        console.log(currency);
+        // HU-CFG-23 E4 (2026-04-27): el nombre tambien debe rechazar XSS.
+        // Antes solo el campo Codigo ISO tenia validacion estricta.
+        const name = (currency?.name || '').trim();
+        const iso = (currency?.isoCode || '').trim();
+        const newErrors = {};
+        if (!name) newErrors.name = 'El nombre es obligatorio';
+        else if (/[<>]/.test(name)) newErrors.name = 'El nombre no puede contener < o >';
+        if (!iso) newErrors.isoCode = 'El codigo ISO es obligatorio';
+        else if (!/^[A-Z]{3}$/.test(iso)) newErrors.isoCode = 'El codigo ISO debe ser 3 letras mayusculas';
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
         try {
             const url = base_url(['api/v1/accounting-lists/currency-types', currency.id]);
-            const response = await fetchHelper.put(url, currency, {}, 500);
+            const response = await fetchHelper.put(url, { ...currency, name, isoCode: iso }, {}, 500);
             setMessage({ message: response.message, type: "success", show: true });
             modalInstance.current.hide();
             dataTableRef.current.draw(false);

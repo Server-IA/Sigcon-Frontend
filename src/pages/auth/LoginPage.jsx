@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import LoginForm from '../../components/organism/LoginForm'; 
-import '../../styles/auth-login.css'; 
-import {base_url} from '../../utils/functions'; 
+import { useState, useEffect } from 'react';
+import LoginForm from '../../components/organism/LoginForm';
+import '../../styles/auth-login.css';
+import {base_url} from '../../utils/functions';
 import { fetchHelper } from '../../utils/fetch';
 import { useDispatch } from 'react-redux';
 import { base_redirect_path } from '../../utils/functions';
@@ -14,9 +14,25 @@ const LoginPage = () => {
     password: '123456',
     rememberMe: false
   });
-  
+
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Fix bfcache: tras login exitoso se navega con window.location.href dejando
+  // isLoading=true. Si el usuario regresa con "atras" del navegador, Chrome/Firefox
+  // restauran la pagina desde el back-forward cache con el state intacto y el
+  // boton queda eternamente en "Cargando...". Escuchamos pageshow.persisted
+  // para resetear el estado y que el formulario sea utilizable de nuevo.
+  useEffect(() => {
+    const onPageShow = (e) => {
+      if (e.persisted) {
+        setIsLoading(false);
+        setError('');
+      }
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

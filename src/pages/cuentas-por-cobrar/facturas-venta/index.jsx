@@ -9,6 +9,7 @@ import { fetchHelper } from '../../../utils/fetch';
 
 import CreateSalesInvoice from './create';
 import UpdatedSalesInvoice from './updated';
+import AttachmentsModal from './attachments';
 
 /**
  * Pagina principal de Facturas de Venta (Cuentas por Cobrar).
@@ -52,11 +53,15 @@ const IndexSalesInvoices = () => {
     const modalUpdateInstance = useRef(null);
     const filterRef = useRef(null);
     const filterInstance = useRef(null);
+    // HU-AR-03: modal de adjuntos vinculado a una factura especifica.
+    const modalAttachRef = useRef(null);
+    const modalAttachInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
     const [message, setMessage] = useState({ message: '', type: '', show: false });
     const [selectedRecord, setSelectedRecord] = useState(null);
+    const [attachInvoice, setAttachInvoice] = useState({ id: null, invoiceNumber: '' });
 
     /** Endpoint DataTable. */
     const url = ['api', 'v1', 'sales-invoices', 'search'];
@@ -66,9 +71,13 @@ const IndexSalesInvoices = () => {
         { title: 'Id', data: 'id', name: 'id' },
         { title: '# Factura', data: 'invoiceNumber', name: 'invoiceNumber' },
         {
+            // HU-AR-01B E1 + AR-12 E1: el JSON de respuesta trae `thirdPartyName`
+            // plano (DTO) pero la entidad SalesInvoice solo tiene
+            // `thirdParty.businessName`. El backend usa `name` para resolver
+            // el path JPA via DataTableSpecificationBuilder.
             title: 'Cliente',
             data: 'thirdPartyName',
-            name: 'thirdPartyName',
+            name: 'thirdParty.businessName',
             render: (val) => val || '-',
         },
         { title: 'Fecha', data: 'invoiceDate', name: 'invoiceDate' },
@@ -100,8 +109,11 @@ const IndexSalesInvoices = () => {
             render: (val) => formatCurrency(val),
         },
         {
+            // HU-AR-12 E1 (2026-04-27): agregado `name` para que el filter
+            // del modal pueda mapear la columna y aplicar busqueda por status.
             title: 'Estado',
             data: 'status',
+            name: 'status',
             render: (val) => {
                 const badge = STATUS_BADGE[val] || 'bg-label-secondary';
                 const label = STATUS_LABEL[val] || val || '-';
@@ -117,6 +129,11 @@ const IndexSalesInvoices = () => {
                 const canDelete = ['DRAFT', 'ISSUED'].includes(row?.status);
                 const canDian = row?.status !== 'VOIDED' && row?.status !== 'DRAFT';
                 const alreadySent = row?.xmlSent === true;
+                // HU-AR-08 (2026-04-27): atajo "Registrar cobro" para que el contador
+                // pueda aplicar abono parcial sin salir del listado. La factura debe
+                // estar emitida y con saldo > 0.
+                const canPay = ['ISSUED', 'PARTIAL', 'OVERDUE'].includes(row?.status)
+                    && Number(row?.balanceDue ?? 0) > 0;
                 return `
                 <div class="d-flex gap-1 flex-wrap">
                     <button class="btn btn-sm btn-label-info action-btn"
@@ -127,6 +144,11 @@ const IndexSalesInvoices = () => {
                         data-action="edit" data-id="${id}" title="Editar"
                         ${!canEdit ? 'disabled' : ''}>
                         <i class="ri-edit-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-label-success action-btn"
+                        data-action="register-payment" data-id="${id}" title="Registrar cobro / abono parcial (HU-AR-08)"
+                        ${!canPay ? 'disabled' : ''}>
+                        <i class="ri-money-dollar-circle-line"></i>
                     </button>
                     <button class="btn btn-sm btn-label-warning action-btn"
                         data-action="generate-xml" data-id="${id}" title="Generar XML DIAN"
@@ -141,6 +163,10 @@ const IndexSalesInvoices = () => {
                     <button class="btn btn-sm btn-label-secondary action-btn"
                         data-action="download-pdf" data-id="${id}" title="Descargar PDF">
                         <i class="ri-file-pdf-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-label-info action-btn"
+                        data-action="attachments" data-id="${id}" title="Comprobantes adjuntos (HU-AR-03)">
+                        <i class="ri-attachment-2"></i>
                     </button>
                     <button class="btn btn-sm btn-label-danger action-btn"
                         data-action="delete" data-id="${id}" title="Eliminar"
@@ -225,25 +251,67 @@ const IndexSalesInvoices = () => {
             if (!selected) return;
 
             if (action === 'view') {
-                window.Swal.fire({
+                // HU-AR-01B E4: el detalle debe mostrar el estado contable
+                // (si fue contabilizada, en que comprobante y con que estado).
+                const jeId = selected.journalEntryId;
+                // HU-AR-11 E2 (2026-04-27): cuando la factura esta en moneda
+                // extranjera, mostrar tambien la conversion a COP usando la
+                // tasa de cambio guardada al emitir.
+                const isForeign = selected.currencyIso && selected.currencyIso !== 'COP';
+                const exRate = Number(selected.exchangeRate) || 1;
+                const fxBlock = isForeign ? (val) => `
+                    <span class="text-muted small">(≈ ${formatCurrency((Number(val)||0) * exRate)} COP)</span>
+                ` : () => '';
+                const baseHtml = (jeBlock) => `
+                    <div class="text-start">
+                        <p><strong>Cliente:</strong> ${selected.thirdPartyName || '-'}</p>
+                        <p><strong>Fecha:</strong> ${selected.invoiceDate || '-'}</p>
+                        <p><strong>Vencimiento:</strong> ${selected.dueDate || '-'}</p>
+                        <p><strong>Moneda:</strong> ${selected.currencyIso || 'COP'} (tasa ${selected.exchangeRate || 1})</p>
+                        <p><strong>Subtotal:</strong> ${formatCurrency(selected.subtotal)} ${fxBlock(selected.subtotal)}</p>
+                        <p><strong>IVA:</strong> ${formatCurrency(selected.totalTax)} ${fxBlock(selected.totalTax)}</p>
+                        <p><strong>Retencion:</strong> ${formatCurrency(selected.totalWithholding)} ${fxBlock(selected.totalWithholding)}</p>
+                        <p><strong>Total:</strong> ${formatCurrency(selected.totalAmount)} ${fxBlock(selected.totalAmount)}</p>
+                        <p><strong>Saldo:</strong> ${formatCurrency(selected.balanceDue)} ${fxBlock(selected.balanceDue)}</p>
+                        <p><strong>Estado factura:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
+                        <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
+                        <hr/>
+                        <h6 class="text-primary mb-2"><i class="ri-file-list-line me-1"></i>Estado contable</h6>
+                        ${jeBlock}
+                    </div>`;
+                const renderModal = (jeBlock) => window.Swal.fire({
                     title: `Factura ${selected.invoiceNumber || selected.id}`,
-                    html: `
-                        <div class="text-start">
-                            <p><strong>Cliente:</strong> ${selected.thirdPartyName || '-'}</p>
-                            <p><strong>Fecha:</strong> ${selected.invoiceDate || '-'}</p>
-                            <p><strong>Vencimiento:</strong> ${selected.dueDate || '-'}</p>
-                            <p><strong>Moneda:</strong> ${selected.currencyIso || 'COP'} (tasa ${selected.exchangeRate || 1})</p>
-                            <p><strong>Subtotal:</strong> ${formatCurrency(selected.subtotal)}</p>
-                            <p><strong>IVA:</strong> ${formatCurrency(selected.totalTax)}</p>
-                            <p><strong>Retencion:</strong> ${formatCurrency(selected.totalWithholding)}</p>
-                            <p><strong>Total:</strong> ${formatCurrency(selected.totalAmount)}</p>
-                            <p><strong>Saldo:</strong> ${formatCurrency(selected.balanceDue)}</p>
-                            <p><strong>Estado:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
-                            <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
-                        </div>`,
-                    width: 520,
+                    html: baseHtml(jeBlock),
+                    width: 560,
+                    showCancelButton: false,
+                    showDenyButton: false,
                     confirmButtonText: 'Cerrar',
                 });
+
+                if (!jeId) {
+                    renderModal(`<p class="text-muted"><em>Sin asiento contable generado.</em></p>`);
+                    return;
+                }
+                // Carga sincrona del JE para mostrar comprobante + estado.
+                fetchHelper.get(base_url(['api', 'v1', 'journal-entries', jeId]), {}, 1000, true)
+                    .then((resp) => {
+                        const je = resp?.data || resp;
+                        const status = je?.status || '-';
+                        const statusLabel = {
+                            DRAFT: '<span class="badge bg-label-secondary">Borrador</span>',
+                            POSTED: '<span class="badge bg-label-success">Contabilizado</span>',
+                            REVERSED: '<span class="badge bg-label-danger">Reversado</span>',
+                        }[status] || `<span class="badge bg-label-secondary">${status}</span>`;
+                        const block = `
+                            <p><strong>Comprobante:</strong> ${je?.voucherCode || `JE-${jeId}`}</p>
+                            <p><strong>Fecha:</strong> ${je?.entryDate || '-'}</p>
+                            <p><strong>Estado:</strong> ${statusLabel}</p>
+                            <p><strong>Total D / C:</strong> ${formatCurrency(je?.totalDebit)} / ${formatCurrency(je?.totalCredit)}</p>`;
+                        renderModal(block);
+                    })
+                    .catch(() => {
+                        renderModal(`<p class="text-warning"><em>No se pudo cargar el comprobante #${jeId}.</em></p>`);
+                    });
                 return;
             }
 
@@ -304,6 +372,25 @@ const IndexSalesInvoices = () => {
                 window.open(url, '_blank');
                 return;
             }
+
+            if (action === 'attachments') {
+                // HU-AR-03: abrir modal para subir/listar/descargar comprobantes
+                // de pago asociados a la factura seleccionada.
+                setAttachInvoice({ id: selected.id, invoiceNumber: selected.invoiceNumber });
+                if (!modalAttachInstance.current) {
+                    modalAttachInstance.current = new window.bootstrap.Modal(modalAttachRef.current);
+                }
+                modalAttachInstance.current.show();
+                return;
+            }
+
+            if (action === 'register-payment') {
+                // HU-AR-08 (2026-04-27): atajo a /cobros con la factura preseleccionada.
+                // El query param invoiceId lo lee la pagina de cobros para abrir el
+                // modal Crear cobro con esa factura ya cargada.
+                window.location.assign(`/cuentas-por-cobrar/cobros?invoiceId=${selected.id}`);
+                return;
+            }
         };
 
         table.on('click', '.action-btn', handler);
@@ -355,17 +442,29 @@ const IndexSalesInvoices = () => {
                 setMessage={setMessage}
             />
 
+            <AttachmentsModal
+                modalRef={modalAttachRef}
+                modalInstance={modalAttachInstance}
+                invoiceId={attachInvoice.id}
+                invoiceNumber={attachInvoice.invoiceNumber}
+            />
+
             <GenericFilterModal
                 filterRef={filterRef}
                 filterInstance={filterInstance}
                 dataTableRef={dataTableRef}
                 title="Filtrar Facturas de Venta"
                 columns={[
-                    { column: 'invoiceNumber:name', label: '# Factura' },
-                    { column: 'thirdPartyName:name', label: 'Cliente' },
-                    { column: 'invoiceDate:name', label: 'Fecha', type: 'date' },
-                    { column: 'dueDate:name', label: 'Vence', type: 'date' },
-                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                    // HU-AR-12 E1+E2 (2026-04-27): paths JPA reales. El formato
+                    // `<jpaPath>:<columnName>` permite al filter mapear el campo
+                    // del request al column.name del DataTable. Antes los filtros
+                    // usaban `:name` literal y nunca encajaban con ninguna columna,
+                    // por eso aparecian sin funcionar.
+                    { column: 'invoiceNumber:invoiceNumber', label: '# Factura' },
+                    { column: 'thirdParty.businessName:name', label: 'Cliente' },
+                    { column: 'invoiceDate:invoiceDate', label: 'Fecha', type: 'date' },
+                    { column: 'dueDate:dueDate', label: 'Vence', type: 'date' },
+                    { column: 'status:status', label: 'Estado', type: 'select', options: [
                         { id: 'DRAFT', label: 'Borrador' },
                         { id: 'ISSUED', label: 'Emitida' },
                         { id: 'PARTIALLY_PAID', label: 'Pago Parcial' },

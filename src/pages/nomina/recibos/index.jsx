@@ -32,6 +32,27 @@ const IndexRecibos = () => {
     const [liquidating, setLiquidating] = useState(false);
     const [liqResult, setLiqResult] = useState(null);
     const [detail, setDetail] = useState(null);
+    // HU-NOM-04 DEF#1 (2026-04-28): selector de tipo de nomina
+    const [liqForm, setLiqForm] = useState({
+        periodType: 'MONTHLY',
+        daysWorked: 30,
+        showModal: false,
+        isComplementary: false,
+        complementaryParentId: null,
+    });
+    // HU-NOM-03 DEF#2 (2026-04-28): editar/eliminar lineas en DRAFT
+    const [lineEdit, setLineEdit] = useState(null);
+
+    const PERIOD_LABELS = {
+        MONTHLY: 'Mensual (30 días)',
+        BIWEEKLY: 'Quincenal (15 días)',
+        WEEKLY: 'Semanal (7 días)',
+    };
+    const periodTypeBadge = (t) => {
+        const map = { MONTHLY: 'bg-label-primary', BIWEEKLY: 'bg-label-info', WEEKLY: 'bg-label-warning' };
+        const lbl = { MONTHLY: 'Mensual', BIWEEKLY: 'Quincenal', WEEKLY: 'Semanal' };
+        return <span className={`badge ${map[t] || 'bg-label-secondary'}`}>{lbl[t] || t || '-'}</span>;
+    };
 
     const load = async () => {
         setLoading(true);
@@ -49,37 +70,104 @@ const IndexRecibos = () => {
 
     useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
-    const liquidate = async () => {
-        const ok = await window.Swal.fire({
-            title: '¿Liquidar nómina del periodo?',
-            html: `Se liquidarán <b>TODOS los empleados activos</b> para ${filters.year}-${String(filters.month).padStart(2, '0')}.<br>
-                Los empleados sin EPS o fondo de pensión serán excluidos (HU-NOM-03 E3).`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, liquidar',
-            cancelButtonText: 'Cancelar',
+    const openLiquidateModal = () => {
+        setLiqForm({
+            periodType: 'MONTHLY', daysWorked: 30,
+            showModal: true, isComplementary: false, complementaryParentId: null,
         });
-        if (!ok.isConfirmed) return;
+    };
 
+    // HU-NOM-04 DEF#2 (2026-04-28): nomina complementaria a partir de un recibo CLOSED
+    const openComplementaryModal = (parent) => {
+        setLiqForm({
+            periodType: parent.periodType || 'MONTHLY',
+            daysWorked: 30,
+            showModal: true,
+            isComplementary: true,
+            complementaryParentId: parent.id,
+            complementaryParentInfo: `${parent.employeeName} - ${parent.periodYear}-${String(parent.periodMonth).padStart(2,'0')}`,
+        });
+    };
+
+    const liquidate = async () => {
         setLiquidating(true);
         setLiqResult(null);
         try {
+            // HU-NOM-04 DEF#2: complementaria = liquida solo el empleado padre
+            // y marca el recibo como complementario del original.
+            const body = {
+                year: filters.year,
+                month: filters.month,
+                periodType: liqForm.periodType,
+                daysWorked: Number(liqForm.daysWorked) || 30,
+            };
+            if (liqForm.isComplementary && liqForm.complementaryParentId) {
+                body.complementaryOfReceiptId = liqForm.complementaryParentId;
+            }
             const resp = await fetchHelper.post(
-                    base_url(['api', 'nomina', 'recibos', 'liquidar']),
-                    {
-                        year: filters.year,
-                        month: filters.month,
-                        periodType: 'MONTHLY',
-                        daysWorked: 30,
-                    }, {}, 0);
+                    base_url(['api', 'nomina', 'recibos', 'liquidar']), body, {}, 0);
             setLiqResult(resp);
+            setLiqForm(prev => ({ ...prev, showModal: false }));
             setAlert({ show: true, type: 'success',
-                message: `Liquidación completa: ${resp.totalReceipts} recibos + JE #${resp.journalEntryId || '-'}${resp.excluded?.length ? ` (${resp.excluded.length} empleados excluidos)` : ''}` });
+                message: `Liquidación ${liqForm.isComplementary ? 'COMPLEMENTARIA ' : ''}completa: ${resp.totalReceipts} recibos + JE #${resp.journalEntryId || '-'}${resp.excluded?.length ? ` (${resp.excluded.length} empleados excluidos)` : ''}` });
             load();
         } catch (err) {
             setAlert({ show: true, type: 'danger', message: err?.msg || err?.message || 'No se pudo liquidar.' });
         } finally {
             setLiquidating(false);
+        }
+    };
+
+    // HU-NOM-03 DEF#2 (2026-04-28): editar/eliminar linea SOLO en DRAFT
+    const editLine = (l, receiptStatus) => {
+        if (receiptStatus !== 'DRAFT') {
+            setAlert({ show: true, type: 'warning',
+                message: 'Solo se pueden editar líneas de recibos en BORRADOR (HU-NOM-04 E2).' });
+            return;
+        }
+        setLineEdit({ ...l, _newAmount: l.amount });
+    };
+
+    const saveLine = async () => {
+        try {
+            await fetchHelper.put(
+                    base_url(['api', 'nomina', 'recibos', detail.id, 'lineas', lineEdit.id]),
+                    { amount: Number(lineEdit._newAmount) }, {}, 0);
+            setAlert({ show: true, type: 'success', message: 'Línea actualizada y totales recalculados.' });
+            const fresh = await fetchHelper.get(base_url(['api', 'nomina', 'recibos', detail.id]), {}, 0);
+            setDetail(fresh);
+            setLineEdit(null);
+            load();
+        } catch (err) {
+            setAlert({ show: true, type: 'danger',
+                message: err?.msg || err?.message || 'No se pudo actualizar la línea.' });
+        }
+    };
+
+    const deleteLine = async (l) => {
+        if (detail?.status !== 'DRAFT') {
+            setAlert({ show: true, type: 'warning',
+                message: 'Solo se pueden eliminar líneas de recibos en BORRADOR.' });
+            return;
+        }
+        const ok = await window.Swal.fire({
+            title: '¿Eliminar línea?',
+            text: `Concepto: ${l.conceptName}. Los totales del recibo se recalculan.`,
+            icon: 'warning', showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
+            customClass: { confirmButton: 'btn btn-danger' },
+        });
+        if (!ok.isConfirmed) return;
+        try {
+            await fetchHelper.delete(
+                    base_url(['api', 'nomina', 'recibos', detail.id, 'lineas', l.id]), {}, {}, 0);
+            setAlert({ show: true, type: 'success', message: 'Línea eliminada.' });
+            const fresh = await fetchHelper.get(base_url(['api', 'nomina', 'recibos', detail.id]), {}, 0);
+            setDetail(fresh);
+            load();
+        } catch (err) {
+            setAlert({ show: true, type: 'danger',
+                message: err?.msg || err?.message || 'No se pudo eliminar la línea.' });
         }
     };
 
@@ -156,7 +244,7 @@ const IndexRecibos = () => {
             <div className="card">
                 <h5 className="card-header d-flex justify-content-between align-items-center">
                     <span><i className="ri-file-list-3-line me-2"></i>Liquidación de nómina</span>
-                    <button className="btn btn-primary btn-sm" onClick={liquidate} disabled={liquidating}>
+                    <button className="btn btn-primary btn-sm" onClick={openLiquidateModal} disabled={liquidating}>
                         {liquidating && <span className="spinner-border spinner-border-sm me-2"></span>}
                         <i className="ri-calculator-line me-1"></i> Liquidar periodo
                     </button>
@@ -200,6 +288,7 @@ const IndexRecibos = () => {
                                 <tr>
                                     <th>Empleado</th>
                                     <th>Periodo</th>
+                                    <th>Tipo</th>
                                     <th className="text-end">Devengados</th>
                                     <th className="text-end">Deducciones</th>
                                     <th className="text-end">Neto</th>
@@ -209,21 +298,29 @@ const IndexRecibos = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {loading && <tr><td colSpan="8" className="text-center py-4">
+                                {loading && <tr><td colSpan="9" className="text-center py-4">
                                     <div className="spinner-border text-primary"></div>
                                 </td></tr>}
                                 {!loading && recibos.length === 0 && (
-                                    <tr><td colSpan="8" className="text-center text-muted py-4">
+                                    <tr><td colSpan="9" className="text-center text-muted py-4">
                                         Sin recibos para este periodo
                                     </td></tr>
                                 )}
                                 {!loading && recibos.map(r => (
                                     <tr key={r.id}>
                                         <td>
-                                            <div>{r.employeeName}</div>
+                                            <div>{r.employeeName}
+                                                {r.complementaryOfReceiptId && (
+                                                    <span className="badge bg-label-warning ms-2"
+                                                          title={`Complementaria del recibo #${r.complementaryOfReceiptId}`}>
+                                                        Compl. #{r.complementaryOfReceiptId}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <small className="text-muted">{r.employeeDocument}</small>
                                         </td>
                                         <td>{r.periodYear}-{String(r.periodMonth).padStart(2, '0')}</td>
+                                        <td>{periodTypeBadge(r.periodType)}</td>
                                         <td className="text-end">{fmt(r.totalEarnings)}</td>
                                         <td className="text-end">{fmt(r.totalDeductions)}</td>
                                         <td className="text-end fw-bold">{fmt(r.netPay)}</td>
@@ -251,9 +348,16 @@ const IndexRecibos = () => {
                                                 </button>
                                             )}
                                             {(r.status === 'APPROVED' || r.status === 'CLOSED') && (
-                                                <button className="btn btn-sm btn-label-primary"
+                                                <button className="btn btn-sm btn-label-primary me-1"
                                                         onClick={() => downloadPdf(r)} title="Comprobante PDF (HU-NOM-06 E1)">
                                                     <i className="ri-file-pdf-line"></i>
+                                                </button>
+                                            )}
+                                            {r.status === 'CLOSED' && !r.complementaryOfReceiptId && (
+                                                <button className="btn btn-sm btn-label-danger"
+                                                        onClick={() => openComplementaryModal(r)}
+                                                        title="Crear nómina complementaria (HU-NOM-04 E3)">
+                                                    <i className="ri-add-circle-line"></i>
                                                 </button>
                                             )}
                                         </td>
@@ -264,6 +368,112 @@ const IndexRecibos = () => {
                     </div>
                 </div>
             </div>
+
+            {/* HU-NOM-04 DEF#1: modal Liquidar con periodType + DEF#2 modo complementaria */}
+            {liqForm.showModal && (
+                <div className="modal show fade d-block" tabIndex="-1"
+                        style={{ background: 'rgba(0,0,0,.5)' }}>
+                    <div className="modal-dialog">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">
+                                    {liqForm.isComplementary
+                                        ? <><i className="ri-add-circle-line me-2"></i>Crear nómina complementaria</>
+                                        : <><i className="ri-calculator-line me-2"></i>Liquidar nómina del periodo</>}
+                                </h5>
+                                <button type="button" className="btn-close"
+                                        onClick={() => setLiqForm(prev => ({ ...prev, showModal: false }))}></button>
+                            </div>
+                            <div className="modal-body">
+                                {liqForm.isComplementary ? (
+                                    <div className="alert alert-warning py-2 small">
+                                        <i className="ri-information-line me-1"></i>
+                                        <b>Nómina complementaria</b> sobre {liqForm.complementaryParentInfo}.
+                                        Genera un recibo adicional que conserva el original CERRADO. Aplica
+                                        para corrección post-cierre (HU-NOM-04 E3).
+                                    </div>
+                                ) : (
+                                    <div className="alert alert-info py-2 small">
+                                        Se liquidarán <b>TODOS los empleados activos</b> para
+                                        <b> {filters.year}-{String(filters.month).padStart(2,'0')}</b>.
+                                        Los empleados sin EPS o fondo de pensión serán excluidos (HU-NOM-03 E3).
+                                    </div>
+                                )}
+                                <div className="row g-3">
+                                    <div className="col-md-7">
+                                        <label className="form-label">Tipo de nómina *</label>
+                                        <select className="form-select" value={liqForm.periodType}
+                                                onChange={e => setLiqForm({ ...liqForm, periodType: e.target.value })}>
+                                            <option value="MONTHLY">Mensual (30 días)</option>
+                                            <option value="BIWEEKLY">Quincenal (15 días)</option>
+                                            <option value="WEEKLY">Semanal (7 días)</option>
+                                        </select>
+                                        <small className="text-muted">Determina el divisor de liquidación.</small>
+                                    </div>
+                                    <div className="col-md-5">
+                                        <label className="form-label">Días trabajados</label>
+                                        <input type="number" min="1" max="31" className="form-control"
+                                                value={liqForm.daysWorked}
+                                                onChange={e => setLiqForm({ ...liqForm, daysWorked: e.target.value })} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-label-secondary"
+                                        onClick={() => setLiqForm(prev => ({ ...prev, showModal: false }))}>Cancelar</button>
+                                <button type="button" className="btn btn-primary" onClick={liquidate}
+                                        disabled={liquidating}>
+                                    {liquidating && <span className="spinner-border spinner-border-sm me-2"></span>}
+                                    <i className="ri-calculator-line me-1"></i>
+                                    {liqForm.isComplementary ? 'Crear complementaria' : 'Liquidar'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* HU-NOM-03 DEF#2: editar amount de una linea (solo DRAFT) */}
+            {lineEdit && (
+                <div className="modal show fade d-block" tabIndex="-1"
+                        style={{ background: 'rgba(0,0,0,.5)' }}>
+                    <div className="modal-dialog">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">Editar línea: {lineEdit.conceptName}</h5>
+                                <button type="button" className="btn-close" onClick={() => setLineEdit(null)}></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="mb-2">
+                                    <label className="form-label small">Concepto</label>
+                                    <div><code>{lineEdit.conceptCode}</code> — {lineEdit.conceptName}</div>
+                                </div>
+                                <div className="mb-2">
+                                    <label className="form-label small">Valor original</label>
+                                    <div className="text-muted">{fmt(lineEdit.amount)}</div>
+                                </div>
+                                <div className="mb-2">
+                                    <label className="form-label">Nuevo valor *</label>
+                                    <input type="number" step="0.01" className="form-control"
+                                            value={lineEdit._newAmount}
+                                            onChange={e => setLineEdit({ ...lineEdit, _newAmount: e.target.value })} />
+                                </div>
+                                <div className="alert alert-info py-2 small">
+                                    Al guardar, los totales (devengados/deducciones/aportes/neto) del recibo
+                                    se recalculan automáticamente.
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-label-secondary"
+                                        onClick={() => setLineEdit(null)}>Cancelar</button>
+                                <button type="button" className="btn btn-primary" onClick={saveLine}>
+                                    <i className="ri-save-line me-1"></i> Guardar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {detail && (
                 <div className="modal show fade d-block" tabIndex="-1"
@@ -304,6 +514,14 @@ const IndexRecibos = () => {
                                     </div></div></div>
                                 </div>
 
+                                {detail.status === 'DRAFT' && (
+                                    <div className="alert alert-info py-2 small">
+                                        <i className="ri-information-line me-1"></i>
+                                        El recibo está en <b>BORRADOR</b>. Puede editar/eliminar líneas para
+                                        sanear los conceptos antes de aprobar (HU-NOM-03 DEF#2).
+                                    </div>
+                                )}
+
                                 {['EARNING', 'DEDUCTION', 'EMPLOYER_CONTRIBUTION'].map(tipo => {
                                     const lns = (detail.lines || []).filter(l => l.lineType === tipo);
                                     if (lns.length === 0) return null;
@@ -322,6 +540,20 @@ const IndexRecibos = () => {
                                                             <td><code>{l.conceptCode}</code></td>
                                                             <td>{l.conceptName}</td>
                                                             <td className="text-end">{fmt(l.amount)}</td>
+                                                            {detail.status === 'DRAFT' && (
+                                                                <td className="text-end" style={{ width: 90 }}>
+                                                                    <button className="btn btn-xs btn-label-primary me-1 p-1"
+                                                                            onClick={() => editLine(l, detail.status)}
+                                                                            title="Editar valor">
+                                                                        <i className="ri-edit-line ri-14px"></i>
+                                                                    </button>
+                                                                    <button className="btn btn-xs btn-label-danger p-1"
+                                                                            onClick={() => deleteLine(l)}
+                                                                            title="Eliminar línea">
+                                                                        <i className="ri-delete-bin-line ri-14px"></i>
+                                                                    </button>
+                                                                </td>
+                                                            )}
                                                         </tr>
                                                     ))}
                                                 </tbody>

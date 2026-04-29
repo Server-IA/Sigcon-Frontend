@@ -6,6 +6,7 @@ import { base_url } from '../../../utils/functions';
 import AlertPage from '../../../components/molecules/AlertPage';
 import CreateComprobante from './create';
 import UpdateComprobante from './updated';
+import SupportsModal from './supports';
 
 /**
  * Pagina principal de Comprobantes Contables (CG).
@@ -56,11 +57,16 @@ const IndexCgComprobantes = () => {
     const modalUpdateInstance = useRef(null);
     const filterRef           = useRef(null);
     const filterInstance      = useRef(null);
+    // HU-CG-05A/B/C: modal de soportes documentales
+    const supportsModalRef      = useRef(null);
+    const supportsModalInstance = useRef(null);
 
     const [data, setData]     = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
     const [message, setMessage] = useState({ message: '', type: '', show: false });
     const [editEntryId, setEditEntryId] = useState(null);
+    // HU-CG-05A/B/C: estado del modal de soportes (id + voucherCode legible)
+    const [supportContext, setSupportContext] = useState({ id: null, voucherCode: '' });
 
     /** Endpoint de busqueda paginada de comprobantes. */
     const url = ['api', 'v1', 'journal-entries', 'search'];
@@ -120,6 +126,10 @@ const IndexCgComprobantes = () => {
                     <button class="btn btn-sm btn-label-info action-btn"
                         data-action="view" data-id="${id}" title="Ver detalle">
                         <i class="ri-eye-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-label-secondary action-btn"
+                        data-action="supports" data-id="${id}" title="Soportes documentales (HU-CG-05A/B/C)">
+                        <i class="ri-attachment-2"></i>
                     </button>
                     <button class="btn btn-sm btn-label-secondary action-btn"
                         data-action="export-pdf" data-id="${id}" title="Exportar PDF">
@@ -239,14 +249,36 @@ const IndexCgComprobantes = () => {
                     modalUpdateInstance.current.show();
                     break;
                 }
+                case 'supports': {
+                    // HU-CG-05A/B/C: gestion de soportes documentales del JE.
+                    setSupportContext({
+                        id: row.id,
+                        voucherCode: row.voucherCode || `#${row.entryNumber || row.id}`,
+                    });
+                    if (!supportsModalInstance.current) {
+                        supportsModalInstance.current = new window.bootstrap.Modal(supportsModalRef.current);
+                    }
+                    supportsModalInstance.current.show();
+                    break;
+                }
                 case 'view': {
-                    // HU-CG-08C E2: traer documentos relacionados (REV original/REV reverso, CORR, etc.)
-                    // y renderizarlos en un panel "Documentos Relacionados" dentro del viewer.
-                    fetchHelper.get(
-                        base_url(['api', 'v1', 'journal-entries', row.id, 'related-docs']),
-                        {}, 0
-                    ).then(resp => {
-                        const related = (resp?.data || []);
+                    // HU-CG-08C E2: documentos relacionados (REV original/reverso, CORR).
+                    // HU-AR-04 E3: desglose de lineas del comprobante (D/C por cuenta,
+                    //               tercero, centro de costo). Sin esto solo se ven los
+                    //               totales y no se puede auditar el calculo de IVA/retenciones.
+                    Promise.all([
+                        fetchHelper.get(
+                            base_url(['api', 'v1', 'journal-entries', row.id, 'related-docs']),
+                            {}, 0
+                        ).catch(() => ({ data: [] })),
+                        fetchHelper.get(
+                            base_url(['api', 'v1', 'journal-entries', row.id]),
+                            {}, 0
+                        ).catch(() => null),
+                    ]).then(([relResp, detailResp]) => {
+                        const related = (relResp?.data || []);
+                        const detail = detailResp?.data || detailResp || {};
+                        const lines = Array.isArray(detail.lines) ? detail.lines : [];
                         const relationLabel = {
                             REVERSA_A:     'Reversa al',
                             CORRIGE_A:     'Corrige al',
@@ -266,6 +298,37 @@ const IndexCgComprobantes = () => {
                                 </ul>
                               </div>`
                             : '';
+                        const linesHtml = lines.length > 0
+                            ? `<div class="mt-3 pt-2 border-top">
+                                <strong class="d-block mb-2">Detalle del comprobante</strong>
+                                <div class="table-responsive" style="max-height:260px;overflow-y:auto;">
+                                  <table class="table table-sm table-bordered mb-0" style="font-size:0.78rem;">
+                                    <thead class="table-light">
+                                      <tr>
+                                        <th>Cuenta</th>
+                                        <th>Descripcion</th>
+                                        <th>Tercero</th>
+                                        <th>CC</th>
+                                        <th class="text-end">Debito</th>
+                                        <th class="text-end">Credito</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      ${lines.map(l => `
+                                        <tr>
+                                          <td><code>${l.accountCode || '-'}</code><br/><small class="text-muted">${l.accountName || ''}</small></td>
+                                          <td>${l.description || '-'}</td>
+                                          <td>${l.thirdPartyNit || '-'}</td>
+                                          <td>${l.costCenterName || '-'}</td>
+                                          <td class="text-end">${l.debitAmount && Number(l.debitAmount) > 0 ? formatCurrency(l.debitAmount) : '-'}</td>
+                                          <td class="text-end">${l.creditAmount && Number(l.creditAmount) > 0 ? formatCurrency(l.creditAmount) : '-'}</td>
+                                        </tr>`).join('')}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>`
+                            : '<p class="text-muted small fst-italic mt-2">Sin lineas en el detalle.</p>';
+
                         const codeShown = row.voucherCode || `#${row.entryNumber || row.id}`;
                         window.Swal.fire({
                             title: `Comprobante ${codeShown}`,
@@ -277,9 +340,12 @@ const IndexCgComprobantes = () => {
                                     <p class="mb-1"><strong>Estado:</strong> ${STATUS_LABEL[row.status] || row.status}</p>
                                     <p class="mb-1"><strong>Total Debito:</strong> ${formatCurrency(row.totalDebit)}</p>
                                     <p class="mb-1"><strong>Total Credito:</strong> ${formatCurrency(row.totalCredit)}</p>
+                                    ${linesHtml}
                                     ${relatedHtml}
                                 </div>`,
-                            width: 600,
+                            width: 880,
+                            showCancelButton: false,
+                            showDenyButton: false,
                             confirmButtonText: 'Cerrar',
                         });
                     }).catch(() => {
@@ -477,6 +543,14 @@ const IndexCgComprobantes = () => {
                         { id: 'REVERSED', label: 'Reversado' },
                     ]},
                 ]}
+            />
+
+            {/* HU-CG-05A/B/C: Modal de soportes documentales del comprobante */}
+            <SupportsModal
+                modalRef={supportsModalRef}
+                journalEntryId={supportContext.id}
+                voucherCode={supportContext.voucherCode}
+                onChange={() => dataTableRef?.current?.ajax?.reload?.(null, false)}
             />
         </>
     );

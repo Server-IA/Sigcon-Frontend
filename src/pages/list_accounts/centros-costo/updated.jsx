@@ -9,6 +9,10 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 
 // Regex: sólo letras (incluidas tildes/ñ), números, espacios, guiones y puntos
 const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\-\.]+$/;
+// HU-CFG-17 E3 (2026-04-27): mismo regex que en create. ASCII alfanumerico + _ -.
+const CODE_REGEX = /^[A-Z0-9_-]{1,20}$/;
+// HU-CFG-19 MT-01: rechazo de tags HTML para evitar XSS persistente.
+const NO_HTML_REGEX = /[<>]/;
 
 const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCosto, dataTableRef, setCentroCostoEdit, allData = [], readOnly = false }) => {
     const sfx = readOnly ? 'view' : 'updated'; // sufijo único por instancia para evitar conflicto de IDs con Select2
@@ -44,6 +48,9 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
         const codigo = (centroCosto.code ?? '').trim();
         if (!codigo) {
             newErrors.code = 'El código es obligatorio';
+        } else if (!CODE_REGEX.test(codigo)) {
+            // HU-CFG-17 E3: codigo solo admite ASCII alfanumerico + _ -
+            newErrors.code = 'El codigo solo admite letras (A-Z), numeros, _ y - (max 20 chars)';
         } else {
             // Verificar código duplicado en los datos en memoria (excluyendo el registro actual)
             const codigoDuplicado = allData.some(
@@ -54,6 +61,12 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
             if (codigoDuplicado) {
                 newErrors.code = 'Código o nombre duplicado para la empresa, ingrese uno diferente';
             }
+        }
+
+        // HU-CFG-19 MT-01: descripcion no puede contener < o >
+        const desc = (centroCosto.description ?? '').trim();
+        if (desc && NO_HTML_REGEX.test(desc)) {
+            newErrors.description = 'La descripcion no puede contener los caracteres < o >';
         }
 
         return newErrors;
@@ -115,9 +128,12 @@ const UpdatedCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCos
     };
 
     const handleClear = () => {
+        // HU-CFG-19 MT-02 (2026-04-27): Limpiar resetea TAMBIEN el codigo,
+        // antes solo limpiaba name+description y dejaba el codigo intacto.
         setCentroCosto({
             ...centroCosto,
             name: null,
+            code: null,
             description: null,
             status: 'ACTIVE',
         });

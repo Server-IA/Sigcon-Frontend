@@ -22,6 +22,7 @@ const emptyErrors = {
     noteType: '',
     amount: '',
     reason: '',
+    approverComment: '',
 };
 
 const emptyRecord = {
@@ -29,7 +30,13 @@ const emptyRecord = {
     noteType: '',
     amount: '',
     reason: '',
+    approverComment: '',
 };
+
+// HU-AR-07 E2 (2026-04-27): umbral del backend (30%) sobre el saldo de la
+// factura. Si la nota credito iguala o supera este porcentaje, se exige una
+// segunda aprobacion via approverComment.
+const APPROVER_COMMENT_THRESHOLD_PCT = 30;
 
 const CreateArNote = ({ modalRef, modalInstance, dataTableRef, setMessage }) => {
     const [record, setRecord] = useState({ ...emptyRecord });
@@ -42,21 +49,33 @@ const CreateArNote = ({ modalRef, modalInstance, dataTableRef, setMessage }) => 
 
     const loadInvoices = async () => {
         try {
-            const { data } = await fetchHelper.post(
+            // fetchHelper.post retorna el JSON directo, no { data, error }.
+            const resp = await fetchHelper.post(
                 base_url(['api', 'v1', 'sales-invoices', 'search']),
                 { length: -1, columns: [] },
                 {},
                 0
             );
-            const list = Array.isArray(data) ? data : data?.data || [];
+            const list = resp?.data ?? [];
             setInvoices(list.map((inv) => ({
                 id: inv.id,
-                name: `${inv.invoiceNumber || ('#' + inv.id)} - ${inv.thirdPartyName || ''}`.trim(),
+                name: `${inv.invoiceNumber || ('#' + inv.id)} - ${inv.thirdPartyName || inv.thirdParty?.businessName || ''}`.trim(),
+                // HU-AR-07 E2: guardamos balanceDue para calcular si requiere doble aprobacion
+                balanceDue: Number(inv.balanceDue ?? inv.totalAmount ?? 0),
             })));
         } catch (e) {
             console.log('Error cargando facturas de venta:', e);
         }
     };
+
+    // HU-AR-07 E2: detecta si el monto/factura/noteType requiere aprobador
+    const selectedInvoice = invoices.find(i => String(i.id) === String(record.invoiceId));
+    const balanceDue = selectedInvoice?.balanceDue ?? 0;
+    const amountNum = Number(record.amount) || 0;
+    const pctOfBalance = balanceDue > 0 ? (amountNum / balanceDue) * 100 : 0;
+    const requiresApproverComment = record.noteType === 'CREDIT'
+        && balanceDue > 0
+        && pctOfBalance >= APPROVER_COMMENT_THRESHOLD_PCT;
 
     useEffect(() => {
         setErrors({ ...emptyErrors });
@@ -74,6 +93,14 @@ const CreateArNote = ({ modalRef, modalInstance, dataTableRef, setMessage }) => 
             next.reason = 'La razon es obligatoria (minimo 5 caracteres)';
             valid = false;
         }
+        // HU-AR-07 E2: doble aprobacion cuando la NC supera el umbral
+        if (requiresApproverComment) {
+            const ac = (record.approverComment || '').trim();
+            if (ac.length < 10) {
+                next.approverComment = 'Esta nota requiere segunda aprobacion. Ingrese un comentario del aprobador (minimo 10 caracteres).';
+                valid = false;
+            }
+        }
 
         setErrors(next);
         return valid;
@@ -87,6 +114,8 @@ const CreateArNote = ({ modalRef, modalInstance, dataTableRef, setMessage }) => 
             noteType: record.noteType,
             amount: Number(record.amount),
             reason: record.reason.trim(),
+            // HU-AR-07 E2: doble aprobacion cuando supera umbral
+            ...(requiresApproverComment ? { approverComment: record.approverComment.trim() } : {}),
         };
 
         try {
@@ -177,6 +206,17 @@ const CreateArNote = ({ modalRef, modalInstance, dataTableRef, setMessage }) => 
                                     required
                                 />
                             </div>
+                            {/* HU-AR-07 E2: mostrar saldo de la factura seleccionada */}
+                            {selectedInvoice && balanceDue > 0 && (
+                                <div className="col-md-6 mb-4 mt-2 d-flex align-items-end">
+                                    <small className="text-muted">
+                                        Saldo factura: <strong>${balanceDue.toLocaleString('es-CO')}</strong>
+                                        {amountNum > 0 && (
+                                            <> &middot; Esta nota cubre el <strong>{pctOfBalance.toFixed(1)}%</strong> del saldo</>
+                                        )}
+                                    </small>
+                                </div>
+                            )}
                         </div>
 
                         <div className="row">
@@ -193,6 +233,36 @@ const CreateArNote = ({ modalRef, modalInstance, dataTableRef, setMessage }) => 
                                 />
                             </div>
                         </div>
+
+                        {/* HU-AR-07 E2 (2026-04-27): segunda aprobacion cuando NC supera 30%
+                            del saldo. Antes el backend rechazaba con un mensaje confuso porque
+                            el campo NO existia en la UI. Ahora aparece dinamicamente con
+                            instrucciones claras del por que. */}
+                        {requiresApproverComment && (
+                            <div className="row">
+                                <div className="col-12 mb-2">
+                                    <div className="alert alert-warning py-2 mb-2">
+                                        <i className="ri-error-warning-line me-1"></i>
+                                        <strong>Esta nota requiere doble aprobacion.</strong>{' '}
+                                        Esta cubriendo el {pctOfBalance.toFixed(1)}% del saldo de la factura
+                                        (umbral: {APPROVER_COMMENT_THRESHOLD_PCT}%). Ingrese el comentario
+                                        del aprobador secundario para continuar.
+                                    </div>
+                                </div>
+                                <div className="col-12 mb-4">
+                                    <InputModal
+                                        type="text"
+                                        id="ar_note_approver_comment"
+                                        label="Comentario del aprobador (segunda aprobacion)"
+                                        value={record.approverComment}
+                                        onChange={(e) => setRecord((prev) => ({ ...prev, approverComment: e.target.value }))}
+                                        error={errors.approverComment}
+                                        placeholder="Confirma autorizacion del supervisor (minimo 10 caracteres)"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="modal-footer">

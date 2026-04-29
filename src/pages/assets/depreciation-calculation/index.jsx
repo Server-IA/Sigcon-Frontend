@@ -45,7 +45,8 @@ const CALCULATION_STATUS_MESSAGES = {
     400: 'Método no reconocido, no permitido o vida útil no definida.',
     403: 'Acceso denegado. Se requiere rol de administrador.',
     404: 'Cuenta de depreciación faltante o inactiva.',
-    422: 'Operación no permitida: el periodo contable está cerrado.',
+    // HU-ACT-02 E5: mensaje EXACTO de la historia de usuario.
+    422: 'El período contable está cerrado. No se puede registrar depreciación en un período cerrado.',
 };
 
 const getPayloadData = (response) => response?.data ?? response;
@@ -273,6 +274,19 @@ const CalculoDepreciacionActivos = () => {
         }
     };
 
+    // HU-ACT-02 E5: si el backend menciona "periodo cerrado", usamos el mensaje
+    // EXACTO de la historia de usuario para no confundir al contador con un texto
+    // distinto al especificado.
+    const resolveCalculationError = (error) => {
+        const raw = error?.msg || error?.message || '';
+        const norm = raw.toLowerCase()
+            .normalize('NFKD').replace(/[̀-ͯ]/g, '');
+        if (norm.includes('periodo') && norm.includes('cerrado')) {
+            return 'El período contable está cerrado. No se puede registrar depreciación en un período cerrado.';
+        }
+        return CALCULATION_STATUS_MESSAGES[error.status] || raw || 'Error al calcular la depreciación';
+    };
+
     // Paso 1: verificar activos elegibles (carga results sin mostrar sección de resultados)
     const handleVerificarElegibles = async () => {
         dismissAlert();
@@ -303,7 +317,7 @@ const CalculoDepreciacionActivos = () => {
             setAlert({
                 show: true,
                 type: 'danger',
-                message: CALCULATION_STATUS_MESSAGES[error.status] || error.msg || 'Error al verificar activos elegibles',
+                message: resolveCalculationError(error),
             });
         }
     };
@@ -328,7 +342,7 @@ const CalculoDepreciacionActivos = () => {
             setAlert({
                 show: true,
                 type: 'danger',
-                message: CALCULATION_STATUS_MESSAGES[error.status] || error.msg || 'Error al calcular la depreciación',
+                message: resolveCalculationError(error),
             });
         }
     };
@@ -714,24 +728,55 @@ const CalculoDepreciacionActivos = () => {
                             <div className="tab-content">
                                 <div className={`tab-pane fade ${activeTab === 'elegibles' ? 'show active' : ''}`}>
                                     <p className="fw-semibold mb-3">Activos elegibles</p>
+                                    {/* HU-ACT-02: el endpoint /depreciation/calculate NO devuelve
+                                        formato DataTable, sino {results, totalDepreciation, ...}.
+                                        Por eso renderizamos los datos del state con tabla HTML
+                                        directa en vez de DataTableReference. */}
                                     {verificado && activosElegibles.length > 0 ? (
-                                        <div className="card-datatable text-nowrap">
-                                            <DataTableReference
-                                                url_api={['api', 'v1', 'assets', 'depreciation', 'calculate']}
-                                                columns={columnsElegibles}
-                                                tableRef={tableRefElegibles}
-                                                dataTableRef={dataTableRefElegibles}
-                                                method="POST"
-                                                buttons={[]}
-                                                title="Activos elegibles"
-                                                setData={setActivosElegibles}
-                                                exportParams={{ period }}
-                                                exportMethod="POST"
-                                                search={searchElegibles}
-                                                setSearch={setSearchElegibles}
-                                                filtered={true}
-                                                data={activosElegibles}
-                                            />
+                                        <div className="table-responsive">
+                                            <table ref={tableRefElegibles} className="table table-sm table-striped table-hover align-middle">
+                                                <thead>
+                                                    <tr>
+                                                        <th style={thStyle}>Asset ID</th>
+                                                        <th style={thStyle}>Nombre</th>
+                                                        <th style={thStyle}>Cuenta activo</th>
+                                                        <th style={thStyle}>Clasificacion</th>
+                                                        <th style={thStyle}>Metodo</th>
+                                                        <th style={thStyle}>F. Calculo</th>
+                                                        <th style={thStyle} className="text-end">Costo</th>
+                                                        <th style={thStyle} className="text-end">Dep. Periodo</th>
+                                                        <th style={thStyle} className="text-end">Valor Libros</th>
+                                                        <th style={thStyle}>Cta Dep.</th>
+                                                        <th style={thStyle}></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {activosElegibles.map((row, i) => {
+                                                        const method = getDepreciationMethod(row);
+                                                        return (
+                                                            <tr key={`${row.assetId || row.assetCode || i}`} style={tdStyle}>
+                                                                <td>{asText(row.assetCode)}</td>
+                                                                <td>{asText(row.assetName ?? row.name)}</td>
+                                                                <td>{asText(row.accountingCode ?? getAccountingCode(row))}</td>
+                                                                <td>{asText(getClassificationLabel(row))}</td>
+                                                                <td>{asText(METHOD_LABELS[method] ?? method)}</td>
+                                                                <td>{asText(row.calculationDate)}</td>
+                                                                <td className="text-end">{formatCOP(row.previousBookValue)}</td>
+                                                                <td className="text-end">{formatCOP(row.depreciationAmount)}</td>
+                                                                <td className="text-end">{formatCOP(row.currentBookValue)}</td>
+                                                                <td>{asText(row.depreciationAccountName)}</td>
+                                                                <td>
+                                                                    <button
+                                                                        className="btn btn-sm btn-outline-secondary"
+                                                                        onClick={() => { loadHistorialActivo(row.assetId); setActiveTab('historico-activo'); }}>
+                                                                        Ver historico
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     ) : (
                                         <p className="text-muted mb-0" style={tdStyle}>
@@ -745,22 +790,42 @@ const CalculoDepreciacionActivos = () => {
                                 <div className={`tab-pane fade ${activeTab === 'resultados' ? 'show active' : ''}`}>
                                     <p className="fw-semibold mb-3">Resultados del cálculo</p>
                                     {calculado && (resultados?.results || []).length > 0 ? (
-                                        <div className="card-datatable text-nowrap">
-                                            <DataTableReference
-                                                url_api={['api', 'v1', 'assets', 'depreciation', 'calculate']}
-                                                columns={columnsResultados}
-                                                tableRef={tableRefResultados}
-                                                dataTableRef={dataTableRefResultados}
-                                                method="POST"
-                                                buttons={[]}
-                                                title="Resultados del calculo"
-                                                exportParams={{ period }}
-                                                exportMethod="POST"
-                                                search={searchResultados}
-                                                setSearch={setSearchResultados}
-                                                filtered={true}
-                                                data={resultados?.results || []}
-                                            />
+                                        <div className="table-responsive">
+                                            <table ref={tableRefResultados} className="table table-sm table-striped table-hover align-middle">
+                                                <thead>
+                                                    <tr>
+                                                        <th style={thStyle}>Asset ID</th>
+                                                        <th style={thStyle}>Nombre</th>
+                                                        <th style={thStyle}>Metodo</th>
+                                                        <th style={thStyle} className="text-end">Dep. periodo</th>
+                                                        <th style={thStyle}>Cta Dep.</th>
+                                                        <th style={thStyle}>Proveedor</th>
+                                                        <th style={thStyle}></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(resultados?.results || []).map((row, i) => {
+                                                        const method = getDepreciationMethod(row);
+                                                        return (
+                                                            <tr key={`${row.assetId || i}`} style={tdStyle}>
+                                                                <td>{asText(row.assetCode)}</td>
+                                                                <td>{asText(row.assetName ?? row.name)}</td>
+                                                                <td>{asText(METHOD_LABELS[method] ?? method)}</td>
+                                                                <td className="text-end">{formatCOP(row.depreciationAmount)}</td>
+                                                                <td>{asText(row.depreciationAccountName)}</td>
+                                                                <td>{getSupplierLabel(row.supplier) !== '—' ? getSupplierLabel(row.supplier) : asText(row.supplierName)}</td>
+                                                                <td>
+                                                                    <button
+                                                                        className="btn btn-sm btn-outline-secondary"
+                                                                        onClick={() => { loadHistorialActivo(row.assetId); setActiveTab('historico-activo'); }}>
+                                                                        Ver historico
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     ) : (
                                         <p className="text-muted mb-0" style={tdStyle}>
@@ -818,22 +883,40 @@ const CalculoDepreciacionActivos = () => {
                                 <div className={`tab-pane fade ${activeTab === 'historico-periodo' ? 'show active' : ''}`}>
                                     <p className="fw-semibold mb-3">Histórico del período</p>
                                     {historicoPeriodoConsultado && historicoPeriodo.length > 0 ? (
-                                        <div className="card-datatable text-nowrap">
-                                            <DataTableReference
-                                                url_api={['api', 'v1', 'assets', 'depreciation', 'history']}
-                                                columns={columnsHistoricoPeriodo}
-                                                tableRef={tableRefHistoricoPeriodo}
-                                                dataTableRef={dataTableRefHistoricoPeriodo}
-                                                method="GET"
-                                                buttons={[]}
-                                                title="Historico del periodo"
-                                                exportParams={{ period }}
-                                                exportMethod="GET"
-                                                search={searchHistoricoPeriodo}
-                                                setSearch={setSearchHistoricoPeriodo}
-                                                filtered={true}
-                                                data={historicoPeriodo}
-                                            />
+                                        <div className="table-responsive">
+                                            <table ref={tableRefHistoricoPeriodo} className="table table-sm table-striped table-hover align-middle">
+                                                <thead>
+                                                    <tr>
+                                                        <th style={thStyle}>Asset ID</th>
+                                                        <th style={thStyle}>Nombre</th>
+                                                        <th style={thStyle}>Periodo</th>
+                                                        <th style={thStyle}>Metodo</th>
+                                                        <th style={thStyle} className="text-end">Valor anterior</th>
+                                                        <th style={thStyle} className="text-end">Dep. periodo</th>
+                                                        <th style={thStyle} className="text-end">Valor actual</th>
+                                                        <th style={thStyle}>F. calculo</th>
+                                                        <th style={thStyle}>Creado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {historicoPeriodo.map((row, i) => {
+                                                        const method = getDepreciationMethod(row);
+                                                        return (
+                                                            <tr key={`${row.id || i}`} style={tdStyle}>
+                                                                <td>{asText(row.assetCode)}</td>
+                                                                <td>{asText(row.assetName ?? row.name)}</td>
+                                                                <td>{asText(row.depreciationPeriod)}</td>
+                                                                <td>{asText(METHOD_LABELS[method] ?? method)}</td>
+                                                                <td className="text-end">{formatCOP(row.previousBookValue)}</td>
+                                                                <td className="text-end">{formatCOP(row.depreciationAmount)}</td>
+                                                                <td className="text-end">{formatCOP(row.currentBookValue)}</td>
+                                                                <td>{asText(row.calculationDate)}</td>
+                                                                <td>{formatDateTime(row.createdAt)}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     ) : (
                                         <p className="text-muted mb-0" style={tdStyle}>
@@ -847,21 +930,40 @@ const CalculoDepreciacionActivos = () => {
                                 <div className={`tab-pane fade ${activeTab === 'historico-activo' ? 'show active' : ''}`}>
                                     <p className="fw-semibold mb-3">Histórico del activo</p>
                                     {historicoActivoConsultado && historicoActivo.length > 0 ? (
-                                        <div className="card-datatable text-nowrap">
-                                            <DataTableReference
-                                                url_api={['api', 'v1', 'assets', 'depreciation', 'history', assetHistoryId || 0]}
-                                                columns={columnsHistoricoActivo}
-                                                tableRef={tableRefHistoricoActivo}
-                                                dataTableRef={dataTableRefHistoricoActivo}
-                                                method="GET"
-                                                buttons={[]}
-                                                title="Historico del activo"
-                                                exportMethod="GET"
-                                                search={searchHistoricoActivo}
-                                                setSearch={setSearchHistoricoActivo}
-                                                filtered={true}
-                                                data={historicoActivo}
-                                            />
+                                        <div className="table-responsive">
+                                            <table ref={tableRefHistoricoActivo} className="table table-sm table-striped table-hover align-middle">
+                                                <thead>
+                                                    <tr>
+                                                        <th style={thStyle}>Periodo</th>
+                                                        <th style={thStyle}>Asset ID</th>
+                                                        <th style={thStyle}>Nombre</th>
+                                                        <th style={thStyle}>Metodo</th>
+                                                        <th style={thStyle} className="text-end">Valor anterior</th>
+                                                        <th style={thStyle} className="text-end">Dep. periodo</th>
+                                                        <th style={thStyle} className="text-end">Valor actual</th>
+                                                        <th style={thStyle}>F. calculo</th>
+                                                        <th style={thStyle}>Creado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {historicoActivo.map((row, i) => {
+                                                        const method = getDepreciationMethod(row);
+                                                        return (
+                                                            <tr key={`${row.id || i}`} style={tdStyle}>
+                                                                <td>{asText(row.depreciationPeriod)}</td>
+                                                                <td>{asText(row.assetCode)}</td>
+                                                                <td>{asText(row.assetName ?? row.name)}</td>
+                                                                <td>{asText(METHOD_LABELS[method] ?? method)}</td>
+                                                                <td className="text-end">{formatCOP(row.previousBookValue)}</td>
+                                                                <td className="text-end">{formatCOP(row.depreciationAmount)}</td>
+                                                                <td className="text-end">{formatCOP(row.currentBookValue)}</td>
+                                                                <td>{asText(row.calculationDate)}</td>
+                                                                <td>{formatDateTime(row.createdAt)}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     ) : (
                                         <p className="text-muted mb-0" style={tdStyle}>

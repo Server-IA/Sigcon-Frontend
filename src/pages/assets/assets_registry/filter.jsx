@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
+// HU-ACT-10: filtro de activos.
+// Acepta `thirds` (lista del index, label="codigo - razon social") como
+// fuente de proveedores. Antes el index pasaba `thirds` pero este componente
+// declaraba `suppliers`, asi que el dropdown salia vacio siempre.
 const FilterAssets = ({
   filterRef,
   filterInstance,
@@ -9,17 +13,20 @@ const FilterAssets = ({
   classifications = [],
   types = [],
   suppliers = [],
+  thirds = [],
   statuses = [],
 }) => {
+  const supplierOptions = (suppliers && suppliers.length ? suppliers : thirds) || [];
   const getTable = () => {
     return dataTableRef?.current?.table();
   };
   const [filters, setFilters] = useState([
-    { regex: true, value: "", column: "name:name" },
-    { regex: true, value: "", column: "classification:name" },
-    { regex: true, value: "", column: "type:name" },
-    { regex: true, value: "", column: "supplier:name" },
-    { regex: true, value: "", column: "status:name" },
+    { regex: true,  value: "", column: "name:name" },
+    { regex: true,  value: "", column: "classification:name" },
+    { regex: true,  value: "", column: "type:name" },
+    { regex: false, value: "", column: "supplier.id:name" },
+    { regex: true,  value: "", column: "status:name" },
+    { regex: false, value: "", column: "acquisition_date:name" },
   ]);
 
   const getFilter = (column) => {
@@ -60,11 +67,12 @@ const FilterAssets = ({
     table.draw();
 
     setFilters([
-      { regex: true, value: "", column: "name:name" },
-      { regex: true, value: "", column: "classification:name" },
-      { regex: true, value: "", column: "type:name" },
-      { regex: true, value: "", column: "supplier:name" },
-      { regex: true, value: "", column: "status:name" },
+      { regex: true,  value: "", column: "name:name" },
+      { regex: true,  value: "", column: "classification:name" },
+      { regex: true,  value: "", column: "type:name" },
+      { regex: false, value: "", column: "supplier.id:name" },
+      { regex: true,  value: "", column: "status:name" },
+      { regex: false, value: "", column: "acquisition_date:name" },
     ]);
 
     filterInstance?.current?.hide();
@@ -172,19 +180,20 @@ const FilterAssets = ({
                   <InputSelectModal
                     id="supplier_filter"
                     label="Proveedor"
-                    options={suppliers.map((s) => ({
-                      name: s.name,
-                      id: s.name,
+                    options={supplierOptions.map((s) => ({
+                      id: s.id,
+                      label: s.label || s.name || `Proveedor ${s.id}`,
                     }))}
                     value={
-                      getFilter("supplier:name")?.value === ""
+                      getFilter("supplier.id:name")?.value === ""
                         ? []
-                        : getFilter("supplier:name")?.value.split("|")
+                        : getFilter("supplier.id:name")?.value.split("|")
                     }
                     onChange={(value) =>
-                      updateFilter("supplier:name", "value", value.join("|"))
+                      updateFilter("supplier.id:name", "value", value.join("|"))
                     }
                     multiple
+                    emptyMessage="No hay proveedores registrados. Cree uno en Terceros con rol PROVEEDOR."
                   />
                 </div>
               </div>
@@ -197,8 +206,8 @@ const FilterAssets = ({
                     id="status_filter"
                     label="Estado"
                     options={statuses.map((s) => ({
-                      name: s.name,
-                      id: s.name,
+                      label: s.name,
+                      id: s.id || s.name,
                     }))}
                     value={
                       getFilter("status:name")?.value === ""
@@ -209,6 +218,19 @@ const FilterAssets = ({
                       updateFilter("status:name", "value", value.join("|"))
                     }
                     multiple
+                  />
+                </div>
+
+                {/* ACQUISITION DATE - HU-ACT-10 E2 */}
+                <div className="col mb-4">
+                  <InputModal
+                    type="date"
+                    id="acquisition_date_filter"
+                    label="Fecha de adquisicion"
+                    value={getFilter("acquisition_date:name")?.value || ""}
+                    onChange={(e) =>
+                      updateFilter("acquisition_date:name", "value", e.target.value)
+                    }
                   />
                 </div>
               </div>

@@ -169,16 +169,21 @@ const CreateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
                                     label="Tasa de cambio"
                                     value={exchangeRate.value}
                                     onChange={(e) => {
-                                        setExchangeRate({ ...exchangeRate, value: e.target.value })
+                                        // HU-CFG-25 MT-01 (2026-04-27): rechazar e/+/-.
+                                        // El input type=number permite estos chars por
+                                        // defecto en HTML5; sanitizamos el value.
+                                        const cleaned = (e.target.value || '').replace(/[eE+\-]/g, '');
+                                        setExchangeRate({ ...exchangeRate, value: cleaned });
                                         setErrors((prev) => ({
                                             ...prev,
                                             value: '',
-                                        }))
+                                        }));
                                     }}
                                     error={errors.value}
-                                    placeholder="Tasa de cambio"
+                                    placeholder="Ej: 4200.50"
                                     required={true}
                                     type="number"
+                                    min="0"
                                 />
                             </div>
                         </div>

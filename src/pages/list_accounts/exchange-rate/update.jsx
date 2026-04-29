@@ -209,6 +209,27 @@ const UpdateExchangeRate = ({ dataTableRef, modalRef, modalInstance, exchangeRat
                                 />
                             </div>
                         </div>
+
+                        {/* HU-CFG-26 E2 (2026-04-27): la columna Estado se mostraba
+                            en el listado pero NO se podia editar. Ahora se expone
+                            para que el contador pueda activar/inactivar la tasa. */}
+                        <div className="row">
+                            <div className="col-md-6 mb-6 mt-2">
+                                <InputSelectModal
+                                    id="status_update"
+                                    label="Estado"
+                                    value={exchangeRate.status}
+                                    onChange={(value) => setExchangeRate({ ...exchangeRate, status: value })}
+                                    error={errors.status}
+                                    placeholder="Seleccione un estado"
+                                    options={[
+                                        { id: 'ACTIVE',   label: 'Activo' },
+                                        { id: 'INACTIVE', label: 'Inactivo' },
+                                    ]}
+                                    required={true}
+                                />
+                            </div>
+                        </div>
                     </div>
                     <div className="modal-footer">
                         <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">

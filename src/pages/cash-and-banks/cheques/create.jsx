@@ -27,6 +27,11 @@ const CreateCheque = ({
     const [loadingChequeras, setLoadingChequeras] = useState(false);
     const [chequeras,        setChequeras]        = useState([]);  // { id, name, checkStartNumber, checkEndNumber, availableChecks }
 
+    // QA HU-020 E1: para cheques VIRTUAL el backend exige supportDocumentBase64
+    // (BNK-ERR-097). Antes el form no tenia input de archivo y siempre salia 400.
+    const [supportFile,      setSupportFile]      = useState(null);
+    const [supportFileBase64, setSupportFileBase64] = useState(null);
+
     // Limpiar al abrir modal
     useEffect(() => {
         setErrors({ ...emptyErrors });
@@ -122,8 +127,52 @@ const CreateCheque = ({
             valid = false;
         }
 
+        // QA HU-020 E1: cheques VIRTUAL exigen documento soporte (PDF/JPG/PNG, max 5MB).
+        if (record.tipoCheque === 'VIRTUAL') {
+            if (!supportFileBase64) {
+                errs.documentoSoporte = 'BNK-ERR-097: Para cheques virtuales debe adjuntar documento soporte (PDF/JPG/PNG)';
+                valid = false;
+            }
+        }
+
         setErrors(errs);
         return valid;
+    };
+
+    /**
+     * QA HU-020 E1: lee el archivo seleccionado, valida MIME y tamaño y lo
+     * convierte a base64 con prefijo data:mime;base64,... que es el formato
+     * que espera el backend (decodeBase64Payload).
+     */
+    const onPickSupport = (file) => {
+        if (!file) {
+            setSupportFile(null);
+            setSupportFileBase64(null);
+            setErrors(prev => ({ ...prev, documentoSoporte: '' }));
+            return;
+        }
+        const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        if (!allowed.includes(file.type)) {
+            setErrors(prev => ({
+                ...prev,
+                documentoSoporte: 'Tipo de archivo no permitido. Use PDF, JPG o PNG.',
+            }));
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setErrors(prev => ({
+                ...prev,
+                documentoSoporte: 'El archivo supera 5MB. Reduzca el tamaño.',
+            }));
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            setSupportFile(file);
+            setSupportFileBase64(reader.result); // data:mime;base64,...
+            setErrors(prev => ({ ...prev, documentoSoporte: '' }));
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = async () => {
@@ -139,6 +188,8 @@ const CreateCheque = ({
             issueDate:    record.fechaExpedicion,
             typeCheck:    record.tipoCheque || 'FISICO',
             observations: record.observaciones?.trim() || null,
+            // QA HU-020 E1: backend exige base64 para VIRTUAL.
+            supportDocumentBase64: record.tipoCheque === 'VIRTUAL' ? supportFileBase64 : null,
         };
 
         try {
@@ -160,6 +211,8 @@ const CreateCheque = ({
             modalInstance?.current?.hide();
             setErrors({ ...emptyErrors });
             setErrorMessage('');
+            setSupportFile(null);
+            setSupportFileBase64(null);
 
             if (tipoCheque === 'VIRTUAL' && pdfPath) {
                 window.Swal.fire({
@@ -275,6 +328,32 @@ const CreateCheque = ({
                                 />
                             </div>
                         </div>
+
+                        {/* QA HU-020 E1: documento soporte obligatorio para VIRTUAL */}
+                        {record.tipoCheque === 'VIRTUAL' && (
+                            <div className="row">
+                                <div className="col-12 mb-4 mt-2">
+                                    <label className="form-label small mb-1">
+                                        Documento soporte <span className="text-danger">*</span>
+                                        <span className="text-muted ms-1">(PDF/JPG/PNG, max 5MB)</span>
+                                    </label>
+                                    <input
+                                        type="file"
+                                        className={`form-control form-control-sm ${errors.documentoSoporte ? 'is-invalid' : ''}`}
+                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                        onChange={(e) => onPickSupport(e.target.files?.[0] || null)}
+                                    />
+                                    {errors.documentoSoporte && (
+                                        <div className="invalid-feedback d-block">{errors.documentoSoporte}</div>
+                                    )}
+                                    {supportFile && (
+                                        <small className="text-success d-block mt-1">
+                                            <i className="ri-check-line"></i> {supportFile.name} ({Math.round(supportFile.size / 1024)} KB)
+                                        </small>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Beneficiario */}
                         <div className="row">

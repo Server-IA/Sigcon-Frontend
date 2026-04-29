@@ -10,7 +10,7 @@ import { fetchHelper } from '../../../utils/fetch';
  * <p>Si el usuario modifica baseSalary durante edicion, el backend exige
  * salaryChangeReason (HU-NOM-01 E3). Este form muestra el campo condicionalmente.
  */
-const EmpleadoForm = ({ modalRef, modalInstance, empleado, onSaved }) => {
+const EmpleadoForm = ({ modalRef, modalInstance, empleado, createKey, onSaved }) => {
     const [form, setForm] = useState({
         documentType: 'CC',
         documentNumber: '',
@@ -47,6 +47,8 @@ const EmpleadoForm = ({ modalRef, modalInstance, empleado, onSaved }) => {
             .catch(() => {});
     }, []);
 
+    // HU-NOM-01 DEF#1 (2026-04-28): el effect tambien depende de createKey para
+    // resetear cuando el padre solicita reabrir Crear (mismo selected=null).
     useEffect(() => {
         if (empleado) {
             setForm({
@@ -75,7 +77,7 @@ const EmpleadoForm = ({ modalRef, modalInstance, empleado, onSaved }) => {
             setOriginalSalary(null);
         }
         setErrors({});
-    }, [empleado]);
+    }, [empleado, createKey]);
 
     const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 

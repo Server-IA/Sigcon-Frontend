@@ -160,7 +160,10 @@ const IndexArOverdue = () => {
                         </thead>
                         <tbody>
                             {overdue.length === 0 && (
-                                <tr><td colSpan="6" className="text-center">Sin facturas vencidas</td></tr>
+                                <tr><td colSpan="6" className="text-center text-muted py-3">
+                                    <i className="ri-information-line me-2"></i>
+                                    No se encontraron registros con los criterios seleccionados.
+                                </td></tr>
                             )}
                             {overdue.map((r) => (
                                 <tr key={r.invoiceId}>
@@ -209,7 +212,10 @@ const IndexArOverdue = () => {
                         </thead>
                         <tbody>
                             {upcoming.length === 0 && (
-                                <tr><td colSpan="5" className="text-center">Sin facturas proximas a vencer</td></tr>
+                                <tr><td colSpan="5" className="text-center text-muted py-3">
+                                    <i className="ri-information-line me-2"></i>
+                                    No se encontraron registros con los criterios seleccionados.
+                                </td></tr>
                             )}
                             {upcoming.map((r) => (
                                 <tr key={r.invoiceId}>

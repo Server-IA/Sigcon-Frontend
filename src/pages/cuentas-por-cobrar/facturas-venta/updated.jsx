@@ -7,6 +7,33 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
 /**
+ * HU-AR-01B DEF#3: traduccion campo->etiqueta para mensajes legibles.
+ */
+const FIELD_LABELS = {
+    thirdPartyId: 'Cliente',
+    invoiceDate: 'Fecha de la factura',
+    dueDate: 'Fecha de vencimiento',
+    resolutionNumber: 'Resolucion DIAN',
+    notes: 'Notas',
+};
+
+const buildValidationErrors = (errors) => {
+    if (!Array.isArray(errors) || errors.length === 0) return { msg: '', map: {} };
+    const map = {};
+    const lines = errors.map((e) => {
+        const field = e?.field || '';
+        const label = FIELD_LABELS[field] || field;
+        const msg = e?.message || 'Campo invalido';
+        map[field] = msg;
+        return `- ${label}: ${msg}`;
+    });
+    return {
+        msg: 'Faltan o son invalidos los siguientes campos:\n' + lines.join('\n'),
+        map,
+    };
+};
+
+/**
  * Modal de edicion de Factura de Venta.
  * Permite actualizar: fecha de vencimiento, resolucion DIAN y notas.
  * No permite modificar factura con pagos, anulada, o liquidada.
@@ -14,6 +41,8 @@ import { fetchHelper } from '../../../utils/fetch';
 const UpdatedSalesInvoice = ({ modalRef, modalInstance, dataTableRef, record, setMessage }) => {
     const [form, setForm] = useState({ dueDate: '', resolutionNumber: '', notes: '' });
     const [errorMessage, setErrorMessage] = useState('');
+    // HU-AR-01B DEF#3: errores por campo para resaltar inputs invalidos.
+    const [fieldErrors, setFieldErrors] = useState({});
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -30,6 +59,7 @@ const UpdatedSalesInvoice = ({ modalRef, modalInstance, dataTableRef, record, se
         e.preventDefault();
         if (!record?.id) return;
         setErrorMessage('');
+        setFieldErrors({});
         setLoading(true);
         try {
             await fetchHelper.put(
@@ -49,7 +79,14 @@ const UpdatedSalesInvoice = ({ modalRef, modalInstance, dataTableRef, record, se
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
         } catch (err) {
-            setErrorMessage(err?.message || err?.msg || 'Error al actualizar la factura.');
+            // HU-AR-01B DEF#3: mostrar campos invalidos detallados.
+            const validation = buildValidationErrors(err?.errors);
+            if (validation.msg) {
+                setErrorMessage(validation.msg);
+                setFieldErrors(validation.map);
+            } else {
+                setErrorMessage(err?.msg || err?.message || 'Error al actualizar la factura.');
+            }
         } finally {
             setLoading(false);
         }
@@ -70,14 +107,17 @@ const UpdatedSalesInvoice = ({ modalRef, modalInstance, dataTableRef, record, se
 
                             <InputModal label="Fecha de vencimiento" name="dueDate" type="date"
                                 value={form.dueDate}
+                                error={fieldErrors.dueDate}
                                 onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
 
                             <InputModal label="Resolucion DIAN" name="resolutionNumber" type="text"
                                 value={form.resolutionNumber}
+                                error={fieldErrors.resolutionNumber}
                                 onChange={(e) => setForm({ ...form, resolutionNumber: e.target.value })} />
 
                             <InputModal label="Notas" name="notes" type="text"
                                 value={form.notes}
+                                error={fieldErrors.notes}
                                 onChange={(e) => setForm({ ...form, notes: e.target.value })} />
                         </div>
                         <div className="modal-footer">

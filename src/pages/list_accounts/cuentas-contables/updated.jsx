@@ -89,10 +89,11 @@ const UpdatedCuentaContable = ({
             return;
         }
 
-        // Swagger: maxLength 50, pattern ^[a-zA-Z0-9 _-]+$
-        const nameRegex = /^[a-zA-Z0-9 _-]{1,50}$/;
+        // Backend regex actualizado: permite letras (con acentos y ñ), numeros, espacios,
+        // guiones, parentesis, puntos y comas. Consistente con UpdateAccountingAccountRequest.
+        const nameRegex = /^[a-zA-Z0-9 áéíóúÁÉÍÓÚñÑüÜ()._,\-]{1,100}$/;
         if (!nameRegex.test(cuentaUpdated.custom_name)) {
-            setErrorMessage('El nombre debe tener entre 1 y 50 caracteres, solo alfanuméricos, espacios, guiones y guiones bajos');
+            setErrorMessage('El nombre debe tener entre 1 y 100 caracteres y solo puede contener letras, números, espacios, guiones, puntos, comas y paréntesis');
             return;
         }
 
@@ -229,7 +230,7 @@ const UpdatedCuentaContable = ({
                                             }}
                                             error={errors.custom_name}
                                             placeholder="Ej: Caja general"
-                                            maxLength={50}
+                                            maxLength={100}
                                             disabled={readOnlyFields.custom_name}
                                             required={true}
                                         />

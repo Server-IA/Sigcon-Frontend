@@ -153,6 +153,83 @@ const AssetReportGeneration = () => {
         }
     };
 
+    /**
+     * HU-ACT-04: descarga las filas como CSV. Usa BOM UTF-8 para que Excel
+     * abra los acentos correctamente y comilla los campos con coma o comilla.
+     */
+    const downloadAsCsv = (rows, fileName) => {
+        // HU-ACT-07 E2: incluir descripcion del activo y cuenta contable
+        // (PUC + nombre cuenta) en el export. Backend devuelve `assetName`,
+        // `description`, `accountInfo`, `supplierName` en AssetReportDTO.
+        const cols = [
+            ['assetCode',         'Codigo'],
+            ['assetName',         'Nombre'],
+            ['description',       'Descripcion'],
+            ['classification',    'Clasificacion'],
+            ['accountInfo',       'Cuenta contable'],
+            ['acquisitionValue',  'Valor adquisicion'],
+            ['currentBookValue',  'Valor en libros'],
+            ['status',            'Estado'],
+            ['acquisitionDate',   'Fecha adquisicion'],
+            ['supplierName',      'Proveedor'],
+        ];
+        const escape = (v) => {
+            if (v == null) return '';
+            const s = String(v);
+            return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        };
+        const get = (r, k) => r?.[k] ?? '';
+        const header = cols.map(c => c[1]).join(';');
+        const body = rows.map(r => cols.map(c => escape(get(r, c[0]))).join(';')).join('\n');
+        const csv = '﻿' + header + '\n' + body;
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
+    /**
+     * Descarga como XLS (HTML-table-as-Excel): Excel reconoce un archivo .xls
+     * con tabla HTML. No requiere libreria externa y respeta acentos cuando
+     * declaramos charset UTF-8.
+     */
+    const downloadAsXlsx = (rows, fileName) => {
+        // HU-ACT-07 E2: descripcion + cuenta contable presentes en XLS.
+        // Campos del AssetReportDTO: assetCode, assetName, description,
+        // classification, accountInfo, acquisitionValue, currentBookValue,
+        // status, acquisitionDate, supplierName.
+        const cols = [
+            ['Codigo',             r => r.assetCode],
+            ['Nombre',             r => r.assetName],
+            ['Descripcion',        r => r.description],
+            ['Clasificacion',      r => r.classification],
+            ['Cuenta contable',    r => r.accountInfo],
+            ['Valor adquisicion',  r => r.acquisitionValue],
+            ['Valor en libros',    r => r.currentBookValue],
+            ['Estado',             r => r.status],
+            ['Fecha adquisicion',  r => r.acquisitionDate],
+            ['Proveedor',          r => r.supplierName],
+        ];
+        const esc = (v) => v == null ? '' : String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        const head = '<tr>' + cols.map(c => `<th>${c[0]}</th>`).join('') + '</tr>';
+        const body = rows.map(r => '<tr>' + cols.map(c => `<td>${esc(c[1](r))}</td>`).join('') + '</tr>').join('');
+        const html = `<html><head><meta charset="utf-8"/></head><body><table border="1">${head}${body}</table></body></html>`;
+        const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
     const handleGenerate = async () => {
         if (!validate()) return;
 
@@ -166,9 +243,31 @@ const AssetReportGeneration = () => {
         };
 
         try {
+            // HU-ACT-04 E3: SIEMPRE consultar primero el JSON para validar
+            // que existan registros. Antes el PDF se descargaba aunque la
+            // consulta fuera vacia (entregando un PDF sin filas).
+            const response = await fetchHelper.post(
+                base_url(['api', 'v1', 'assets', 'reports', 'generate']),
+                payload, {}, 0
+            );
+            const data = response?.data ?? response ?? [];
+            const rows = Array.isArray(data) ? data
+                : (data && typeof data === 'object'
+                    ? Object.values(data).flat()
+                    : []);
+
+            if (rows.length === 0) {
+                // HU-ACT-04 E3: mensaje EXACTO de la HU.
+                setErrorMessage('No hay activos registrados con los criterios seleccionados');
+                return;
+            }
+
+            setReportData(rows);
+
+            const baseName = `reporte_activos_${payload.startDate}_${payload.endDate}`;
+
             if (formData.formatoSalida === 'pdf') {
-                // Descarga del PDF: pedimos blob a traves de fetch nativo para
-                // poder disparar download en el navegador.
+                // Descarga del PDF: pedimos blob via fetch nativo.
                 const token = localStorage.getItem('token');
                 const resp = await fetch(
                     base_url(['api', 'v1', 'assets', 'reports', 'generate', 'pdf']),
@@ -181,43 +280,26 @@ const AssetReportGeneration = () => {
                         body: JSON.stringify(payload),
                     }
                 );
-
                 if (!resp.ok) {
                     const txt = await resp.text();
                     throw new Error(txt || `Error HTTP ${resp.status}`);
                 }
-
                 const blob = await resp.blob();
                 const url  = window.URL.createObjectURL(blob);
                 const a    = document.createElement('a');
                 a.href = url;
-                a.download = `reporte_activos_${payload.startDate}_${payload.endDate}.pdf`;
+                a.download = `${baseName}.pdf`;
                 document.body.appendChild(a);
                 a.click();
                 a.remove();
                 window.URL.revokeObjectURL(url);
-
-                setReportGenerated(true);
-            } else {
-                // JSON (para previsualizacion y posterior export XLSX/CSV client-side).
-                const response = await fetchHelper.post(
-                    base_url(['api', 'v1', 'assets', 'reports', 'generate']),
-                    payload, {}, 0
-                );
-
-                const data = response?.data ?? response ?? [];
-                const rows = Array.isArray(data) ? data
-                    : (data && typeof data === 'object'
-                        ? Object.values(data).flat()
-                        : []);
-
-                if (rows.length > 0) {
-                    setReportData(rows);
-                    setReportGenerated(true);
-                } else {
-                    setErrorMessage('No se encontraron activos para los filtros seleccionados.');
-                }
+            } else if (formData.formatoSalida === 'xlsx') {
+                downloadAsXlsx(rows, `${baseName}.xls`);
+            } else if (formData.formatoSalida === 'csv') {
+                downloadAsCsv(rows, `${baseName}.csv`);
             }
+
+            setReportGenerated(true);
         } catch (error) {
             console.error(error);
             setErrorMessage(error?.msg || error?.message || 'Error al generar el informe. Intente nuevamente.');

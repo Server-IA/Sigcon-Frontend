@@ -41,6 +41,12 @@ const UpdatedCommercialData = ({
      * PUT /api/v1/commercial-data/{thirdPartyId}
      */
     const handleUpdate = async () => {
+        // HU-TER-12 E2 (2026-04-27): validar motivo del cambio min 30 chars
+        const reason = (commercialData.changeReason || '').trim();
+        if (reason.length < 30) {
+            setErrors(prev => ({ ...prev, changeReason: 'Debe ingresar el motivo del cambio (minimo 30 caracteres).' }));
+            return;
+        }
         try {
             const payload = {
                 thirdPartyId: Number(commercialData.thirdPartyId),
@@ -50,6 +56,7 @@ const UpdatedCommercialData = ({
                 riskLevel: commercialData.riskLevel || null,
                 validityFrom: commercialData.validityFrom || null,
                 validityTo: commercialData.validityTo || null,
+                changeReason: reason,
             };
 
             await fetchHelper.put(
@@ -166,6 +173,29 @@ const UpdatedCommercialData = ({
                                     error={errors.validityTo}
                                     placeholder=""
                                 />
+                            </div>
+                        </div>
+
+                        {/* HU-TER-12 E2 (2026-04-27): motivo del cambio obligatorio min 30 chars */}
+                        <div className="row">
+                            <div className="col-md-12 mb-4 mt-2">
+                                <label htmlFor="cd_changeReason" className="form-label fw-semibold">
+                                    Motivo del cambio <span className="text-danger">*</span>
+                                </label>
+                                <textarea
+                                    id="cd_changeReason"
+                                    className={`form-control ${errors.changeReason ? 'is-invalid' : ''}`}
+                                    rows={3}
+                                    placeholder="Explique el motivo del cambio (minimo 30 caracteres)..."
+                                    value={commercialData.changeReason || ''}
+                                    onChange={(e) => setCommercialData({ ...commercialData, changeReason: e.target.value })}
+                                />
+                                <small className="text-muted">
+                                    {(commercialData.changeReason || '').length}/30 caracteres minimos
+                                </small>
+                                {errors.changeReason && (
+                                    <div className="invalid-feedback d-block">{errors.changeReason}</div>
+                                )}
                             </div>
                         </div>
                     </div>

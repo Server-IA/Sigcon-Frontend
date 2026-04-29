@@ -26,6 +26,118 @@ const UpdateBankAccount = ({
     // const [loadingBranches, setLoadingBranches] = useState(false);
     const [loadingDetail,   setLoadingDetail]   = useState(false);
 
+    // HU-TER-05 (2026-04-27): terceros vinculados a esta cuenta bancaria
+    // (lookup inverso). Permite al contador asignar/quitar terceros sin salir
+    // del modal de la cuenta.
+    const [linkedThirdParties, setLinkedThirdParties] = useState([]);
+    const [thirdPartyOptions, setThirdPartyOptions]   = useState([]);
+    const [selectedThirdPartyId, setSelectedThirdPartyId] = useState('');
+    const [linksLoading, setLinksLoading]             = useState(false);
+    // QA-BLOQUE-AK (2026-04-29): pendientes hasta "Guardar Cambios". Si el usuario
+    // cierra el modal sin guardar, las pendientes se descartan.
+    const [pendingTpLinks,   setPendingTpLinks]   = useState([]);   // [{tempId, thirdPartyId, label}]
+    const [pendingTpUnlinks, setPendingTpUnlinks] = useState([]);   // [linkIds existentes]
+
+    // Carga listado de terceros (para dropdown) + terceros vinculados al abrir
+    useEffect(() => {
+        if (!record?.id) {
+            setLinkedThirdParties([]);
+            setThirdPartyOptions([]);
+            setSelectedThirdPartyId('');
+            setPendingTpLinks([]);
+            setPendingTpUnlinks([]);
+            return;
+        }
+        // QA-BLOQUE-AK: limpiar pendientes al recargar el record
+        setPendingTpLinks([]);
+        setPendingTpUnlinks([]);
+        setLinksLoading(true);
+        // Listar terceros del tenant (DataTable search)
+        fetchHelper.post(
+            base_url(['api', 'v1', 'third-parties', 'search']),
+            { draw: 1, start: 0, length: 10000, columns: [], search: { value: '', regex: false } },
+            {}, 0
+        )
+            .then(res => setThirdPartyOptions((res?.data ?? []).map(tp => ({
+                id: tp.id,
+                label: `${tp.nit ?? ''}/${tp.dv ?? ''} - ${tp.businessName ?? ''}`,
+            }))))
+            .catch(() => setThirdPartyOptions([]));
+        // Lookup inverso: terceros que tienen esta cuenta vinculada
+        fetchHelper.get(
+            base_url(['api', 'v1', 'bank-accounts', record.id, 'third-parties']),
+            {}, 0, false
+        )
+            .then(res => setLinkedThirdParties(res?.data ?? []))
+            .catch(() => setLinkedThirdParties([]))
+            .finally(() => setLinksLoading(false));
+    }, [record?.id]);
+
+    /**
+     * HU-TER-05 + QA-BLOQUE-AK (2026-04-29): "vincular" agrega a pendientes en
+     * memoria. La persistencia ocurre solo al hacer click en "Guardar Cambios".
+     * Ademas: una cuenta bancaria solo puede pertenecer a UN tercero (validado en
+     * backend). Si ya hay uno vinculado, se bloquea aqui antes de llamar.
+     */
+    const handleLinkThirdParty = () => {
+        if (!selectedThirdPartyId) {
+            setError({ message: 'Seleccione un tercero para vincular.', type: 'warning', show: true });
+            return;
+        }
+        const id = Number(selectedThirdPartyId);
+        const visibleLinked = linkedThirdParties.filter(l => !pendingTpUnlinks.includes(l.id));
+        if (visibleLinked.length > 0 || pendingTpLinks.length > 0) {
+            setError({
+                message: 'Una cuenta bancaria solo puede pertenecer a un tercero. Desvincule el actual antes de agregar otro.',
+                type: 'warning', show: true,
+            });
+            return;
+        }
+        const meta = thirdPartyOptions.find(t => t.id === id);
+        if (!meta) {
+            setError({ message: 'No se pudo resolver el tercero seleccionado.', type: 'danger', show: true });
+            return;
+        }
+        setPendingTpLinks([{ tempId: `tmp_${Date.now()}_${id}`, thirdPartyId: id, label: meta.label }]);
+        setSelectedThirdPartyId('');
+        setError({ message: '', type: '', show: false });
+    };
+
+    /**
+     * HU-TER-05 + QA-BLOQUE-AK: "desvincular" agrega a pendientes (si tiene id)
+     * o quita del array de links pendientes (si tiene tempId).
+     */
+    const handleUnlinkThirdParty = (entry) => {
+        if (entry.tempId) {
+            setPendingTpLinks(prev => prev.filter(p => p.tempId !== entry.tempId));
+            return;
+        }
+        if (entry.id) {
+            setPendingTpUnlinks(prev => prev.includes(entry.id) ? prev : [...prev, entry.id]);
+        }
+    };
+
+    /** Aplicar pendientes al backend, llamado desde handleSave */
+    const applyPendingTpChanges = async () => {
+        // Unlinks primero (libera la cuenta antes de potencial reasignacion)
+        for (const linkId of pendingTpUnlinks) {
+            const link = linkedThirdParties.find(l => l.id === linkId);
+            if (!link) continue;
+            await fetchHelper.delete(
+                base_url(['api', 'v1', 'third-parties', link.thirdPartyId, 'bank-accounts', linkId]),
+                null, {}, 1000
+            );
+        }
+        // Luego links nuevos
+        for (const pl of pendingTpLinks) {
+            await fetchHelper.post(
+                base_url(['api', 'v1', 'bank-accounts', record.id, 'third-parties']),
+                { thirdPartyId: pl.thirdPartyId, isPrimary: false },
+                {}, 1000
+            );
+        }
+    };
+
     // ── Al abrir el modal: cargar detalle completo (GET /{id}) ────────────────
     // El endpoint de búsqueda (DataTable) NO devuelve allowsOverdraft, creditLimit, etc.
     // Solo GET /{id} trae todos los campos
@@ -115,6 +227,17 @@ const UpdateBankAccount = ({
 
             await fetchHelper.put(base_url(['api', 'v1', 'bank-accounts', record.id]), body, {}, 1000);
 
+            // QA-BLOQUE-AK: aplicar pendientes de terceros vinculados ANTES de cerrar
+            try {
+                await applyPendingTpChanges();
+                setPendingTpLinks([]);
+                setPendingTpUnlinks([]);
+            } catch (e) {
+                const msg = e?.msg || e?.message || 'No se pudieron guardar los cambios de terceros.';
+                setError({ message: msg, type: 'danger', show: true });
+                return; // No cerrar — el usuario debe corregir
+            }
+
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
             setErrors({});
@@ -133,7 +256,19 @@ const UpdateBankAccount = ({
         }
     };
 
-    const field = (key, val) => setRecord(prev => ({ ...prev, [key]: val }));
+    // QA HU-002 E1: al cambiar el valor de un campo, limpiamos cualquier error
+    // previo que tuviera ese campo. Antes el mensaje *"El motivo de cambio debe
+    // tener al menos 10 caracteres"* persistia aun despues de corregir el texto.
+    const field = (key, val) => {
+        setRecord(prev => ({ ...prev, [key]: val }));
+        if (errors && errors[key]) {
+            setErrors(prev => {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+            });
+        }
+    };
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
@@ -369,6 +504,129 @@ const UpdateBankAccount = ({
                                 </div>
                             </>
                         )}
+
+                        {/* HU-TER-05 (2026-04-27): Terceros vinculados a esta cuenta bancaria.
+                            Mismo modelo que el tab 'Cuentas Bancarias' del modal Tercero,
+                            pero invertido: aqui el contador asigna terceros al abrir la cuenta. */}
+                        <hr className="my-4" />
+                        <h6 className="mb-3">
+                            <i className="ri-user-shared-line me-2"></i>Terceros vinculados a esta cuenta
+                        </h6>
+                        <p className="text-muted small mb-3">
+                            Permite asignar el titular o terceros autorizados de la cuenta. Los cambios
+                            se reflejan automaticamente en el modulo de Terceros.
+                        </p>
+
+                        <div className="row align-items-end mb-3">
+                            <div className="col-md-9">
+                                <InputSelectModal
+                                    id="upd_link_third_party"
+                                    label="Tercero"
+                                    value={selectedThirdPartyId}
+                                    onChange={(v) => setSelectedThirdPartyId(v)}
+                                    options={thirdPartyOptions.filter(o => {
+                                        // Excluir el ya vinculado activo (no en pending unlink)
+                                        const linkedActive = linkedThirdParties.some(l =>
+                                            l.thirdPartyId === o.id && !pendingTpUnlinks.includes(l.id));
+                                        return !linkedActive;
+                                    })}
+                                    placeholder="Seleccione un tercero"
+                                    emptyMessage={thirdPartyOptions.length === 0
+                                        ? 'No hay terceros registrados. Cree uno en el modulo Terceros.'
+                                        : 'No hay terceros disponibles para vincular.'}
+                                />
+                            </div>
+                            <div className="col-md-3">
+                                <button
+                                    type="button"
+                                    className="btn btn-primary w-100"
+                                    onClick={handleLinkThirdParty}
+                                    disabled={!selectedThirdPartyId
+                                        || (linkedThirdParties.filter(l => !pendingTpUnlinks.includes(l.id)).length > 0)
+                                        || pendingTpLinks.length > 0}
+                                    title={(linkedThirdParties.filter(l => !pendingTpUnlinks.includes(l.id)).length > 0
+                                        || pendingTpLinks.length > 0)
+                                        ? 'Solo se puede vincular un tercero por cuenta'
+                                        : 'Vincular tercero'}
+                                >
+                                    <i className="ri-link me-1"></i>Vincular
+                                </button>
+                            </div>
+                        </div>
+
+                        {(pendingTpLinks.length > 0 || pendingTpUnlinks.length > 0) && (
+                            <div className="alert alert-warning py-2 mb-3" role="alert">
+                                <i className="ri-information-line me-1"></i>
+                                Hay cambios pendientes en terceros vinculados.
+                                Se aplicaran al hacer click en <strong>Guardar Cambios</strong>.
+                                Si cierra sin guardar, se descartaran.
+                            </div>
+                        )}
+
+                        {linksLoading && (
+                            <p className="text-muted text-center py-2">Cargando...</p>
+                        )}
+                        {(() => {
+                            const visibleLinked = linkedThirdParties.filter(l => !pendingTpUnlinks.includes(l.id));
+                            const totalRows = visibleLinked.length + pendingTpLinks.length;
+                            if (linksLoading) return null;
+                            if (totalRows === 0) {
+                                return (
+                                    <p className="text-muted text-center py-2">
+                                        Esta cuenta no tiene terceros vinculados.
+                                    </p>
+                                );
+                            }
+                            return (
+                                <div className="table-responsive">
+                                    <table className="table table-sm table-bordered">
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th>NIT</th>
+                                                <th>Razon Social</th>
+                                                <th>Estado</th>
+                                                <th style={{width:'80px'}}>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {visibleLinked.map(link => (
+                                                <tr key={`bd_${link.id}`}>
+                                                    <td>{link.thirdPartyNit ?? '-'}</td>
+                                                    <td>{link.thirdPartyBusinessName ?? '-'}</td>
+                                                    <td><span className="badge bg-label-success">Guardada</span></td>
+                                                    <td>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-outline-danger"
+                                                            title="Desvincular (pendiente hasta Guardar)"
+                                                            onClick={() => handleUnlinkThirdParty(link)}
+                                                        >
+                                                            <i className="ri-link-unlink"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {pendingTpLinks.map(pl => (
+                                                <tr key={pl.tempId} className="table-warning">
+                                                    <td colSpan={2}>{pl.label}</td>
+                                                    <td><span className="badge bg-label-warning">Pendiente</span></td>
+                                                    <td>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-outline-danger"
+                                                            title="Quitar de pendientes"
+                                                            onClick={() => handleUnlinkThirdParty(pl)}
+                                                        >
+                                                            <i className="ri-close-line"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     <div className="modal-footer">

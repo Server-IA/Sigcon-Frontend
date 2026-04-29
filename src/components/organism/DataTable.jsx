@@ -238,8 +238,15 @@ const DataTableReference = ({
             className="btn btn-outline-danger"
             type="button"
             onClick={() => {
+              // QA HU-007/013: el handleFilter usaba el state stale (setSearch
+              // es async). Antes "Limpiar" dejaba la busqueda anterior aplicada.
+              // Ahora limpiamos directo via la API de DataTables y luego
+              // sincronizamos el state.
               setSearch({ ...search, value: "" });
-              handleFilter();
+              if (dataTableRef?.current) {
+                dataTableRef.current.table().columns().search("");
+                dataTableRef.current.table().search("").ajax.reload();
+              }
             }}
             disabled={!dataTableRef?.current}
             data-bs-toggle="tooltip"

@@ -90,7 +90,13 @@ const IndexDepreciationRules = () => {
             title: 'Valor residual', data: 'residualValue', name: 'residualValue',
             render: (val) => val != null ? Number(val).toFixed(2) : '-'
         },
-        { title: 'Fecha de vigencia', data: 'effectiveDate', name: 'effectiveDate', render: (val) => val ?? '-' },
+        // HU-CFG-RF-14 E1: la HU pide "Fecha de creacion" (no la fecha de
+        // vigencia). Mostramos createdAt formateado y dejamos effectiveDate
+        // disponible como dato secundario en el detalle.
+        {
+            title: 'Fecha de creación', data: 'createdAt', name: 'createdAt',
+            render: (val) => val ? String(val).slice(0, 10) : '-'
+        },
         {
             title: 'Estado', data: 'status', name: 'status',
             render: (status) => status === 'ACTIVE'

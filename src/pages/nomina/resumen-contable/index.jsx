@@ -13,6 +13,22 @@ const fmt = (n) => new Intl.NumberFormat('es-CO', {
     style: 'currency', currency: 'COP', maximumFractionDigits: 0
 }).format(Number(n) || 0);
 
+// HU-NOM-06 DEF#2 (2026-04-28): nombres de meses en espaniol
+const MONTHS = [
+    { id: 1, label: '01 - Enero' },
+    { id: 2, label: '02 - Febrero' },
+    { id: 3, label: '03 - Marzo' },
+    { id: 4, label: '04 - Abril' },
+    { id: 5, label: '05 - Mayo' },
+    { id: 6, label: '06 - Junio' },
+    { id: 7, label: '07 - Julio' },
+    { id: 8, label: '08 - Agosto' },
+    { id: 9, label: '09 - Septiembre' },
+    { id: 10, label: '10 - Octubre' },
+    { id: 11, label: '11 - Noviembre' },
+    { id: 12, label: '12 - Diciembre' },
+];
+
 const IndexResumenContable = () => {
     const now = new Date();
     const [year, setYear] = useState(now.getFullYear());
@@ -36,6 +52,40 @@ const IndexResumenContable = () => {
         }
     };
 
+    // HU-NOM-06 DEF#2 (2026-04-28): exportar CSV del resumen contable.
+    const downloadCsv = () => {
+        if (!data) return;
+        const monthLabel = MONTHS.find(m => m.id === month)?.label || month;
+        const lines = [];
+        lines.push(`Resumen contable de nomina;${year};${monthLabel}`);
+        lines.push('');
+        lines.push('Totales del periodo');
+        lines.push(`Total recibos;${data.totalReceipts || 0}`);
+        lines.push(`Devengados;${data.totalEarnings || 0}`);
+        lines.push(`Deducciones;${data.totalDeductions || 0}`);
+        lines.push(`Aportes patronales;${data.totalEmployerContributions || 0}`);
+        lines.push(`Total neto a pagar;${data.totalNetPay || 0}`);
+        lines.push('');
+        lines.push('Devengados por centro de costo');
+        lines.push('Centro de costo;Monto');
+        Object.entries(data.earningsByCostCenter || {}).forEach(([cc, val]) =>
+            lines.push(`${cc};${val}`));
+        lines.push('');
+        lines.push('Neto a pagar por centro de costo');
+        lines.push('Centro de costo;Monto');
+        Object.entries(data.netByCostCenter || {}).forEach(([cc, val]) =>
+            lines.push(`${cc};${val}`));
+        lines.push('');
+        lines.push(`Comprobantes contables;${(data.journalEntryIds || []).map(id => 'JE #' + id).join(', ')}`);
+        const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `resumen_contable_nomina_${year}-${String(month).padStart(2,'0')}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="card">
             <h5 className="card-header">
@@ -49,20 +99,30 @@ const IndexResumenContable = () => {
                         onChange={() => setAlert({ show: false, type: '', message: '' })} />
 
                 <div className="row g-3 mb-3">
-                    <div className="col-md-4">
+                    <div className="col-md-3">
                         <label className="form-label">Año</label>
                         <input type="number" className="form-control" value={year}
                                 onChange={e => setYear(Number(e.target.value))} />
                     </div>
                     <div className="col-md-4">
                         <label className="form-label">Mes</label>
-                        <input type="number" min="1" max="12" className="form-control" value={month}
-                                onChange={e => setMonth(Number(e.target.value))} />
+                        <select className="form-select" value={month}
+                                onChange={e => setMonth(Number(e.target.value))}>
+                            {MONTHS.map(m => (
+                                <option key={m.id} value={m.id}>{m.label}</option>
+                            ))}
+                        </select>
                     </div>
-                    <div className="col-md-4 d-flex align-items-end">
+                    <div className="col-md-3 d-flex align-items-end">
                         <button className="btn btn-primary w-100" onClick={load} disabled={loading}>
                             {loading && <span className="spinner-border spinner-border-sm me-2"></span>}
                             <i className="ri-pie-chart-line me-1"></i> Generar resumen
+                        </button>
+                    </div>
+                    <div className="col-md-2 d-flex align-items-end">
+                        <button className="btn btn-success w-100" onClick={() => downloadCsv()}
+                                disabled={!data}>
+                            <i className="ri-file-excel-2-line me-1"></i> CSV
                         </button>
                     </div>
                 </div>
@@ -111,7 +171,7 @@ const IndexResumenContable = () => {
                                     <tbody>
                                         {Object.entries(data.earningsByCostCenter || {}).map(([cc, val]) => (
                                             <tr key={cc}>
-                                                <td>CC {cc === '0' ? '(sin asignar)' : `#${cc}`}</td>
+                                                <td>{cc}</td>
                                                 <td className="text-end">{fmt(val)}</td>
                                             </tr>
                                         ))}
@@ -124,7 +184,7 @@ const IndexResumenContable = () => {
                                     <tbody>
                                         {Object.entries(data.netByCostCenter || {}).map(([cc, val]) => (
                                             <tr key={cc}>
-                                                <td>CC {cc === '0' ? '(sin asignar)' : `#${cc}`}</td>
+                                                <td>{cc}</td>
                                                 <td className="text-end">{fmt(val)}</td>
                                             </tr>
                                         ))}

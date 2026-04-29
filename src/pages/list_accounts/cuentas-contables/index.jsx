@@ -137,14 +137,18 @@ const IndexCuentasContables = () => {
                 return;
             }
 
-            // Snake_case fields matching swagger response
+            // Mapping del row del DataTable -> form snake_case esperado por
+            // UpdateAccountingAccountRequest. La respuesta del backend es camelCase
+            // con objetos anidados (pucAccount, currencyType, costCenter), no expone
+            // un puc_id plano — antes el form quedaba vacio porque cuentaRef.puc_id
+            // siempre era undefined.
             const cuentaData = {
                 id: cuentaRef.id,
-                puc_id: cuentaRef.puc_id ?? null,
+                puc_id: cuentaRef.pucAccount?.id ?? cuentaRef.puc_id ?? null,
                 custom_name: cuentaRef.customName ?? null,
                 currency_type_id: cuentaRef.currencyType?.id ?? null,
                 cost_center_id: cuentaRef.costCenter?.id ?? null,
-                tax_rule_id: cuentaRef.taxRuleId ?? null,
+                tax_rule_id: cuentaRef.taxRule?.id ?? cuentaRef.taxRuleId ?? null,
                 nature: cuentaRef.nature ?? null,
                 status: cuentaRef.status ?? 'ACTIVE',
             };
@@ -156,31 +160,32 @@ const IndexCuentasContables = () => {
                     break;
 
                 case 'delete':
+                    // HU-CFG-RF-08: el flujo eliminar es realmente un soft-delete
+                    // que el contador percibe como "eliminar". Antes el wording
+                    // mezclaba "inactivar" / "eliminar" causando confusion.
                     window.Swal.fire({
                         title: '¿Estás seguro?',
-                        text: '¿Deseas inactivar esta cuenta contable? (CFG-RF-08)',
+                        text: '¿Deseas eliminar esta cuenta contable? Esta acción la desactiva del catálogo (CFG-RF-08).',
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: 'Inactivar',
+                        confirmButtonText: 'Eliminar',
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => {
                         if (!result.isConfirmed) return;
-                        // Swagger: DELETE /api/v1/accounting-accounts/delete/{id}?reason={reason}
                         window.Swal.fire({
-                            title: 'Motivo de inactivación',
+                            title: 'Motivo de eliminación',
                             input: 'text',
-                            inputLabel: 'Indique el motivo por el cual desea inactivar esta cuenta',
-                            inputPlaceholder: 'Ej: Cuenta obsoleta',
+                            inputLabel: 'Indique el motivo por el cual desea eliminar esta cuenta',
+                            inputPlaceholder: 'Ej: Cuenta obsoleta tras restructuración',
                             inputAttributes: { 'aria-label': 'Motivo', maxlength: 255 },
                             inputValidator: (value) => {
                                 if (!value || value.trim() === '') return 'El motivo es obligatorio';
                             },
                             showCancelButton: true,
-                            confirmButtonText: 'Inactivar',
+                            confirmButtonText: 'Eliminar',
                             cancelButtonText: 'Cancelar',
                         }).then(async (reasonResult) => {
                             if (!reasonResult.isConfirmed) return;
-                            // reason como query param según swagger
                             const deleteUrl = base_url(
                                 ['api', 'v1', 'accounting-accounts', 'delete', id],
                                 { reason: reasonResult.value.trim() }
@@ -188,14 +193,15 @@ const IndexCuentasContables = () => {
                             try {
                                 await fetchHelper.delete(deleteUrl, null, {}, 500, false);
                                 setMessage({
-                                    message: 'Cuenta contable inactivada exitosamente',
+                                    // HU-CFG-RF-08 E10: mensaje literal de la HU.
+                                    message: 'La cuenta contable fue eliminada exitosamente',
                                     type: 'success',
                                     show: true,
                                 });
                             } catch (error) {
                                 console.error('Error DELETE /api/v1/accounting-accounts/delete/' + id, error);
                                 setMessage({
-                                    message: error.msg || error.message || 'Error al inactivar la cuenta contable',
+                                    message: error.msg || error.message || 'Error al eliminar la cuenta contable',
                                     type: 'danger',
                                     show: true,
                                 });

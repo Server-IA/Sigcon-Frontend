@@ -195,6 +195,8 @@ import IndexApNotes from "../pages/accounts-payable/notes/index";
 import IndexApPurchaseOrders from "../pages/accounts-payable/purchase-orders/index";
 import IndexApReceipts from "../pages/accounts-payable/receipts/index";
 import IndexApReports from "../pages/accounts-payable/reports/index";
+import IndexApGoodsReturns from "../pages/accounts-payable/goods-returns/index";
+import IndexApInvoicesBulk from "../pages/accounts-payable/invoices-bulk/index";
 
 // Cuentas por Cobrar (AR)
 import IndexSalesInvoices from "../pages/cuentas-por-cobrar/facturas-venta/index";
@@ -208,6 +210,7 @@ import IndexDianResolutions from "../pages/cuentas-por-cobrar/resoluciones-dian/
 // Contabilidad General (CG)
 import IndexCgComprobantes from "../pages/contabilidad/comprobantes/index";
 import IndexCgPeriodos from "../pages/contabilidad/periodos/index";
+import CgVoucherSeriesAdmin from "../pages/contabilidad/series/index";
 import CgLibroDiario from "../pages/contabilidad/libros/libro-diario";
 import CgLibroMayor from "../pages/contabilidad/libros/libro-mayor";
 import CgBalanceComprobacion from "../pages/contabilidad/libros/balance-comprobacion";
@@ -232,6 +235,7 @@ import IndexAuditDashboard from "../pages/auditoria/dashboard/index";
 import IndexAuditExport from "../pages/auditoria/exportar/index";
 import IndexRiskRules from "../pages/auditoria/reglas-riesgo/index";
 import IndexRetention from "../pages/auditoria/retencion/index";
+import IndexFindings from "../pages/auditoria/hallazgos/index";
 
 // HU-INT-RF-14 E5: gatekeeper JSX para rutas que requieren ROLE_ADMIN.
 // Si el usuario no es admin, AdminRoute renderiza Page403 en lugar del componente.
@@ -316,8 +320,14 @@ export const COMPONENT_MAP = [
   { id: "AP_PURCHASE_ORDERS", name: "Ordenes de Compra", component: IndexApPurchaseOrders },
   { id: "AP_RECEIPTS", name: "Recepciones de Bienes", component: IndexApReceipts },
   { id: "AP_REPORTS", name: "Reportes CxP", component: IndexApReports },
+  // HU-AP-22 (2026-04-28): Devoluciones de mercancia
+  { id: "AP_GOODS_RETURNS", name: "Devoluciones de Mercancia", component: IndexApGoodsReturns },
+  // HU-AP-23 (2026-04-28): Carga masiva de facturas de compra
+  { id: "AP_INVOICES_BULK", name: "Carga Masiva Facturas", component: IndexApInvoicesBulk },
   { id: "CG_COMPROBANTES", name: "Comprobantes Contables", component: IndexCgComprobantes },
   { id: "CG_PERIODOS", name: "Periodos Contables", component: IndexCgPeriodos },
+  // HU-CG-03A E3/E5: configuracion de series de consecutivos por tipo de comprobante.
+  { id: "CG_SERIES", name: "Series de Consecutivos", component: CgVoucherSeriesAdmin },
   { id: "CG_LIBRO_DIARIO", name: "Libro Diario", component: CgLibroDiario },
   { id: "CG_LIBRO_MAYOR", name: "Libro Mayor", component: CgLibroMayor },
   { id: "CG_BALANCE_COMPROBACION", name: "Balance de Comprobacion", component: CgBalanceComprobacion },
@@ -342,6 +352,7 @@ export const COMPONENT_MAP = [
   { id: "AU_EXPORT", name: "Exportación Auditoría", component: adminOnly(IndexAuditExport) },
   { id: "AU_RISK_RULES", name: "Reglas de Riesgo", component: adminOnly(IndexRiskRules) },
   { id: "AU_RETENTION", name: "Retención y Purga", component: adminOnly(IndexRetention) },
+  { id: "AU_FINDINGS", name: "Hallazgos", component: adminOnly(IndexFindings) },
 
   // Bloque F - Plataforma (solo PLATFORM_ADMIN cross-empresa)
   { id: "PLATFORM_EMPRESAS", name: "Empresas (plataforma)", component: platformOnly(IndexEmpresas) },

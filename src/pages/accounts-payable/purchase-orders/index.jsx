@@ -8,6 +8,7 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
 import CreateApPurchaseOrder from './create';
+import UpdateApPurchaseOrder from './updated';
 
 /**
  * Pagina principal de Ordenes de Compra (Cuentas por Pagar).
@@ -46,8 +47,11 @@ const IndexApPurchaseOrders = () => {
     const dataTableRef = useRef(null);
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
+    const modalUpdateRef = useRef(null);
+    const modalUpdateInstance = useRef(null);
     const filterRef = useRef(null);
     const filterInstance = useRef(null);
+    const [editingOrderId, setEditingOrderId] = useState(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
@@ -98,6 +102,11 @@ const IndexApPurchaseOrders = () => {
                     <button class="btn btn-sm btn-label-info action-btn"
                         data-action="view" data-id="${id}" title="Ver">
                         <i class="ri-eye-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-label-warning action-btn"
+                        data-action="edit" data-id="${id}" title="Editar (solo borrador)"
+                        ${!isDraft ? 'disabled' : ''}>
+                        <i class="ri-edit-line"></i>
                     </button>
                     <button class="btn btn-sm btn-label-primary action-btn"
                         data-action="submit" data-id="${id}" title="Enviar a aprobacion"
@@ -271,6 +280,17 @@ const IndexApPurchaseOrders = () => {
                 return;
             }
 
+            if (action === 'edit') {
+                // HU-AP-17 (2026-04-28): editar OC en estado borrador
+                if (selected.status !== 'DRAFT') return;
+                setEditingOrderId(selected.id);
+                if (!modalUpdateInstance.current) {
+                    modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
+                }
+                modalUpdateInstance.current.show();
+                return;
+            }
+
             if (action === 'submit') {
                 if (selected.status !== 'DRAFT') return;
                 handleSubmit(selected);
@@ -328,6 +348,14 @@ const IndexApPurchaseOrders = () => {
                 modalInstance={modalCreateInstance}
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
+            />
+
+            <UpdateApPurchaseOrder
+                modalRef={modalUpdateRef}
+                modalInstance={modalUpdateInstance}
+                dataTableRef={dataTableRef}
+                setMessage={setMessage}
+                orderId={editingOrderId}
             />
 
             <GenericFilterModal

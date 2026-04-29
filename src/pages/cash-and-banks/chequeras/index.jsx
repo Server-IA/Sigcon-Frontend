@@ -201,7 +201,9 @@ const IndexCheckbooks = () => {
             data: 'bankAccount.accountName',
             name: 'bankAccount.accountName',
         },
-        { title: 'BANCO EMISOR', data: 'bankAccount.bankDTO.name', name: 'bankAccount.bankDTO.name' },
+        // QA HU-019 E2: el `name` apunta al atributo JPA real (bankAccount.bank.name).
+        // Antes era `bankAccount.bankDTO.name` -> crash *"Could not resolve attribute 'bankDTO'..."*.
+        { title: 'BANCO EMISOR', data: 'bankAccount.bankDTO.name', name: 'bankAccount.bank.name' },
         { title: 'NO. CHEQUERA', data: 'checkbookNumber', name: 'checkbookNumber' },
         { title: 'CHEQUE INICIAL', data: 'checkStartNumber', name: 'checkStartNumber' },
         { title: 'CHEQUE FINAL', data: 'checkEndNumber', name: 'checkEndNumber' },

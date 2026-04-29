@@ -34,6 +34,14 @@ const FilterThirdParty = ({ filterRef, filterInstance, dataTableRef }) => {
         { regex: true, value: '', column: 'personType:name' },
         { regex: true, value: '', column: 'roles:name' },
         { regex: true, value: '', column: 'status:name' },
+        // HU-TER-01 DEF#1 (2026-04-27): filtros de localidad usando paths JPA
+        // reales. El modelo Municipality solo tiene `name` (ciudad) y FK a
+        // Country. NO existe campo Department en el modelo de datos. El
+        // segundo filtro mapea a country.name (etiqueta "Pais") porque es lo
+        // que el modelo realmente expone. Si se agrega columna `department`
+        // a Municipality, cambiar el `column:` a `municipality.department:name`.
+        { regex: true, value: '', column: 'municipality.name:name' },
+        { regex: true, value: '', column: 'municipality.country.name:name' },
     ]);
 
     useEffect(() => {
@@ -213,19 +221,23 @@ const FilterThirdParty = ({ filterRef, filterInstance, dataTableRef }) => {
                                 </div>
                             </div>
 
-                            {/* Ciudad + Departamento */}
+                            {/* HU-TER-01 DEF#1 (2026-04-27): filtros de localidad funcionales.
+                                Ciudad usa path JPA `municipality.name` (existe en el modelo).
+                                Pais usa `municipality.country.name`. NO hay campo Department
+                                en Municipality; si se requiere literal "Departamento", agregar
+                                columna a la entidad y cambiar el column path aqui. */}
                             <div className="row">
                                 <div className="col-md-6 mb-4 mt-2">
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={getFilter('city:name')?.regex || false}
+                                                checked={getFilter('municipality.name:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 type="checkbox"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Búsqueda por coincidencia"
-                                                onChange={(e) => updateFilter('city:name', 'regex', e.target.checked)}
+                                                onChange={(e) => updateFilter('municipality.name:name', 'regex', e.target.checked)}
                                                 disabled={!dataTableRef?.current}
                                                 aria-label="Buscar"
                                             />
@@ -234,8 +246,8 @@ const FilterThirdParty = ({ filterRef, filterInstance, dataTableRef }) => {
                                             type="text"
                                             id="tp_filter_city"
                                             label="Ciudad"
-                                            value={getFilter('city:name')?.value || ''}
-                                            onChange={(e) => updateFilter('city:name', 'value', e.target.value)}
+                                            value={getFilter('municipality.name:name')?.value || ''}
+                                            onChange={(e) => updateFilter('municipality.name:name', 'value', e.target.value)}
                                             placeholder="Buscar por ciudad"
                                             error=""
                                         />
@@ -246,24 +258,24 @@ const FilterThirdParty = ({ filterRef, filterInstance, dataTableRef }) => {
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={getFilter('department:name')?.regex || false}
+                                                checked={getFilter('municipality.country.name:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 type="checkbox"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Búsqueda por coincidencia"
-                                                onChange={(e) => updateFilter('department:name', 'regex', e.target.checked)}
+                                                onChange={(e) => updateFilter('municipality.country.name:name', 'regex', e.target.checked)}
                                                 disabled={!dataTableRef?.current}
                                                 aria-label="Buscar"
                                             />
                                         </div>
                                         <InputModal
                                             type="text"
-                                            id="tp_filter_department"
-                                            label="Departamento"
-                                            value={getFilter('department:name')?.value || ''}
-                                            onChange={(e) => updateFilter('department:name', 'value', e.target.value)}
-                                            placeholder="Buscar por departamento"
+                                            id="tp_filter_country"
+                                            label="País"
+                                            value={getFilter('municipality.country.name:name')?.value || ''}
+                                            onChange={(e) => updateFilter('municipality.country.name:name', 'value', e.target.value)}
+                                            placeholder="Buscar por país"
                                             error=""
                                         />
                                     </div>

@@ -127,6 +127,17 @@ const IndexThirdPartyList = () => {
                 return status ?? '-';
             }
         },
+        // HU-TER-01 DEF#1 (2026-04-27): columnas ocultas para que el filter
+        // modal pueda aplicar busqueda JPA via DataTableSpecificationBuilder.
+        // Se renderizan vacias (visible:false) y solo participan en el filtro.
+        {
+            title: 'Ciudad', data: 'municipality.name', name: 'municipality.name',
+            visible: false, searchable: true, orderable: false,
+        },
+        {
+            title: 'País', data: 'municipality.country.name', name: 'municipality.country.name',
+            visible: false, searchable: true, orderable: false,
+        },
         {
             title: 'Acciones', data: 'id', searchable: false,
             render: (id) => `
@@ -318,7 +329,7 @@ const IndexThirdPartyList = () => {
                     setThirdPartyBulk(true);
                     dataTableRef?.current?.ajax?.reload?.();
                 }}
-                templateColumns={['nit','dv','razon_social','tipo_persona','email','telefono','direccion','municipio_id','rol_id','estado_id','regimen_tributario']}
+                templateColumns={['nit','dv','razon_social','municipio','rol','estado','email','direccion']}
                 templateFileName="plantilla_terceros.csv"
             />
 

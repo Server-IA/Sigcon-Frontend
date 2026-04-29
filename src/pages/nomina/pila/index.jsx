@@ -17,6 +17,33 @@ const IndexPila = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
+            // HU-NOM-06 DEF#1 (2026-04-28): primero verificar si hay datos
+            // del periodo. Antes la descarga generaba archivo vacio sin advertencia.
+            const checkUrl = base_url(['api', 'nomina', 'recibos', 'search']);
+            const checkResp = await fetch(checkUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    start: 0, length: 1, draw: 1,
+                    columns: [
+                        { data: 'periodYear', name: 'periodYear', searchable: true,
+                          search: { value: String(year), regex: false } },
+                        { data: 'periodMonth', name: 'periodMonth', searchable: true,
+                          search: { value: String(month), regex: false } },
+                    ],
+                }),
+            });
+            const checkJson = await checkResp.json();
+            const total = checkJson?.recordsFiltered ?? checkJson?.recordsTotal ?? 0;
+            if (total === 0) {
+                setAlert({ show: true, type: 'warning',
+                    message: `No hay recibos APROBADOS o CERRADOS en ${year}-${String(month).padStart(2,'0')}. No se descarga el archivo.` });
+                return;
+            }
+
             const url = base_url(['api', 'nomina', 'reportes', 'pila'], { year, month });
             const resp = await fetch(url, {
                 headers: token ? { 'Authorization': `Bearer ${token}` } : {},
@@ -66,8 +93,21 @@ const IndexPila = () => {
                     </div>
                     <div className="col-md-4">
                         <label className="form-label">Mes</label>
-                        <input type="number" min="1" max="12" className="form-control" value={month}
-                                onChange={e => setMonth(Number(e.target.value))} />
+                        <select className="form-select" value={month}
+                                onChange={e => setMonth(Number(e.target.value))}>
+                            <option value={1}>01 - Enero</option>
+                            <option value={2}>02 - Febrero</option>
+                            <option value={3}>03 - Marzo</option>
+                            <option value={4}>04 - Abril</option>
+                            <option value={5}>05 - Mayo</option>
+                            <option value={6}>06 - Junio</option>
+                            <option value={7}>07 - Julio</option>
+                            <option value={8}>08 - Agosto</option>
+                            <option value={9}>09 - Septiembre</option>
+                            <option value={10}>10 - Octubre</option>
+                            <option value={11}>11 - Noviembre</option>
+                            <option value={12}>12 - Diciembre</option>
+                        </select>
                     </div>
                     <div className="col-md-4 d-flex align-items-end">
                         <button className="btn btn-primary w-100" onClick={download} disabled={loading}>

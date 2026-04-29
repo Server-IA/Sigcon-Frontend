@@ -218,16 +218,26 @@ const IndexBankBranches = () => {
   ];
 
   useEffect(() => {
+    // QA HU-033 E2: cargar primero el banco para conocer su pais, despues los
+    // municipios filtrados por countryId. Antes la carga era paralela y bank
+    // era null al ejecutar -> se enviaba value:undefined -> el servidor
+    // devolvia TODOS los municipios sin filtrar por pais.
     const loadData = async () => {
       try {
+        const bankResponse = await fetchHelper.get(base_url(['api/v1/banks', id_bank]), {}, 0, false);
+        const loadedBank = bankResponse?.data ?? bankResponse ?? null;
+        setBank(loadedBank);
 
-        const [bankResponse, municipalitiesResponse] = await Promise.all([
-          fetchHelper.get(base_url(['api/v1/banks', id_bank]), {}, 0, false),
-          fetchHelper.post(base_url(['api/v1/resources/municipalities']), { length: -1, columns: [
-            { data: 'country.id', searchable: true, search: { value: bank?.country?.id, regex: true } },
-          ] }, {}, 0, false),
-        ]);
-        setBank(bankResponse?.data ?? bankResponse ?? null);
+        const countryId = loadedBank?.country?.id;
+        const municipalitiesResponse = await fetchHelper.post(
+          base_url(['api/v1/resources/municipalities']),
+          {
+            length: -1,
+            columns: countryId ? [
+              { data: 'country.id', name: 'country.id', searchable: true, search: { value: String(countryId), regex: false } },
+            ] : [],
+          }, {}, 0, false,
+        );
         setMunicipalities(municipalitiesResponse?.data ?? municipalitiesResponse ?? []);
       } catch (error) {
         setBank([]);

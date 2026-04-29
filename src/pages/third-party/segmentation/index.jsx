@@ -103,6 +103,11 @@ const IndexSegmentation = () => {
             render: (val) => renderSegmentBadge(val)
         },
         {
+            // HU-TER-11 E6 (2026-04-27): porcentaje provision ECL automatico
+            title: '% Provisión', data: 'provisionPct', searchable: false, orderable: false,
+            render: (val) => val != null ? `${val}%` : '-'
+        },
+        {
             title: 'Tipo ajuste', data: 'segmentationSource', name: 'segmentationSource',
             render: (val) => val === 'MANUAL'
                 ? `<span class="badge bg-label-info">Manual</span>`

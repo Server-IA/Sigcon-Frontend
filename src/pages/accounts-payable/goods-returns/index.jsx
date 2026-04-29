@@ -7,32 +7,37 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
-import CreateApReceipt from './create';
-
 /**
- * Pagina principal de Recepciones de Bienes (Cuentas por Pagar).
- * Muestra un listado paginado de recepciones asociadas a ordenes de compra.
+ * HU-AP-22 (2026-04-28): Submodulo de Devoluciones de Mercancia.
+ *
+ * Reutiliza la entidad GoodsReceipt (recepciones) y muestra:
+ * - Recepciones rechazadas (status=REJECTED) - operacion ya realizada
+ * - Recepciones recibidas que pueden devolverse (status=RECEIVED, sin factura asociada)
+ *
+ * El backend expone POST /api/v1/ap/receipts/{id}/reject con motivo (>=20 chars).
+ *
+ * Por requerimiento del usuario "no hace un modulo nuevo, puede ser un submodulo",
+ * NO crea una entidad nueva. El historial de devoluciones se rastrea en los
+ * mismos campos rejected_at / rejected_by / rejection_reason de GoodsReceipt.
  */
 
 const STATUS_BADGE = {
     RECEIVED: 'bg-label-success',
-    PARTIAL: 'bg-label-warning',
-    PENDING: 'bg-label-info',
     REJECTED: 'bg-label-danger',
+    RETURNED: 'bg-label-warning',
 };
 
 const STATUS_LABEL = {
     RECEIVED: 'Recibido',
+    REJECTED: 'Devuelto',
+    RETURNED: 'Devuelto',
     PARTIAL: 'Parcial',
     PENDING: 'Pendiente',
-    REJECTED: 'Rechazado',
 };
 
-const IndexApReceipts = () => {
+const IndexGoodsReturns = () => {
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
-    const modalCreateRef = useRef(null);
-    const modalCreateInstance = useRef(null);
     const filterRef = useRef(null);
     const filterInstance = useRef(null);
 
@@ -44,18 +49,10 @@ const IndexApReceipts = () => {
 
     const columns = [
         { title: 'Id', data: 'id', name: 'id' },
-        {
-            title: '# Recepcion',
-            data: 'receiptNumber',
-            name: 'receiptNumber',
-            render: (val) => val || '-',
-        },
-        {
-            title: 'Orden Compra',
-            data: 'purchaseOrderId',
-            name: 'purchaseOrderId',
-            render: (val) => val || '-',
-        },
+        { title: '# Recepcion', data: 'receiptNumber', name: 'receiptNumber',
+            render: (val) => val || '-' },
+        { title: 'Orden Compra', data: 'purchaseOrderId', name: 'purchaseOrderId',
+            render: (val) => val || '-' },
         { title: 'Fecha', data: 'receiptDate', name: 'receiptDate' },
         {
             title: 'Estado',
@@ -67,59 +64,41 @@ const IndexApReceipts = () => {
                 return `<span class="badge ${badge}">${label}</span>`;
             },
         },
-        {
-            title: 'Factura Asociada',
-            data: 'invoiceId',
-            name: 'invoiceId',
-            render: (val) => val || '-',
-        },
+        { title: 'Factura asociada', data: 'invoiceId', name: 'invoiceId',
+            render: (val) => val || '-' },
         {
             title: 'Acciones',
             data: 'id',
             searchable: false,
             render: (id, _type, row) => {
-                // HU-AP-20 (2026-04-28): permitir vincular la recepcion con
-                // una factura del mismo proveedor.
-                const canLink = !row?.invoiceId;
+                // Solo recepciones RECEIVED sin factura pueden devolverse
+                const canReturn = row?.status === 'RECEIVED' && !row?.invoiceId;
+                const isRejected = row?.status === 'REJECTED' || row?.status === 'RETURNED';
                 return `
                 <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-label-info action-btn"
                         data-action="view" data-id="${id}" title="Ver">
                         <i class="ri-eye-line"></i>
                     </button>
-                    <button class="btn btn-sm btn-label-success action-btn"
-                        data-action="link-invoice" data-id="${id}"
-                        title="Vincular factura del proveedor (3-way match)"
-                        ${!canLink ? 'disabled' : ''}>
-                        <i class="ri-link"></i>
+                    <button class="btn btn-sm btn-label-warning action-btn"
+                        data-action="return" data-id="${id}"
+                        title="${canReturn ? 'Registrar devolucion' : isRejected ? 'Ya devuelto' : 'No devolvible (vinculada a factura)'}"
+                        ${!canReturn ? 'disabled' : ''}>
+                        <i class="ri-arrow-go-back-line"></i>
                     </button>
                 </div>`;
             },
         },
     ];
 
-    const openModalCreate = () => {
-        if (!modalCreateInstance.current) {
-            modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
+    const buttons = [{
+        text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
+        className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
+        action: () => {
+            if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+            filterInstance.current.show();
         }
-        modalCreateInstance.current.show();
-    };
-
-    const buttons = [
-        {
-            text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
-            className: 'btn rounded-pill btn-secondary waves-effect mx-1 my-2',
-            action: () => {
-                if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
-                filterInstance.current.show();
-            }
-        },
-        {
-            text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Recepcion</span>',
-            className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
-            action: () => openModalCreate(),
-        },
-    ];
+    }];
 
     const rows = useMemo(() => {
         if (Array.isArray(data)) return data;
@@ -145,39 +124,43 @@ const IndexApReceipts = () => {
                             <p><strong>Orden de Compra:</strong> ${selected.purchaseOrderId || '-'}</p>
                             <p><strong>Fecha:</strong> ${selected.receiptDate || '-'}</p>
                             <p><strong>Estado:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
-                            <p><strong>Factura Asociada:</strong> ${selected.invoiceId || '-'}</p>
+                            <p><strong>Factura asociada:</strong> ${selected.invoiceId || '-'}</p>
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
+                            ${selected.rejectionReason ? `<hr/><p><strong>Motivo devolucion:</strong> ${selected.rejectionReason}</p>` : ''}
                         </div>`,
                     width: 500,
                     confirmButtonText: 'Cerrar',
                 });
+                return;
             }
 
-            if (action === 'link-invoice') {
-                // HU-AP-20 (2026-04-28): vincular factura. Pide el ID de la
-                // factura via SweetAlert + valida en backend que sea del mismo
-                // proveedor (Gap 2 ya existente en GoodsReceiptService.linkToInvoice).
+            if (action === 'return') {
                 window.Swal.fire({
-                    title: 'Vincular factura del proveedor',
-                    text: 'Ingrese el ID de la factura de compra a vincular con esta recepcion.',
-                    input: 'number',
-                    inputValidator: (v) => !v ? 'El ID de la factura es obligatorio' : null,
+                    title: 'Registrar devolucion',
+                    text: 'Ingrese el motivo de la devolucion (minimo 20 caracteres).',
+                    input: 'textarea',
+                    inputAttributes: { maxlength: 500 },
+                    inputValidator: (v) => {
+                        if (!v || v.trim().length < 20)
+                            return 'El motivo debe tener al menos 20 caracteres';
+                    },
                     showCancelButton: true,
-                    confirmButtonText: 'Vincular',
+                    confirmButtonText: 'Devolver',
                     cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#ff9f43',
                 }).then(async ({ isConfirmed, value }) => {
                     if (!isConfirmed) return;
                     try {
                         await fetchHelper.post(
-                            base_url(['api', 'v1', 'ap', 'receipts', selected.id, 'link-invoice']),
-                            { invoiceId: Number(value) }, {}, 1000
+                            base_url(['api', 'v1', 'ap', 'receipts', selected.id, 'reject']),
+                            { reason: value.trim() }, {}, 1000
                         );
                         setMessage({ type: 'success', show: true,
-                            message: 'Factura vinculada exitosamente a la recepcion.' });
+                            message: 'Devolucion registrada exitosamente.' });
                         dataTableRef?.current?.ajax.reload();
                     } catch (error) {
                         setMessage({ type: 'danger', show: true,
-                            message: error?.msg || 'No se pudo vincular la factura.' });
+                            message: error?.msg || 'No se pudo registrar la devolucion.' });
                     }
                 });
             }
@@ -190,7 +173,16 @@ const IndexApReceipts = () => {
     return (
         <>
             <div className="card">
-                <h5 className="card-header text-md-start text-center">Recepciones de Bienes</h5>
+                <h5 className="card-header text-md-start text-center">
+                    <i className="ri-arrow-go-back-line me-2" />Devoluciones de Mercancia
+                </h5>
+                <div className="card-body pt-0">
+                    <p className="text-muted small mb-0">
+                        Liste y gestione devoluciones de bienes recibidos.
+                        Solo se pueden devolver recepciones <strong>recibidas que aun NO esten vinculadas a una factura</strong>.
+                        El motivo es obligatorio y queda registrado en auditoria.
+                    </p>
+                </div>
 
                 <AlertPage
                     type={message.type}
@@ -207,7 +199,7 @@ const IndexApReceipts = () => {
                         dataTableRef={dataTableRef}
                         method="POST"
                         buttons={buttons}
-                        title="Recepciones de Bienes"
+                        title="Devoluciones de Mercancia"
                         setData={setData}
                         search={search}
                         setSearch={setSearch}
@@ -217,28 +209,19 @@ const IndexApReceipts = () => {
                 </div>
             </div>
 
-            <CreateApReceipt
-                modalRef={modalCreateRef}
-                modalInstance={modalCreateInstance}
-                dataTableRef={dataTableRef}
-                setMessage={setMessage}
-            />
-
             <GenericFilterModal
                 filterRef={filterRef}
                 filterInstance={filterInstance}
                 dataTableRef={dataTableRef}
-                title="Filtrar Recepciones"
+                title="Filtrar Devoluciones"
                 columns={[
-                    { column: 'receiptNumber:name', label: '# Recepcion' },
-                    { column: 'purchaseOrderId:name', label: 'Orden Compra', type: 'number' },
-                    { column: 'receiptDate:name', label: 'Fecha', type: 'date' },
-                    { column: 'invoiceId:name', label: 'Factura Asociada', type: 'number' },
-                    { column: 'status:name', label: 'Estado', type: 'select', options: [
-                        { id: 'RECEIVED', label: 'Recibido' },
-                        { id: 'PARTIAL', label: 'Parcial' },
-                        { id: 'PENDING', label: 'Pendiente' },
-                        { id: 'REJECTED', label: 'Rechazado' },
+                    { column: 'receiptNumber:receiptNumber', label: '# Recepcion' },
+                    { column: 'purchaseOrderId:purchaseOrderId', label: 'Orden Compra', type: 'number' },
+                    { column: 'receiptDate:receiptDate', label: 'Fecha', type: 'date' },
+                    { column: 'status:status', label: 'Estado', type: 'select', options: [
+                        { id: 'RECEIVED', label: 'Recibido (devolvible)' },
+                        { id: 'REJECTED', label: 'Devuelto' },
+                        { id: 'RETURNED', label: 'Devuelto' },
                     ]},
                 ]}
             />
@@ -246,4 +229,4 @@ const IndexApReceipts = () => {
     );
 };
 
-export default IndexApReceipts;
+export default IndexGoodsReturns;

@@ -45,6 +45,24 @@ const IndexArPayments = () => {
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
     const [message, setMessage] = useState({ message: '', type: '', show: false });
+    // HU-AR-08 (2026-04-27): factura preseleccionada via query param desde el
+    // boton "Registrar cobro" del listado de FV.
+    const [preselectedInvoiceId, setPreselectedInvoiceId] = useState(null);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const invoiceId = params.get('invoiceId');
+        if (invoiceId) {
+            setPreselectedInvoiceId(Number(invoiceId));
+            // Esperar al render del modal antes de abrirlo
+            setTimeout(() => {
+                if (!modalCreateInstance.current && modalCreateRef.current) {
+                    modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
+                }
+                modalCreateInstance.current?.show();
+            }, 300);
+        }
+    }, []);
 
     /** Endpoint de busqueda paginada de cobros. */
     const url = ['api', 'v1', 'ar', 'payments', 'search'];
@@ -201,6 +219,7 @@ const IndexArPayments = () => {
                 modalInstance={modalCreateInstance}
                 dataTableRef={dataTableRef}
                 setMessage={setMessage}
+                preselectedInvoiceId={preselectedInvoiceId}
             />
 
             <GenericFilterModal

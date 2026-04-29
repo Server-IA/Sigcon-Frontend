@@ -132,7 +132,18 @@ const IndexCentrosCosto = () => {
 
     const onReasonDeleteSubmit = async () => {
         if (!deleteTarget) return;
-        const url = base_url(['api', 'v1', 'cost-centers', deleteTarget.id], deletionReason ? { reason: deletionReason } : {});
+        // HU-CFG-20 MT-01 (2026-04-27): motivo de eliminacion obligatorio
+        // (minimo 10 caracteres). Antes se permitia enviar vacio sin validacion.
+        const reasonTrimmed = (deletionReason || '').trim();
+        if (reasonTrimmed.length < 10) {
+            setCentroCostoError({
+                message: 'Debe ingresar el motivo de la eliminacion (minimo 10 caracteres).',
+                show: true,
+                type: 'warning',
+            });
+            return;
+        }
+        const url = base_url(['api', 'v1', 'cost-centers', deleteTarget.id], { reason: reasonTrimmed });
         try {
             await fetchHelper.delete(url, {}, {}, 500, false);
             dataTableRef?.current?.ajax.reload();
@@ -323,19 +334,23 @@ const IndexCentrosCosto = () => {
                         </div>
                         <div className="modal-body">
                             <p className="text-body text-muted mb-2">
-                                Escriba el motivo de la eliminación del Centro de costo {deleteTarget?.code ?? ''} - {deleteTarget?.name ?? ''}.
+                                Escriba el motivo de la eliminación del Centro de costo {deleteTarget?.code ?? ''} - {deleteTarget?.name ?? ''}. <span className="text-danger">*</span>
                             </p>
                             <textarea
-                                className="form-control"
+                                className={`form-control ${deletionReason.trim().length > 0 && deletionReason.trim().length < 10 ? 'is-invalid' : ''}`}
                                 rows={4}
-                                placeholder="Motivo de eliminación"
+                                placeholder="Motivo de eliminación (mínimo 10 caracteres)"
                                 value={deletionReason}
                                 onChange={(e) => setDeletionReason(e.target.value)}
                             />
+                            {/* HU-CFG-20 MT-01: contador visible para que el usuario sepa cuanto le falta */}
+                            <small className={deletionReason.trim().length >= 10 ? 'text-success' : 'text-muted'}>
+                                {deletionReason.trim().length}/10 caracteres mínimos
+                            </small>
                         </div>
                         <div className="modal-footer justify-content-end">
                             <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-                            <button type="button" className="btn btn-danger" onClick={onReasonDeleteSubmit}>Eliminar</button>
+                            <button type="button" className="btn btn-danger" onClick={onReasonDeleteSubmit} disabled={deletionReason.trim().length < 10}>Eliminar</button>
                         </div>
                     </div>
                 </div>

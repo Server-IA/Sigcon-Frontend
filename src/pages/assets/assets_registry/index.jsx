@@ -213,6 +213,17 @@ const IndexAssets = () => {
   const modalCreateInstance = useRef(null);
   const modalUpdateRef = useRef(null);
   const modalUpdateInstance = useRef(null);
+  // HU-ACT-10 E4: detalle (solo lectura)
+  const modalDetailRef = useRef(null);
+  const modalDetailInstance = useRef(null);
+  const [detailAsset, setDetailAsset] = useState(null);
+  const openDetailModal = (asset) => {
+    setDetailAsset(asset);
+    if (!modalDetailInstance.current) {
+      modalDetailInstance.current = new window.bootstrap.Modal(modalDetailRef.current);
+    }
+    modalDetailInstance.current.show();
+  };
 
   const [url, setUrl] = useState(base_url(["api", "v1", "assets", "search"]));
 
@@ -299,13 +310,15 @@ const IndexAssets = () => {
     {
       title: "Fecha adquisición",
       data: "acquisitionDate",
-      name: "acquisition_date",
+      name: "acquisitionDate",
     },
     {
       title: "Costo adquisición",
       data: "acquisitionValue",
-      name: "acquisition_cost",
-      render: (v,_,row) => formatPrice(row.acquisitionValue + row.taxValue),
+      name: "acquisitionValue",
+      // HU-ACT-10 E3: ordenable por costo (mayor a menor / menor a mayor).
+      orderable: true,
+      render: (v,_,row) => formatPrice((row.acquisitionValue || 0) + (row.taxValue || 0)),
     },
     {
       title: "Vida útil (meses)",
@@ -320,7 +333,11 @@ const IndexAssets = () => {
     {
       title: "Proveedor",
       data: "supplier",
-      searchable: false,
+      // HU-ACT-10 E2: la columna debe poder filtrarse por id de proveedor
+      // (el filtro multi-select envia ids separados por '|'). El backend
+      // resuelve `supplier.id` via Specification.
+      name: "supplier.id",
+      searchable: true,
       orderable: false,
       render: (v) => v?.businessName || "-",
       defaultContent: "-",
@@ -335,10 +352,13 @@ const IndexAssets = () => {
       title: "Acciones",
       data: "id",
       searchable: false,
+      // HU-ACT-10: el boton eliminar se ocultaba para activos con voucher
+      // (i.e. todos los recien creados). Ahora se muestra siempre salvo que
+      // el activo este DECOMMISSIONED o TRANSFERRED (estados terminales).
       render: (id, _, asset) => `
          <div className="d-flex gap-1">
           ${actions
-            .filter((a) => a.key !== "delete" || asset.vouchers.length == 0)
+            .filter((a) => a.key !== "delete" || (asset.status !== "DECOMMISSIONED" && asset.status !== "TRANSFERRED"))
             .map(
               (a) => `
              <button class="btn btn-sm ${a.class} action-btn"
@@ -476,12 +496,13 @@ const IndexAssets = () => {
           window.open(getKardexUrl(assetKardex.assetCode || ""), "_blank");
           break;
 
-        case "view":
+        case "view": {
+          // HU-ACT-10 E4: vista de detalle de SOLO LECTURA (no editable).
           const assetView = data.find((m) => m.id === id);
           if (!assetView) { console.warn("Activo no encontrado", id); return; }
-          // Navega al formulario de edición (se puede usar como vista detallada)
-          navigate(`edit/${assetView.id}`);
+          openDetailModal(assetView);
           break;
+        }
 
         case "delete":
           window.Swal.fire({
@@ -624,6 +645,7 @@ const IndexAssets = () => {
           filterInstance={filterInstance}
           dataTableRef={dataTableRef}
           thirds={thirds}
+          suppliers={thirds}
           accountingAccount={accountingAccount}
           depreciationRules={depreciationRules}
           statuses={[
@@ -633,6 +655,51 @@ const IndexAssets = () => {
             { id: 'TRANSFERRED', name: 'Transferido' },
           ]}
         />
+
+        {/* HU-ACT-10 E4: modal de detalle (solo lectura) */}
+        <div className="modal fade" ref={modalDetailRef} tabIndex="-1" aria-hidden="true">
+          <div className="modal-dialog modal-lg modal-dialog-scrollable">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="ri-eye-line me-2"></i>Detalle del activo
+                </h5>
+                <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div className="modal-body">
+                {detailAsset && (
+                  <div className="row g-3">
+                    <div className="col-md-6"><strong>Codigo:</strong> {detailAsset.assetCode || '-'}</div>
+                    <div className="col-md-6"><strong>Nombre:</strong> {detailAsset.name || '-'}</div>
+                    <div className="col-md-6"><strong>Clasificacion:</strong> {
+                      ({NON_CURRENT:'Activo no corriente', CURRENT:'Activo corriente'})[detailAsset.classification] || detailAsset.classification || '-'
+                    }</div>
+                    <div className="col-md-6"><strong>Tipo:</strong> {
+                      ({TANGIBLE:'Tangible', INTANGIBLE:'Intangible'})[detailAsset.type] || detailAsset.type || '-'
+                    }</div>
+                    <div className="col-md-6"><strong>Estado:</strong> {detailAsset.status || '-'}</div>
+                    <div className="col-md-6"><strong>Fecha adquisicion:</strong> {detailAsset.acquisitionDate || '-'}</div>
+                    <div className="col-md-6"><strong>Valor adquisicion:</strong> {formatPrice(detailAsset.acquisitionValue || 0)}</div>
+                    <div className="col-md-6"><strong>Vida util (meses):</strong> {detailAsset.usefulLifeMonths || '-'}</div>
+                    <div className="col-md-6"><strong>Cuenta contable:</strong> {detailAsset.accountingAccount?.customName || detailAsset.accountingAccount?.pucAccount?.name || '-'}</div>
+                    <div className="col-md-6"><strong>Regla depreciacion:</strong> {detailAsset.depretationRule?.name || '-'}</div>
+                    <div className="col-md-12"><strong>Proveedor:</strong> {detailAsset.supplier?.businessName || '-'} {detailAsset.supplier?.nit ? `(NIT ${detailAsset.supplier.nit})` : ''}</div>
+                    <div className="col-md-12"><strong>Descripcion:</strong> {detailAsset.description || '-'}</div>
+                    <div className="col-md-12"><strong>Observaciones:</strong> {detailAsset.observations || '-'}</div>
+                    <div className="col-md-12">
+                      <strong>Comprobantes:</strong> {detailAsset.vouchers?.length > 0
+                        ? `${detailAsset.vouchers.length} registrado(s)`
+                        : 'Sin comprobante'}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <DropzoneModal
           modalRef={modalBulkUploadRef}
           title="Carga Masiva de Activos"

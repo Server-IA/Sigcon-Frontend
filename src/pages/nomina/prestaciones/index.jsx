@@ -17,13 +17,50 @@ const fmt = (n) => new Intl.NumberFormat('es-CO', {
     style: 'currency', currency: 'COP', maximumFractionDigits: 0
 }).format(Number(n) || 0);
 
+// HU-NOM-05 DEF#1 (2026-04-28): traduccion de claves del backend al espaniol.
+const FIELD_LABELS = {
+    employeeId: 'ID Empleado',
+    employeeName: 'Empleado',
+    year: 'Año',
+    semester: 'Semestre',
+    daysWorked: 'Días trabajados',
+    totalDays: 'Días totales',
+    baseSalary: 'Salario base',
+    severance: 'Cesantías',
+    interest: 'Intereses cesantías',
+    bonus: 'Prima',
+    serviceBonus: 'Prima de servicios',
+    proportionalBonus: 'Prima proporcional',
+    pendingSeverance: 'Cesantías pendientes',
+    vacationCompensation: 'Vacaciones compensadas',
+    indemnity: 'Indemnización Art. 64',
+    severanceInterest: 'Intereses cesantías',
+    totalPayable: 'Total a pagar',
+    journalEntryId: 'Comprobante (JE #)',
+    terminationType: 'Tipo terminación',
+    terminationDate: 'Fecha retiro',
+    period: 'Período',
+};
+
+const labelFor = (k) => FIELD_LABELS[k] || k;
+
 const IndexPrestaciones = () => {
     const now = new Date();
     const [tab, setTab] = useState('cesantias');
     const [alert, setAlert] = useState({ show: false, type: '', message: '' });
     const [result, setResult] = useState(null);
+    const [resultType, setResultType] = useState(null); // 'cesantias' | 'prima' | 'liquidacion'
     const [loading, setLoading] = useState(false);
     const [employees, setEmployees] = useState([]);
+
+    // HU-NOM-05 DEF#3 + Imagen 2 (2026-04-28): al cambiar de tab limpiar el
+    // resultado anterior. Antes el bloque "Resultado" mostraba la liquidacion
+    // anterior aunque ya estuvieras en otro tab (confusion grave: "estoy en
+    // liquidacion definitiva pero me muestra cesantias").
+    useEffect(() => {
+        setResult(null);
+        setResultType(null);
+    }, [tab]);
 
     // Cargar empleados para dropdown
     useEffect(() => {
@@ -54,7 +91,7 @@ const IndexPrestaciones = () => {
         terminationType: 'SIN_JUSTA_CAUSA'
     });
 
-    const liquidate = async (endpoint, params) => {
+    const liquidate = async (endpoint, params, kind) => {
         setLoading(true);
         setResult(null);
         try {
@@ -62,6 +99,7 @@ const IndexPrestaciones = () => {
                     base_url(['api', 'nomina', 'prestaciones', endpoint], params),
                     {}, {}, 0);
             setResult(resp);
+            setResultType(kind);
             setAlert({ show: true, type: 'success',
                 message: `Liquidación calculada. JE #${resp.journalEntryId || '-'}` });
         } catch (err) {
@@ -74,11 +112,11 @@ const IndexPrestaciones = () => {
 
     const doCesantias = () => {
         if (!sevForm.employeeId) return setAlert({ show: true, type: 'warning', message: 'Ingrese ID de empleado' });
-        liquidate('cesantias', { employeeId: Number(sevForm.employeeId), year: sevForm.year });
+        liquidate('cesantias', { employeeId: Number(sevForm.employeeId), year: sevForm.year }, 'cesantias');
     };
     const doBonus = () => {
         if (!bonusForm.employeeId) return setAlert({ show: true, type: 'warning', message: 'Ingrese ID de empleado' });
-        liquidate('prima', { employeeId: Number(bonusForm.employeeId), year: bonusForm.year, semester: bonusForm.semester });
+        liquidate('prima', { employeeId: Number(bonusForm.employeeId), year: bonusForm.year, semester: bonusForm.semester }, 'prima');
     };
     const doTermination = () => {
         if (!termForm.employeeId) return setAlert({ show: true, type: 'warning', message: 'Ingrese ID de empleado' });
@@ -86,7 +124,46 @@ const IndexPrestaciones = () => {
             employeeId: Number(termForm.employeeId),
             terminationDate: termForm.terminationDate,
             terminationType: termForm.terminationType,
-        });
+        }, 'liquidacion');
+    };
+
+    // HU-NOM-05 DEF#2 (2026-04-28): descargar comprobante de la liquidacion en PDF
+    // via window.print. Cumple CST Art. 132 (cesantias/prima) y Art. 64 (definitiva).
+    const downloadResultPdf = () => {
+        if (!result) return;
+        const titles = {
+            cesantias: 'Liquidación de Cesantías e Intereses',
+            prima: 'Liquidación de Prima de Servicios',
+            liquidacion: 'Liquidación Definitiva de Contrato',
+        };
+        const title = titles[resultType] || 'Liquidación de Prestaciones';
+        const popup = window.open('', '_blank');
+        if (!popup) {
+            setAlert({ show: true, type: 'warning',
+                message: 'Habilite ventanas emergentes para exportar PDF.' });
+            return;
+        }
+        const moneyKeys = new Set(['baseSalary','severance','interest','severanceInterest',
+            'bonus','serviceBonus','proportionalBonus','pendingSeverance',
+            'vacationCompensation','indemnity','totalPayable']);
+        const rows = Object.entries(result)
+            .filter(([k]) => k !== 'legalRef')
+            .map(([k, v]) => {
+                const display = (typeof v === 'number' && moneyKeys.has(k)) ? fmt(v) : String(v ?? '-');
+                return `<tr><td><b>${labelFor(k)}</b></td><td>${display}</td></tr>`;
+            }).join('');
+        popup.document.write(`<html><head><title>${title}</title>
+            <style>body{font-family:Arial;padding:20px}h1{font-size:18px}
+                table{width:100%;border-collapse:collapse;margin-top:14px}
+                td{border:1px solid #999;padding:8px;font-size:12px}
+                .ref{margin-top:14px;font-size:11px;color:#666}</style>
+            </head><body onload="window.print()">
+            <h1>${title}</h1>
+            <p>Generado: ${new Date().toLocaleString('es-CO')}</p>
+            <table>${rows}</table>
+            ${result.legalRef ? `<div class="ref">📚 ${result.legalRef}</div>` : ''}
+            </body></html>`);
+        popup.document.close();
     };
 
     return (
@@ -237,11 +314,22 @@ const IndexPrestaciones = () => {
                 {result && (
                     <div className="mt-4 card bg-label-primary">
                         <div className="card-body">
-                            <h6 className="card-title">Resultado de la liquidación</h6>
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                <h6 className="card-title mb-0">
+                                    Resultado de la liquidación
+                                    {resultType === 'cesantias' && ' — Cesantías e Intereses'}
+                                    {resultType === 'prima' && ' — Prima de Servicios'}
+                                    {resultType === 'liquidacion' && ' — Liquidación Definitiva'}
+                                </h6>
+                                <button type="button" className="btn btn-sm btn-danger"
+                                        onClick={downloadResultPdf}>
+                                    <i className="ri-file-pdf-line me-1"></i> Descargar comprobante
+                                </button>
+                            </div>
                             <div className="row">
                                 {Object.entries(result).filter(([k]) => !['legalRef'].includes(k)).map(([k, v]) => (
                                     <div className="col-md-6" key={k}>
-                                        <strong>{k}:</strong>{' '}
+                                        <strong>{labelFor(k)}:</strong>{' '}
                                         {typeof v === 'number' && k !== 'employeeId' && k !== 'journalEntryId'
                                                 && k !== 'daysWorked' && k !== 'totalDays' && k !== 'year'
                                                 && k !== 'semester'

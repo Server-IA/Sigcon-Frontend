@@ -115,8 +115,13 @@ const CreateApReceipt = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
             if (i !== idx) return l;
             let num = Number(value);
             if (isNaN(num) || num < 0) num = 0;
-            // Tope maximo: cantidad ordenada
-            if (num > l.quantityOrdered) num = l.quantityOrdered;
+            // HU-AP-19 MT-#01 (2026-04-28): mostrar mensaje claro al usuario
+            // cuando intenta exceder. Antes el input lo bloqueaba silenciosamente.
+            if (num > l.quantityOrdered) {
+                num = l.quantityOrdered;
+                setErrorMessage(
+                    `La cantidad recibida supera la cantidad pedida (max: ${l.quantityOrdered}).`);
+            }
             return { ...l, quantityReceived: String(num) };
         }));
     };

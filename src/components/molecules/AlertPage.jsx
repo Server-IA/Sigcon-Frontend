@@ -85,7 +85,9 @@ const AlertPage = ({ type, message, show, duration = 5000, onChange }) => {
                     }, 400);
                 }}
             ></button>
-            <span>{message}</span>
+            {/* HU-AR-01B DEF#3: preservar saltos de linea cuando el mensaje
+                viene como lista multilinea de errores de validacion. */}
+            <span style={{ whiteSpace: 'pre-line' }}>{message}</span>
         </div>
     )
 }

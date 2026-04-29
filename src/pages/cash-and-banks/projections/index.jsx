@@ -119,15 +119,38 @@ const IndexProjections = () => {
         },
         {
             title: 'Acciones', data: 'id', searchable: false,
-            render: (id) => `
-                <div class="d-flex gap-1 flex-wrap">
-                    <button class="btn btn-sm btn-label-primary action-btn" data-action="edit" data-id="${id}" title="Editar">
-                        <i class="ri-edit-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-danger action-btn" data-action="delete" data-id="${id}" title="Eliminar">
-                        <i class="ri-delete-bin-5-line"></i>
-                    </button>
-                </div>`,
+            // QA HU-030/031/059: botones segun estado.
+            render: (id, _t, row) => {
+                const status = row?.status;
+                let btns = '';
+                // BORRADOR: editar, aprobar, eliminar
+                if (status === 'BORRADOR') {
+                    btns += `
+                        <button class="btn btn-sm btn-label-primary action-btn" data-action="edit" data-id="${id}" title="Editar">
+                            <i class="ri-edit-line"></i>
+                        </button>
+                        <button class="btn btn-sm btn-label-success action-btn" data-action="approve" data-id="${id}" title="Aprobar (HU-030)">
+                            <i class="ri-check-line"></i>
+                        </button>
+                        <button class="btn btn-sm btn-label-danger action-btn" data-action="delete" data-id="${id}" title="Eliminar">
+                            <i class="ri-delete-bin-5-line"></i>
+                        </button>`;
+                }
+                // APROBADA: marcar como ejecutada o inactivar
+                if (status === 'APROBADA') {
+                    btns += `
+                        <button class="btn btn-sm btn-label-info action-btn" data-action="execute" data-id="${id}" title="Marcar como EJECUTADA (HU-059)">
+                            <i class="ri-flag-line"></i>
+                        </button>
+                        <button class="btn btn-sm btn-label-warning action-btn" data-action="inactivate" data-id="${id}" title="Inactivar (HU-031)">
+                            <i class="ri-close-circle-line"></i>
+                        </button>`;
+                }
+                if (!btns) {
+                    btns = '<span class="text-muted small fst-italic">Sin acciones</span>';
+                }
+                return `<div class="d-flex gap-1 flex-wrap">${btns}</div>`;
+            },
         },
     ];
 
@@ -186,6 +209,82 @@ const IndexProjections = () => {
                     modalUpdateInstance.current.show();
                     break;
                 }
+                case 'approve': {
+                    // QA HU-030/031: BORRADOR -> APROBADA
+                    window.Swal.fire({
+                        title: 'Aprobar proyeccion',
+                        html: `¿Aprobar la proyeccion <strong>${row.name}</strong>?<br/><br/>Una vez aprobada solo podra modificarse con motivo y luego marcarse como EJECUTADA.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Si, aprobar',
+                        cancelButtonText: 'Cancelar',
+                    }).then(async (result) => {
+                        if (!result.isConfirmed) return;
+                        try {
+                            await fetchHelper.post(
+                                base_url(['api', 'v1', 'bnk', 'projections', row.id, 'approve']),
+                                {}, {}, 1000, true,
+                            );
+                            dataTableRef?.current?.ajax?.reload?.();
+                            setItemApprove(true);
+                        } catch (error) {
+                            window.Swal.fire({ icon: 'error', title: 'No se pudo aprobar',
+                                text: error?.msg || error?.message || 'Error desconocido' });
+                        }
+                    });
+                    break;
+                }
+                case 'execute': {
+                    // QA HU-059: APROBADA -> EJECUTADA (terminal)
+                    window.Swal.fire({
+                        title: 'Marcar como EJECUTADA',
+                        html: `¿La proyeccion <strong>${row.name}</strong> ya se realizo? Estado terminal — no podra revertirse.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Si, ejecutada',
+                        cancelButtonText: 'Cancelar',
+                    }).then(async (result) => {
+                        if (!result.isConfirmed) return;
+                        try {
+                            await fetchHelper.post(
+                                base_url(['api', 'v1', 'bnk', 'projections', row.id, 'execute']),
+                                {}, {}, 1000, true,
+                            );
+                            dataTableRef?.current?.ajax?.reload?.();
+                            setItemApprove(true);
+                        } catch (error) {
+                            window.Swal.fire({ icon: 'error', title: 'No se pudo marcar como ejecutada',
+                                text: error?.msg || error?.message || 'Error desconocido' });
+                        }
+                    });
+                    break;
+                }
+                case 'inactivate': {
+                    // QA HU-031: APROBADA -> INACTIVA
+                    window.Swal.fire({
+                        title: 'Inactivar proyeccion',
+                        html: `¿Inactivar la proyeccion <strong>${row.name}</strong>? Conserva el historial.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Si, inactivar',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#f0ad4e',
+                    }).then(async (result) => {
+                        if (!result.isConfirmed) return;
+                        try {
+                            await fetchHelper.patch(
+                                base_url(['api', 'v1', 'bnk', 'projections', row.id, 'inactivate']),
+                                {}, {}, 1000, true,
+                            );
+                            dataTableRef?.current?.ajax?.reload?.();
+                            setItemDelete(true);
+                        } catch (error) {
+                            window.Swal.fire({ icon: 'error', title: 'No se pudo inactivar',
+                                text: error?.msg || error?.message || 'Error desconocido' });
+                        }
+                    });
+                    break;
+                }
                 case 'delete': {
                     window.Swal.fire({
                         title: 'Eliminar proyeccion',
@@ -205,6 +304,15 @@ const IndexProjections = () => {
                             dataTableRef?.current?.ajax?.reload?.();
                             setItemDelete(true);
                         } catch (error) {
+                            // QA HU-029 E1: usar el mensaje real del backend en
+                            // lugar del generico "Error al procesar la operacion".
+                            const realMsg = error?.msg || error?.message || error?.error
+                                || 'Error al procesar la operación.';
+                            window.Swal.fire({
+                                icon: 'error',
+                                title: 'No se pudo eliminar',
+                                text: realMsg,
+                            });
                             setItemError(true);
                         }
                     });

@@ -81,6 +81,8 @@ const CurrencyIndex = () => {
         ] : [])
     ];
     const columns = [
+        // HU-CFG-22 E1 (2026-04-27): la HU exige ID en el listado.
+        {title: 'ID', data: 'id', name: 'id', width: '60px'},
         {title: 'Código', data: 'isoCode', name: 'isoCode'},
         {title: 'Nombre', data: 'name', name: 'name'},
         {title: 'Estado', data: 'status', name: 'status', render: (status) => status === 'ACTIVE'

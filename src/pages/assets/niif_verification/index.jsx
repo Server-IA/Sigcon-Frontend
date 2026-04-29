@@ -71,10 +71,14 @@ const buildColumns = (onDetail, onCorrection) => [
     },
     {
         title: 'Estado',
-        data: 'overallStatus',
-        name: 'overallStatus',
+        data: 'result',
+        name: 'result',
         render: (v, _t, row) => {
-            const status = v ?? row.status ?? row.complianceStatus ?? 'CUMPLE';
+            // HU-ACT-05 E1 (2026-04-28): el backend devuelve `result`
+            // (COMPLIANT/WARNING/NON_COMPLIANT). Antes el frontend leia
+            // `overallStatus/status/complianceStatus` que NO existen y
+            // defaulteaba a 'CUMPLE' para todos los activos.
+            const status = v ?? row.overallStatus ?? row.status ?? row.complianceStatus ?? 'CUMPLE';
             const cfg = resolveBadge(status);
             return `<span class="badge ${cfg.badge}">${cfg.label}</span>`;
         },

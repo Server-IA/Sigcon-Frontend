@@ -293,12 +293,20 @@ const BankReconciliation = () => {
         }
     };
 
+    // QA HU-050 E1: guard contra doble-click. Antes el POST OK + GET refresh
+    // fallido se mostraba como error, el usuario reintentaba y se generaban
+    // duplicados.
+    const [savingMovement, setSavingMovement] = useState(false);
+
     const addMovement = async () => {
+        if (savingMovement) return; // Evitar doble-click
+
         const amt = Number(String(movForm.amount).replace(',', '.'));
         if (!movForm.movementDate || Number.isNaN(amt) || amt === 0) {
             setMessage({ message: 'Fecha e importe válidos requeridos', type: 'warning', show: true });
             return;
         }
+        setSavingMovement(true);
         try {
             const url = base_url(['api', 'v1', 'bank-accounts', id, 'financial-movements']);
             const body = {
@@ -313,9 +321,28 @@ const BankReconciliation = () => {
             }
             await fetchHelper.post(url, body, {}, 1000);
             setMessage({ message: 'Movimiento registrado', type: 'success', show: true });
-            refresh();
+            // Limpiar form para no reenviar el mismo movimiento
+            setMovForm(prev => ({
+                ...prev,
+                amount: '',
+                description: '',
+                reference: '',
+            }));
+            try {
+                await refresh();
+            } catch (refreshErr) {
+                // QA HU-050 E1: el refresh fallido NO es error de la operacion.
+                // El POST ya fue exitoso. Mostramos warning pero no permitimos reintento.
+                setMessage({
+                    message: 'Movimiento registrado. No se pudo refrescar la lista; recargue la pagina.',
+                    type: 'warning',
+                    show: true,
+                });
+            }
         } catch (e) {
             setMessage({ message: e?.msg || 'Error al registrar', type: 'danger', show: true });
+        } finally {
+            setSavingMovement(false);
         }
     };
 
@@ -454,7 +481,9 @@ const BankReconciliation = () => {
                                             label="Notas"
                                             placeholder="Notas"
                                             value={sessionForm.notes}
-                                            onChange={(value) => setSessionForm((f) => ({ ...f, notes: value }))}
+                                            // QA HU-054 E2: InputModal entrega el evento (no el value directo).
+                                            // Antes se guardaba el event como objeto y al re-renderizar mostraba "[object Object]".
+                                            onChange={(e) => setSessionForm((f) => ({ ...f, notes: e?.target?.value ?? '' }))}
                                         />
                                         {/* <label className="form-label small">Notas</label>
                                         <input type="text" className="form-control form-control-sm" value={sessionForm.notes} onChange={(e) => setSessionForm((f) => ({ ...f, notes: e.target.value }))} /> */}
@@ -675,7 +704,14 @@ const BankReconciliation = () => {
                                     <input type="text" className="form-control form-control-sm" value={movForm.reference} onChange={(e) => setMovForm((f) => ({ ...f, reference: e.target.value }))} /> */}
                                 </div>
                                 <div className="col-md-6">
-                                    <button type="button" className="btn btn-lg btn-primary mt-4" onClick={addMovement}>Registrar movimiento</button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-lg btn-primary mt-4"
+                                        onClick={addMovement}
+                                        disabled={savingMovement}
+                                    >
+                                        {savingMovement ? 'Registrando...' : 'Registrar movimiento'}
+                                    </button>
                                 </div>
                             </div>
                             <div className="mb-2">

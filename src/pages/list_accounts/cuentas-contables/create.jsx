@@ -21,23 +21,22 @@ const CreateCuentaContable = ({
     const [loading, setLoading] = useState(false);
 
     // Data loading — swagger endpoints:
-    // POST /api/v1/chart-of-accounts/search
     // POST /api/v1/accounting-lists/currency-types/search
     // POST /api/v1/cost-centers/search
-    // POST /api/v1/depreciation-rules/search
+    // (Reglas de depreciacion ya no se cargan aqui: el campo del form esta comentado
+    // y el setter `setDepreciationRules` no estaba declarado, lo que causaba
+    // ReferenceError en runtime y colapsaba la pagina al cancelar.)
     useEffect(() => {
         const dtBody = { length: -1, columns: [{data:'status', search: {value: 'ACTIVE', regex: false}}] };
         const loadData = async () => {
             // Promise.allSettled: a 403 on one endpoint won't block the others
-            const [currRes, ccRes, drRes] = await Promise.allSettled([
+            const [currRes, ccRes] = await Promise.allSettled([
                 fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']), dtBody, {}, 0),
                 fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']), dtBody, {}, 0),
-                fetchHelper.post(base_url(['api', 'v1', 'depreciation-rules', 'search']), dtBody, {}, 0),
             ]);
             if (currRes.status === 'fulfilled') setCurrencies(currRes.value.data || []);
             if (ccRes.status === 'fulfilled')   setCostCenters(ccRes.value.data || []);
-            if (drRes.status === 'fulfilled')   setDepreciationRules(drRes.value.data || []);
-            const failed = [currRes, ccRes, drRes].filter(r => r.status === 'rejected');
+            const failed = [currRes, ccRes].filter(r => r.status === 'rejected');
             if (failed.length) console.warn('Algunos datos no pudieron cargarse:', failed.map(f => f.reason));
         };
         loadData();
@@ -59,19 +58,19 @@ const CreateCuentaContable = ({
             setErrors({ ...errors, currency_type_id: 'Por favor seleccione una moneda base' });
             return;
         }
-        if (!cuentaContable.cost_center_id) {
-            setErrors({ ...errors, cost_center_id: 'Por favor seleccione un centro de costos' });
-            return;
-        }
+        // HU-CFG-RF-05 E6: Centro de Costos es OPCIONAL segun la HU. Antes el
+        // form lo trataba como obligatorio, impidiendo crear cuentas que no
+        // tuvieran centro de costos asignado. Se elimina la validacion cliente.
         if (!cuentaContable.nature) {
             setErrors({ ...errors, nature: 'Por favor seleccione la naturaleza de la cuenta' });
             return;
         }
 
-        // Swagger CreateAccountingAccountRequest: maxLength 50, pattern ^[a-zA-Z0-9 _-]+$
-        const nameRegex = /^[a-zA-Z0-9 _-]{1,50}$/;
+        // Backend regex actualizado: permite letras (con acentos y ñ), numeros, espacios,
+        // guiones, parentesis, puntos y comas. Consistente con CreateAccountingAccountRequest.
+        const nameRegex = /^[a-zA-Z0-9 áéíóúÁÉÍÓÚñÑüÜ()._,\-]{1,100}$/;
         if (!nameRegex.test(cuentaContable.custom_name)) {
-            setErrors({ ...errors, custom_name: 'El nombre debe tener entre 1 y 50 caracteres, solo alfanuméricos, espacios, guiones y guiones bajos' });
+            setErrors({ ...errors, custom_name: 'El nombre debe tener entre 1 y 100 caracteres y solo puede contener letras, números, espacios, guiones, puntos, comas y paréntesis' });
             return;
         }
 
@@ -179,7 +178,7 @@ const CreateCuentaContable = ({
                                         })}
                                         error={errors.custom_name}
                                         placeholder="Ej: Caja general"
-                                        maxLength={50}
+                                        maxLength={100}
                                         required={true}
                                     />
                                 </div>
@@ -207,15 +206,15 @@ const CreateCuentaContable = ({
                                 </div>
                             </div>
 
-                            {/* Centro de Costos (Opcional) */}
+                            {/* Centro de Costos (Opcional) - HU-CFG-RF-05 E6 */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
                                         id="costCenterId"
-                                        label="Centro de Costos"
+                                        label="Centro de Costos (opcional)"
                                         value={cuentaContable.cost_center_id}
-                                        onChange={(value) => setCuentaContable({ 
-                                            ...cuentaContable, 
+                                        onChange={(value) => setCuentaContable({
+                                            ...cuentaContable,
                                             cost_center_id: parseInt(value) || null
                                         })}
                                         error={errors.cost_center_id}
@@ -224,7 +223,7 @@ const CreateCuentaContable = ({
                                             id: center.id,
                                             label: `${center.code} - ${center.name}`
                                         }))}
-                                        required={true}
+                                        required={false}
                                     />
                                 </div>
                             </div>

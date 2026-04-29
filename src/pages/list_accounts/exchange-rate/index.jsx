@@ -59,17 +59,23 @@ const ExchangeRateIndex = () => {
 
     // Datos para el datatable
     const columns = [
+        // HU-CFG-26 E1 (2026-04-27): paths JPA reales (`currencyExchange.name`,
+        // `currencyExchanged.name`). El `name` lo usa el backend para resolver
+        // el path via DataTableSpecificationBuilder. Antes searchable=false
+        // bloqueaba la busqueda; ahora habilitado para que el filtro funcione.
         {
             title: 'Moneda de origen',
             data: 'currencyExchange.name',
-            searchable: false,
+            name: 'currencyExchange.name',
+            searchable: true,
             orderable: false,
             defaultContent: '-',
         },
         {
             title: 'Moneda de destino',
             data: 'currencyExchanged.name',
-            searchable: false,
+            name: 'currencyExchanged.name',
+            searchable: true,
             orderable: false,
             defaultContent: '-',
         },
@@ -292,10 +298,15 @@ const ExchangeRateIndex = () => {
                 dataTableRef={dataTableRef}
                 title="Filtrar Tasas de Cambio"
                 columns={[
-                    { column: 'value:name',     label: 'Tasa de cambio', type: 'number' },
-                    { column: 'startDate:name', label: 'Fecha de inicio', type: 'date' },
-                    { column: 'endDate:name',   label: 'Fecha de fin',    type: 'date' },
-                    { column: 'status:name',    label: 'Estado', type: 'select', options: [
+                    // HU-CFG-26 E1 (2026-04-27): paths JPA reales para el filtro.
+                    // Patron `<jpaPath>:<dataTableColumnName>`. Antes el `:name`
+                    // literal nunca encajaba con la columna y el filtro era inerte.
+                    { column: 'currencyExchange.name:name', label: 'Moneda origen' },
+                    { column: 'currencyExchanged.name:name', label: 'Moneda destino' },
+                    { column: 'value:value',         label: 'Tasa de cambio', type: 'number' },
+                    { column: 'startDate:startDate', label: 'Fecha de inicio', type: 'date' },
+                    { column: 'endDate:endDate',     label: 'Fecha de fin',    type: 'date' },
+                    { column: 'status:status',       label: 'Estado', type: 'select', options: [
                         { id: 'ACTIVE',   label: 'Activo' },
                         { id: 'INACTIVE', label: 'Inactivo' },
                     ]},

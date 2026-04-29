@@ -29,6 +29,10 @@ const IndexEmpleados = () => {
     const [search, setSearch] = useState({ value: '', checked: true });
     const [alert, setAlert] = useState({ message: '', type: '', show: false });
     const [selected, setSelected] = useState(null);
+    // HU-NOM-01 DEF#1 (2026-04-28): contador para forzar re-mount del form
+    // cada vez que se abre "Crear empleado". Sin esto el state local del form
+    // persistia con datos del empleado anterior aunque selected fuera null.
+    const [createKey, setCreateKey] = useState(0);
 
     const url = ['api', 'nomina', 'empleados', 'search'];
 
@@ -77,6 +81,7 @@ const IndexEmpleados = () => {
 
     const openCreate = () => {
         setSelected(null);
+        setCreateKey(k => k + 1);  // fuerza re-mount del form (HU-NOM-01 DEF#1)
         if (!modalInstance.current)
             modalInstance.current = new window.bootstrap.Modal(modalRef.current);
         modalInstance.current.show();
@@ -216,8 +221,9 @@ const IndexEmpleados = () => {
                 </div>
             </div>
 
-            <EmpleadoForm modalRef={modalRef} modalInstance={modalInstance}
-                    empleado={selected} onSaved={onSaved} />
+            <EmpleadoForm
+                    modalRef={modalRef} modalInstance={modalInstance}
+                    empleado={selected} createKey={createKey} onSaved={onSaved} />
 
             <GenericFilterModal
                 filterRef={filterRef}

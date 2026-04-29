@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 import AlertPage from '../../../components/molecules/AlertPage';
+import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 /**
  * Pagina de Reportes de Cuentas por Cobrar.
@@ -48,6 +49,28 @@ const IndexArReports = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
+    // HU-AR-05 E1: lista de clientes para dropdown buscable.
+    const [clients, setClients] = useState([]);
+
+    useEffect(() => {
+        // Cargar terceros con rol cliente para el filtro "Por Cliente".
+        const loadClients = async () => {
+            try {
+                const resp = await fetchHelper.post(
+                    base_url(['api', 'v1', 'third-parties', 'search']),
+                    { length: -1, columns: [] }, {}, 0
+                );
+                const list = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+                setClients(list.map((t) => ({
+                    id: t.id,
+                    // Mostramos NIT + razon social + nombre comercial para que el
+                    // contador pueda buscar por cualquiera de esos campos.
+                    name: `${t.nit || t.documentNumber || ''}${t.dv ? '-' + t.dv : ''} - ${t.businessName || t.firstName || ''}`.trim(),
+                })));
+            } catch (_) { /* noop */ }
+        };
+        loadClients();
+    }, []);
 
     /** Construye el body del request a partir del tipo seleccionado y filtros. */
     const buildBody = () => {
@@ -120,6 +143,21 @@ const IndexArReports = () => {
     /** Renderiza la tabla de resultados segun el tipo de reporte. */
     const renderResults = () => {
         if (!data) return null;
+
+        // HU-AR-10 E2 (2026-04-27): mensaje claro cuando los criterios no
+        // devuelven resultados. Antes el frontend pintaba tabla vacia y el QA
+        // no sabia si fallaba o si simplemente no habia datos.
+        const isEmpty = (Array.isArray(data) && data.length === 0)
+            || (data && typeof data === 'object' && !Array.isArray(data)
+                && data.invoiceCount === 0 && reportType === 'by-period');
+        if (isEmpty) {
+            return (
+                <div className="alert alert-info text-center py-3 mb-0">
+                    <i className="ri-information-line me-2"></i>
+                    No se encontraron registros con los criterios seleccionados.
+                </div>
+            );
+        }
 
         if (reportType === 'by-period') {
             return (
@@ -229,15 +267,19 @@ const IndexArReports = () => {
                         </select>
                     </div>
                     {reportType === 'by-customer' && (
-                        <div className="col-md-3">
-                            <label className="form-label">Id Cliente (opcional)</label>
-                            <input
-                                type="number"
-                                className="form-control"
+                        // HU-AR-05 E1: el contador no debe tener que conocer el ID
+                        // numerico del cliente. Reemplazamos el input por un select
+                        // buscable (Select2) cargado con NIT + razon social + nombre.
+                        <div className="col-md-4">
+                            <InputSelectModal
+                                label="Cliente (opcional)"
+                                name="thirdPartyId"
                                 value={filters.thirdPartyId}
-                                onChange={(e) =>
-                                    setFilters({ ...filters, thirdPartyId: e.target.value })
+                                options={clients}
+                                onChange={(val) =>
+                                    setFilters({ ...filters, thirdPartyId: val || '' })
                                 }
+                                emptyMessage="No hay clientes registrados. Cree uno en Terceros."
                             />
                         </div>
                     )}

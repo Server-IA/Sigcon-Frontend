@@ -9,6 +9,8 @@ import { fetchHelper } from '../../../utils/fetch';
 
 import CreateApInvoice from './create';
 import UpdatedApInvoice from './updated';
+// HU-AP-13 (2026-04-28): documentos soporte de factura de compra.
+import ApAttachmentsModal from './attachments';
 
 /**
  * Pagina principal de Facturas de Compra (Cuentas por Pagar).
@@ -52,11 +54,16 @@ const IndexApInvoices = () => {
     const modalUpdateInstance = useRef(null);
     const filterRef = useRef(null);
     const filterInstance = useRef(null);
+    // HU-AP-13: refs para modal de documentos soporte
+    const modalAttachRef = useRef(null);
+    const modalAttachInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
     const [message, setMessage] = useState({ message: '', type: '', show: false });
     const [selectedInvoice, setSelectedInvoice] = useState(null);
+    // HU-AP-13: factura para la que se abre el modal de attachments
+    const [attachInvoice, setAttachInvoice] = useState(null);
 
     /** Endpoint de busqueda paginada de facturas. */
     const url = ['api', 'v1', 'invoices', 'search'];
@@ -66,9 +73,13 @@ const IndexApInvoices = () => {
         { title: 'Id', data: 'id', name: 'id' },
         { title: '# Factura Proveedor', data: 'supplierInvoiceNumber', name: 'supplierInvoiceNumber' },
         {
+            // HU-AP-01 DEF#3: la columna anterior leia `resolution`, que es el
+            // consecutivo interno numerico ("1","2","3"). El campo correcto
+            // visible al usuario es `resolutionInvoice`, que guarda la
+            // resolucion DIAN real ("FC-QA3-003", "RES-2026-001", etc).
             title: 'Resolucion',
-            data: 'resolution',
-            name: 'resolution',
+            data: 'resolutionInvoice',
+            name: 'resolutionInvoice',
             render: (val) => val || '-',
         },
         {
@@ -110,8 +121,11 @@ const IndexApInvoices = () => {
             render: (id, _type, row) => {
                 // Backend permite editar siempre que no este anulada ni liquidada.
                 // Solo se puede eliminar (soft delete) si esta en estado PENDIENTE.
-                const isEditable   = row?.status !== 'VOIDED' && row?.status !== 'SETTLED';
-                const isDeletable  = row?.status === 'PENDING';
+                // HU-AP-03: liquidar SOLO si esta totalmente pagada (saldo=0) y no
+                // ya liquidada/anulada.
+                const isEditable    = row?.status !== 'VOIDED' && row?.status !== 'SETTLED';
+                const isDeletable   = row?.status === 'PENDING';
+                const isSettleable  = row?.status === 'PAID';
                 return `
                 <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-label-info action-btn"
@@ -122,6 +136,17 @@ const IndexApInvoices = () => {
                         data-action="edit" data-id="${id}" title="Editar"
                         ${!isEditable ? 'disabled' : ''}>
                         <i class="ri-edit-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-label-success action-btn"
+                        data-action="settle" data-id="${id}"
+                        title="Liquidar factura (HU-AP-03)"
+                        ${!isSettleable ? 'disabled' : ''}>
+                        <i class="ri-check-double-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-label-info action-btn"
+                        data-action="attachments" data-id="${id}"
+                        title="Documentos soporte (HU-AP-13)">
+                        <i class="ri-attachment-2"></i>
                     </button>
                     <button class="btn btn-sm btn-label-danger action-btn"
                         data-action="delete" data-id="${id}" title="Eliminar"
@@ -205,6 +230,8 @@ const IndexApInvoices = () => {
             if (!selected) return;
 
             if (action === 'view') {
+                // Imagen 3 QA: el modal anterior mostraba botones fantasma
+                // "Cerrar / No / Cancel". showCancelButton/Deny en false los oculta.
                 window.Swal.fire({
                     title: `Factura #${selected.supplierInvoiceNumber || selected.id}`,
                     html: `
@@ -217,6 +244,8 @@ const IndexApInvoices = () => {
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
                         </div>`,
                     width: 500,
+                    showCancelButton: false,
+                    showDenyButton: false,
                     confirmButtonText: 'Cerrar',
                 });
                 return;
@@ -249,6 +278,55 @@ const IndexApInvoices = () => {
                     return;
                 }
                 handleDelete(selected);
+                return;
+            }
+
+            if (action === 'attachments') {
+                // HU-AP-13 (2026-04-28): abrir modal de documentos soporte.
+                setAttachInvoice({ id: selected.id, invoiceNumber: selected.supplierInvoiceNumber });
+                if (!modalAttachInstance.current) {
+                    modalAttachInstance.current = new window.bootstrap.Modal(modalAttachRef.current);
+                }
+                modalAttachInstance.current.show();
+                return;
+            }
+
+            if (action === 'settle') {
+                // HU-AP-03 E1: liquidar factura. El backend valida saldo=0 y
+                // pagos conciliados antes de aceptar.
+                if (selected.status !== 'PAID') {
+                    setMessage({
+                        type: 'warning',
+                        show: true,
+                        message: 'Solo se pueden liquidar facturas con saldo $0 (estado Pagada).',
+                    });
+                    return;
+                }
+                window.Swal.fire({
+                    title: 'Liquidar factura?',
+                    text: `Se liquidara la factura #${selected.supplierInvoiceNumber || selected.id}. Esta accion la marca como cerrada definitivamente.`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Si, liquidar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#28a745',
+                }).then(async (result) => {
+                    if (!result.isConfirmed) return;
+                    try {
+                        await fetchHelper.post(
+                            base_url(['api', 'v1', 'invoices', selected.id, 'settle']),
+                            {}, {}, 1000
+                        );
+                        setMessage({ type: 'success', show: true, message: 'Factura liquidada correctamente.' });
+                        dataTableRef?.current?.ajax.reload();
+                    } catch (err) {
+                        setMessage({
+                            type: 'danger',
+                            show: true,
+                            message: err?.message || err?.msg || 'Error al liquidar la factura.',
+                        });
+                    }
+                });
             }
         };
 
@@ -301,22 +379,34 @@ const IndexApInvoices = () => {
                 selected={selectedInvoice}
             />
 
+            {/* HU-AP-13: documentos soporte de la factura de compra. */}
+            <ApAttachmentsModal
+                modalRef={modalAttachRef}
+                modalInstance={modalAttachInstance}
+                invoiceId={attachInvoice?.id}
+                invoiceNumber={attachInvoice?.invoiceNumber}
+            />
+
             <GenericFilterModal
                 filterRef={filterRef}
                 filterInstance={filterInstance}
                 dataTableRef={dataTableRef}
                 title="Filtrar Facturas de Compra"
                 columns={[
-                    { column: 'supplierInvoiceNumber:name', label: '# Factura Proveedor' },
-                    { column: 'thirdPartyName:name', label: 'Proveedor' },
-                    { column: 'invoiceDate:name', label: 'Fecha', type: 'date' },
-                    { column: 'totalPayment:name', label: 'Total', type: 'number' },
-                    { column: 'status:name', label: 'Estado', type: 'select', options: [
+                    // HU-AP-25 / AR-12 (2026-04-28): paths JPA reales para el filter.
+                    { column: 'supplierInvoiceNumber:supplierInvoiceNumber', label: '# Factura Proveedor' },
+                    { column: 'thirdParty.businessName:name', label: 'Proveedor' },
+                    { column: 'thirdParty.nit:name', label: 'NIT proveedor' },
+                    { column: 'invoiceDate:invoiceDate', label: 'Fecha', type: 'date' },
+                    { column: 'totalPayment:totalPayment', label: 'Total', type: 'number' },
+                    { column: 'status:status', label: 'Estado', type: 'select', options: [
                         { id: 'PENDING', label: 'Pendiente' },
                         { id: 'PAID', label: 'Pagada' },
                         { id: 'PARTIALLY_PAID', label: 'Pago Parcial' },
                         { id: 'OVERDUE', label: 'Vencida' },
                         { id: 'CANCELLED', label: 'Anulada' },
+                        { id: 'VOIDED', label: 'Anulada/VOIDED' },
+                        { id: 'SETTLED', label: 'Liquidada' },
                     ]},
                 ]}
             />

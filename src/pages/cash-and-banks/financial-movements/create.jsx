@@ -33,21 +33,25 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
 
     /**
      * Carga la lista de cuentas bancarias activas para el selector.
+     * fetchHelper.post devuelve directamente la respuesta JSON parseada
+     * (no un objeto {data, error}). El payload del DataTable es
+     * {draw, recordsTotal, data:[...]}, asi que las filas son resp.data.
      */
     const loadBankAccounts = async () => {
         try {
-            const { data, error } = await fetchHelper.post(
+            const resp = await fetchHelper.post(
                 base_url(['api', 'v1', 'bank-accounts', 'search']),
                 { draw: 1, start: 0, length: -1, search: { value: '', regex: false }, columns: [], order: [] },
                 {},
                 0
             );
-            if (!error && data?.data) {
-                setBankAccounts(data.data.map(acc => ({
-                    id: acc.id,
-                    name: `${acc.code || ''} - ${acc.accountName || ''}`,
-                })));
-            }
+            const items = Array.isArray(resp?.data) ? resp.data : [];
+            // Solo cuentas activas (status='ACTIVA') son utilizables para movimientos.
+            const active = items.filter(acc => !acc.status || acc.status === 'ACTIVA');
+            setBankAccounts(active.map(acc => ({
+                id: acc.id,
+                name: `${acc.code || ''} - ${acc.accountName || ''}`.trim(),
+            })));
         } catch (e) {
             console.log('Error cargando cuentas bancarias:', e);
         }

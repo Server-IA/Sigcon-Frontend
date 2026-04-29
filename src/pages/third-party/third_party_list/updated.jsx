@@ -35,11 +35,18 @@ const RISK_LEVELS = [
 // Los datos comerciales se gestionan en Terceros -> Datos Comerciales (con vigencia
 // temporal e historial). Evita doble punto de entrada para los mismos campos.
 const TABS = [
-    { id: 'general',    label: 'Datos Generales', icon: 'ri-user-3-line' },
-    { id: 'roles',      label: 'Roles',           icon: 'ri-shield-user-line' },
-    { id: 'fiscal',     label: 'Datos Fiscales',  icon: 'ri-file-text-line' },
-    { id: 'contact',    label: 'Contacto',        icon: 'ri-phone-line' },
+    { id: 'general',    label: 'Datos Generales',   icon: 'ri-user-3-line' },
+    { id: 'roles',      label: 'Roles',             icon: 'ri-shield-user-line' },
+    { id: 'fiscal',     label: 'Datos Fiscales',    icon: 'ri-file-text-line' },
+    { id: 'contact',    label: 'Contacto',          icon: 'ri-phone-line' },
+    // HU-TER-05 (2026-04-27): vincular cuentas bancarias existentes (no se
+    // crean nuevas aqui; vienen del modulo Bancos y Cajas).
+    { id: 'banks',      label: 'Cuentas Bancarias', icon: 'ri-bank-line' },
 ];
+
+const API_BANK_ACCOUNTS_SEARCH = ['api', 'v1', 'bank-accounts', 'search'];
+const API_TPBA = (thirdPartyId) => ['api', 'v1', 'third-parties', thirdPartyId, 'bank-accounts'];
+const API_TPBA_DELETE = (thirdPartyId, linkId) => ['api', 'v1', 'third-parties', thirdPartyId, 'bank-accounts', linkId];
 
 const emptyContact = { position: '', phone: '', email: '', contactPerson: '' };
 
@@ -83,6 +90,17 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
     const [commercial, setCommercial]       = useState(emptyCommercial);
     const [commercialId, setCommercialId]   = useState(null); // null = no existe aún
     const [commercialLoading, setCommercialLoading] = useState(false);
+
+    // HU-TER-05: cuentas bancarias vinculadas al tercero
+    const [bankAccountsAvailable, setBankAccountsAvailable] = useState([]);  // todas las del sistema
+    const [bankAccountsLinked, setBankAccountsLinked]       = useState([]);  // vinculadas al tercero (snapshot BD)
+    // QA-BLOQUE-AK (2026-04-29): los cambios sobre cuentas bancarias se acumulan
+    // en pending* y se persisten SOLO al hacer "Guardar cambios". Si el usuario
+    // cierra el modal sin guardar, las pendientes se descartan.
+    const [pendingBankLinks,   setPendingBankLinks]   = useState([]);   // [{tempId, bankAccountId, label}]
+    const [pendingBankUnlinks, setPendingBankUnlinks] = useState([]);   // [linkIds existentes a borrar]
+    const [selectedBankAccountId, setSelectedBankAccountId] = useState('');
+    const [bankAccountsLoading, setBankAccountsLoading]     = useState(false);
 
     // Catalogos FK para tipos de organizacion, regimen y retenciones
     const [regimesOpts, setRegimesOpts]           = useState([]);
@@ -188,7 +206,104 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                 })
                 .finally(() => setCommercialLoading(false));
         }
+
+        // HU-TER-05: cargar cuentas bancarias del sistema y las vinculadas al tercero
+        setBankAccountsLinked([]);
+        setSelectedBankAccountId('');
+        // QA-BLOQUE-AK: limpiar pendientes al recargar el tercero
+        setPendingBankLinks([]);
+        setPendingBankUnlinks([]);
+        if (thirdParty.id) {
+            setBankAccountsLoading(true);
+            // Listar cuentas disponibles del tenant (DataTable search global)
+            fetchHelper.post(base_url(API_BANK_ACCOUNTS_SEARCH), CATALOG_BODY, {}, 0)
+                .then(res => {
+                    const list = res?.data ?? [];
+                    setBankAccountsAvailable(list.map(a => ({
+                        id: a.id,
+                        label: `${a.code ?? '-'} - ${a.bankDTO?.name ?? a.bank?.name ?? 'Banco'} - ${a.accountNumber ?? ''}`,
+                    })));
+                })
+                .catch(() => setBankAccountsAvailable([]));
+            // Listar las ya vinculadas
+            fetchHelper.get(base_url(API_TPBA(thirdParty.id)), {}, 0, false)
+                .then(res => setBankAccountsLinked(res?.data ?? []))
+                .catch(() => setBankAccountsLinked([]))
+                .finally(() => setBankAccountsLoading(false));
+        }
     }, [thirdParty]);
+
+    /**
+     * HU-TER-05 + QA-BLOQUE-AK (2026-04-29): "vincular" ya NO golpea el backend.
+     * Solo agrega la cuenta a la lista de pendientes en memoria. La persistencia
+     * ocurre al hacer click en "Guardar cambios".
+     */
+    const handleLinkBankAccount = () => {
+        if (!selectedBankAccountId) {
+            setErrorMessage('Seleccione una cuenta bancaria para vincular.');
+            return;
+        }
+        const id = Number(selectedBankAccountId);
+        // Sacar metadata desde el catalogo cargado (label "code - banco - num")
+        const meta = bankAccountsAvailable.find(a => a.id === id);
+        if (!meta) {
+            setErrorMessage('No se pudo resolver la cuenta seleccionada.');
+            return;
+        }
+        // Si ya esta vinculada (BD) y no se va a unlink, evitar duplicar
+        const alreadyLinked = bankAccountsLinked.some(l =>
+            l.bankAccountId === id && !pendingBankUnlinks.includes(l.id));
+        const alreadyPending = pendingBankLinks.some(p => p.bankAccountId === id);
+        if (alreadyLinked || alreadyPending) {
+            setErrorMessage('Esa cuenta ya esta vinculada o en pendiente.');
+            return;
+        }
+        setPendingBankLinks(prev => [...prev, {
+            tempId: `tmp_${Date.now()}_${id}`,
+            bankAccountId: id,
+            label: meta.label,
+        }]);
+        setSelectedBankAccountId('');
+        setErrorMessage('');
+    };
+
+    /**
+     * HU-TER-05 + QA-BLOQUE-AK: "desvincular" ya NO golpea el backend.
+     * - Si la entrada es persistida (tiene linkId real), se agrega a pendingBankUnlinks.
+     * - Si la entrada es pending (tempId), se quita de pendingBankLinks.
+     */
+    const handleUnlinkBankAccount = (entry) => {
+        if (entry.tempId) {
+            setPendingBankLinks(prev => prev.filter(p => p.tempId !== entry.tempId));
+            return;
+        }
+        if (entry.id) {
+            setPendingBankUnlinks(prev => prev.includes(entry.id) ? prev : [...prev, entry.id]);
+        }
+    };
+
+    /**
+     * QA-BLOQUE-AK: aplicar al backend las cuentas pendientes (link/unlink).
+     * Llamado solo desde handleUpdate. Si alguna falla, propaga el error
+     * al usuario y mantiene el estado pendiente para que pueda corregir.
+     */
+    const applyPendingBankAccountChanges = async (tpId) => {
+        // 1. Unlinks primero (libera cuentas si se reasignan dentro del mismo save)
+        for (const linkId of pendingBankUnlinks) {
+            await fetchHelper.delete(
+                base_url(API_TPBA_DELETE(tpId, linkId)),
+                null, {}, 1000
+            );
+        }
+        // 2. Links nuevos
+        for (const pl of pendingBankLinks) {
+            await fetchHelper.post(
+                base_url(API_TPBA(tpId)),
+                { bankAccountId: pl.bankAccountId, isPrimary: false },
+                {}, 1000
+            );
+        }
+    };
 
     const toggleRole = (roleId) => {
         const roles = thirdPartyUpdated.roles ?? [];
@@ -220,10 +335,18 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
         try {
             // ── 1. Actualizar información general del tercero ──────────────────
             const url = base_url(API_UPDATE(thirdPartyUpdated.id));
+            // HU-TER-02 E2 + HU-TER-03 E1 (2026-04-27): faltaban typeOrganizationId,
+            // typeRegimenId y el nombre correcto del campo `withholdingIds` (estaba
+            // como singular `withholdingId`). Por eso al editar datos fiscales no se
+            // persistian.
             const payload = {
                 businessName:   thirdPartyUpdated.businessName,
                 municipalityId: thirdPartyUpdated.municipalityId ? Number(thirdPartyUpdated.municipalityId) : null,
-                withholdingId: Array.isArray(thirdPartyUpdated.withholdingIds)
+                typeOrganizationId: thirdPartyUpdated.typeOrganizationId
+                    ? Number(thirdPartyUpdated.typeOrganizationId) : null,
+                typeRegimenId: thirdPartyUpdated.typeRegimenId
+                    ? Number(thirdPartyUpdated.typeRegimenId) : null,
+                withholdingIds: Array.isArray(thirdPartyUpdated.withholdingIds)
                     ? thirdPartyUpdated.withholdingIds.map(Number).filter(n => !isNaN(n) && n > 0)
                     : (typeof thirdPartyUpdated.withholdingIds === 'string' && thirdPartyUpdated.withholdingIds
                         ? thirdPartyUpdated.withholdingIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0)
@@ -243,6 +366,20 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                 }),
             };
             await fetchHelper.put(urlRolesStatus, rolesStatusPayload, {}, 1000);
+
+            // QA-BLOQUE-AK (2026-04-29): aplicar cambios pendientes de cuentas
+            // bancarias (link/unlink) ANTES de cerrar el modal. Si falla alguno,
+            // propaga el error y conserva el modal abierto.
+            try {
+                await applyPendingBankAccountChanges(thirdPartyUpdated.id);
+                setPendingBankLinks([]);
+                setPendingBankUnlinks([]);
+            } catch (e) {
+                const msg = e?.msg || e?.message || 'No se pudieron guardar los cambios de cuentas bancarias.';
+                setErrorMessage(msg);
+                setActiveTab('banks');
+                return; // No cerrar el modal — usuario debe reintentar
+            }
 
             // Los datos comerciales (creditLimit, paymentTerm, riskLevel) ya NO se
             // guardan desde este modal — se gestionan en el submodulo dedicado
@@ -266,8 +403,20 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             const errores = error?.errors;
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
-                errores.forEach(err => { fieldErrors[err.field] = err.message; });
+                errores.forEach(err => {
+                    fieldErrors[err.field] = err.message;
+                    // HU-TER-04 E5 (2026-04-27): el backend devuelve `roleIds`
+                    // pero el JSX de la pestania Roles lee `errors.roles`.
+                    // Si se intenta quitar el unico rol activo, el alert
+                    // nunca aparece. Mapear por compatibilidad.
+                    if (err.field === 'roleIds') fieldErrors.roles = err.message;
+                });
                 setErrors(fieldErrors);
+                // Mostrar tambien banner global para que el usuario lo vea
+                // sin importar la pestania activa.
+                if (fieldErrors.roles) setErrorMessage(fieldErrors.roles);
+                // Cambiar a la pestania Roles si el error es de roles
+                if (fieldErrors.roles) setActiveTab('roles');
             } else if (error?.msg) {
                 setErrorMessage(error.msg);
             }
@@ -552,6 +701,143 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
 
                         {/* Tab "Comercial" eliminado para consistencia con create.jsx.
                             Gestionar desde Terceros -> Datos Comerciales. */}
+
+                        {/* HU-TER-05 (2026-04-27): Cuentas bancarias vinculadas */}
+                        {activeTab === 'banks' && (
+                            <div>
+                                <p className="text-muted mb-3">
+                                    Vincule cuentas bancarias existentes al tercero. Las cuentas se gestionan
+                                    desde el modulo <strong>Bancos y Cajas &gt; Cuentas Bancarias</strong>;
+                                    aqui solo se asocian al tercero.
+                                </p>
+
+                                {!readOnly && (
+                                    <div className="row align-items-end mb-3">
+                                        <div className="col-md-9">
+                                            <InputSelectModal
+                                                id="tp_link_bank_account"
+                                                label="Cuenta bancaria"
+                                                value={selectedBankAccountId}
+                                                onChange={(v) => setSelectedBankAccountId(v)}
+                                                options={bankAccountsAvailable.filter(a => {
+                                                    // Excluir las ya vinculadas en BD que NO esten pendientes de unlink
+                                                    const linkedActive = bankAccountsLinked.some(l =>
+                                                        l.bankAccountId === a.id && !pendingBankUnlinks.includes(l.id));
+                                                    // Excluir las que ya estan en pending links
+                                                    const pendingLinked = pendingBankLinks.some(p => p.bankAccountId === a.id);
+                                                    return !linkedActive && !pendingLinked;
+                                                })}
+                                                placeholder="Seleccione una cuenta bancaria"
+                                                emptyMessage={bankAccountsAvailable.length === 0
+                                                    ? 'No hay cuentas bancarias registradas en el sistema. Cree una en Bancos y Cajas.'
+                                                    : 'Todas las cuentas disponibles ya estan vinculadas a este tercero.'}
+                                            />
+                                        </div>
+                                        <div className="col-md-3">
+                                            <button
+                                                type="button"
+                                                className="btn btn-primary w-100"
+                                                onClick={handleLinkBankAccount}
+                                                disabled={!selectedBankAccountId}
+                                            >
+                                                <i className="ri-link me-1"></i> Vincular
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {(pendingBankLinks.length > 0 || pendingBankUnlinks.length > 0) && (
+                                    <div className="alert alert-warning py-2 mb-3" role="alert">
+                                        <i className="ri-information-line me-1"></i>
+                                        Hay cambios pendientes en cuentas bancarias.
+                                        Se aplicaran al hacer click en <strong>Guardar cambios</strong>.
+                                        Si cierra el modal sin guardar, se descartaran.
+                                    </div>
+                                )}
+
+                                <hr className="my-3" />
+
+                                <p className="text-muted mb-2">Cuentas vinculadas:</p>
+                                {bankAccountsLoading && (
+                                    <p className="text-muted text-center py-3">Cargando...</p>
+                                )}
+                                {(() => {
+                                    // Vista combinada: BD - pendingUnlinks + pendingLinks
+                                    const visibleLinked = bankAccountsLinked.filter(l =>
+                                        !pendingBankUnlinks.includes(l.id));
+                                    const totalRows = visibleLinked.length + pendingBankLinks.length;
+                                    if (bankAccountsLoading) return null;
+                                    if (totalRows === 0) {
+                                        return (
+                                            <p className="text-muted text-center py-3">
+                                                Este tercero no tiene cuentas bancarias vinculadas.
+                                            </p>
+                                        );
+                                    }
+                                    return (
+                                        <div className="table-responsive">
+                                            <table className="table table-sm table-bordered">
+                                                <thead className="table-light">
+                                                    <tr>
+                                                        <th>Codigo</th>
+                                                        <th>Banco</th>
+                                                        <th>Numero de cuenta</th>
+                                                        <th>Principal</th>
+                                                        <th>Estado</th>
+                                                        {!readOnly && <th style={{width:'80px'}}>Acciones</th>}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {visibleLinked.map(link => (
+                                                        <tr key={`bd_${link.id}`}>
+                                                            <td>{link.bankAccountCode ?? '-'}</td>
+                                                            <td>{link.bankName ?? '-'}</td>
+                                                            <td>{link.accountNumber ?? '-'}</td>
+                                                            <td>
+                                                                {link.isPrimary
+                                                                    ? <span className="badge bg-label-primary">Si</span>
+                                                                    : <span className="badge bg-label-secondary">No</span>}
+                                                            </td>
+                                                            <td><span className="badge bg-label-success">Guardada</span></td>
+                                                            {!readOnly && (
+                                                                <td>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-sm btn-outline-danger"
+                                                                        title="Desvincular (pendiente hasta Guardar)"
+                                                                        onClick={() => handleUnlinkBankAccount(link)}
+                                                                    >
+                                                                        <i className="ri-link-unlink"></i>
+                                                                    </button>
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    ))}
+                                                    {pendingBankLinks.map(pl => (
+                                                        <tr key={pl.tempId} className="table-warning">
+                                                            <td colSpan={4}>{pl.label}</td>
+                                                            <td><span className="badge bg-label-warning">Pendiente</span></td>
+                                                            {!readOnly && (
+                                                                <td>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-sm btn-outline-danger"
+                                                                        title="Quitar de pendientes"
+                                                                        onClick={() => handleUnlinkBankAccount(pl)}
+                                                                    >
+                                                                        <i className="ri-close-line"></i>
+                                                                    </button>
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
 
                     </div>{/* /modal-body */}
 

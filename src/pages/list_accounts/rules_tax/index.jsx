@@ -71,7 +71,11 @@ const RulesTaxIndex = () => {
         scope: '',
         dateStart: null,
         dateEnd: null,
-        accountingAccountId: null
+        accountingAccountId: null,
+        // Base gravable (motor UVT del Estatuto Tributario). Solo aplica para
+        // TypeRulerTax = WITHHOLDING. Si vienen null, el motor no omite por tope.
+        minAmountUvt: null,
+        uvtValueYear: null
     }
 
     const [rulesTax, setRulesTax] = useState(rulesTaxBase); // Info para el envio de datos
@@ -156,6 +160,19 @@ const RulesTaxIndex = () => {
             title: 'Alcance',
             data: 'scope',
             name: 'scope',
+        },
+        {
+            // HU-CFG-RF-10 E1: columna requerida por la HU. Antes estaba ausente.
+            title: 'Cuenta contable',
+            data: 'accountingAccount',
+            searchable: false,
+            orderable: false,
+            render: (acc) => {
+                if (!acc) return '<span class="text-muted">—</span>';
+                const code = acc?.pucAccount?.code || '';
+                const name = acc?.customName || acc?.pucAccount?.name || '';
+                return `${code}${code && name ? ' - ' : ''}${name}`;
+            }
         },
         {
             title: 'Fecha de inicio',
@@ -250,6 +267,9 @@ const RulesTaxIndex = () => {
                 dateEnd: rulesTaxRef.dateEnd,
                 accountingAccountId: rulesTaxRef.accountingAccountId,
                 accountingAccount: rulesTaxRef.accountingAccount,
+                // Base gravable (motor UVT del Estatuto Tributario)
+                minAmountUvt: rulesTaxRef.minAmountUvt ?? null,
+                uvtValueYear: rulesTaxRef.uvtValueYear ?? null,
             });
 
             switch (action) {
@@ -258,26 +278,38 @@ const RulesTaxIndex = () => {
                     break;
 
                 case 'delete':
+                    // HU-CFG-RF-12 E5: el motivo de eliminacion es OBLIGATORIO
+                    // (>= 10 chars). Antes el flujo era una sola confirmacion sin
+                    // pedir motivo, lo que dejaba el audit log sin trazabilidad.
                     window.Swal.fire({
-                        title: '¿Estás seguro?',
-                        text: 'Esta acción no se puede deshacer',
+                        title: '¿Eliminar regla tributaria?',
+                        html: 'Esta acción inactiva la regla y queda registrada en auditoría.<br/><br/>Ingrese el motivo (mínimo 10 caracteres):',
                         icon: 'warning',
+                        input: 'textarea',
+                        inputAttributes: { 'aria-label': 'Motivo de eliminacion', minlength: 10, maxlength: 500 },
+                        inputValidator: (v) => {
+                            if (!v || v.trim().length < 10) return 'El motivo debe tener al menos 10 caracteres';
+                            if (v.length > 500) return 'Máximo 500 caracteres';
+                            return null;
+                        },
                         showCancelButton: true,
                         confirmButtonText: 'Sí, eliminar',
                         cancelButtonText: 'Cancelar',
                         allowOutsideClick: false,
+                        confirmButtonColor: '#dc3545',
                         customClass: {
-                            confirmButton: 'btn btn-primary me-3 waves-effect waves-light',
+                            confirmButton: 'btn btn-danger me-3 waves-effect waves-light',
                             cancelButton: 'btn btn-outline-secondary waves-effect',
                         },
                     }).then(async(result) => {
                         if (result.isConfirmed) {
                             try {
-                                const url = base_url(['api/v1/ruler-tax', id]);
+                                const reason = (result.value || '').trim();
+                                const url = base_url(['api/v1/ruler-tax', id], { reason });
                                 const response = await fetchHelper.delete(url, {}, {}, 500);
 
                                 setRulesTaxMessage({
-                                    message: response.message || response.msg || 'Regla de impuesto eliminada correctamente',
+                                    message: response.message || response.msg || 'La regla tributaria ha sido eliminada exitosamente',
                                     type: 'success',
                                     show: true,
                                 });

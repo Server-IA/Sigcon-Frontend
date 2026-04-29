@@ -9,9 +9,10 @@ import { fetchHelper } from '../../../utils/fetch';
 import InputDate from '../../../components/molecules/InputDate';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
+// HU-CFG-15 MT-1 (2026-04-27): backend enum = DECREASING, no DECLINING_BALANCE.
 const DEPRECIATION_TYPES = [
     { id: 'LINEAR', label: 'Lineal' },
-    { id: 'DECLINING_BALANCE', label: 'Decreciente' },
+    { id: 'DECREASING', label: 'Decreciente' },
     { id: 'ACCELERATED', label: 'Acelerada' },
     { id: 'PRODUCTION_UNITS', label: 'Unidades de producción' },
     { id: 'MINIMUN_USEFUL_LIFE', label: 'Vida útil mínima' },
@@ -30,24 +31,30 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
         setErrorMessage('');
     }, [rule]);
 
-    // Cargar cuentas contables activas
+    // Cargar cuentas contables activas con codigo PUC clase 14/15/16 (activos
+    // depreciables/amortizables). El filtro se aplica client-side porque el
+    // backend DataTableSpecificationBuilder no parsea comma-separated LIKE
+    // patterns de forma confiable; cargamos todas las activas y filtramos aqui.
     useEffect(() => {
         const loadAccounts = async () => {
             try {
                 const url = base_url(['api', 'v1', 'accounting-accounts']);
-                const response = await fetchHelper.post(url, {length: -1, columns: [
-                    {data: 'status', search: {value: 'ACTIVE', regex: false}},
-                    {
-                        data:"pucAccount.code",
-                        searchable: true,
-                        search:{
-                          value:"14%,12%,15%,16%",
-                          regex:true
-                        }
-                    }
-                ]}, {  }, 0);
+                const response = await fetchHelper.post(url, {
+                    length: -1,
+                    columns: [
+                        { data: 'status', search: { value: 'ACTIVE', regex: false } }
+                    ]
+                }, {}, 0);
                 const list = response?.content ?? response?.data ?? [];
-                setAccounts(list.map(a => ({ id: a.id, label: a.customName })));
+                // Solo cuentas con codigo 14xx (Inventarios), 15xx (PPE) o 16xx (Intangibles)
+                const filtered = list.filter(a => {
+                    const code = String(a.pucAccount?.code ?? '');
+                    return code.startsWith('14') || code.startsWith('15') || code.startsWith('16');
+                });
+                setAccounts(filtered.map(a => ({
+                    id: a.id,
+                    label: a.customName || `${a.pucAccount?.name ?? ''} (${a.pucAccount?.code ?? ''})`
+                })));
             } catch (err) {
                 console.error('Error al cargar cuentas contables:', err);
             }

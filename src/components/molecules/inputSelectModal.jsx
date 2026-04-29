@@ -105,11 +105,17 @@ const InputSelectModal = ({
         }
 
         if (url) {
-            const item = options.find(item => item.id == value);
-            const option = new Option(item.text, item.id, true, true);
+            // Defensive: si options esta vacio o el id no esta entre las opciones
+            // cargadas, NO crasheamos. Antes se hacia `new Option(item.text, ...)`
+            // sin null-check y reventaba toda la pagina con
+            // "Cannot read properties of undefined (reading 'text')".
+            const item = (options || []).find(item => item.id == value);
+            if (!item) return;
+            const text = item.label ?? item.name ?? item.text ?? String(item.id);
+            const option = new Option(text, item.id, true, true);
             $select.append(option).trigger('change.select2');
         }
-    
+
     }, [value]);
 
     return (

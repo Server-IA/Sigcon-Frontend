@@ -229,5 +229,6 @@ export const fetchHelper = {
     postForm: (url, formData, headers = {}, time = 1, showErrorAlert = false, useToken = true) =>
         request(url, formData, 'POST', time, headers, showErrorAlert, useToken),
     put: (url, data, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, data, 'PUT', time, headers, showErrorAlert, useToken),
+    patch: (url, data, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, data, 'PATCH', time, headers, showErrorAlert, useToken),
     delete: (url, data, headers = {}, time = 1, showErrorAlert = false, useToken = true) => request(url, data, 'DELETE', time, headers, showErrorAlert, useToken),
 };

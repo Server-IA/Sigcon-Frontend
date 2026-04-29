@@ -10,11 +10,23 @@ const CurrencyCreated = ({ dataTableRef, modalRef, modalInstance, currency, setC
     const [errors, setErrors] = useState({});
 
     const handleSave = async() => {
-        console.log(currency);
+        // HU-CFG-21 MT-1 (2026-04-27): rechazo de tags HTML/XSS en el nombre.
+        // Sanitizacion fuerte se hace en backend; aqui es solo guardia front.
+        const name = (currency?.name || '').trim();
+        const iso = (currency?.isoCode || '').trim();
+        const newErrors = {};
+        if (!name) newErrors.name = 'El nombre es obligatorio';
+        else if (/[<>]/.test(name)) newErrors.name = 'El nombre no puede contener < o >';
+        if (!iso) newErrors.isoCode = 'El codigo ISO es obligatorio';
+        else if (!/^[A-Z]{3}$/.test(iso)) newErrors.isoCode = 'El codigo ISO debe ser 3 letras mayusculas (ej. USD, COP)';
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
         try {
             const url = base_url(['api/v1/accounting-lists/currency-types']);
 
-            const response = await fetchHelper.post(url, currency, {}, 500);
+            const response = await fetchHelper.post(url, { ...currency, name, isoCode: iso }, {}, 500);
 
             setMessage({ message: response.message, type: "success", show: true });
             modalInstance.current.hide();

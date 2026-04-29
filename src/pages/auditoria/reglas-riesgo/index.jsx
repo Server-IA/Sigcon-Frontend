@@ -4,6 +4,26 @@ import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
 
 /**
+ * HU-AU-04 E1 (2026-04-28): mapa de entidades auditables por modulo. Cuando el
+ * admin selecciona un modulo, el dropdown de "Match entidad" muestra solo las
+ * entidades validas de ese modulo. Esto refleja el alcance real del listener
+ * AuditEventListener + AuditPublisher de cada submodulo.
+ */
+const ENTITIES_BY_MODULE = {
+    PA:  ['User', 'Role', 'Module', 'Menu', 'Parameter', 'ReportTemplate', 'ReportType', 'SystemWithholdingAssignment'],
+    TER: ['ThirdParty', 'CommercialData', 'EclSegmentation', 'ThirdPartyBankAccount'],
+    CFG: ['AccountingAccount', 'ChartOfAccount', 'CostCenter', 'ExchangeRate', 'RuleTax', 'DepretationRule', 'CurrencyType'],
+    ACT: ['Asset', 'AssetDisposal', 'NiifVerification'],
+    AP:  ['Invoice', 'ApPayment', 'ApAdvance', 'ApNote', 'PurchaseOrder', 'GoodsReceipt', 'InvoiceAttachment'],
+    AR:  ['SalesInvoice', 'ArPayment', 'ArAdvance', 'ArNote', 'DianResolution', 'SalesInvoiceAttachment'],
+    BNK: ['Bank', 'BankAccount', 'BankBranch', 'Checkbook', 'Check', 'Cash', 'CashAudit', 'FinancialMovement', 'BankReconciliationSession', 'CashFlowProjection'],
+    CG:  ['JournalEntry', 'AccountingPeriod', 'JournalEntrySupport', 'VoucherSeriesConfig', 'ClosingEntry'],
+    NOM: ['Employee', 'PayrollConcept', 'PayrollReceipt', 'PayrollLine', 'BenefitLiquidation'],
+    INT: ['IntegrationBatch', 'IntegrationTransfer'],
+    AU:  ['AuditLog', 'AuditRiskRule', 'AuditRetentionPolicy', 'AuditPurgeRecord'],
+};
+
+/**
  * HU-AU-04: CRUD de reglas configurables de clasificación por riesgo.
  *
  * <p>El admin define reglas (módulo + acción + tipo entidad → severidad)
@@ -171,10 +191,20 @@ const IndexRiskRules = () => {
                         </div>
                         <div className="col-md-3">
                             <label className="form-label small">Match entidad (opcional)</label>
-                            <input type="text" className="form-control form-control-sm"
-                                   placeholder="ej: ThirdParty, Invoice"
-                                   value={form.matchEntityType}
-                                   onChange={(e) => setForm({...form, matchEntityType: e.target.value})} />
+                            {/* HU-AU-04 E1 (2026-04-28): dropdown contextual segun el modulo
+                                seleccionado. Si no hay modulo, queda como input libre.  */}
+                            <select className="form-select form-select-sm"
+                                    value={form.matchEntityType}
+                                    onChange={(e) => setForm({...form, matchEntityType: e.target.value})}
+                                    disabled={!form.matchModule}>
+                                <option value="">(cualquiera)</option>
+                                {ENTITIES_BY_MODULE[form.matchModule]?.map(e => (
+                                    <option key={e} value={e}>{e}</option>
+                                ))}
+                            </select>
+                            {!form.matchModule && (
+                                <small className="text-muted">Seleccione primero un módulo</small>
+                            )}
                         </div>
                         <div className="col-md-3 d-flex align-items-end gap-2">
                             <button type="submit" className="btn btn-primary btn-sm">

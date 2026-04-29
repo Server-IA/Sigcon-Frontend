@@ -42,7 +42,7 @@ const emptyRecord = {
     notes: '',
 };
 
-const CreateArPayment = ({ modalRef, modalInstance, dataTableRef, setMessage }) => {
+const CreateArPayment = ({ modalRef, modalInstance, dataTableRef, setMessage, preselectedInvoiceId }) => {
     const [record, setRecord] = useState({ ...emptyRecord });
     const [errors, setErrors] = useState({ ...emptyErrors });
     const [errorMessage, setErrorMessage] = useState('');
@@ -55,6 +55,14 @@ const CreateArPayment = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
         loadInvoices();
         loadBankAccounts();
     }, []);
+
+    // HU-AR-08 (2026-04-27): si llega preseleccionada desde el listado de FV
+    // (query param), prellenar el invoiceId al cargar el modal.
+    useEffect(() => {
+        if (preselectedInvoiceId && !record.invoiceId) {
+            setRecord(prev => ({ ...prev, invoiceId: String(preselectedInvoiceId) }));
+        }
+    }, [preselectedInvoiceId]);
 
     /** Carga facturas de venta con saldo pendiente. */
     const loadInvoices = async () => {

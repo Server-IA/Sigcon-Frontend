@@ -8,6 +8,12 @@ import AlertPage from '../../../components/molecules/AlertPage';
 
 const API_STORE = ['api', 'v1', 'cost-centers', 'store'];
 
+// HU-CFG-17 E3 (2026-04-27): formato del codigo. Solo alfanumerico ASCII +
+// guion bajo y guion. Rechaza Ñ, tildes, +, espacios, signos.
+const CODE_REGEX = /^[A-Z0-9_-]{1,20}$/;
+// HU-CFG-17 MT-2 + CFG-19 MT-01: rechazo basico de tags HTML/XSS en texto.
+const NO_HTML_REGEX = /[<>]/;
+
 const CreateCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCosto, dataTableRef, setCentroCostoCreate }) => {
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
@@ -20,10 +26,29 @@ const CreateCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCost
         status: '',
     };
 
+    // HU-CFG-17 (2026-04-27): validacion previa al submit.
+    const validate = () => {
+        const next = {};
+        const name = (centroCosto.name || '').trim();
+        const code = (centroCosto.code || '').trim();
+        const description = (centroCosto.description || '').trim();
+        if (!name) next.name = 'El nombre es obligatorio';
+        else if (NO_HTML_REGEX.test(name)) next.name = 'El nombre no puede contener < o >';
+        if (!code) next.code = 'El codigo es obligatorio';
+        else if (!CODE_REGEX.test(code)) next.code = 'El codigo solo admite letras (A-Z), numeros, _ y - (max 20 chars)';
+        if (description && NO_HTML_REGEX.test(description)) next.description = 'La descripcion no puede contener < o >';
+        setErrors(next);
+        return Object.keys(next).length === 0;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!validate()) return;
         const payload = {
             ...centroCosto,
+            name: (centroCosto.name || '').trim(),
+            code: (centroCosto.code || '').trim(),
+            description: (centroCosto.description || '').trim(),
         };
         const url = base_url(API_STORE);
         try {
@@ -100,11 +125,17 @@ const CreateCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCost
                                     label="Código del Centro de Costo"
                                     value={centroCosto.code}
                                     onChange={(e) => {
-                                        setCentroCosto({ ...centroCosto, code: e.target.value.toUpperCase().trim().replace(/ /g, '') });
+                                        // HU-CFG-17 E3: sanitizar en vivo. Solo permitir
+                                        // caracteres del CODE_REGEX. El resto se descarta.
+                                        const cleaned = (e.target.value || '')
+                                            .toUpperCase()
+                                            .replace(/[^A-Z0-9_-]/g, '');
+                                        setCentroCosto({ ...centroCosto, code: cleaned });
                                         setErrors({ ...errors, code: null });
                                     }}
                                     error={errors.code}
                                     placeholder="EJ: CC001"
+                                    maxLength={20}
                                     required
                                 />
                             </div>

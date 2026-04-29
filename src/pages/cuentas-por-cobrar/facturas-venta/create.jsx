@@ -31,16 +31,67 @@ const emptyLine = {
     taxRuleIds: [],
 };
 
+/**
+ * HU-AR-01B DEF#3: traduccion de nombres de campos a etiquetas legibles para
+ * mostrar en mensajes de validacion. Si un campo no esta en el mapa, se usa
+ * el nombre crudo. Cubre los campos de SalesInvoice + lineas anidadas.
+ */
+const FIELD_LABELS = {
+    thirdPartyId: 'Cliente',
+    invoiceDate: 'Fecha de la factura',
+    dueDate: 'Fecha de vencimiento',
+    currencyId: 'Moneda',
+    exchangeRate: 'Tasa de cambio',
+    paymentFormId: 'Forma de pago',
+    resolutionNumber: 'Resolucion DIAN',
+    notes: 'Notas',
+    lines: 'Lineas de la factura',
+    'lines[].description': 'Descripcion de la linea',
+    'lines[].quantity': 'Cantidad',
+    'lines[].unitPrice': 'Precio unitario',
+    'lines[].discount': 'Descuento',
+    'lines[].taxRuleIds': 'Reglas tributarias',
+};
+
+/**
+ * HU-AR-01B DEF#3: convierte el array de errores de validacion del backend
+ * (formato {field, message}) en (1) un mensaje legible y (2) un mapa
+ * fieldName -> message para resaltar campos en el form.
+ */
+const buildValidationErrors = (errors) => {
+    if (!Array.isArray(errors) || errors.length === 0) return { msg: '', map: {} };
+    const map = {};
+    const lines = errors.map((e) => {
+        const field = e?.field || '';
+        // Normalizar `lines[0].description` a `lines[].description`
+        const normalized = field.replace(/\[\d+\]/g, '[]');
+        const label = FIELD_LABELS[normalized] || FIELD_LABELS[field] || field;
+        const msg = e?.message || 'Campo invalido';
+        map[field] = msg;
+        return `- ${label}: ${msg}`;
+    });
+    return {
+        msg: 'Faltan o son invalidos los siguientes campos:\n' + lines.join('\n'),
+        map,
+    };
+};
+
 const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) => {
     const [record, setRecord] = useState({ ...emptyRecord });
     const [lines, setLines] = useState([{ ...emptyLine }]);
     const [errorMessage, setErrorMessage] = useState('');
+    // HU-AR-01B DEF#3: errores por campo para resaltar inputs invalidos.
+    const [fieldErrors, setFieldErrors] = useState({});
     const [loading, setLoading] = useState(false);
 
     const [clients, setClients] = useState([]);
     const [currencies, setCurrencies] = useState([]);
     const [paymentForms, setPaymentForms] = useState([]);
     const [taxRules, setTaxRules] = useState([]);
+    // HU-AR-01A E3: cache de paymentTermDays por tercero, cargado desde commercial-data.
+    const [paymentTermDaysByThird, setPaymentTermDaysByThird] = useState({});
+    // Para mostrar warning cuando el cliente NO tiene termino de pago configurado.
+    const [missingPaymentTermWarning, setMissingPaymentTermWarning] = useState('');
 
     useEffect(() => {
         loadClients();
@@ -51,14 +102,16 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
 
     const loadClients = async () => {
         try {
-            const { data } = await fetchHelper.post(
+            // fetchHelper retorna el JSON directo (no {data, error}).
+            const resp = await fetchHelper.post(
                 base_url(['api', 'v1', 'third-parties', 'search']),
                 { length: -1, columns: [] },
                 {},
                 0
             );
-            if (Array.isArray(data)) {
-                setClients(data.map((t) => ({
+            const list = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+            if (list.length > 0) {
+                setClients(list.map((t) => ({
                     id: t.id,
                     name: `${t.documentNumber || t.nit || ''} - ${t.businessName || t.firstName || ''}`.trim(),
                 })));
@@ -92,6 +145,58 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                 setPaymentForms(list.map((p) => ({ id: p.id, name: p.name })));
             }
         } catch (e) { /* noop */ }
+    };
+
+    /**
+     * HU-AR-01A E3: cuando el contador selecciona cliente o cambia la fecha de
+     * factura, calculamos automaticamente la fecha de vencimiento sumando los
+     * dias del termino de pago configurado en commercial-data del cliente.
+     */
+    const fetchPaymentTermDays = async (thirdPartyId) => {
+        if (!thirdPartyId) return null;
+        if (paymentTermDaysByThird[thirdPartyId] !== undefined) {
+            return paymentTermDaysByThird[thirdPartyId];
+        }
+        try {
+            const resp = await fetchHelper.get(
+                base_url(['api', 'v1', 'commercial-data', thirdPartyId]),
+                {}, 1000, true
+            );
+            const data = resp?.data || resp;
+            const days = data?.paymentTermDays
+                      ?? data?.paymentTerm?.days
+                      ?? data?.commercial?.paymentTermDays
+                      ?? null;
+            setPaymentTermDaysByThird((prev) => ({ ...prev, [thirdPartyId]: days }));
+            return days;
+        } catch (_) {
+            setPaymentTermDaysByThird((prev) => ({ ...prev, [thirdPartyId]: null }));
+            return null;
+        }
+    };
+
+    const recalcDueDate = async (clientId, invoiceDate) => {
+        if (!clientId || !invoiceDate) {
+            setRecord((prev) => ({ ...prev, dueDate: '' }));
+            setMissingPaymentTermWarning('');
+            return;
+        }
+        const days = await fetchPaymentTermDays(clientId);
+        if (!days || days <= 0) {
+            setRecord((prev) => ({ ...prev, dueDate: '' }));
+            setMissingPaymentTermWarning(
+                'Este cliente no tiene terminos de pago configurados. '
+                + 'Registre los datos comerciales del cliente antes de continuar.'
+            );
+            return;
+        }
+        setMissingPaymentTermWarning('');
+        const base = new Date(invoiceDate + 'T00:00:00');
+        base.setDate(base.getDate() + Number(days));
+        const yyyy = base.getFullYear();
+        const mm = String(base.getMonth() + 1).padStart(2, '0');
+        const dd = String(base.getDate()).padStart(2, '0');
+        setRecord((prev) => ({ ...prev, dueDate: `${yyyy}-${mm}-${dd}` }));
     };
 
     const loadTaxRules = async () => {
@@ -132,6 +237,7 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMessage('');
+        setFieldErrors({});
         setLoading(true);
         try {
             const payload = {
@@ -160,7 +266,15 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
             setRecord({ ...emptyRecord });
             setLines([{ ...emptyLine }]);
         } catch (err) {
-            setErrorMessage(err?.message || err?.msg || 'Error al crear la factura.');
+            // HU-AR-01B DEF#3: si el backend mando details/errors, mostrar
+            // cada campo invalido con su mensaje y resaltar inputs.
+            const validation = buildValidationErrors(err?.errors);
+            if (validation.msg) {
+                setErrorMessage(validation.msg);
+                setFieldErrors(validation.map);
+            } else {
+                setErrorMessage(err?.msg || err?.message || 'Error al crear la factura.');
+            }
         } finally {
             setLoading(false);
         }
@@ -188,34 +302,69 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                     <InputSelectModal label="Cliente" name="thirdPartyId"
                                         value={record.thirdPartyId}
                                         options={clients}
-                                        onChange={(val) => setRecord({ ...record, thirdPartyId: val })} />
+                                        error={fieldErrors.thirdPartyId}
+                                        onChange={(val) => {
+                                            // HU-AR-01A E3: al cambiar cliente, recalcular venc.
+                                            setRecord((prev) => ({ ...prev, thirdPartyId: val }));
+                                            recalcDueDate(val, record.invoiceDate);
+                                        }} />
                                 </div>
                                 <div className="col-md-3">
                                     <InputModal label="Fecha factura" name="invoiceDate" type="date"
                                         value={record.invoiceDate}
-                                        onChange={(e) => setRecord({ ...record, invoiceDate: e.target.value })} />
+                                        error={fieldErrors.invoiceDate}
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+                                            setRecord((prev) => ({ ...prev, invoiceDate: v }));
+                                            // HU-AR-01A E3: al cambiar fecha, recalcular venc.
+                                            recalcDueDate(record.thirdPartyId, v);
+                                        }} />
                                 </div>
                                 <div className="col-md-3">
-                                    <InputModal label="Vencimiento" name="dueDate" type="date"
-                                        value={record.dueDate}
-                                        onChange={(e) => setRecord({ ...record, dueDate: e.target.value })} />
+                                    {/* HU-AR-01A E3: la fecha de vencimiento se calcula automaticamente
+                                        sumando los dias del termino de pago configurado en
+                                        commercial-data del cliente. Read-only para evitar manipulacion. */}
+                                    <label className="form-label small fw-semibold">
+                                        Vencimiento <i className="ri-lock-line text-muted" title="Calculado por sistema" />
+                                    </label>
+                                    <input type="date" className="form-control"
+                                        name="dueDate"
+                                        value={record.dueDate || ''}
+                                        readOnly
+                                        disabled
+                                        title="Calculada automaticamente desde los terminos de pago del cliente" />
+                                    {missingPaymentTermWarning && (
+                                        <small className="text-danger d-block mt-1">
+                                            <i className="ri-error-warning-line me-1" />
+                                            {missingPaymentTermWarning}
+                                        </small>
+                                    )}
+                                    {!missingPaymentTermWarning && record.dueDate && (
+                                        <small className="text-success d-block mt-1">
+                                            <i className="ri-check-line me-1" />
+                                            Calculada automaticamente
+                                        </small>
+                                    )}
                                 </div>
 
                                 <div className="col-md-4">
                                     <InputSelectModal label="Moneda" name="currencyId"
                                         value={record.currencyId}
                                         options={currencies}
+                                        error={fieldErrors.currencyId}
                                         onChange={(val) => setRecord({ ...record, currencyId: val })} />
                                 </div>
                                 <div className="col-md-4">
                                     <InputModal label="Tasa de cambio" name="exchangeRate" type="number"
                                         value={record.exchangeRate}
+                                        error={fieldErrors.exchangeRate}
                                         onChange={(e) => setRecord({ ...record, exchangeRate: e.target.value })} />
                                 </div>
                                 <div className="col-md-4">
                                     <InputSelectModal label="Forma de pago" name="paymentFormId"
                                         value={record.paymentFormId}
                                         options={paymentForms}
+                                        error={fieldErrors.paymentFormId}
                                         onChange={(val) => setRecord({ ...record, paymentFormId: val })} />
                                 </div>
 
@@ -303,6 +452,41 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                     </div>
                                 </div>
                             ))}
+
+                            {/* HU-AR-11 E2 (2026-04-27): si la factura es en moneda extranjera,
+                                mostrar totales en moneda original Y conversion a COP usando la
+                                tasa de cambio ingresada. Antes el contador no veia el equivalente
+                                en pesos hasta confirmar la factura. */}
+                            {(() => {
+                                const subtotal = lines.reduce((acc, l) => {
+                                    const qty = Number(l.quantity) || 0;
+                                    const price = Number(l.unitPrice) || 0;
+                                    const disc = Number(l.discount) || 0;
+                                    return acc + (qty * price - disc);
+                                }, 0);
+                                const selectedCur = currencies.find(c => String(c.id) === String(record.currencyId));
+                                const iso = selectedCur?.isoCode || selectedCur?.label || 'COP';
+                                const rate = Number(record.exchangeRate) || 1;
+                                const isForeign = iso && iso !== 'COP';
+                                if (subtotal <= 0) return null;
+                                return (
+                                    <div className="alert alert-info mt-3 mb-0">
+                                        <div className="d-flex justify-content-between flex-wrap">
+                                            <span><strong>Subtotal:</strong> {subtotal.toLocaleString('es-CO')} {iso}</span>
+                                            {isForeign && (
+                                                <span className="text-primary">
+                                                    <i className="ri-exchange-line me-1" />
+                                                    <strong>Equivalente:</strong> ${(subtotal * rate).toLocaleString('es-CO')} COP
+                                                    <small className="ms-2">(tasa {rate})</small>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <small className="text-muted d-block mt-1">
+                                            Los impuestos y retenciones se calculan automaticamente al guardar.
+                                        </small>
+                                    </div>
+                                );
+                            })()}
                         </div>
                         <div className="modal-footer">
                             <button type="button" className="btn btn-label-secondary" data-bs-dismiss="modal">Cancelar</button>

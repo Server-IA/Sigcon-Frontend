@@ -94,7 +94,26 @@ const DropzoneModal = ({
 
             const response = await fetchHelper.post(uploadUrl, payload, {}, 1000);
 
-            setAlert({ text: response?.msg || 'Archivo procesado exitosamente.', type: 'success' });
+            // HU-TER-07 E2 (2026-04-27): mostrar reporte resumen detallado.
+            // Backend devuelve { totalProcessed, created, updated, failed, errors[] }.
+            const data = response?.data ?? {};
+            const summary = [];
+            if (data.totalProcessed != null) summary.push(`Total procesados: ${data.totalProcessed}`);
+            if (data.created != null) summary.push(`Creados: ${data.created}`);
+            if (data.updated != null) summary.push(`Actualizados: ${data.updated}`);
+            if (data.failed != null && data.failed > 0) summary.push(`Fallidos: ${data.failed}`);
+            const baseMsg = response?.msg || 'Archivo procesado exitosamente.';
+            const summaryText = summary.length > 0 ? `${baseMsg}\n${summary.join(' | ')}` : baseMsg;
+            const errors = Array.isArray(data.errors) ? data.errors : [];
+            const errorLines = errors.slice(0, 20).map(e =>
+                `Linea ${e.line}${e.nit ? ' (NIT ' + e.nit + ')' : ''}: ${e.message}`).join('\n');
+            const fullText = errors.length > 0
+                ? `${summaryText}\n\nDetalle de errores:\n${errorLines}${errors.length > 20 ? `\n...y ${errors.length - 20} mas` : ''}`
+                : summaryText;
+            setAlert({
+                text: fullText,
+                type: errors.length > 0 ? 'warning' : 'success',
+            });
             setSelectedFile(null);
             if (inputRef.current) inputRef.current.value = '';
             onSuccess?.(response);
@@ -126,7 +145,7 @@ const DropzoneModal = ({
                     <div className="modal-body">
 
                         {alert.text && (
-                            <div className={`alert alert-${alert.type} alert-dismissible mb-3`} role="alert">
+                            <div className={`alert alert-${alert.type} alert-dismissible mb-3`} role="alert" style={{ whiteSpace: 'pre-line' }}>
                                 {alert.text}
                                 <button
                                     type="button"

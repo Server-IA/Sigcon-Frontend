@@ -23,8 +23,11 @@ export const formatBankStatus = (status) => {
   return status || "";
 };
 
+// QA HU-006 E1: codigo de banco como BC-001 admite guion ahora.
+// Antes el regex eliminaba todo lo que no fuera alfanumerico — los guiones
+// del codigo se perdian y la BD rechazaba con duplicidad o codigo invalido.
 export const sanitizeUpperAlphaNum = (value = "") =>
-  String(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  String(value).toUpperCase().replace(/[^A-Z0-9-]/g, "");
 
 export const sanitizeNit = (value = "") =>
   String(value).toUpperCase().replace(/[^0-9-]/g, "");
