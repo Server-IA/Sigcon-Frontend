@@ -5,7 +5,7 @@ import PasswordInput from '../../../components/molecules/PasswordInput';
 import Button from '../../../components/atoms/Button';
 import Icon from '../../../components/atoms/Icon';
 import NotificationBar from '../../../components/molecules/NotificationBar';
-import { base_url } from '../../../utils/functions';
+import { base_url, base_redirect_path } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import '../../../styles/profile.css';
 import ThemeSelector from '../../../components/organism/ThemeSelector';
@@ -136,7 +136,8 @@ const PerfilPage = () => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       dispatch({ type: 'LOGOUT' });
-      window.location.href = '/login';
+      // QA-BLOQUE-AL: respetar basename del BrowserRouter (Dokploy /sigcon/dev/)
+      window.location.href = base_redirect_path(true);
     } catch (err) {
       setNotification({ type: 'error', message: err?.msg || err?.message || 'No se pudo eliminar la cuenta. Intente nuevamente.' });
       setDeleteModalVisible(false);

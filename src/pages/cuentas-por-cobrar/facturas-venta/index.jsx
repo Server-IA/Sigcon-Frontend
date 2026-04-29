@@ -4,7 +4,7 @@ import DataTableReference from '../../../components/organism/DataTable';
 import AlertPage from '../../../components/molecules/AlertPage';
 import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 
-import { base_url } from '../../../utils/functions';
+import { base_url, app_path } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
 import CreateSalesInvoice from './create';
@@ -388,7 +388,10 @@ const IndexSalesInvoices = () => {
                 // HU-AR-08 (2026-04-27): atajo a /cobros con la factura preseleccionada.
                 // El query param invoiceId lo lee la pagina de cobros para abrir el
                 // modal Crear cobro con esa factura ya cargada.
-                window.location.assign(`/cuentas-por-cobrar/cobros?invoiceId=${selected.id}`);
+                // QA-BLOQUE-AL: usar app_path() para respetar el basename del
+                // BrowserRouter (/sigcon/dev/ en Dokploy). Antes el path absoluto
+                // saltaba el prefix y caia en una pagina fuera del SPA.
+                window.location.assign(app_path(`/cuentas-por-cobrar/cobros?invoiceId=${selected.id}`));
                 return;
             }
         };

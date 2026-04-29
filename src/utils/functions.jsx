@@ -36,6 +36,34 @@ export const base_redirect_path = (is_login = false) => {
         : joinPath(base, '/dashboard')
 }
 
+/**
+ * QA-BLOQUE-AL (2026-04-29): construye una URL interna del SPA respetando el
+ * basename del BrowserRouter (`/sigcon/dev/` en development, `/sigcon/` en
+ * produccion, `/` en local).
+ *
+ * Usar esto cuando se necesita navegar imperativamente con
+ * `window.location.assign/href` y se requiere preservar el prefijo del
+ * deployment Dokploy. Para navegacion declarativa dentro del SPA usar
+ * `useNavigate()` de react-router-dom (respeta basename automaticamente).
+ *
+ * Ejemplo:
+ *   window.location.assign(app_path('/cuentas-por-cobrar/cobros?invoiceId=' + id));
+ *   // -> https://www.inmero.co/sigcon/dev/cuentas-por-cobrar/cobros?invoiceId=12
+ *
+ * @param {string} relativePath path interno del SPA con o sin slash inicial
+ * @returns {string} path absoluto con basename resuelto
+ */
+export const app_path = (relativePath = '/') => {
+    const joinPath = (...parts) => parts.join('/').replace(/\/+/g, '/')
+    const base = import.meta.env.VITE_ENVIRONMENT == 'local'
+        ? '/' : import.meta.env.VITE_ENVIRONMENT == 'development'
+            ? '/sigcon/dev/' : '/sigcon/'
+    // Separar query/hash para no normalizar slashes dentro de ellos
+    const [pathPart, ...rest] = relativePath.split(/(\?|#)/);
+    const tail = rest.join('');
+    return joinPath(base, pathPart) + tail;
+}
+
 export const validarArrays = (a, b) => {
     if (a.length !== b.length) return false;
 
