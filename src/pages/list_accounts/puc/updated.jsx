@@ -59,8 +59,12 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
             setErrorsMessage({field: 'name', message: 'El nombre de la cuenta es obligatorio'});
             return;
         }
-        if (!/^[A-Za-z0-9_\-\s]{1,100}$/.test(accountUpdated.name)) {
-            setErrorsMessage({field: 'name', message: 'El nombre solo puede contener letras, números, guiones y espacios (máximo 100 caracteres)'});
+        // QA-BLOQUE-AO (2026-04-29): regex permisivo. Antes rechazaba parentesis y
+        // acentos, lo cual bloqueaba editar cualquier cuenta PUC seedeada (todos los
+        // nombres del PUC Colombia tienen formato "X (codigo)" con tildes/(). Mismo
+        // patron del fix de cuentas-contables (Bloque Q).
+        if (!/^[a-zA-Z0-9 áéíóúÁÉÍÓÚñÑüÜ()._,\-]{1,100}$/.test(accountUpdated.name)) {
+            setErrorsMessage({field: 'name', message: 'El nombre puede contener letras, numeros, espacios, guiones, parentesis, puntos y comas (maximo 100 caracteres)'});
             return;
         }
         if (!accountUpdated.accountClass) {

@@ -55,7 +55,7 @@ const IndexArAdvances = () => {
         {
             title: 'Cliente',
             data: 'thirdPartyName',
-            name: 'thirdPartyName',
+            name: 'thirdParty.businessName',
             render: (val) => val || '-',
         },
         { title: 'Monto', data: 'amount', name: 'amount', render: (v) => formatCurrency(v) },

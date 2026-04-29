@@ -8,23 +8,29 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
 import CreateApAdvance from './create';
+import ApplyApAdvance from './apply';
 
 /**
  * Pagina principal de Anticipos a Proveedores (Cuentas por Pagar).
  * Muestra un listado paginado y permite registrar y aplicar anticipos.
+ *
+ * QA-BLOQUE-AO (2026-04-29): refactor del flujo "Aplicar a Factura":
+ *  - Antes: el filter de status pedia AVAILABLE/PARTIALLY_APPLIED, pero el
+ *    backend usa PENDING/APPLIED. Resultado: boton apply siempre deshabilitado.
+ *  - El handler abria un Swal con input numerico de ID factura (no usable).
+ *  - Ahora: status mapeado a PENDING/APPLIED + modal con dropdown de facturas
+ *    de compra pendientes del proveedor (similar a AR cobros/anticipos).
  */
 
 const STATUS_BADGE = {
-    AVAILABLE: 'bg-label-success',
+    PENDING: 'bg-label-success',
     APPLIED: 'bg-label-info',
-    PARTIALLY_APPLIED: 'bg-label-warning',
     REVERSED: 'bg-label-danger',
 };
 
 const STATUS_LABEL = {
-    AVAILABLE: 'Disponible',
+    PENDING: 'Pendiente',
     APPLIED: 'Aplicado',
-    PARTIALLY_APPLIED: 'Parcialmente Aplicado',
     REVERSED: 'Reversado',
 };
 
@@ -42,12 +48,15 @@ const IndexApAdvances = () => {
     const dataTableRef = useRef(null);
     const modalCreateRef = useRef(null);
     const modalCreateInstance = useRef(null);
+    const modalApplyRef = useRef(null);
+    const modalApplyInstance = useRef(null);
     const filterRef = useRef(null);
     const filterInstance = useRef(null);
 
     const [data, setData] = useState([]);
     const [search, setSearch] = useState({ value: '', checked: true });
     const [message, setMessage] = useState({ message: '', type: '', show: false });
+    const [selectedAdvance, setSelectedAdvance] = useState(null);
 
     const url = ['api', 'v1', 'ap', 'advances'];
 
@@ -56,7 +65,8 @@ const IndexApAdvances = () => {
         {
             title: 'Proveedor',
             data: 'thirdPartyName',
-            name: 'thirdPartyName',
+            // QA-BLOQUE-AO (2026-04-29): path JPA real para filter modal.
+            name: 'thirdParty.businessName',
             render: (val) => val || '-',
         },
         {
@@ -87,7 +97,8 @@ const IndexApAdvances = () => {
             data: 'id',
             searchable: false,
             render: (id, _type, row) => {
-                const canApply = row?.status === 'AVAILABLE' || row?.status === 'PARTIALLY_APPLIED';
+                // QA-BLOQUE-AO (2026-04-29): status real del backend es PENDING (no AVAILABLE).
+                const canApply = row?.status === 'PENDING';
                 return `
                 <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-label-info action-btn"
@@ -133,39 +144,16 @@ const IndexApAdvances = () => {
         return [];
     }, [data]);
 
-    /** Aplica anticipo a una factura con prompt de SweetAlert. */
-    const handleApply = async (selected) => {
-        const result = await window.Swal.fire({
-            title: 'Aplicar Anticipo',
-            input: 'number',
-            inputLabel: 'ID de la factura a aplicar',
-            inputPlaceholder: 'Ingrese el ID de la factura',
-            showCancelButton: true,
-            confirmButtonText: 'Aplicar',
-            cancelButtonText: 'Cancelar',
-            inputValidator: (value) => {
-                if (!value || Number(value) <= 0) return 'Debe ingresar un ID de factura valido';
-            },
-        });
-        if (!result.isConfirmed) return;
-
-        try {
-            await fetchHelper.post(
-                base_url(['api', 'v1', 'ap', 'advances', selected.id, 'apply']),
-                { invoiceId: Number(result.value) },
-                {},
-                1000
-            );
-            setMessage({ type: 'success', show: true, message: 'Anticipo aplicado exitosamente.' });
-        } catch (error) {
-            setMessage({
-                type: 'danger',
-                show: true,
-                message: error?.msg || 'Error al aplicar el anticipo.',
-            });
-        } finally {
-            dataTableRef?.current?.ajax.reload();
+    /**
+     * QA-BLOQUE-AO (2026-04-29): abre el modal dedicado con dropdown de
+     * facturas de compra pendientes en lugar de un Swal con input numerico.
+     */
+    const openModalApply = (advance) => {
+        setSelectedAdvance(advance);
+        if (!modalApplyInstance.current) {
+            modalApplyInstance.current = new window.bootstrap.Modal(modalApplyRef.current);
         }
+        modalApplyInstance.current.show();
     };
 
     useEffect(() => {
@@ -196,7 +184,7 @@ const IndexApAdvances = () => {
             }
 
             if (action === 'apply') {
-                handleApply(selected);
+                openModalApply(selected);
             }
         };
 
@@ -238,6 +226,14 @@ const IndexApAdvances = () => {
                 modalRef={modalCreateRef}
                 modalInstance={modalCreateInstance}
                 dataTableRef={dataTableRef}
+                setMessage={setMessage}
+            />
+
+            <ApplyApAdvance
+                modalRef={modalApplyRef}
+                modalInstance={modalApplyInstance}
+                dataTableRef={dataTableRef}
+                advance={selectedAdvance}
                 setMessage={setMessage}
             />
 

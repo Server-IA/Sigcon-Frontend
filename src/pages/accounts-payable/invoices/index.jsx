@@ -85,7 +85,10 @@ const IndexApInvoices = () => {
         {
             title: 'Proveedor',
             data: 'thirdPartyName',
-            name: 'thirdPartyName',
+            // QA-BLOQUE-AO (2026-04-29): name = path JPA real para que el GenericFilterModal
+            // pueda hacer table.column('thirdParty.businessName:name') correctamente y el
+            // backend DataTableSpecificationBuilder resuelva el JOIN.
+            name: 'thirdParty.businessName',
             render: (val) => val || '-',
         },
         { title: 'Fecha', data: 'invoiceDate', name: 'invoiceDate' },

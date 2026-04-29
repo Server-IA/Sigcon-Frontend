@@ -450,9 +450,14 @@ const IndexCgComprobantes = () => {
                     }).then(async (result) => {
                         if (!result.isConfirmed) return;
                         try {
+                            // QA-BLOQUE-AO (2026-04-29): firma del helper es
+                            // delete(url, data, headers, time). Antes se pasaba
+                            // 1000 en posicion de headers -> headers=1000 ->
+                            // spread sobre primitivo da {} -> NO se setea
+                            // Authorization -> 401 -> "Error al eliminar".
                             await fetchHelper.delete(
                                 base_url(['api', 'v1', 'journal-entries', row.id]),
-                                {}, 1000
+                                null, {}, 1000
                             );
                             dataTableRef?.current?.ajax?.reload?.();
                             setMessage({ type: 'success', show: true, message: 'Comprobante eliminado exitosamente.' });

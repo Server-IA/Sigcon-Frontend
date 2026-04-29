@@ -130,7 +130,9 @@ const IndexFindings = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Eliminar este hallazgo? Solo se puede en estado ABIERTO.')) return;
         try {
-            await fetchHelper.delete(base_url(['api', 'v1', 'audit', 'findings', id]), {}, 500);
+            // QA-BLOQUE-AO (2026-04-29): firma (url, data, headers, time). Antes 500
+            // se pasaba como headers -> spread sobre primitivo da {} -> sin Authorization -> 401.
+            await fetchHelper.delete(base_url(['api', 'v1', 'audit', 'findings', id]), null, {}, 500);
             setAlert({ show: true, type: 'success', message: 'Hallazgo eliminado' });
             load();
         } catch (err) {

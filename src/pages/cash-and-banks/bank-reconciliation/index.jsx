@@ -78,11 +78,19 @@ const BankReconciliation = () => {
             setAccountLabel(`${acc?.code || ''} — ${acc?.accountName || ''}`.trim() || `Cuenta #${id}`);
             setSessions(Array.isArray(sessRes?.data) ? sessRes.data : []);
             setMovements(Array.isArray(movRes?.data) ? movRes.data : []);
-            setVouchers(Array.isArray(vouRes?.data) ? vouRes.data.filter(
-                (v) =>
-                  v.bankAccount.id == id &&
-                  !movements.some((m) => m.matchedVoucherId == v.id)
-            ) : []);
+            // QA-BLOQUE-AO (2026-04-29): bug fix doble:
+            //  1. v.bankAccount podia ser null (rompia con NPE) -> chequeo defensivo.
+            //  2. movements aqui siempre es el state PREVIO (closure stale) -> usaba
+            //     el set anterior como referencia y no podia filtrar matches recientes.
+            //     Para evitar false-positives mejor usar el resultado fresco de
+            //     movRes que YA conocemos.
+            const movList = Array.isArray(movRes?.data) ? movRes.data : [];
+            const matchedIds = new Set(movList.map((m) => m.matchedVoucherId).filter(Boolean));
+            setVouchers(Array.isArray(vouRes?.data) ? vouRes.data.filter((v) => {
+                const accountId = v?.bankAccount?.id;
+                if (accountId == null || accountId != id) return false;
+                return !matchedIds.has(v.id);
+            }) : []);
         } catch (e) {
             console.error(e);
             setMessage({ message: e?.msg || 'Error al cargar datos', type: 'danger', show: true });
@@ -843,6 +851,17 @@ const BankReconciliation = () => {
                                     <p className="small text-muted">No hay sugerencias automáticas (mismo importe absoluto ±7 días).</p>
                                 )}
 
+                                {/* QA-BLOQUE-AO (2026-04-29): mensaje claro cuando no hay vouchers
+                                  * disponibles. Antes el dropdown salia vacio sin contexto. */}
+                                {vouchers.length === 0 && (
+                                    <div className="alert alert-warning" role="alert">
+                                        <strong>No hay comprobantes disponibles.</strong> Para emparejar
+                                        registre antes pagos a proveedores, cobros de clientes u otros
+                                        comprobantes que afecten esta cuenta bancaria. Los movimientos
+                                        sin comprobante asociado pueden quedar registrados manualmente
+                                        en la conciliacion sin emparejar.
+                                    </div>
+                                )}
                                 <InputSelectModal
                                     id="voucherId"
                                     label="Comprobante manual"
@@ -850,6 +869,7 @@ const BankReconciliation = () => {
                                     options={vouchers.map((v) => ({ id: v.id, label: `${v.number} - ${formatPrice(v.amount)} - ${v.date}` }))}
                                     value={matchModal.voucherId}
                                     clearable={true}
+                                    emptyMessage="No hay comprobantes asociados a esta cuenta bancaria"
                                     onChange={(value) => setMatchModal((x) => ({ ...x, voucherId: value }))}
                                 />
 

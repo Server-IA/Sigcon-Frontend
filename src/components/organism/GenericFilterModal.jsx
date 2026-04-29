@@ -72,11 +72,17 @@ const GenericFilterModal = ({ filterRef, filterInstance, dataTableRef, title = '
             filterInstance?.current?.hide();
             return;
         }
+        // QA-BLOQUE-AO (2026-04-29): normalizar el selector a `<colName>:name`.
+        // Antes muchas paginas usaban formato `<col>:<col>` (ej. `status:status`)
+        // que jQuery interpretaba como pseudo selector NO REGISTRADO -> excepcion
+        // silenciosa por el try/catch -> filter nunca se aplicaba. Solo `:name`
+        // literal es el pseudo valido de DataTables para matchear column.name.
         filters.forEach(f => {
             try {
-                table.column(f.column).search(f.value || '', !!f.regex, false);
+                const colName = String(f.column).split(':')[0];
+                table.column(colName + ':name').search(f.value || '', !!f.regex, false);
             } catch (e) {
-                // la columna puede no existir (ej. si cambia columns dinamicamente) — ignorar
+                // columna no existe en el DataTable (ej. cambia dinamicamente)
             }
         });
         table.draw();

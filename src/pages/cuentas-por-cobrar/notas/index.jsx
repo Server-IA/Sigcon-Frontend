@@ -60,7 +60,8 @@ const IndexArNotes = () => {
         {
             title: 'Factura',
             data: 'invoiceNumber',
-            name: 'invoiceNumber',
+            // QA-BLOQUE-AO (2026-04-29): path JPA real para filter modal.
+            name: 'invoice.invoiceNumber',
             render: (val, _t, row) => val || (row?.invoiceId ?? '-'),
         },
         { title: 'Monto', data: 'amount', name: 'amount', render: (v) => formatCurrency(v) },
@@ -187,7 +188,7 @@ const IndexArNotes = () => {
                 title="Filtrar NC/ND Ventas"
                 columns={[
                     { column: 'noteNumber:name', label: 'Numero' },
-                    { column: 'invoiceNumber:name', label: 'Factura' },
+                    { column: 'invoice.invoiceNumber:name', label: 'Factura' },
                     { column: 'amount:name', label: 'Monto', type: 'number' },
                     { column: 'reason:name', label: 'Razon' },
                     { column: 'noteType:name', label: 'Tipo', type: 'select', options: [

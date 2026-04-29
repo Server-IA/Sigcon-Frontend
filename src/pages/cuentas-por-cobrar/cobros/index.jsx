@@ -73,7 +73,8 @@ const IndexArPayments = () => {
         {
             title: 'Factura',
             data: 'invoiceNumber',
-            name: 'invoiceNumber',
+            // QA-BLOQUE-AO (2026-04-29): path JPA real para filter modal.
+            name: 'invoice.invoiceNumber',
             render: (val, _type, row) => val || (row?.invoiceId ?? '-'),
         },
         {
@@ -228,7 +229,7 @@ const IndexArPayments = () => {
                 dataTableRef={dataTableRef}
                 title="Filtrar Cobros"
                 columns={[
-                    { column: 'invoiceNumber:name', label: 'Factura' },
+                    { column: 'invoice.invoiceNumber:name', label: 'Factura' },
                     { column: 'amount:name', label: 'Monto', type: 'number' },
                     { column: 'paymentDate:name', label: 'Fecha', type: 'date' },
                     { column: 'paymentReference:name', label: 'Referencia' },
