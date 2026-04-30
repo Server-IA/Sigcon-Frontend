@@ -396,10 +396,11 @@ const IndexApInvoices = () => {
                 dataTableRef={dataTableRef}
                 title="Filtrar Facturas de Compra"
                 columns={[
-                    // HU-AP-25 / AR-12 (2026-04-28): paths JPA reales para el filter.
+                    // QA-BLOQUE-AT (2026-04-30): quitado "NIT proveedor" (innecesario,
+                    // no aparece en la tabla) y agregado "Resolucion DIAN" en su lugar.
                     { column: 'supplierInvoiceNumber:supplierInvoiceNumber', label: '# Factura Proveedor' },
-                    { column: 'thirdParty.businessName:name', label: 'Proveedor' },
-                    { column: 'thirdParty.nit:name', label: 'NIT proveedor' },
+                    { column: 'resolutionInvoice:resolutionInvoice', label: 'Resolucion DIAN' },
+                    { column: 'thirdParty.businessName:thirdParty.businessName', label: 'Proveedor' },
                     { column: 'invoiceDate:invoiceDate', label: 'Fecha', type: 'date' },
                     { column: 'totalPayment:totalPayment', label: 'Total', type: 'number' },
                     { column: 'status:status', label: 'Estado', type: 'select', options: [

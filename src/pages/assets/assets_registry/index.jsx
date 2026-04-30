@@ -272,7 +272,8 @@ const IndexAssets = () => {
       key: "kardex",
       icon: "ri-arrow-left-right-line",
       class: "btn-label-primary",
-      title: "Kardex",
+      // QA-BLOQUE-AR (2026-04-30): renombrado para reflejar la accion real
+      title: "Bajas / Transferencias",
     },
     {
       key: "delete",
@@ -486,6 +487,11 @@ const IndexAssets = () => {
           break;
 
         case "kardex":
+          // QA-BLOQUE-AR (2026-04-30): el boton (icono flechas dobles) ahora
+          // navega a Bajas y Transferencias con el activo preseleccionado.
+          // Antes hacia window.open a /activos/kardex (modulo en español que
+          // NO existe en routing) -> 404. La intencion del contador es
+          // operar bajas/transferencias del activo, no kardex propiamente.
           const assetKardex = data.find((m) => m.id === id);
 
           if (!assetKardex) {
@@ -493,7 +499,7 @@ const IndexAssets = () => {
             return;
           }
 
-          window.open(getKardexUrl(assetKardex.assetCode || ""), "_blank");
+          navigate(`/assets/bajas-transferencias?asset=${encodeURIComponent(assetKardex.assetCode || "")}`);
           break;
 
         case "view": {

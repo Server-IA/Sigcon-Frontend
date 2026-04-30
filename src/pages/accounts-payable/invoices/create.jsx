@@ -69,6 +69,13 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
     const [errors, setErrors] = useState({ ...emptyErrors });
     const [errorMessage, setErrorMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    /**
+     * QA-BLOQUE-AS v2 (2026-04-30): contador que se bumpea al cerrar el modal
+     * para forzar re-mount del cuerpo del form. Sin esto, los InputSelectModal
+     * (Select2/jQuery) mantenian visualmente el valor previo aunque el state
+     * de React se reseteara.
+     */
+    const [formKey, setFormKey] = useState(0);
 
     /** Catalogos. */
     const [suppliers, setSuppliers] = useState([]);
@@ -82,6 +89,29 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
         loadAccounts();
         loadTaxRules();
     }, []);
+
+    /**
+     * QA-BLOQUE-AS (2026-04-30): cada vez que el modal se oculta (X, backdrop,
+     * Cancelar, ESC) reseteamos el state. Antes los datos quedaban "fantasma":
+     * el state de React se limpiaba con handleClear pero Select2/jQuery
+     * mantenia el valor visualmente cacheado, asi al reabrir el form parecia
+     * tener datos pero el guardar fallaba con campos vacios.
+     */
+    useEffect(() => {
+        const el = modalRef?.current;
+        if (!el) return;
+        const handler = () => {
+            setRecord({ ...emptyRecord });
+            setLines([emptyLine()]);
+            setErrors({ ...emptyErrors });
+            setErrorMessage('');
+            setLoading(false);
+            // QA-BLOQUE-AS v2: bump key -> remount completo de los Select2
+            setFormKey((k) => k + 1);
+        };
+        el.addEventListener('hidden.bs.modal', handler);
+        return () => el.removeEventListener('hidden.bs.modal', handler);
+    }, [modalRef]);
 
     /** Proveedores desde terceros. */
     const loadSuppliers = async () => {
@@ -369,7 +399,7 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
                         <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
                     </div>
 
-                    <div className="modal-body">
+                    <div className="modal-body" key={`form-${formKey}`}>
                         <AlertPage
                             message={errorMessage}
                             type="danger"

@@ -96,8 +96,37 @@ const InputSelectModal = ({
     // Sincronizar value desde React
     useEffect(() => {
         const $select = $(selectRef.current);
-    
-        if (!value) return;
+
+        // QA-BLOQUE-AU (2026-04-30): soportar value=array para multiple=true.
+        // Antes el sync solo manejaba escalares: cuando value=[1,2,3], el
+        // template literal lo serializaba como "1,2,3" y nunca matcheaba
+        // option[value="1,2,3"]. Resultado: las opciones precargadas no se
+        // mostraban en el Select2, el usuario las re-seleccionaba y al guardar
+        // sobrescribia con las nuevas (perdiendo las antiguas).
+        if (value === null || value === undefined || value === '') return;
+
+        if (multiple) {
+            const arr = Array.isArray(value)
+                ? value.map(v => String(v))
+                : (typeof value === 'string' && value.length > 0
+                    ? value.split(',').map(s => s.trim()).filter(Boolean)
+                    : []);
+            if (arr.length === 0) {
+                $select.val(null).trigger('change.select2');
+                return;
+            }
+            // Para cada id en el array, asegurar que existe la option en el DOM
+            // (si no, agregarla) y luego setear val() con todos los ids juntos.
+            arr.forEach((id) => {
+                if ($select.find(`option[value="${id}"]`).length === 0) {
+                    const item = (options || []).find(o => String(o.id) === String(id));
+                    const text = item?.label ?? item?.name ?? item?.text ?? String(id);
+                    $select.append(new Option(text, id, true, true));
+                }
+            });
+            $select.val(arr).trigger('change.select2');
+            return;
+        }
 
         if($select.find(`option[value="${value}"]`).length) {
             $select.val(value).trigger('change.select2');
@@ -116,7 +145,7 @@ const InputSelectModal = ({
             $select.append(option).trigger('change.select2');
         }
 
-    }, [value]);
+    }, [value, multiple]);
 
     return (
         <div className="form-floating form-floating-outline">

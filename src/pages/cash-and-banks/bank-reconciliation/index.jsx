@@ -179,34 +179,45 @@ const BankReconciliation = () => {
         }
     }, [movements, dataTableRef.current]);
 
-    const [matchModal, setMatchModal] = useState({ open: false, movement: null, suggestions: [], voucherId: '', loadingSug: false });
+    // QA-BLOQUE-AP (2026-04-29): el modal ahora carga DOS fuentes:
+    // suggestions (vouchers legacy de pago) y journalEntries (asientos contables
+    // modernos). Asi las empresas que no usan Vouchers (todas las QA actuales)
+    // pueden emparejar con sus JEs POSTED. La UI marca cada sugerencia con un
+    // tipo y submitMatch rutea al endpoint correcto.
+    const [matchModal, setMatchModal] = useState({ open: false, movement: null, suggestions: [], journalEntries: [], voucherId: '', selectedType: 'voucher', loadingSug: false });
 
     const openMatchModal = async (mov) => {
-        setMatchModal({ open: true, movement: mov, suggestions: [], voucherId: '', loadingSug: true });
+        setMatchModal({ open: true, movement: mov, suggestions: [], journalEntries: [], voucherId: '', selectedType: 'voucher', loadingSug: true });
         try {
-            const url = base_url(['api', 'v1', 'bank-accounts', id, 'financial-movements', mov.id, 'voucher-suggestions']);
-            const res = await fetchHelper.get(url, {}, 1, false, true);
+            const urlV = base_url(['api', 'v1', 'bank-accounts', id, 'financial-movements', mov.id, 'voucher-suggestions']);
+            const urlJ = base_url(['api', 'v1', 'bank-accounts', id, 'financial-movements', mov.id, 'journal-entry-suggestions']);
+            const [resV, resJ] = await Promise.all([
+                fetchHelper.get(urlV, {}, 1, false, true).catch(() => ({ data: [] })),
+                fetchHelper.get(urlJ, {}, 1, false, true).catch(() => ({ data: [] })),
+            ]);
             setMatchModal((m) => ({
                 ...m,
-                suggestions: Array.isArray(res?.data) ? res.data : [],
+                suggestions: Array.isArray(resV?.data) ? resV.data : [],
+                journalEntries: Array.isArray(resJ?.data) ? resJ.data : [],
                 loadingSug: false,
             }));
         } catch {
-            setMatchModal((m) => ({ ...m, suggestions: [], loadingSug: false }));
+            setMatchModal((m) => ({ ...m, suggestions: [], journalEntries: [], loadingSug: false }));
         }
     };
 
-    const closeMatchModal = () => setMatchModal({ open: false, movement: null, suggestions: [], voucherId: '', loadingSug: false });
+    const closeMatchModal = () => setMatchModal({ open: false, movement: null, suggestions: [], journalEntries: [], voucherId: '', selectedType: 'voucher', loadingSug: false });
 
-    const submitMatch = async (voucherId) => {
-        // const vid = Number(voucherId || matchModal.voucherId);
-        // if (!vid) {
-        //     setMessage({ message: 'Indique un comprobante válido', type: 'warning', show: true });
-        //     return;
-        // }
+    const submitMatch = async (selectedId, type = 'voucher') => {
+        const targetId = selectedId || matchModal.voucherId;
+        if (!targetId) {
+            setMessage({ message: 'Indique un comprobante valido', type: 'warning', show: true });
+            return;
+        }
         try {
-            const url = base_url(['api', 'v1', 'bank-accounts', id, 'financial-movements', matchModal.movement.id, 'match-voucher']);
-            await fetchHelper.put(url, { voucherId: matchModal.voucherId, bankAccountId: id }, {}, 1000);
+            const endpoint = type === 'journalEntry' ? 'match-journal-entry' : 'match-voucher';
+            const url = base_url(['api', 'v1', 'bank-accounts', id, 'financial-movements', matchModal.movement.id, endpoint]);
+            await fetchHelper.put(url, { voucherId: Number(targetId), bankAccountId: id }, {}, 1000);
             setMessage({ message: 'Movimiento emparejado con comprobante', type: 'success', show: true });
             closeMatchModal();
             refresh();
@@ -383,6 +394,8 @@ const BankReconciliation = () => {
     const matchLabel = (m) => {
         if (m.matchedCheckId) return `Cheque #${m.matchedCheckId}`;
         if (m.matchedVoucherId) return `Comprobante #${m.matchedVoucherId}`;
+        // QA-BLOQUE-AP v2: mostrar el JE emparejado con su numero legible
+        if (m.matchedJournalEntryId) return m.matchedJournalEntryNumber || `JE #${m.matchedJournalEntryId}`;
         return '—';
     };
 
@@ -751,11 +764,15 @@ const BankReconciliation = () => {
                             { data: 'sourceType', title: 'Origen' },
                             { data: 'matchedCheckId', title: 'Emparejado', render: (data, type, row) => matchLabel(row) },
                             { data: 'actions', title: 'Acciones', render: (data, type, m) => {
+                                // QA-BLOQUE-AP v2: el boton Emparejar aparece solo si NINGUN tipo
+                                // de match esta presente. Quitar aparece tanto para Voucher como JE.
+                                const isUnmatched = !m.matchedCheckId && !m.matchedVoucherId && !m.matchedJournalEntryId;
+                                const canUnmatch = !m.matchedCheckId && (m.matchedVoucherId || m.matchedJournalEntryId);
                                 return `
-                                    ${!m.matchedCheckId && !m.matchedVoucherId ? `
+                                    ${isUnmatched ? `
                                         <button type="button" class="btn btn-sm btn-label-primary" data-action="match" data-id="${m.id}">Emparejar</button>
                                     ` : ''}
-                                    ${m.matchedVoucherId && !m.matchedCheckId ? `
+                                    ${canUnmatch ? `
                                         <button type="button" class="btn btn-sm btn-label-secondary ms-1" data-action="unmatch" data-id="${m.id}">Quitar</button>
                                     ` : ''}
                                 `;
@@ -827,53 +844,95 @@ const BankReconciliation = () => {
                                     Movimiento {matchModal.movement?.movementDate} — {formatPrice(matchModal.movement?.amount)}
                                 </p>
                                 {matchModal.loadingSug ? <p>Cargando sugerencias…</p> : null}
+
+                                {/* Sugerencias de Vouchers (legacy) */}
                                 {!matchModal.loadingSug && matchModal.suggestions.length > 0 && (
+                                    <>
+                                    <h6 className="mt-2">Vouchers (comprobantes de pago)</h6>
                                     <div className="table-responsive mb-3">
                                         <table className="table table-sm">
                                             <thead><tr><th>#</th><th>Fecha</th><th>Importe</th><th>Descripción</th><th /></tr></thead>
                                             <tbody>
                                                 {matchModal.suggestions.map((s) => (
-                                                    <tr key={s.id}>
+                                                    <tr key={`v-${s.id}`}>
                                                         <td>{s.number}</td>
                                                         <td>{s.date}</td>
                                                         <td>{formatPrice(s.amount)}</td>
                                                         <td><small>{s.description}</small></td>
                                                         <td>
-                                                            <button type="button" className="btn btn-sm btn-success" onClick={() => submitMatch(s.id)}>Usar</button>
+                                                            <button type="button" className="btn btn-sm btn-success" onClick={() => submitMatch(s.id, 'voucher')}>Usar</button>
                                                         </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
-                                )}
-                                {!matchModal.loadingSug && !matchModal.suggestions.length && (
-                                    <p className="small text-muted">No hay sugerencias automáticas (mismo importe absoluto ±7 días).</p>
+                                    </>
                                 )}
 
-                                {/* QA-BLOQUE-AO (2026-04-29): mensaje claro cuando no hay vouchers
-                                  * disponibles. Antes el dropdown salia vacio sin contexto. */}
-                                {vouchers.length === 0 && (
+                                {/* QA-BLOQUE-AP v2 (2026-04-30): sugerencias de JournalEntries POSTED en
+                                  * ventana ±7d. La columna "Afecta cuenta" indica con badge verde si el
+                                  * JE tiene linea sobre la cuenta operativa del banco. Asientos sin badge
+                                  * pueden emparejarse pero el contador debe verificar la coherencia. */}
+                                {!matchModal.loadingSug && matchModal.journalEntries.length > 0 && (
+                                    <>
+                                    <h6 className="mt-2">Asientos contables disponibles</h6>
+                                    <p className="small text-muted mb-2">
+                                        Los marcados con <span className="badge bg-label-success">✓ Afecta cuenta</span> tienen linea
+                                        sobre la cuenta operativa del banco. Los demas pueden emparejarse pero verifique
+                                        la coherencia contable antes.
+                                    </p>
+                                    <div className="table-responsive mb-3">
+                                        <table className="table table-sm">
+                                            <thead><tr><th>Asiento</th><th>Fecha</th><th>Total</th><th>Relevancia</th><th>Descripción</th><th /></tr></thead>
+                                            <tbody>
+                                                {matchModal.journalEntries.map((j) => (
+                                                    <tr key={`j-${j.id}`}>
+                                                        <td><span className="badge bg-label-primary">{j.number}</span></td>
+                                                        <td>{j.date}</td>
+                                                        <td>{formatPrice(j.amount)}</td>
+                                                        <td>{j.affectsAccount
+                                                            ? <span className="badge bg-label-success">✓ Afecta cuenta</span>
+                                                            : <span className="badge bg-label-secondary">No afecta</span>
+                                                        }</td>
+                                                        <td><small>{j.description}</small></td>
+                                                        <td>
+                                                            <button type="button" className="btn btn-sm btn-primary" onClick={() => submitMatch(j.id, 'journalEntry')}>Usar</button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    </>
+                                )}
+
+                                {!matchModal.loadingSug && !matchModal.suggestions.length && !matchModal.journalEntries.length && (
                                     <div className="alert alert-warning" role="alert">
-                                        <strong>No hay comprobantes disponibles.</strong> Para emparejar
-                                        registre antes pagos a proveedores, cobros de clientes u otros
-                                        comprobantes que afecten esta cuenta bancaria. Los movimientos
-                                        sin comprobante asociado pueden quedar registrados manualmente
-                                        en la conciliacion sin emparejar.
+                                        <strong>No hay comprobantes ni asientos disponibles.</strong> Para emparejar
+                                        registre pagos a proveedores, cobros de clientes o asientos contables que
+                                        afecten esta cuenta bancaria (en ventana ±7 dias). Los movimientos sin
+                                        comprobante asociado pueden quedar registrados manualmente en la
+                                        conciliacion sin emparejar.
                                     </div>
                                 )}
-                                <InputSelectModal
-                                    id="voucherId"
-                                    label="Comprobante manual"
-                                    placeholder="Selecciona un comprobante"
-                                    options={vouchers.map((v) => ({ id: v.id, label: `${v.number} - ${formatPrice(v.amount)} - ${v.date}` }))}
-                                    value={matchModal.voucherId}
-                                    clearable={true}
-                                    emptyMessage="No hay comprobantes asociados a esta cuenta bancaria"
-                                    onChange={(value) => setMatchModal((x) => ({ ...x, voucherId: value }))}
-                                />
 
-                                <button type="button" className="btn btn-primary mt-2" onClick={() => submitMatch()}>Emparejar</button>
+                                {/* Selector manual: lista vouchers de la cuenta (mantenido para flujos legacy). */}
+                                {vouchers.length > 0 && (
+                                    <>
+                                    <InputSelectModal
+                                        id="voucherId"
+                                        label="Voucher manual (lista completa)"
+                                        placeholder="Selecciona un voucher"
+                                        options={vouchers.map((v) => ({ id: v.id, label: `${v.number} - ${formatPrice(v.amount)} - ${v.date}` }))}
+                                        value={matchModal.voucherId}
+                                        clearable={true}
+                                        emptyMessage="No hay vouchers asociados a esta cuenta bancaria"
+                                        onChange={(value) => setMatchModal((x) => ({ ...x, voucherId: value }))}
+                                    />
+                                    <button type="button" className="btn btn-primary mt-2" onClick={() => submitMatch(matchModal.voucherId, 'voucher')}>Emparejar voucher manual</button>
+                                    </>
+                                )}
 
 
                                 {/* <label className="form-label small">ID comprobante manual</label>

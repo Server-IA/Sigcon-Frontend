@@ -57,7 +57,11 @@ const AssetSearch = ({ onSelect, selectedAsset, error, required = false }) => {
                     length:  10,
                     columns: [{
                         data:       'assetCode',
-                        name:       'string',
+                        // QA-BLOQUE-AR (2026-04-30): name="string" hacia que el
+                        // DataTableSpecificationBuilder no resolviera el path JPA y
+                        // search global retornaba 0 resultados. assetCode es campo
+                        // directo de la entidad Assets.
+                        name:       'assetCode',
                         searchable: true,
                         orderable:  true,
                         search:     { value: '', regex: true },

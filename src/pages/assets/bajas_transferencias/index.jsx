@@ -79,10 +79,16 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
   const [alert, setAlert] = useState({ show: false, type: '', message: '' });
   const [transactionId, setTransactionId] = useState('');
   const [bankMovements, setBankMovements] = useState([]);
+  const [assetsList, setAssetsList] = useState([]);
 
-  // Cargar movimientos bancarios para el dropdown de referencia BNK/CAJ
+  // QA-BLOQUE-AQ (2026-04-30): cargar movimientos bancarios via POST search
+  // (el GET requiere bankAccountId obligatorio y tiraba 400 silenciosamente,
+  // dejando el dropdown vacio). Tambien cargar listado de activos para el
+  // dropdown del campo "ID Activo" (antes era input texto libre).
   useEffect(() => {
-      fetchHelper.get(base_url(['api', 'v1', 'financial-movements']), {}, 0, false)
+      fetchHelper.post(base_url(['api', 'v1', 'financial-movements']),
+              { draw: 1, start: 0, length: -1, columns: [], order: [], search: { value: '', regex: false } },
+              {}, 0, false)
           .then(resp => {
               const list = Array.isArray(resp) ? resp : (resp?.data ?? []);
               if (Array.isArray(list)) {
@@ -91,6 +97,18 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
                       name: `#${m.id} - ${m.movementDate || ''} ${m.description || m.externalReference || ''} ($${m.amount || 0})`.trim(),
                   })));
               }
+          })
+          .catch(() => {});
+
+      fetchHelper.post(base_url(['api', 'v1', 'assets', 'search']),
+              { draw: 1, start: 0, length: -1, columns: [], order: [], search: { value: '', regex: false } },
+              {}, 0, false)
+          .then(resp => {
+              const list = Array.isArray(resp?.data) ? resp.data : [];
+              setAssetsList(list.map(a => ({
+                  id: a.assetCode || String(a.id),
+                  name: `${a.assetCode || a.id} - ${a.assetName || a.name || ''}`.trim(),
+              })));
           })
           .catch(() => {});
   }, []);
@@ -380,24 +398,24 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
                 colClass="col-md-3"
               />
 
-              <div className="col-md-4 mb-3">
-                <div className="form-floating form-floating-outline">
-                  <input
-                    type="text"
-                    id="assetId"
-                    className={`form-control ${errors.assetId ? 'is-invalid' : ''}`}
-                    placeholder="Ej: ACT-1001"
-                    value={formData.assetId}
-                    onChange={(e) => handleFieldChange('assetId')(e.target.value)}
-                    readOnly={Boolean(initialAssetId)}
-                  />
-                  <label htmlFor="assetId">
-                    ID Activo <span className="text-danger">*</span>
-                  </label>
-                  {errors.assetId && <div className="invalid-feedback">{errors.assetId}</div>}
-                </div>
-                <small className="form-text text-muted d-block mt-1">{assetInfo.description}</small>
-              </div>
+              {/* QA-BLOQUE-AQ (2026-04-30): convertido de input texto libre a
+                * dropdown con activos disponibles. Antes obligaba al contador
+                * a saber el ACT-XXXX de memoria. Si viene initialAssetId
+                * desde la URL, se preserva como readonly. */}
+              <FormField
+                type="select"
+                id="assetId"
+                label="ID Activo"
+                value={formData.assetId}
+                onChange={handleFieldChange('assetId')}
+                options={assetsList}
+                placeholder="-- Seleccione un activo --"
+                required
+                error={errors.assetId}
+                disabled={Boolean(initialAssetId)}
+                colClass="col-md-4"
+                helperText={assetInfo.description !== '-' ? assetInfo.description : undefined}
+              />
 
               <div className="col-md-2 mb-3 d-flex align-items-end">
                 <button className="btn btn-outline-primary w-100" type="button" onClick={handleAssetLookup}>

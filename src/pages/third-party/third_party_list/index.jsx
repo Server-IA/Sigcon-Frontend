@@ -33,7 +33,14 @@ const mapDTOToState = (row) => ({
     businessName:       row.businessName          ?? '',
     typeOrganizationId: row.typeOrganization?.id  ?? '',
     typeRegimenId:      row.typeRegimen?.id        ?? '',
-    withholdingIds:     (row.withholdings  ?? []).map(w => w.id).join(','),
+    // QA-BLOQUE-AU (2026-04-30): preservar array de ids (NO usar join CSV).
+    // El modal de edicion espera array para precargar las retenciones en el
+    // Select2 multiple. Antes se enviaba string "3,5" que nunca matcheaba
+    // con las opciones individuales y el dropdown salia visualmente vacio.
+    withholdingIds:     (row.withholdings  ?? []).map(w => Number(w.id)).filter(n => !isNaN(n)),
+    // Tambien preservamos el array crudo de objetos por si el modal quiere
+    // mostrar nombres antes de que el catalogo de retenciones cargue.
+    withholdings:       row.withholdings ?? [],
     roles:              (row.roles         ?? []).map(r => ROLE_ID_TO_CODE[r.id]).filter(Boolean),
     municipalityId:     row.municipality?.id           ?? '',
     countryId:          row.municipality?.country?.id  ?? '',

@@ -62,6 +62,23 @@ const CreateApPurchaseOrder = ({ modalRef, modalInstance, dataTableRef, setMessa
         loadSuppliers();
     }, []);
 
+    /** QA-BLOQUE-AS v2 (2026-04-30): reset + remount Select2 al cerrar. */
+    const [formKey, setFormKey] = useState(0);
+    useEffect(() => {
+        const el = modalRef?.current;
+        if (!el) return;
+        const handler = () => {
+            setRecord({ ...emptyRecord });
+            setLines([emptyLine()]);
+            setErrors({ ...emptyErrors });
+            setErrorMessage('');
+            setLoading(false);
+            setFormKey((k) => k + 1);
+        };
+        el.addEventListener('hidden.bs.modal', handler);
+        return () => el.removeEventListener('hidden.bs.modal', handler);
+    }, [modalRef]);
+
     /** Carga catalogo de proveedores. */
     const loadSuppliers = async () => {
         try {
@@ -204,7 +221,7 @@ const CreateApPurchaseOrder = ({ modalRef, modalInstance, dataTableRef, setMessa
                         <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
                     </div>
 
-                    <div className="modal-body">
+                    <div className="modal-body" key={`form-${formKey}`}>
                         <AlertPage
                             message={errorMessage}
                             type="danger"

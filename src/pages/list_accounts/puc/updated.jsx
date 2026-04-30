@@ -127,17 +127,36 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
         } catch (error) {
             console.log(error);
             const errores = error?.errors;
+            // QA-BLOQUE-AV (2026-04-30): cuando el backend bloquea el cambio
+            // (ej. "No se puede cambiar el estado, la cuenta tiene transacciones
+            // registradas") tambien hay que mostrarlo. Antes solo se mostraba si
+            // el array errores estaba vacio Y existia error.msg. Si errores
+            // tenia datos pero ademas habia mensaje general, este se perdia.
             if (errores && errores.length > 0) {
                 const fieldErrors = {};
                 errores.forEach(err => { fieldErrors[err.field] = err.message; });
                 setErrors(fieldErrors);
-            } else if (error?.msg) {
+            }
+            const generalMsg = error?.msg || error?.message;
+            if (generalMsg) {
                 setErrorMessage({
-                    message: error.msg,
+                    message: generalMsg,
+                    type: 'danger',
+                    show: true
+                });
+            } else if (!(errores && errores.length > 0)) {
+                // ningun mensaje conocido -> generico para evitar fallar en silencio
+                setErrorMessage({
+                    message: 'No se pudo guardar la cuenta PUC. Intente nuevamente.',
                     type: 'danger',
                     show: true
                 });
             }
+            // Asegurar que el AlertPage sea visible: scroll del modal-body al tope
+            try {
+                const body = modalRef?.current?.querySelector('.modal-body');
+                if (body) body.scrollTop = 0;
+            } catch (_) { /* ignore */ }
         } finally {
             setLoading(false);
         }

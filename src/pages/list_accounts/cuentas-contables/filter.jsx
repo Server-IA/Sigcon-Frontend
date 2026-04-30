@@ -52,11 +52,15 @@ const FilterCuentaContable = ({
         loadData();
     }, []);
 
+    // QA-BLOQUE-AV (2026-04-30): selectores alineados a paths JPA reales (matchean
+    // los `name` del DataTable y el DataTableSpecificationBuilder). Antes
+    // 'pucAccount.code:name' / 'currencyType.name:name' / 'costCenter.name:name' no
+    // matcheaban con nada.
     const [filters, setFilters] = useState([
-        { regex: true, value: '', column: 'pucAccount:name' },
+        { regex: true, value: '', column: 'pucAccount.code:name' },
         { regex: true, value: '', column: 'customName:name' },
-        { regex: true, value: '', column: 'baseCurrency:name' },
-        { regex: true, value: '', column: 'costCenterName:name' },
+        { regex: true, value: '', column: 'currencyType.name:name' },
+        { regex: true, value: '', column: 'costCenter.name:name' },
         { regex: true, value: '', column: 'nature:name' },
         { regex: true, value: '', column: 'status:name' },
     ]);
@@ -134,8 +138,8 @@ const FilterCuentaContable = ({
                                     <InputSelectModal
                                         id="filter_base_currency"
                                         label="Moneda Base"
-                                        value={getFilter('baseCurrency:name')?.value?.split(',') || []}
-                                        onChange={(value) => updateFilter('baseCurrency:name', 'value', value.filter(v => v !== '').join(','))}
+                                        value={getFilter('currencyType.name:name')?.value?.split(',') || []}
+                                        onChange={(value) => updateFilter('currencyType.name:name', 'value', value.filter(v => v !== '').join(','))}
                                         placeholder="Seleccionar moneda base"
                                         options={currencies.map(c => ({ id: c.name, name: c.name }))}
                                         multiple={true}
@@ -154,8 +158,8 @@ const FilterCuentaContable = ({
                                 <InputSelectModal
                                     id="filter_puc_id"
                                     label="Código PUC"
-                                    value={getFilter('pucAccount:name')?.value?.split(',') || []}
-                                    onChange={(value) => updateFilter('pucAccount:name', 'value', value.filter(v => v !== '').join(','))}
+                                    value={getFilter('pucAccount.code:name')?.value?.split(',') || []}
+                                    onChange={(value) => updateFilter('pucAccount.code:name', 'value', value.filter(v => v !== '').join(','))}
                                     placeholder="Seleccionar código PUC"
                                     options={pucs.map(p => ({ id: p.code, name: p.code }))}
                                     multiple={true}
@@ -182,8 +186,8 @@ const FilterCuentaContable = ({
                                 <InputSelectModal
                                     id="filter_cost_center_id"
                                     label="Centro de Costos"
-                                    value={getFilter('costCenterName:name')?.value?.split(',') || []}
-                                    onChange={(value) => updateFilter('costCenterName:name', 'value', value.filter(v => v !== '').join(','))}
+                                    value={getFilter('costCenter.name:name')?.value?.split(',') || []}
+                                    onChange={(value) => updateFilter('costCenter.name:name', 'value', value.filter(v => v !== '').join(','))}
                                     placeholder="Seleccionar centro de costos"
                                     options={costCenters.map(c => ({ id: c.name, name: c.name }))}
                                     multiple={true}

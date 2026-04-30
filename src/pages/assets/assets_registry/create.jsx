@@ -500,9 +500,16 @@ const CreateAssets = (
                       bankAccountId: Number(value),
                     })
                   }
-                  options={accountBanks
-                    .filter(b => b.accountType == "TARJETA_CREDITO")
-                    .map(b => ({ id: b.id, label: `${b.accountName} - ${b.accountNumberMasked}` }))}
+                  /* QA-BLOQUE-AQ (2026-04-30): filtro relajado.
+                   * Antes solo mostraba cuentas tipo TARJETA_CREDITO, dejando
+                   * el dropdown vacio cuando la empresa no tenia ninguna
+                   * tarjeta registrada (caso real en QA). Ahora muestra todas
+                   * las cuentas activas y el contador elige la de origen. */
+                  options={accountBanks.map(b => ({
+                    id: b.id,
+                    label: `${b.accountName} - ${b.accountNumberMasked || b.accountNumber || ''}`,
+                  }))}
+                  emptyMessage="No hay cuentas bancarias activas. Cree una en Bancos y Cajas → Cuentas bancarias."
                 />
               </div>
               <div className="col-md-4 mb-4">

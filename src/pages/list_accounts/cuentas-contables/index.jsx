@@ -57,13 +57,16 @@ const IndexCuentasContables = () => {
 
     const [cuentaContable, setCuentaContable] = useState(initialCuentaContable);
 
-    // Column `data` keys must match backend response field names
+    // QA-BLOQUE-AV (2026-04-30): name = path JPA real para que el
+    // DataTableSpecificationBuilder pueda resolver el filtro. Antes los names
+    // 'pucAccountName' / 'pucAccountCode' / 'baseCurrency' / 'costCenterName'
+    // no eran paths reales y el filtro fallaba silenciosamente.
     const [columns] = useState([
-        { title: 'PUC', data: 'pucAccount.name', name: 'pucAccountName' },
+        { title: 'PUC', data: 'pucAccount.name', name: 'pucAccount.name' },
         { title: 'Nombre Personalizado', data: 'customName',          name: 'customName' },
-        { title: 'Código PUC',          data: 'pucAccount.code',       name: 'pucAccountCode' },
-        { title: 'Moneda Base',          data: 'currencyType.name',        name: 'baseCurrency' },
-        { title: 'Centro de Costos',     data: 'costCenter.name',       name: 'costCenterName', defaultContent: '—' },
+        { title: 'Código PUC',          data: 'pucAccount.code',       name: 'pucAccount.code' },
+        { title: 'Moneda Base',          data: 'currencyType.name',        name: 'currencyType.name' },
+        { title: 'Centro de Costos',     data: 'costCenter.name',       name: 'costCenter.name', defaultContent: '—' },
         // { title: 'Regla tributaria', data: 'taxRuleId', name: 'taxRuleId', defaultContent: '—' },
         {
             title: 'Naturaleza', data: 'nature', name: 'nature',

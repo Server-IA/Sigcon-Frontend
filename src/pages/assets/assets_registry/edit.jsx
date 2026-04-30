@@ -242,18 +242,13 @@ const EditAssets = (
 
       await fetchHelper.put(url, assets, {}, 1000);
 
-      // dataTableRef?.current?.ajax.reload();
-      // modalInstance?.current?.hide();
-
-      // setAssetsCreate(true);
-
-      const path = window.location.pathname.replace(/\/$/, "");
-      const parts = path.split("/");
-
-      // quitar los últimos 2 segmentos
-      const newPath = parts.slice(0, -2).join("/") || "/";
-
-      navigate(newPath);
+      // QA-BLOQUE-AR (2026-04-30): navigate con path absoluto fijo. Antes
+      // computaba el path quitando 2 segmentos del pathname, lo cual incluia
+      // el basename de Dokploy ("/sigcon/dev") en producción y React Router
+      // lo agregaba de nuevo dando 404 ("/sigcon/dev/sigcon/dev/assets/assets").
+      // navigate() ya inyecta el basename, asi que pasamos la ruta interna
+      // sin prefijo.
+      navigate("/assets/assets");
 
       setErrors({});
       setError({ message: "", type: "", show: false });
@@ -500,9 +495,12 @@ const EditAssets = (
                       bankAccountId: Number(value),
                     })
                   }
-                  options={accountBanks
-                    .filter(b => b.accountType == "TARJETA_CREDITO")
-                    .map(b => ({ id: b.id, label: `${b.accountName} - ${b.accountNumberMasked}` }))}
+                  /* QA-BLOQUE-AQ (2026-04-30): filtro relajado, ver create.jsx */
+                  options={accountBanks.map(b => ({
+                    id: b.id,
+                    label: `${b.accountName} - ${b.accountNumberMasked || b.accountNumber || ''}`,
+                  }))}
+                  emptyMessage="No hay cuentas bancarias activas. Cree una en Bancos y Cajas → Cuentas bancarias."
                 />
               </div>
               <div className="col-md-4 mb-4">
