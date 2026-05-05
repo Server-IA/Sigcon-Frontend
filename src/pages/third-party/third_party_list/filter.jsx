@@ -303,7 +303,6 @@ const FilterThirdParty = ({ filterRef, filterInstance, dataTableRef }) => {
                                     getTable().search('');
                                     getTable().draw();
                                     setFilters(prev => prev.map(f => ({ ...f, value: '' })));
-                                    filterInstance?.current?.hide();
                                 }}
                             >
                                 Limpiar

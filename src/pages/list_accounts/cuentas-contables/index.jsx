@@ -67,6 +67,9 @@ const IndexCuentasContables = () => {
         { title: 'Código PUC',          data: 'pucAccount.code',       name: 'pucAccount.code' },
         { title: 'Moneda Base',          data: 'currencyType.name',        name: 'currencyType.name' },
         { title: 'Centro de Costos',     data: 'costCenter.name',       name: 'costCenter.name', defaultContent: '—' },
+        // HU-CFG-RF-05/07 (Bloque AP, 2026-05-04): columna opcional para regla
+        // de depreciacion. depretationRuleName se resuelve en backend.
+        { title: 'Regla Depreciación', data: 'depretationRuleName', name: 'depretationRuleName', defaultContent: '—' },
         // { title: 'Regla tributaria', data: 'taxRuleId', name: 'taxRuleId', defaultContent: '—' },
         {
             title: 'Naturaleza', data: 'nature', name: 'nature',
@@ -152,6 +155,9 @@ const IndexCuentasContables = () => {
                 currency_type_id: cuentaRef.currencyType?.id ?? null,
                 cost_center_id: cuentaRef.costCenter?.id ?? null,
                 tax_rule_id: cuentaRef.taxRule?.id ?? cuentaRef.taxRuleId ?? null,
+                // HU-CFG-RF-07 (Bloque AP): pre-poblar regla depreciacion al abrir
+                // modal de edicion. El backend lo expone como depretationRuleId/Name.
+                depretation_rule_id: cuentaRef.depretationRuleId ?? null,
                 nature: cuentaRef.nature ?? null,
                 status: cuentaRef.status ?? 'ACTIVE',
             };

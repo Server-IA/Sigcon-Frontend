@@ -64,15 +64,53 @@ const CreateDepreciationRule = ({ modalRef, modalInstance, rule, setRule, dataTa
 
     // ── Enviar formulario ──
     const handleCreate = async () => {
+        // HU-CFG-RF-13/14 (Bloque AP, 2026-05-04): validacion frontend exhaustiva
+        // antes de enviar al backend. Antes el formulario no validaba nada y el
+        // backend explotaba con "Cannot coerce empty String to DepretationType"
+        // exponiendo trace tecnico al usuario.
+        const fe = {};
+        if (!rule.name || !rule.name.trim()) fe.name = 'El nombre de la regla es obligatorio';
+        if (!rule.depreciationType) fe.depreciationType = 'Seleccione el tipo de depreciación';
+        if (!rule.accountId) fe.accountId = 'Seleccione la cuenta contable asociada';
+
+        const tasa = Number(rule.depreciationRate);
+        if (rule.depreciationRate === '' || rule.depreciationRate === null || rule.depreciationRate === undefined) {
+            fe.depreciationRate = 'La tasa de depreciación es obligatoria';
+        } else if (Number.isNaN(tasa) || tasa <= 0 || tasa > 100) {
+            fe.depreciationRate = 'La tasa de depreciación debe ser un número entre 0 y 100 (%)';
+        }
+
+        const vida = Number(rule.usefulLife);
+        if (rule.usefulLife === '' || rule.usefulLife === null || Number.isNaN(vida) || vida <= 0) {
+            fe.usefulLife = 'La vida útil debe ser un entero positivo';
+        }
+
+        const resid = Number(rule.residualValue);
+        if (rule.residualValue === '' || rule.residualValue === null || Number.isNaN(resid) || resid < 0) {
+            fe.residualValue = 'El valor residual debe ser un número mayor o igual a 0';
+        }
+
+        if (!rule.effectiveDate) fe.effectiveDate = 'Seleccione la fecha de vigencia';
+        if (!rule.calculationBase || !rule.calculationBase.trim()) fe['descriptionStructured.calculationBase'] = 'La base de cálculo es obligatoria';
+        if (!rule.parameters || !rule.parameters.trim()) fe['descriptionStructured.parameters'] = 'Los parámetros son obligatorios';
+        if (!rule.exception || !rule.exception.trim()) fe['descriptionStructured.exception'] = 'Las excepciones son obligatorias';
+        if (!rule.applicableNorm || !rule.applicableNorm.trim()) fe['descriptionStructured.applicableNorm'] = 'La norma aplicable es obligatoria';
+
+        if (Object.keys(fe).length > 0) {
+            setErrors(fe);
+            setErrorMessage('Por favor corrija los campos marcados antes de guardar.');
+            return;
+        }
+
         try {
             const url = base_url(['api', 'v1', 'depreciation-rules', 'store']);
             const payload = {
-                name: rule.name,
+                name: rule.name.trim(),
                 depretationType: rule.depreciationType,
                 accountingAccountId: Number(rule.accountId),
-                depretationRate: Number(rule.depreciationRate),
-                usefulLifeYears: Number(rule.usefulLife),
-                residualValue: Number(rule.residualValue),
+                depretationRate: tasa,
+                usefulLifeYears: vida,
+                residualValue: resid,
                 effectiveDate: rule.effectiveDate,
                 descriptionStructured: {
                     calculationBase: rule.calculationBase,

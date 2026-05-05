@@ -101,6 +101,55 @@ const ApAttachmentsModal = ({ modalRef, modalInstance, invoiceId, invoiceNumber 
         }
     };
 
+    /**
+     * HU-AP-12 E4 (Bloque AS): reemplaza un adjunto existente por una version
+     * actualizada. Abre file picker, valida MIME y tamaño, y hace POST al
+     * endpoint /attachments/{id}/replace. El previo queda historico.
+     */
+    const handleReplace = async (attachmentId) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/pdf,application/xml,text/xml,image/jpeg,image/png';
+        input.onchange = async (ev) => {
+            const f = ev.target.files?.[0];
+            if (!f) return;
+            const allowed = ['application/pdf','application/xml','text/xml','image/jpeg','image/png'];
+            if (!allowed.includes(f.type)) {
+                setMessage({ type: 'danger', text: 'Tipo de archivo no permitido. Solo PDF/XML/JPG/PNG.' });
+                return;
+            }
+            if (f.size > 5 * 1024 * 1024) {
+                setMessage({ type: 'danger', text: 'Archivo supera 5MB.' });
+                return;
+            }
+            try {
+                setLoading(true);
+                const formData = new FormData();
+                formData.append('file', f);
+                const token = localStorage.getItem('token');
+                const res = await fetch(
+                    base_url(['api', 'v1', 'ap', 'attachments', attachmentId, 'replace']),
+                    {
+                        method: 'POST',
+                        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                        body: formData,
+                    }
+                );
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err?.message || err?.msg || 'Error reemplazando');
+                }
+                setMessage({ type: 'success', text: 'Documento reemplazado correctamente. Nueva version guardada.' });
+                loadList();
+            } catch (error) {
+                setMessage({ type: 'danger', text: error?.message || 'Error' });
+            } finally {
+                setLoading(false);
+            }
+        };
+        input.click();
+    };
+
     const handleDelete = async (attachmentId) => {
         if (!window.confirm('Eliminar este documento adjunto?')) return;
         try {
@@ -195,6 +244,11 @@ const ApAttachmentsModal = ({ modalRef, modalInstance, invoiceId, invoiceNumber 
                                                 onClick={() => handleDownload(a.id, a.fileName)}
                                                 title="Descargar">
                                                 <i className="ri-download-line" />
+                                            </button>
+                                            <button type="button" className="btn btn-sm btn-warning me-1"
+                                                onClick={() => handleReplace(a.id)}
+                                                title="Reemplazar por nueva version (HU-AP-12 E4)">
+                                                <i className="ri-refresh-line" />
                                             </button>
                                             <button type="button" className="btn btn-sm btn-danger"
                                                 onClick={() => handleDelete(a.id)}

@@ -63,31 +63,23 @@ const UpdatedCuentaContable = ({
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validar campos obligatorios (swagger UpdateAccountingAccountRequest)
-        if (!cuentaUpdated.puc_id) {
-            setErrors({ ...errors, puc_id: 'Por favor seleccione una cuenta PUC' });
-            return;
-        }
+        // HU-CFG-RF-07 E? (Bloque AP, 2026-05-04): centro de costos OPCIONAL al editar
+        // (consistente con el backend UpdateAccountingAccountRequest, donde el campo
+        // es nullable). Antes el form lo exigia y bloqueaba el guardado.
+        const fieldErrors = {};
+        if (!cuentaUpdated.puc_id) fieldErrors.puc_id = 'Por favor seleccione una cuenta PUC';
         if (!cuentaUpdated.custom_name || cuentaUpdated.custom_name.trim() === '') {
-            setErrors({ ...errors, custom_name: 'El nombre personalizado de la cuenta es obligatorio' });
+            fieldErrors.custom_name = 'El nombre personalizado de la cuenta es obligatorio';
+        }
+        if (!cuentaUpdated.currency_type_id) fieldErrors.currency_type_id = 'Por favor seleccione una moneda base';
+        if (!cuentaUpdated.nature) fieldErrors.nature = 'Por favor seleccione la naturaleza de la cuenta';
+        if (!cuentaUpdated.status) fieldErrors.status = 'Por favor seleccione el estado de la cuenta';
+
+        if (Object.keys(fieldErrors).length > 0) {
+            setErrors(fieldErrors);
             return;
         }
-        if (!cuentaUpdated.currency_type_id) {
-            setErrors({ ...errors, currency_type_id: 'Por favor seleccione una moneda base' });
-            return;
-        }
-        if (!cuentaUpdated.cost_center_id) {
-            setErrors({ ...errors, cost_center_id: 'Por favor seleccione un centro de costos' });
-            return;
-        }
-        if (!cuentaUpdated.nature) {
-            setErrors({ ...errors, nature: 'Por favor seleccione la naturaleza de la cuenta' });
-            return;
-        }
-        if (!cuentaUpdated.status) {
-            setErrors({ ...errors, status: 'Por favor seleccione el estado de la cuenta' });
-            return;
-        }
+        setErrors({});
 
         // Backend regex actualizado: permite letras (con acentos y ñ), numeros, espacios,
         // guiones, parentesis, puntos y comas. Consistente con UpdateAccountingAccountRequest.
@@ -106,6 +98,8 @@ const UpdatedCuentaContable = ({
             currency_type_id: cuentaUpdated.currency_type_id,
             cost_center_id: cuentaUpdated.cost_center_id || null,
             tax_rule_id: cuentaUpdated.tax_rule_id || null,
+            // HU-CFG-RF-07 (Bloque AP): regla depreciacion opcional.
+            depretation_rule_id: cuentaUpdated.depretation_rule_id || null,
             nature: cuentaUpdated.nature,
             status: cuentaUpdated.status,
         };
@@ -260,18 +254,18 @@ const UpdatedCuentaContable = ({
                                 </div>
                             </div>
 
-                            {/* Centro de Costos (Solo lectura si hay transacciones) */}
+                            {/* Centro de Costos (OPCIONAL - HU-CFG-RF-07 Bloque AP) */}
                             <div className="row">
                                 <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
                                         readOnlyFields.cost_center_id,
                                         <InputSelectModal
                                             id="costCenterId_updated"
-                                            label="Centro de Costos"
+                                            label="Centro de Costos (opcional)"
                                             value={cuentaUpdated.cost_center_id}
-                                            onChange={(value) => setCuentaUpdated({ 
-                                                ...cuentaUpdated, 
-                                                cost_center_id: parseInt(value) || null
+                                            onChange={(value) => setCuentaUpdated({
+                                                ...cuentaUpdated,
+                                                cost_center_id: value ? parseInt(value) : null
                                             })}
                                             error={errors.cost_center_id}
                                             placeholder="Seleccionar centro de costos (opcional)"
@@ -279,38 +273,38 @@ const UpdatedCuentaContable = ({
                                                 id: center.id,
                                                 label: `${center.code} - ${center.name}`
                                             }))}
-                                            required={true}
+                                            required={false}
                                             disabled={readOnlyFields.cost_center_id}
                                         />
                                     )}
                                 </div>
                             </div>
 
-                            {/* Regla de Depreciación (Solo lectura si hay transacciones) */}
-                            {/* <div className="row">
+                            {/* Regla de Depreciación (HU-CFG-RF-07 Bloque AP - opcional) */}
+                            <div className="row">
                                 <div className="col mb-6 mt-2">
                                     {renderFieldWithTooltip(
                                         readOnlyFields.depreciation_rule_id,
                                         <InputSelectModal
                                             id="depreciationRuleId_updated"
-                                            label="Regla de Depreciación"
-                                            value={cuentaUpdated.depreciation_rule_id}
-                                            onChange={(value) => setCuentaUpdated({ 
-                                                ...cuentaUpdated, 
-                                                tax_rule_id: parseInt(value) || null
+                                            label="Regla de Depreciación (opcional)"
+                                            value={cuentaUpdated.depretation_rule_id}
+                                            onChange={(value) => setCuentaUpdated({
+                                                ...cuentaUpdated,
+                                                depretation_rule_id: value ? parseInt(value) : null
                                             })}
-                                            error={errors.depreciation_rule_id}
+                                            error={errors.depretation_rule_id}
                                             placeholder="Seleccionar regla de depreciación (opcional)"
                                             options={depreciationRules.map(rule => ({
                                                 id: rule.id,
                                                 label: rule.name
                                             }))}
-                                            clearable={true}
+                                            required={false}
                                             disabled={readOnlyFields.depreciation_rule_id}
                                         />
                                     )}
                                 </div>
-                            </div> */}
+                            </div>
 
                             {/* Naturaleza */}
                             <div className="row">

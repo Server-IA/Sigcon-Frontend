@@ -121,6 +121,17 @@ const IndexSalesInvoices = () => {
             },
         },
         {
+            // HU-AR-01B E5: columna Origen (MANUAL / AAEF) con filtro
+            title: 'Origen',
+            data: 'source',
+            name: 'source',
+            render: (val) => {
+                const v = val || 'MANUAL';
+                const cls = v === 'AAEF' ? 'bg-label-primary' : 'bg-label-secondary';
+                return `<span class="badge ${cls}">${v}</span>`;
+            },
+        },
+        {
             title: 'Acciones',
             data: 'id',
             searchable: false,
@@ -225,6 +236,25 @@ const IndexSalesInvoices = () => {
             action: () => {
                 if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
                 filterInstance.current.show();
+            }
+        },
+        // HU-AR-12 E1: toggle "Solo pendientes" filtra por status PARTIALLY_PAID/ISSUED/OVERDUE
+        // (facturas con saldo > 0). Click 2 veces limpia. Usa coma como separador
+        // (la rama IN multi-select del DataTableSpecificationBuilder convierte cada
+        // valor al ENUM SalesInvoiceStatus correspondiente).
+        {
+            text: '<i class="ri-funnel-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Solo pendientes</span>',
+            className: 'btn rounded-pill btn-warning waves-effect mx-1 my-2',
+            action: () => {
+                const dt = dataTableRef?.current;
+                if (!dt) return;
+                const col = dt.column('status:name');
+                const current = col.search();
+                if (current && current.includes('PARTIALLY_PAID')) {
+                    col.search('').draw();
+                } else {
+                    col.search('PARTIALLY_PAID,ISSUED,OVERDUE', false, false).draw();
+                }
             }
         },
         {
@@ -474,6 +504,11 @@ const IndexSalesInvoices = () => {
                         { id: 'PAID', label: 'Pagada' },
                         { id: 'VOIDED', label: 'Anulada' },
                         { id: 'SETTLED', label: 'Liquidada' },
+                    ]},
+                    // HU-AR-01B E5: filtro origen MANUAL/AAEF
+                    { column: 'integrationSource.source:source', label: 'Origen', type: 'select', options: [
+                        { id: 'MANUAL', label: 'Manual' },
+                        { id: 'AAEF', label: 'AgroFusion (AAEF)' },
                     ]},
                 ]}
             />

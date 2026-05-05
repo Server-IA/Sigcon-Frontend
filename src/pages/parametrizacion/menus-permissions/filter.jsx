@@ -76,7 +76,6 @@ const FilterMenuPermission = ({ dataTableRef, filterRef, filterInstance, menus, 
                                     dataTableRef?.current?.table().columns().search('');
                                     dataTableRef?.current?.table().search('');
                                     dataTableRef?.current?.table().draw();
-                                    filterInstance?.current?.hide();
                                 }}
                             >
                                 Limpiar

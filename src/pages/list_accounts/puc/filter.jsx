@@ -239,7 +239,6 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, le
                                     getTable().search('');
                                     getTable().draw();
                                     setFilters(prev => prev.map(f => ({ ...f, value: '' })));
-                                    filterInstance?.current?.hide();
                                 }}
                             >
                                 Limpiar

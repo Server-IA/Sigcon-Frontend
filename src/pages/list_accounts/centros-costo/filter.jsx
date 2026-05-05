@@ -148,13 +148,16 @@ const FilterCentroCosto = ({ filterRef, filterInstance, dataTableRef }) => {
                             type="button"
                             className="btn btn-danger"
                             onClick={() => {
+                                // HU-CFG-RF-19 (Bloque AQ, 2026-05-04): Limpiar debe vaciar
+                                // los inputs y refrescar tabla SIN cerrar el modal. Antes el
+                                // .hide() saca al usuario del modal sin feedback visual.
+                                setFilters((prev) => prev.map((f) => ({ ...f, value: '' })));
                                 const t = getTable();
                                 if (t) {
                                     t.columns().search('');
                                     t.search('');
                                     t.draw();
                                 }
-                                filterInstance?.current?.hide();
                             }}
                         >
                             Limpiar

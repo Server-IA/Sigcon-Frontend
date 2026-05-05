@@ -274,7 +274,6 @@ const FilterMenu = ({ filterRef, filterInstance, dataTableRef, modules, parents,
                                     getTable().columns().search('');
                                     getTable().search('');
                                     getTable().draw();
-                                    filterInstance?.current?.hide();
                                 }}
                             >
                                 Limpiar

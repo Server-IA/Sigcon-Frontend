@@ -18,6 +18,49 @@ const formatCurrency = (val) => {
     }).format(Number(val));
 };
 
+/**
+ * HU-AR-10 E3: descarga CSV (UTF-8 con BOM) de un listado.
+ * @param {Array<Object>} rows filas a exportar
+ * @param {Array<{key,label}>} cols definicion de columnas
+ * @param {string} filename nombre del archivo
+ */
+const downloadCsv = (rows, cols, filename) => {
+    if (!rows || rows.length === 0) return;
+    const head = cols.map(c => c.label).join(';');
+    const body = rows.map(r => cols.map(c => {
+        const v = r[c.key];
+        if (v === null || v === undefined) return '';
+        const s = String(v).replace(/"/g, '""');
+        return s.includes(';') || s.includes('"') ? `"${s}"` : s;
+    }).join(';')).join('\n');
+    const csv = '﻿' + head + '\n' + body;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+/** HU-AR-10 E3: imprime una tabla a PDF via window.print de una ventana. */
+const printToPdf = (title, rows, cols) => {
+    if (!rows || rows.length === 0) return;
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const trs = rows.map(r => '<tr>' + cols.map(c => {
+        const v = r[c.key];
+        return `<td>${v === null || v === undefined ? '' : v}</td>`;
+    }).join('') + '</tr>').join('');
+    w.document.write(`<html><head><title>${title}</title>
+        <style>body{font-family:Arial;padding:20px}h2{margin-bottom:15px}
+        table{border-collapse:collapse;width:100%;font-size:12px}
+        th,td{border:1px solid #999;padding:6px;text-align:left}
+        th{background:#333;color:#fff}</style></head><body>
+        <h2>${title}</h2><table><thead><tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+        <tbody>${trs}</tbody></table></body></html>`);
+    w.document.close();
+    setTimeout(() => { w.print(); }, 300);
+};
+
 const IndexArOverdue = () => {
     const [aging, setAging] = useState([]);
     const [overdue, setOverdue] = useState([]);
@@ -30,7 +73,7 @@ const IndexArOverdue = () => {
     /** Carga aging, vencidas y proximas a vencer. */
     const loadAll = async () => {
         setLoading(true);
-        setMessage({ show: false });
+        setMessage({ show: false, message: '', type: 'info' });
         try {
             const [agingRes, overdueRes, upcomingRes] = await Promise.all([
                 fetchHelper.get(base_url(['api', 'v1', 'ar', 'reports', 'aging'])),
@@ -148,6 +191,37 @@ const IndexArOverdue = () => {
                         >
                             Filtrar
                         </button>
+                        {/* HU-AR-10 E3: export Excel/PDF */}
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-success ms-2"
+                            disabled={overdue.length === 0}
+                            onClick={() => downloadCsv(overdue, [
+                                {key:'invoiceNumber',label:'Numero'},
+                                {key:'thirdPartyName',label:'Cliente'},
+                                {key:'thirdPartyNit',label:'NIT'},
+                                {key:'dueDate',label:'Vence'},
+                                {key:'balanceDue',label:'Saldo'},
+                                {key:'daysOverdue',label:'Dias Mora'},
+                            ], 'cartera-vencida.csv')}
+                        >
+                            <i className="ri-file-excel-2-line"></i> CSV
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-danger ms-2"
+                            disabled={overdue.length === 0}
+                            onClick={() => printToPdf('Cartera Vencida', overdue, [
+                                {key:'invoiceNumber',label:'Numero'},
+                                {key:'thirdPartyName',label:'Cliente'},
+                                {key:'thirdPartyNit',label:'NIT'},
+                                {key:'dueDate',label:'Vence'},
+                                {key:'balanceDue',label:'Saldo'},
+                                {key:'daysOverdue',label:'Dias Mora'},
+                            ])}
+                        >
+                            <i className="ri-file-pdf-line"></i> PDF
+                        </button>
                     </div>
                 </h5>
                 <div className="card-body">
@@ -199,6 +273,35 @@ const IndexArOverdue = () => {
                             onClick={loadAll}
                         >
                             Filtrar
+                        </button>
+                        {/* HU-AR-10 E3: export */}
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-success ms-2"
+                            disabled={upcoming.length === 0}
+                            onClick={() => downloadCsv(upcoming, [
+                                {key:'invoiceNumber',label:'Numero'},
+                                {key:'thirdPartyName',label:'Cliente'},
+                                {key:'thirdPartyNit',label:'NIT'},
+                                {key:'dueDate',label:'Vence'},
+                                {key:'balanceDue',label:'Saldo'},
+                            ], 'proximas-vencer.csv')}
+                        >
+                            <i className="ri-file-excel-2-line"></i> CSV
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-danger ms-2"
+                            disabled={upcoming.length === 0}
+                            onClick={() => printToPdf('Proximas a Vencer', upcoming, [
+                                {key:'invoiceNumber',label:'Numero'},
+                                {key:'thirdPartyName',label:'Cliente'},
+                                {key:'thirdPartyNit',label:'NIT'},
+                                {key:'dueDate',label:'Vence'},
+                                {key:'balanceDue',label:'Saldo'},
+                            ])}
+                        >
+                            <i className="ri-file-pdf-line"></i> PDF
                         </button>
                     </div>
                 </h5>

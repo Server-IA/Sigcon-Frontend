@@ -47,42 +47,39 @@ const UpdatedPUC = ({ modalRef, modalInstance, account, setAccount, dataTableRef
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // HU-CFG-RF-03 (Bloque AP, 2026-05-04): el handler usaba `setErrorsMessage`
+        // (typo, funcion inexistente) que lanzaba ReferenceError silencioso y dejaba
+        // el boton Guardar "no hace nada". Refactor a setErrors field-level
+        // consistente con el resto del proyecto.
+        const fieldErrors = {};
         if (!accountUpdated.code || accountUpdated.code.trim() === '') {
-            setErrorsMessage({field: 'code', message: 'El código de la cuenta es obligatorio'});
-            return;
-        }
-        if (!/^[0-9]{1,10}$/.test(accountUpdated.code)) {
-            setErrorsMessage({field: 'code', message: 'El código solo debe contener números y tener máximo 10 dígitos'});
-            return;
+            fieldErrors.code = 'El código de la cuenta es obligatorio';
+        } else if (!/^[0-9]{1,10}$/.test(accountUpdated.code)) {
+            fieldErrors.code = 'El código solo debe contener números y tener máximo 10 dígitos';
         }
         if (!accountUpdated.name || accountUpdated.name.trim() === '') {
-            setErrorsMessage({field: 'name', message: 'El nombre de la cuenta es obligatorio'});
+            fieldErrors.name = 'El nombre de la cuenta es obligatorio';
+        } else if (!/^[a-zA-Z0-9 áéíóúÁÉÍÓÚñÑüÜ()._,\-]{1,100}$/.test(accountUpdated.name)) {
+            // QA-BLOQUE-AO (2026-04-29): regex permisivo. Antes rechazaba parentesis y
+            // acentos, lo cual bloqueaba editar cualquier cuenta PUC seedeada (todos
+            // los nombres del PUC Colombia tienen formato "X (codigo)" con tildes/().
+            fieldErrors.name = 'El nombre puede contener letras, numeros, espacios, guiones, parentesis, puntos y comas (maximo 100 caracteres)';
+        }
+        if (!accountUpdated.accountClass) fieldErrors.accountClass = 'Por favor seleccione la clase de la cuenta';
+        if (!accountUpdated.level)        fieldErrors.level        = 'Por favor seleccione el nivel jerárquico';
+        if (!accountUpdated.nature)       fieldErrors.nature       = 'Por favor seleccione la naturaleza de la cuenta';
+        if (!accountUpdated.status)       fieldErrors.status       = 'Por favor seleccione el estado de la cuenta';
+
+        if (Object.keys(fieldErrors).length > 0) {
+            setErrors(fieldErrors);
+            setErrorMessage({ message: 'Por favor corrija los campos marcados antes de guardar.', type: 'danger', show: true });
+            try {
+                const body = modalRef?.current?.querySelector('.modal-body');
+                if (body) body.scrollTop = 0;
+            } catch (_) { /* ignore */ }
             return;
         }
-        // QA-BLOQUE-AO (2026-04-29): regex permisivo. Antes rechazaba parentesis y
-        // acentos, lo cual bloqueaba editar cualquier cuenta PUC seedeada (todos los
-        // nombres del PUC Colombia tienen formato "X (codigo)" con tildes/(). Mismo
-        // patron del fix de cuentas-contables (Bloque Q).
-        if (!/^[a-zA-Z0-9 áéíóúÁÉÍÓÚñÑüÜ()._,\-]{1,100}$/.test(accountUpdated.name)) {
-            setErrorsMessage({field: 'name', message: 'El nombre puede contener letras, numeros, espacios, guiones, parentesis, puntos y comas (maximo 100 caracteres)'});
-            return;
-        }
-        if (!accountUpdated.accountClass) {
-            setErrorsMessage({field: 'accountClass', message: 'Por favor seleccione la clase de la cuenta'});
-            return;
-        }
-        if (!accountUpdated.level) {
-            setErrorsMessage({field: 'level', message: 'Por favor seleccione el nivel jerárquico'});
-            return;
-        }
-        if (!accountUpdated.nature) {
-            setErrorsMessage({field: 'nature', message: 'Por favor seleccione la naturaleza de la cuenta'});
-            return;
-        }
-        if (!accountUpdated.status) {
-            setErrorsMessage({field: 'status', message: 'Por favor seleccione el estado de la cuenta'});
-            return;
-        }
+        setErrors({});
 
         const url = base_url(['api', 'v1', 'chart-of-accounts', accountUpdated.id]);
         const payload = {

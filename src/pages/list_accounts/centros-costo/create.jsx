@@ -18,12 +18,15 @@ const CreateCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCost
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
 
+    // HU-CFG-RF-17 (Bloque AQ, 2026-05-04): el form no expone "Estado" (input comentado),
+    // pero el backend lo exige obligatorio. Default a 'ACTIVE' para que tras Limpiar +
+    // re-llenar + Guardar el payload nunca llegue con status vacio.
     const initialState = {
         id: '',
         code: '',
         name: '',
         description: '',
-        status: '',
+        status: 'ACTIVE',
     };
 
     // HU-CFG-17 (2026-04-27): validacion previa al submit.
@@ -49,6 +52,8 @@ const CreateCentroCosto = ({ modalRef, modalInstance, centroCosto, setCentroCost
             name: (centroCosto.name || '').trim(),
             code: (centroCosto.code || '').trim(),
             description: (centroCosto.description || '').trim(),
+            // HU-CFG-RF-17 (Bloque AQ): defensa contra status vacio tras Limpiar.
+            status: centroCosto.status || 'ACTIVE',
         };
         const url = base_url(API_STORE);
         try {

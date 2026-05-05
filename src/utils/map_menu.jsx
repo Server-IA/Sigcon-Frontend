@@ -1,5 +1,10 @@
 import Home from "../pages/home/index";
 import PerfilPage from "../pages/parametrizacion/perfil/index";
+// Sprint 2 — HU-PA-BRAND-01 + HU-PA-NAV-01
+import IdentidadVisualPage from "../pages/parametrizacion/identidad-visual/index";
+import NavegacionPage from "../pages/parametrizacion/navegacion/index";
+// Sprint 4 — HU-PA-18 notificaciones por rol
+import NotificacionesRolPage from "../pages/parametrizacion/notificaciones-rol/index";
 
 // Parametrizacion
 import IndexModules from "../pages/parametrizacion/modules/index";
@@ -243,6 +248,7 @@ import AdminRoute from "../components/organism/AdminRoute";
 
 // Bloque F (multi-tenant): gatekeeper para rutas /platform/* (solo PLATFORM_ADMIN).
 import PlatformRoute from "../components/organism/PlatformRoute";
+import TenantOnlyRoute from "../components/organism/TenantOnlyRoute";
 
 // Plataforma (HU-PLAT-01/02/05/06)
 import IndexEmpresas from "../pages/platform/empresas/index";
@@ -258,17 +264,31 @@ const platformOnly = (Component) => () => (
     <PlatformRoute><Component /></PlatformRoute>
 );
 
+/** Bloque AM (2026-05-03): paginas tenant-specific (no aplican a PLATFORM_ADMIN). */
+const tenantOnly = (Component) => () => (
+    <TenantOnlyRoute><Component /></TenantOnlyRoute>
+);
+
 export const COMPONENT_MAP = [
   { id: "HOME", name: "Home", component: Home },
   { id: "PERFIL", name: "Perfil", component: PerfilPage },
-  { id: "MODULOS", name: "Módulos", component: IndexModules },
-  { id: "MENUS", name: "Menus", component: IndexMenus },
-  { id: "PERMISSIONS", name: "Permisos", component: PermissionsIndex },
+  // Sprint 2 — Branding (HU-PA-BRAND-01) y Navegacion (HU-PA-NAV-01)
+  { id: "IDENTIDAD_VISUAL", name: "Identidad Visual", component: tenantOnly(IdentidadVisualPage) },
+  // Bloque AM ajuste fino (2026-05-03): Navegacion y Notificaciones por rol
+  // son personalizacion del admin de empresa (cada empresa decide qué eventos
+  // disparan notificacion in-app y qué orden tiene su navegacion). Pasan a
+  // tenantOnly para que el platform admin no las vea (no opera una empresa).
+  { id: "NAVEGACION", name: "Navegacion", component: tenantOnly(NavegacionPage) },
+  { id: "NOTIFICACIONES_ROL", name: "Notificaciones por rol", component: tenantOnly(NotificacionesRolPage) },
+  { id: "MODULOS", name: "Módulos", component: platformOnly(IndexModules) },
+  { id: "MENUS", name: "Menus", component: platformOnly(IndexMenus) },
+  { id: "PERMISSIONS", name: "Permisos", component: platformOnly(PermissionsIndex) },
   { id: "USERS", name: "Usuarios", component: IndexUsers },
   { id: "ROLES", name: "Roles", component: IndexRoles },
-  { id: "PARAMETROS", name: "Parámetros", component: IndexParameters },
+  // Parametros del sistema: solo PLATFORM_ADMIN (config global FONT/COLOR/etc.).
+  { id: "PARAMETROS", name: "Parámetros", component: platformOnly(IndexParameters) },
   { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
-  { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: MenuPermissionIndex },
+  { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: platformOnly(MenuPermissionIndex) },
   { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },
   { id: "DEPRECIATION_RULES", name: "Reglas de Depreciación", component: IndexDepreciationRules },
   { id: "PUC", name: "Catálogo PUC", component: IndexPUC },
@@ -297,11 +317,12 @@ export const COMPONENT_MAP = [
   { id: "CHEQUERAS", name: "Chequeras", component: IndexCheckbooks },
   { id: "BANK_ACCOUNTS", name: "Cuentas Bancarias", component: IndexBankAccounts },
   { id: "CASH_LIST", name: "Lista de Cajas", component: IndexCashList },
-  { id: "PAISES", name: "Países", component: IndexPaises },
-  { id: "MUNICIPIOS", name: "Municipios", component: IndexMunicipios },
-  { id: "REPORT_TYPES", name: "Tipos de Reporte", component: IndexReportTypes },
-  { id: "REPORT_TEMPLATES", name: "Plantillas de Reporte", component: IndexReportTemplates },
-  { id: "SYSTEM_WITHHOLDINGS", name: "Retenciones del Sistema", component: IndexSystemWithholdings },
+  // Bloque AM (2026-05-03): Paises y Municipios son catalogos globales del sistema.
+  { id: "PAISES", name: "Países", component: platformOnly(IndexPaises) },
+  { id: "MUNICIPIOS", name: "Municipios", component: platformOnly(IndexMunicipios) },
+  { id: "REPORT_TYPES", name: "Tipos de Reporte", component: tenantOnly(IndexReportTypes) },
+  { id: "REPORT_TEMPLATES", name: "Plantillas de Reporte", component: tenantOnly(IndexReportTemplates) },
+  { id: "SYSTEM_WITHHOLDINGS", name: "Retenciones del Sistema", component: tenantOnly(IndexSystemWithholdings) },
   { id: "COMMERCIAL_DATA", name: "Datos Comerciales", component: IndexCommercialData },
   { id: "CASH_FLOW_PROJECTIONS", name: "Proyecciones de Flujo de Caja", component: IndexProjections },
   { id: "CASH_AUDITS", name: "Arqueos de Caja", component: IndexCashAudits },

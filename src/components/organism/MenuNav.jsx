@@ -13,6 +13,32 @@ const MenuNav = () =>{
     const menuInstance = useRef(null);
 
     const modules = useSelector(state => state.modules.modules ?? []);
+    const user = useSelector(state => state.user?.user);
+
+    /*
+     * Bloque AM (2026-05-03): el sidebar mostraba "S SIGCON" hardcoded ignorando
+     * la identidad visual de la empresa configurada en /parametrizacion/identidad-visual.
+     * Ahora: PLATFORM_ADMIN ve el branding default SIGCON. ADMIN_EMPRESA lee
+     * sigcon_brand_theme (logo + nombre comercial) que se persiste al Guardar.
+     */
+    let brandName = 'SIGCON';
+    let brandLetter = 'S';
+    let brandLogo = null;
+    if (user && !user.isPlatformAdmin) {
+        try {
+            const theme = JSON.parse(localStorage.getItem('sigcon_brand_theme') || '{}');
+            if (theme.brandName && theme.brandName.trim().length > 0) {
+                brandName = theme.brandName.trim();
+                brandLetter = brandName.charAt(0).toUpperCase();
+            } else if (user.companyName) {
+                brandName = user.companyName;
+                brandLetter = brandName.charAt(0).toUpperCase();
+            }
+            if (theme.logoData && typeof theme.logoData === 'string' && theme.logoData.startsWith('data:')) {
+                brandLogo = theme.logoData;
+            }
+        } catch (_) { /* ignore */ }
+    }
 
     const toggleMenu = () => {
         if (window.Helpers) {
@@ -48,14 +74,27 @@ const MenuNav = () =>{
                     <Link to="/dashboard" className="app-brand-link">
                         <span className="app-brand-logo demo">
                             <span style={{color: "var(--bs-primary)"}}>
-                                <div className="auth-logo-brand">
-                                    <div className="auth-logo-circle">
-                                        <span className="auth-logo-letter">S</span>
+                                {brandLogo ? (
+                                    <img
+                                        src={brandLogo}
+                                        alt={brandName}
+                                        style={{ maxHeight: 36, maxWidth: 120, objectFit: 'contain' }}
+                                    />
+                                ) : (
+                                    <div className="auth-logo-brand">
+                                        <div className="auth-logo-circle">
+                                            <span className="auth-logo-letter">{brandLetter}</span>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </span>
                         </span>
-                        <span className="app-brand-text demo menu-text fw-semibold ms-2 text-primary">SIGCON</span>
+                        <span
+                            className="app-brand-text demo menu-text fw-semibold ms-2 text-primary"
+                            style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            title={brandName}>
+                            {brandName}
+                        </span>
                     </Link>
 
                     <a href="#!" onClick={toggleMenu} className="layout-menu-toggle menu-link text-large ms-auto">

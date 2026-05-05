@@ -84,6 +84,19 @@ const ExchangeRateIndex = () => {
             data: 'value',
             name: 'value',
         },
+        // HU-CFG-RF-26 (Bloque AQ, 2026-05-04): columna nueva "Tipo de cambio"
+        // visible en el listado (Oficial / Preferencial). El campo ya existe en
+        // el DTO `ExchangeRateDTO.exchangeType`.
+        {
+            title: 'Tipo de cambio',
+            data: 'exchangeType',
+            name: 'exchangeType',
+            render: (val) => {
+                if (!val) return '-';
+                const map = { OFICIAL: 'Oficial', PREFERENCIAL: 'Preferencial' };
+                return map[val] || val;
+            },
+        },
         {
             title: 'Fecha de inicio',
             data: 'startDate',

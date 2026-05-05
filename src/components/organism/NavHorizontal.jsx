@@ -7,6 +7,7 @@ import { fetchHelper } from "../../utils/fetch";
 
 import avatar from '../../../public/assets/img/avatars/1.png';
 import { refreshMenu } from "../../routes/routes";
+import NotificationBell from "./NotificationBell";
 
 // import { ComponentsFinal } from "../../utils/map_menu";
 
@@ -37,19 +38,21 @@ const NavHorizontal = () => {
             }
         }).then(async (result) => {
             if (result.isConfirmed) {
-
+                // QA 2026-05-05: el flow original no tenia try/catch.
+                // Si el endpoint /auth/logout fallaba (token expirado, red caida,
+                // 401, etc.), la excepcion propagaba y dispatch + redirect NO se
+                // ejecutaban. Resultado: el usuario veia "Logout no hace nada".
+                // Ahora: el logout local SIEMPRE se ejecuta, aunque el server
+                // falle (best-effort).
                 const url = base_url(['auth/logout']);
-
-                await fetchHelper.post(url, {}, {}, 500);
+                try {
+                    await fetchHelper.post(url, {}, {}, 500);
+                } catch (err) {
+                    // Backend pudo invalidar el token igual; el front debe seguir.
+                    console.warn('[logout] backend devolvio error, se cierra sesion localmente:', err);
+                }
                 dispatch({ type: "LOGOUT" });
                 window.location.href = base_redirect_path(true);
-                window.Swal.fire({
-                    title: 'Cerrando sesión',
-                    text: 'Cerrando sesión...',
-                    icon: 'success',
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                });
             }
         });
     }
@@ -89,7 +92,10 @@ const NavHorizontal = () => {
                 ) : null}
 
                 <ul className="navbar-nav flex-row align-items-center ms-auto">
-                    
+
+                    {/* HU-PA-21/22/23: campanita de notificaciones in-app */}
+                    <NotificationBell />
+
                     {/* <li className="nav-item dropdown-style-switcher dropdown me-1 me-xl-0">
                         <a
                         className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow"
@@ -217,8 +223,44 @@ const NavHorizontal = () => {
                             </li>
 
                             {
+                                /* Bloque AM (2026-05-03): el dropdown del avatar listaba TODOS
+                                   los menus del modulo Parametrizacion sin distincion de rol.
+                                   PLATFORM_ADMIN y ADMIN_EMPRESA tienen funciones DIFERENTES:
+                                     - PLATFORM_ONLY: configuracion del sistema (catalogos
+                                       globales, modulos/menus/permisos, navegacion). Solo
+                                       PLATFORM_ADMIN.
+                                     - TENANT_ONLY: configuracion DE la empresa (identidad
+                                       visual, plantillas/tipos de reporte, retenciones,
+                                       parametros propios). Solo ADMIN_EMPRESA. El
+                                       PLATFORM_ADMIN no las usa porque no opera una
+                                       empresa concreta.
+                                     - Compartidos (Perfil, Roles, Usuarios): visibles para
+                                       ambos pero con scope distinto (backend filtra). */
+                            }
+                            {
                                 modulos?.filter((module) => module?.id == 1).map((module) => {
-                                    return module?.menus?.filter((menu) => menu.visible).map((menu) => {
+                                    /* Bloque AM ajuste fino (2026-05-03): el admin de
+                                       empresa NO necesita Parametros (es config sistema).
+                                       SI necesita Navegacion y Notificaciones por rol para
+                                       personalizar su empresa. */
+                                    const PLATFORM_ONLY = new Set([
+                                        'MODULOS','MENUS','PERMISSIONS','MENUSPERMISSIONS',
+                                        'PAISES','MUNICIPIOS','PARAMETROS'
+                                    ]);
+                                    const TENANT_ONLY = new Set([
+                                        'IDENTIDAD_VISUAL','REPORT_TYPES','REPORT_TEMPLATES',
+                                        'SYSTEM_WITHHOLDINGS','NAVEGACION','NOTIFICACIONES_ROL'
+                                    ]);
+                                    return module?.menus
+                                        ?.filter((menu) => menu.visible)
+                                        ?.filter((menu) => {
+                                            const comp = menu.component || menu.componentName;
+                                            if (user?.isPlatformAdmin) {
+                                                return !TENANT_ONLY.has(comp);
+                                            }
+                                            return !PLATFORM_ONLY.has(comp);
+                                        })
+                                        ?.map((menu) => {
                                         return (
                                             <li key={menu.id}>
                                                 <Link to={`${module.url}/${menu.path}`} className="dropdown-item">

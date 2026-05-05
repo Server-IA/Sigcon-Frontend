@@ -84,7 +84,19 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
     }).catch(async error => {
         clearTimeout(timeoutId);
         window.Swal.close();
-        console.error(error);
+        // Errores de red (fetch fail por backend caido, CORS, abort) usan
+        // console.debug para no llenar la consola en escenarios esperados
+        // (ej. NotificationBell polling durante reload del backend).
+        // Errores estructurados del backend (JSON con msg) sí loguean a error.
+        // Nota: este chequeo basico es para decidir el nivel de log; mas abajo
+        // hay un isNetworkError extendido (con includes) para decidir reintentos.
+        const isNetworkErrorEarly = error instanceof TypeError
+            || (error && error.name === 'AbortError');
+        if (isNetworkErrorEarly) {
+            console.debug('[fetch network]', error.message);
+        } else {
+            console.error(error);
+        }
         // 🟡 Error controlado del backend (JSON)
         let error_parse;
         try {

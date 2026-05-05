@@ -139,7 +139,6 @@ const FilterRole = ({ filterRef, filterInstance, dataTableRef }) => {
                                     getTable().columns().search('');
                                     getTable().search('');
                                     getTable().draw();
-                                    filterInstance?.current?.hide();
                                 }}
                             >
                                 Limpiar

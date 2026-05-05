@@ -25,10 +25,18 @@ const UpdatedApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage, s
         notes: '',
     });
     const [paymentForms, setPaymentForms] = useState([]);
+    const [accountingAccounts, setAccountingAccounts] = useState([]);
     const [errorMessage, setErrorMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    // HU-AP-02 (Bloque AT/AU): editar lineas/monto solo si la factura es PENDING.
+    // PENDING significa "sin pagos aplicados" por definicion del estado, sin
+    // importar si balanceDue == totalPayment (puede haber retenciones que hacen
+    // que difieran). PARTIAL/PAID/SETTLED/VOIDED bloquean edicion de lineas.
+    const canEditLines = selected?.status === 'PENDING';
+    const [editLines, setEditLines] = useState(false);
+    const [lines, setLines] = useState([]);
 
-    /** Carga el catalogo de formas de pago. */
+    /** Carga catalogos: formas de pago + cuentas contables. */
     useEffect(() => {
         (async () => {
             try {
@@ -40,6 +48,19 @@ const UpdatedApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage, s
                 const list = data?.data || data || [];
                 if (Array.isArray(list)) {
                     setPaymentForms(list.map((pf) => ({ id: pf.id, name: pf.name })));
+                }
+            } catch (e) { /* noop */ }
+            try {
+                const acc = await fetchHelper.post(
+                    base_url(['api', 'v1', 'accounting-accounts']),
+                    { start: 0, length: 200, draw: 1, columns: [], order: [], search: { value: '' } },
+                    {}, 0, true
+                );
+                const accList = acc?.data || [];
+                if (Array.isArray(accList)) {
+                    setAccountingAccounts(accList.map((a) => ({
+                        id: a.id, name: a.customName || `${a.pucAccount?.code || ''} - ${a.customName || ''}`
+                    })));
                 }
             } catch (e) { /* noop */ }
         })();
@@ -70,6 +91,9 @@ const UpdatedApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage, s
             return;
         }
 
+        // HU-AP-02 (Bloque AT): si el usuario activo "Editar lineas", incluir
+        // lineInvoices en el payload. El backend valida que la factura este
+        // en PENDING sin pagos.
         const payload = {
             supplierInvoiceNumber: form.supplierInvoiceNumber?.trim() || null,
             resolutionInvoice:     form.resolutionInvoice?.trim() || null,
@@ -77,10 +101,22 @@ const UpdatedApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage, s
             invoiceDueDay:         form.invoiceDueDay !== '' ? Number(form.invoiceDueDay) : null,
             paymentFormId:         form.paymentFormId ? Number(form.paymentFormId) : null,
             notes:                 form.notes?.trim() || null,
-            // Campos obligatorios del DTO pero inmutables (se envian con valor actual)
             thirdPartyId:          selected.thirdPartyId,
-            lineInvoices:          [],
+            version:               selected.version,
+            lineInvoices:          editLines ? lines.filter(l => l.accountingAccountId && l.quantity > 0 && l.price > 0)
+                                                     .map(l => ({
+                                                         accountingAccountId: Number(l.accountingAccountId),
+                                                         description: l.description || '',
+                                                         quantity: Number(l.quantity),
+                                                         price: Number(l.price),
+                                                         taxRulesIds: []
+                                                     })) : [],
         };
+
+        if (editLines && payload.lineInvoices.length === 0) {
+            setErrorMessage('Debe agregar al menos una linea valida con cantidad y precio mayores a cero.');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -197,12 +233,102 @@ const UpdatedApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage, s
                                 </div>
                             </div>
 
-                            <small className="text-muted mt-3 d-block">
-                                <i className="ri-information-line me-1" />
-                                Las lineas, el proveedor y los totales no pueden modificarse una vez
-                                generado el asiento contable. Si necesitas corregir montos, anula la
-                                factura y crea una nueva.
-                            </small>
+                            {/* HU-AP-02 (Bloque AT): editar lineas/monto solo si PENDING sin pagos */}
+                            {canEditLines ? (
+                                <div className="mt-3">
+                                    <div className="form-check form-switch mb-2">
+                                        <input className="form-check-input" type="checkbox" id="toggleEditLines"
+                                               checked={editLines}
+                                               onChange={(e) => {
+                                                   setEditLines(e.target.checked);
+                                                   if (e.target.checked && lines.length === 0) {
+                                                       setLines([{ accountingAccountId: '', description: '', quantity: 1, price: 0 }]);
+                                                   }
+                                               }} />
+                                        <label className="form-check-label" htmlFor="toggleEditLines">
+                                            <strong>Editar lineas y monto</strong>
+                                            <small className="text-muted ms-2">(reemplaza las lineas actuales y recalcula el JE)</small>
+                                        </label>
+                                    </div>
+                                    {editLines && (
+                                        <div className="border rounded p-2">
+                                            <div className="row fw-bold small mb-1 text-muted">
+                                                <div className="col-md-4">Cuenta contable</div>
+                                                <div className="col-md-3">Descripcion</div>
+                                                <div className="col-md-2">Cantidad</div>
+                                                <div className="col-md-2">Precio</div>
+                                                <div className="col-md-1"></div>
+                                            </div>
+                                            {lines.map((ln, idx) => (
+                                                <div className="row g-2 mb-2 align-items-center" key={idx}>
+                                                    <div className="col-md-4">
+                                                        <select className="form-select form-select-sm"
+                                                            value={ln.accountingAccountId || ''}
+                                                            onChange={(e) => {
+                                                                const next = [...lines];
+                                                                next[idx].accountingAccountId = e.target.value;
+                                                                setLines(next);
+                                                            }}>
+                                                            <option value="">-- Cuenta --</option>
+                                                            {accountingAccounts.map(a => (
+                                                                <option key={a.id} value={a.id}>{a.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="col-md-3">
+                                                        <input type="text" className="form-control form-control-sm"
+                                                            placeholder="Descripcion"
+                                                            value={ln.description || ''}
+                                                            onChange={(e) => {
+                                                                const next = [...lines];
+                                                                next[idx].description = e.target.value;
+                                                                setLines(next);
+                                                            }} />
+                                                    </div>
+                                                    <div className="col-md-2">
+                                                        <input type="number" min="1" className="form-control form-control-sm"
+                                                            value={ln.quantity}
+                                                            onChange={(e) => {
+                                                                const next = [...lines];
+                                                                next[idx].quantity = e.target.value;
+                                                                setLines(next);
+                                                            }} />
+                                                    </div>
+                                                    <div className="col-md-2">
+                                                        <input type="number" min="0" className="form-control form-control-sm"
+                                                            value={ln.price}
+                                                            onChange={(e) => {
+                                                                const next = [...lines];
+                                                                next[idx].price = e.target.value;
+                                                                setLines(next);
+                                                            }} />
+                                                    </div>
+                                                    <div className="col-md-1">
+                                                        <button type="button" className="btn btn-sm btn-label-danger"
+                                                            onClick={() => setLines(lines.filter((_, i) => i !== idx))}
+                                                            disabled={lines.length === 1}>
+                                                            <i className="ri-close-line" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <button type="button" className="btn btn-sm btn-outline-primary"
+                                                onClick={() => setLines([...lines, { accountingAccountId: '', description: '', quantity: 1, price: 0 }])}>
+                                                <i className="ri-add-line" /> Agregar linea
+                                            </button>
+                                            <div className="mt-2 text-end small">
+                                                <strong>Total:</strong> $ {lines.reduce((acc, l) => acc + (Number(l.quantity) || 0) * (Number(l.price) || 0), 0).toLocaleString('es-CO')}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <small className="text-muted mt-3 d-block">
+                                    <i className="ri-information-line me-1" />
+                                    Las lineas y los totales no pueden modificarse en una factura con pagos
+                                    aplicados. Si necesitas corregir montos, anula la factura y crea una nueva.
+                                </small>
+                            )}
                         </div>
                         <div className="modal-footer">
                             <button type="button" className="btn btn-label-secondary" data-bs-dismiss="modal">

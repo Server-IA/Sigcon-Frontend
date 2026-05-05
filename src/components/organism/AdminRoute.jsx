@@ -34,7 +34,12 @@ const Page403 = lazy(() => import('../../pages/errors/page_403'));
  */
 const AdminRoute = ({ children }) => {
     const user = useSelector(state => state.user.user);
-    const isAdmin = user?.isAdmin || false;
+    // Bloque AM (2026-05-03): tambien permitir PLATFORM_ADMIN. La cuenta de
+    // plataforma debe poder acceder a las paginas de admin (Identidad Visual,
+    // Tipos/Plantillas de Reporte, Retenciones Sistema). Antes solo isAdmin
+    // (ADMIN_EMPRESA) pasaba; el platform admin recibia 403 al intentar
+    // configurar paginas de la propia plataforma.
+    const isAdmin = user?.isAdmin || user?.isPlatformAdmin || false;
 
     if (!user) {
         // No hay usuario logueado todavia - mostrar loading mientras se hidrata

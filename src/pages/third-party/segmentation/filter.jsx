@@ -183,7 +183,6 @@ const FilterSegmentation = ({ filterRef, filterInstance, dataTableRef, segments,
                                 ]);
                                 const t = getTable();
                                 if (t) { t.columns().search(''); t.search(''); t.draw(); }
-                                filterInstance?.current?.hide();
                             }}
                         >
                             Limpiar

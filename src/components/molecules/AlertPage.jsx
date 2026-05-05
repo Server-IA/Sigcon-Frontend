@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState, useRef } from 'react';
 
-const AlertPage = ({ type, message, show, duration = 5000, onChange }) => {
+const AlertPage = ({ type = 'info', message = '', show = false, duration = 5000, onChange = () => {} }) => {
     const [visible, setVisible] = useState(false);
     const [animState, setAnimState] = useState('hidden'); // 'hidden' | 'entering' | 'visible' | 'exiting'
     const timeoutRef = useRef(null);
@@ -92,12 +92,14 @@ const AlertPage = ({ type, message, show, duration = 5000, onChange }) => {
     )
 }
 
+// PropTypes opcionales con defaults definidos arriba. AlertPage es seguro
+// renderizar con props vacios (queda invisible si show=false).
 AlertPage.propTypes = {
-    type: PropTypes.string.isRequired,
-    message: PropTypes.string.isRequired,
-    show: PropTypes.bool.isRequired,
+    type: PropTypes.string,
+    message: PropTypes.string,
+    show: PropTypes.bool,
     duration: PropTypes.number,
-    onChange: PropTypes.func.isRequired,
+    onChange: PropTypes.func,
 }
 
 export default AlertPage;

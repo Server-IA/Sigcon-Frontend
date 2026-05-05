@@ -86,7 +86,6 @@ const FilterUser = ({ dataTableRef, filterRef, filterInstance, roles }) => {
                                 dataTableRef?.current?.table().columns().search('');
                                 dataTableRef?.current?.table().search('');
                                 dataTableRef?.current?.table().draw();
-                                filterInstance?.current?.hide();
                             }}
                         >
                             Limpiar

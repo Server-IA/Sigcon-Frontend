@@ -126,9 +126,15 @@ const IndexApInvoices = () => {
                 // Solo se puede eliminar (soft delete) si esta en estado PENDIENTE.
                 // HU-AP-03: liquidar SOLO si esta totalmente pagada (saldo=0) y no
                 // ya liquidada/anulada.
-                const isEditable    = row?.status !== 'VOIDED' && row?.status !== 'SETTLED';
+                // HU-AP-02 (Bloque AT): no permitir edit en VOIDED, SETTLED ni PAID
+                const isEditable    = row?.status !== 'VOIDED' && row?.status !== 'SETTLED' && row?.status !== 'PAID';
                 const isDeletable   = row?.status === 'PENDING';
                 const isSettleable  = row?.status === 'PAID';
+                // HU-AP-25 (Bloque AS): solo se puede anular factura en estado
+                // PENDIENTE no originada por AAEF. El backend valida E1-E9; el
+                // boton se deshabilita en la UI segun el estado para mejor UX.
+                const isVoidable    = row?.status === 'PENDING'
+                                     && row?.source !== 'AAEF';
                 return `
                 <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-label-info action-btn"
@@ -150,6 +156,12 @@ const IndexApInvoices = () => {
                         data-action="attachments" data-id="${id}"
                         title="Documentos soporte (HU-AP-13)">
                         <i class="ri-attachment-2"></i>
+                    </button>
+                    <button class="btn btn-sm btn-label-warning action-btn"
+                        data-action="void" data-id="${id}"
+                        title="Anular factura (HU-AP-25)"
+                        ${!isVoidable ? 'disabled' : ''}>
+                        <i class="ri-close-circle-line"></i>
                     </button>
                     <button class="btn btn-sm btn-label-danger action-btn"
                         data-action="delete" data-id="${id}" title="Eliminar"
@@ -255,11 +267,14 @@ const IndexApInvoices = () => {
             }
 
             if (action === 'edit') {
-                if (selected.status === 'VOIDED' || selected.status === 'SETTLED') {
+                if (selected.status === 'VOIDED' || selected.status === 'SETTLED' || selected.status === 'PAID') {
                     setMessage({
                         type: 'warning',
                         show: true,
-                        message: 'No se puede editar una factura anulada o liquidada.',
+                        message: 'No se puede editar una factura ' + (
+                            selected.status === 'PAID' ? 'totalmente pagada' :
+                            selected.status === 'VOIDED' ? 'anulada' : 'liquidada') +
+                            '. Si necesita correcciones, anule y registre una nueva factura.',
                     });
                     return;
                 }
@@ -291,6 +306,46 @@ const IndexApInvoices = () => {
                     modalAttachInstance.current = new window.bootstrap.Modal(modalAttachRef.current);
                 }
                 modalAttachInstance.current.show();
+                return;
+            }
+
+            if (action === 'void') {
+                // HU-AP-25 (Bloque AS): anular factura con motivo (>=10 chars).
+                // Backend valida E1-E9: AAEF, PAGADA, PARCIAL, periodo cerrado.
+                window.Swal.fire({
+                    title: 'Anular factura?',
+                    html: `<p>Se anulara la factura <strong>#${selected.supplierInvoiceNumber || selected.id}</strong>.</p>
+                           <p class="text-muted small">Esta accion conserva la trazabilidad pero marca la factura como ANULADA. Si la factura tiene asiento contable contabilizado, se generara un asiento de reversa.</p>`,
+                    input: 'textarea',
+                    inputLabel: 'Motivo de anulacion (minimo 10 caracteres)',
+                    inputPlaceholder: 'Indique el motivo...',
+                    inputAttributes: { 'aria-label': 'Motivo de anulacion' },
+                    showCancelButton: true,
+                    confirmButtonText: 'Si, anular',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#ff9800',
+                    inputValidator: (value) => {
+                        if (!value || value.trim().length < 10) {
+                            return 'Debe ingresar el motivo de anulacion (minimo 10 caracteres)';
+                        }
+                    }
+                }).then(async (result) => {
+                    if (!result.isConfirmed) return;
+                    try {
+                        await fetchHelper.post(
+                            base_url(['api', 'v1', 'invoices', selected.id, 'void']),
+                            { reason: result.value }, {}, 1000
+                        );
+                        setMessage({ type: 'success', show: true, message: 'Factura anulada exitosamente.' });
+                        dataTableRef?.current?.ajax.reload();
+                    } catch (err) {
+                        setMessage({
+                            type: 'danger',
+                            show: true,
+                            message: err?.message || err?.msg || 'Error al anular la factura.',
+                        });
+                    }
+                });
                 return;
             }
 

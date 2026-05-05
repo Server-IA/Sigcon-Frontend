@@ -95,8 +95,11 @@ const IndexApPurchaseOrders = () => {
             data: 'id',
             searchable: false,
             render: (id, _type, row) => {
-                const isDraft   = row?.status === 'DRAFT';
-                const isPending = row?.status === 'PENDING';
+                const isDraft    = row?.status === 'DRAFT';
+                const isPending  = row?.status === 'PENDING';
+                const isRejected = row?.status === 'REJECTED';
+                // HU-AP-17 E2 (Bloque AT): rechazada se puede editar y re-enviar.
+                const isEditable = isDraft || isRejected;
                 return `
                 <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-label-info action-btn"
@@ -104,13 +107,14 @@ const IndexApPurchaseOrders = () => {
                         <i class="ri-eye-line"></i>
                     </button>
                     <button class="btn btn-sm btn-label-warning action-btn"
-                        data-action="edit" data-id="${id}" title="Editar (solo borrador)"
-                        ${!isDraft ? 'disabled' : ''}>
+                        data-action="edit" data-id="${id}"
+                        title="${isRejected ? 'Editar y re-enviar a aprobacion (HU-AP-17 E2)' : 'Editar (solo borrador)'}"
+                        ${!isEditable ? 'disabled' : ''}>
                         <i class="ri-edit-line"></i>
                     </button>
                     <button class="btn btn-sm btn-label-primary action-btn"
                         data-action="submit" data-id="${id}" title="Enviar a aprobacion"
-                        ${!isDraft ? 'disabled' : ''}>
+                        ${!isEditable ? 'disabled' : ''}>
                         <i class="ri-send-plane-line"></i>
                     </button>
                     <button class="btn btn-sm btn-label-success action-btn"
@@ -217,18 +221,20 @@ const IndexApPurchaseOrders = () => {
         }
     };
 
-    /** Rechaza una orden de compra con motivo. */
+    /** HU-AP-17 E4 (Bloque AS): rechaza OC con motivo (>=10 chars). Validacion
+     * client-side espejo del backend para feedback inmediato. */
     const handleReject = async (selected) => {
         const result = await window.Swal.fire({
             title: 'Rechazar Orden?',
-            input: 'text',
-            inputLabel: 'Motivo del rechazo',
-            inputPlaceholder: 'Ingrese el motivo',
+            input: 'textarea',
+            inputLabel: 'Motivo del rechazo (minimo 10 caracteres)',
+            inputPlaceholder: 'Indique el motivo de rechazo...',
             showCancelButton: true,
             confirmButtonText: 'Rechazar',
             cancelButtonText: 'Cancelar',
             inputValidator: (value) => {
-                if (!value || !value.trim()) return 'El motivo es obligatorio';
+                if (!value || !value.trim()) return 'Debe ingresar el motivo del rechazo para continuar';
+                if (value.trim().length < 10) return 'El motivo del rechazo debe tener al menos 10 caracteres';
             },
         });
         if (!result.isConfirmed) return;
@@ -281,8 +287,10 @@ const IndexApPurchaseOrders = () => {
             }
 
             if (action === 'edit') {
-                // HU-AP-17 (2026-04-28): editar OC en estado borrador
-                if (selected.status !== 'DRAFT') return;
+                // HU-AP-17 E2 (Bloque AT): permitir editar tambien REJECTED.
+                // Al guardar, el backend cambia REJECTED -> DRAFT y limpia
+                // rejectionReason, dejando la OC lista para re-enviar a aprobacion.
+                if (selected.status !== 'DRAFT' && selected.status !== 'REJECTED') return;
                 setEditingOrderId(selected.id);
                 if (!modalUpdateInstance.current) {
                     modalUpdateInstance.current = new window.bootstrap.Modal(modalUpdateRef.current);
@@ -292,7 +300,8 @@ const IndexApPurchaseOrders = () => {
             }
 
             if (action === 'submit') {
-                if (selected.status !== 'DRAFT') return;
+                // HU-AP-17 E2 (Bloque AT): permitir submit en DRAFT y REJECTED.
+                if (selected.status !== 'DRAFT' && selected.status !== 'REJECTED') return;
                 handleSubmit(selected);
                 return;
             }

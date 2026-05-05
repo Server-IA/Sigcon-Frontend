@@ -154,32 +154,60 @@ const IndexApReceipts = () => {
             }
 
             if (action === 'link-invoice') {
-                // HU-AP-20 (2026-04-28): vincular factura. Pide el ID de la
-                // factura via SweetAlert + valida en backend que sea del mismo
-                // proveedor (Gap 2 ya existente en GoodsReceiptService.linkToInvoice).
-                window.Swal.fire({
-                    title: 'Vincular factura del proveedor',
-                    text: 'Ingrese el ID de la factura de compra a vincular con esta recepcion.',
-                    input: 'number',
-                    inputValidator: (v) => !v ? 'El ID de la factura es obligatorio' : null,
-                    showCancelButton: true,
-                    confirmButtonText: 'Vincular',
-                    cancelButtonText: 'Cancelar',
-                }).then(async ({ isConfirmed, value }) => {
-                    if (!isConfirmed) return;
+                // HU-AP-20 (Bloque AT): cargar facturas SIN vincular del mismo
+                // proveedor de la recepcion. QA reporto que el input numerico
+                // es propenso a error; mejor dropdown filtrado.
+                (async () => {
+                    let invoiceOptions = {};
+                    try {
+                        const resp = await fetchHelper.post(
+                            base_url(['api', 'v1', 'invoices', 'search']),
+                            {
+                                start: 0, length: 200, draw: 1,
+                                columns: [], order: [], search: { value: '' }
+                            }, {}, 0, false
+                        );
+                        const allInvoices = resp?.data || [];
+                        // Filtrar por proveedor de la OC + estado abierto/no anulado
+                        allInvoices
+                            .filter(inv => inv.status !== 'VOIDED' && inv.status !== 'SETTLED')
+                            .forEach(inv => {
+                                const label = `#${inv.id} - ${inv.supplierInvoiceNumber || inv.resolutionInvoice} | ${inv.thirdPartyName || ''} | $${inv.totalPayment || 0} | ${inv.status}`;
+                                invoiceOptions[String(inv.id)] = label;
+                            });
+                    } catch (err) {
+                        console.error('Error cargando facturas:', err);
+                    }
+                    if (Object.keys(invoiceOptions).length === 0) {
+                        setMessage({ type: 'warning', show: true,
+                            message: 'No hay facturas disponibles para vincular. Cree una factura primero.' });
+                        return;
+                    }
+                    const result = await window.Swal.fire({
+                        title: 'Vincular factura del proveedor',
+                        text: 'Seleccione la factura de compra a vincular con esta recepcion.',
+                        input: 'select',
+                        inputOptions: invoiceOptions,
+                        inputPlaceholder: '-- Seleccione una factura --',
+                        inputValidator: (v) => !v ? 'Debe seleccionar una factura' : null,
+                        showCancelButton: true,
+                        confirmButtonText: 'Vincular',
+                        cancelButtonText: 'Cancelar',
+                    });
+                    if (!result.isConfirmed) return;
                     try {
                         await fetchHelper.post(
                             base_url(['api', 'v1', 'ap', 'receipts', selected.id, 'link-invoice']),
-                            { invoiceId: Number(value) }, {}, 1000
+                            { invoiceId: Number(result.value) }, {}, 1000
                         );
                         setMessage({ type: 'success', show: true,
                             message: 'Factura vinculada exitosamente a la recepcion.' });
                         dataTableRef?.current?.ajax.reload();
                     } catch (error) {
                         setMessage({ type: 'danger', show: true,
-                            message: error?.msg || 'No se pudo vincular la factura.' });
+                            message: error?.msg || error?.message || 'No se pudo vincular la factura.' });
                     }
-                });
+                })();
             }
         };
 

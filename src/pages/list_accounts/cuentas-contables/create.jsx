@@ -18,25 +18,28 @@ const CreateCuentaContable = ({
     const [errorMessage, setErrorMessage] = useState('');
     const [currencies, setCurrencies] = useState([]);
     const [costCenters, setCostCenters] = useState([]);
+    // HU-CFG-RF-05 E? (Bloque AP, 2026-05-04): cargar reglas depreciacion para
+    // exponer el dropdown opcional. Antes el setter estaba huerfano.
+    const [depreciationRules, setDepreciationRules] = useState([]);
     const [loading, setLoading] = useState(false);
 
     // Data loading — swagger endpoints:
     // POST /api/v1/accounting-lists/currency-types/search
     // POST /api/v1/cost-centers/search
-    // (Reglas de depreciacion ya no se cargan aqui: el campo del form esta comentado
-    // y el setter `setDepreciationRules` no estaba declarado, lo que causaba
-    // ReferenceError en runtime y colapsaba la pagina al cancelar.)
+    // POST /api/v1/depreciation-rules/search
     useEffect(() => {
         const dtBody = { length: -1, columns: [{data:'status', search: {value: 'ACTIVE', regex: false}}] };
         const loadData = async () => {
             // Promise.allSettled: a 403 on one endpoint won't block the others
-            const [currRes, ccRes] = await Promise.allSettled([
+            const [currRes, ccRes, drRes] = await Promise.allSettled([
                 fetchHelper.post(base_url(['api', 'v1', 'accounting-lists', 'currency-types', 'search']), dtBody, {}, 0),
                 fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']), dtBody, {}, 0),
+                fetchHelper.post(base_url(['api', 'v1', 'depreciation-rules', 'search']), dtBody, {}, 0),
             ]);
             if (currRes.status === 'fulfilled') setCurrencies(currRes.value.data || []);
             if (ccRes.status === 'fulfilled')   setCostCenters(ccRes.value.data || []);
-            const failed = [currRes, ccRes].filter(r => r.status === 'rejected');
+            if (drRes.status === 'fulfilled')   setDepreciationRules(drRes.value.data || []);
+            const failed = [currRes, ccRes, drRes].filter(r => r.status === 'rejected');
             if (failed.length) console.warn('Algunos datos no pudieron cargarse:', failed.map(f => f.reason));
         };
         loadData();
@@ -82,6 +85,8 @@ const CreateCuentaContable = ({
             currency_type_id: cuentaContable.currency_type_id,
             cost_center_id: cuentaContable.cost_center_id || null,
             tax_rule_id: cuentaContable.tax_rule_id || null,
+            // HU-CFG-RF-05 (Bloque AP): regla de depreciacion opcional.
+            depretation_rule_id: cuentaContable.depretation_rule_id || null,
             nature: cuentaContable.nature,
         };
         try {
@@ -228,27 +233,27 @@ const CreateCuentaContable = ({
                                 </div>
                             </div>
 
-                            {/* Regla de Depreciación (Opcional) */}
-                            {/* <div className="row">
+                            {/* Regla de Depreciación (Opcional) - HU-CFG-RF-05 Bloque AP */}
+                            <div className="row">
                                 <div className="col mb-6 mt-2">
                                     <InputSelectModal
                                         id="depreciationRuleId"
-                                        label="Regla de Depreciación"
-                                        value={cuentaContable.depreciation_rule_id}
-                                        onChange={(value) => setCuentaContable({ 
-                                            ...cuentaContable, 
-                                            depreciation_rule_id: parseInt(value) || null
+                                        label="Regla de Depreciación (opcional)"
+                                        value={cuentaContable.depretation_rule_id}
+                                        onChange={(value) => setCuentaContable({
+                                            ...cuentaContable,
+                                            depretation_rule_id: value ? parseInt(value) : null
                                         })}
-                                        error={errors.depreciation_rule_id}
+                                        error={errors.depretation_rule_id}
                                         placeholder="Seleccionar regla de depreciación (opcional)"
                                         options={depreciationRules.map(rule => ({
                                             id: rule.id,
                                             label: rule.name
                                         }))}
-                                        clearable={true}
+                                        required={false}
                                     />
                                 </div>
-                            </div> */}
+                            </div>
 
                             {/* Naturaleza */}
                             <div className="row">

@@ -79,6 +79,14 @@ const LoginPage = () => {
           companyId: responseData.companyId ?? null,
           companyName: responseData.companyName ?? null,
           platformRole: responseData.platformRole ?? null,
+          // HU-PA-01 + HU-PA-11: effectivePermissions y roles vienen del /auth/login
+          // y son la fuente de verdad del hook usePermissions.
+          effectivePermissions: responseData.effectivePermissions || [],
+          fullName: responseData.fullName ?? null,
+          // Si el login devuelve roles top-level (E1.0), usarlos; sino caer al rol de userResponse
+          roles: responseData.roles && responseData.roles.length > 0
+                  ? responseData.roles
+                  : (userResponse.data.roles || []),
         };
         dispatch({ type: "SET_USER", payload: enriched });
       }

@@ -81,7 +81,6 @@ const FilterPermission = ({ dataTableRef, filterRef, filterInstance, modules, ty
                                 dataTableRef?.current?.table().columns().search('');
                                 dataTableRef?.current?.table().search('');
                                 dataTableRef?.current?.table().draw();
-                                filterInstance?.current?.hide();
                             }}
                         >
                             Limpiar
