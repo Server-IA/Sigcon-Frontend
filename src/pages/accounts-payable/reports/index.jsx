@@ -288,7 +288,7 @@ const IndexApReports = () => {
             <td style="text-align:right">${poData.totalAmount || 0}</td></tr></tbody></table>
             <h2>Detalle</h2>
             <table><thead><tr><th># Orden</th><th>Fecha</th><th>Proveedor</th><th>NIT</th><th>Estado</th><th>Total</th></tr></thead>
-            <tbody>${orders || '<tr><td colspan="6">Sin ordenes en el filtro</td></tr>'}</tbody></table>`;
+            <tbody>${orders || '<tr><td colspan="6">No se encontraron registros con los criterios seleccionados.</td></tr>'}</tbody></table>`;
         printPdf('Reporte OCs', body);
     };
 
@@ -658,7 +658,7 @@ const IndexApReports = () => {
                                 </tr></thead>
                                 <tbody>
                                     {(poData.orders || []).length === 0 ? (
-                                        <tr><td colSpan="6" className="text-center text-muted">Sin ordenes en el filtro.</td></tr>
+                                        <tr><td colSpan="6" className="text-center text-muted">No se encontraron registros con los criterios seleccionados.</td></tr>
                                     ) : (
                                         (poData.orders || []).map((row, idx) => (
                                             <tr key={idx}>

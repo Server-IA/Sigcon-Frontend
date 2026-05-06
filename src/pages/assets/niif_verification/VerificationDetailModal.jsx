@@ -37,7 +37,17 @@ const extractAssetInfo = (r) => ({
 });
 
 // Extrae la lista de checks probando múltiples estructuras posibles
+// HU-ACT-09 E1+E2 (QA 2026-05-05): el backend ahora devuelve `criteria` con
+// {code, name, status, message} para detallar cumple/no-cumple por criterio.
 const extractChecks = (r) => {
+    if (Array.isArray(r.criteria))
+        return r.criteria.map(c => ({
+            label:  c.name ?? c.code ?? 'Verificación',
+            result: c.status === 'CUMPLE' ? 'CUMPLE'
+                  : c.status === 'ADVERTENCIA' ? 'ADVERTENCIA'
+                  : 'NO_CUMPLE',
+            detail: c.message ?? '',
+        }));
     if (Array.isArray(r.checks))          return r.checks;
     if (Array.isArray(r.checkResults))    return r.checkResults;
     if (Array.isArray(r.verifications))   return r.verifications;

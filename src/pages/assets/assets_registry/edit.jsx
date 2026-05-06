@@ -92,32 +92,72 @@ const EditAssets = (
     try{
       const assetResponse = await fetchHelper.get(base_url(["api", "v1", "assets", id]), {}, 0);
 
-      const voucher = assetResponse.data?.vouchers?.find(v => v?.voucherType?.id == 1);
+      // ACT-06.3 (QA 2026-05-05): el voucher de compra de activo es PC. Antes
+      // se filtraba por voucherType.id == 1 (CM), por eso el modal de edicion
+      // mostraba la forma de pago y la cuenta vacias aunque el voucher si
+      // existiera. Ahora resolvemos por code o id flexibles.
+      const voucher = assetResponse.data?.vouchers?.find(v =>
+        v?.voucherType?.code === 'PC' || v?.voucherType?.id == 1 || v?.voucherType?.id == 2
+      );
       const d = assetResponse.data;
       const asset = {
         ...d,
         supplierId: d.supplier?.id || "",
         accountingAccountId: d.accountingAccount?.id || "",
         depreciationRuleId: d.depretationRule?.id || "",
+        paymentFormId: d.paymentFormId || "",
+        paymentMethodId: d.paymentMethodId || "",
+        status: d.status || "ACTIVE",
         paymentTerms: d.paymentTerms || "",
         taxesRetention: d.taxesRetention?.find(t => t.taxRule?.name?.includes("iva"))?.taxRule?.id ?? null,
+        // ACT-06.3: prepoblar resolutionInvoice e invoiceDueDay desde la factura AP si existe
+        resolutionInvoice: d.accountsPayableReferenceId ? "" : "",
+        invoiceDueDay: d.invoiceDueDay || "",
       }
 
-      if(voucher){
+      // QA-2026-05-05: NO sobrescribir paymentFormId con el del voucher.
+      // El voucher se crea UNA SOLA VEZ al registrar el activo y nunca se
+      // actualiza despues. Si el contador edita el activo y cambia la forma
+      // de pago, el campo actualizado vive en `d.paymentFormId` del activo,
+      // no en el voucher antiguo. Antes la linea
+      //     asset.paymentFormId = voucher.paymentForm?.id || asset.paymentFormId
+      // hacia que al re-editar siempre se viera el valor original (parecia
+      // que la edicion no hubiese guardado nada). Ahora confiamos primero en
+      // el campo del activo y solo caemos al voucher si el activo no lo trae.
+      if (!asset.paymentFormId && voucher?.paymentForm?.id) {
         asset.paymentFormId = voucher.paymentForm.id;
-        if(voucher.bankAccount){
+      }
+
+      // Origen de pago (cash/check/bank): solo aplica si el activo es CONTADO
+      // (paymentFormId == 1). Si paso a credito, no hay origen.
+      if (voucher && asset.paymentFormId == 1) {
+        if (voucher.bankAccount) {
           asset.originPaymentMethodId = voucher.bankAccount.id;
+          asset.bankAccountId = voucher.bankAccount.id;
           asset.paymentMethodId = 3;
         }
-        if(voucher.check){
+        if (voucher.check) {
           asset.originPaymentMethodId = voucher.check.id;
+          asset.checkId = voucher.check.id;
           asset.paymentMethodId = 2;
         }
-        if(voucher.cash){
+        // El DTO usa "cashAccount" no "cash". Antes el origen de pago no se
+        // preselectaba al editar activos pagados con caja.
+        const cashRef = voucher.cashAccount || voucher.cash;
+        if (cashRef) {
           asset.paymentMethodId = 1;
-          asset.originPaymentMethodId = voucher.cash.id;
+          asset.originPaymentMethodId = cashRef.id;
+          asset.cashAccountId = cashRef.id;
         }
+      }
 
+      // ACT-06.3: si la factura AP existe (paymentForm credito), traer su numero
+      if (d.accountsPayableReferenceId) {
+        try {
+          const inv = await fetchHelper.get(base_url(["api","v1","invoices", d.accountsPayableReferenceId]), {}, 0);
+          asset.resolutionInvoice = inv?.data?.resolutionInvoice || inv?.data?.supplierInvoiceNumber || "";
+          asset.invoiceDueDay = inv?.data?.invoiceDueDay || asset.invoiceDueDay;
+        } catch (_) { /* tolerancia: no romper edit si la factura no carga */ }
       }
 
       console.log(asset, "Asset");
@@ -203,8 +243,10 @@ const EditAssets = (
   }
 
   useEffect(() => {
+    // ACT-06.3 (QA 2026-05-05): NO sobreescribir el state con ASSETS_BASIC
+    // despues de loadData. Eso borraba la forma de pago / origen / vida util
+    // recien cargados del backend, dejando el form vacio en pantalla.
     loadData();
-    setAssets(ASSETS_BASIC);
   }, []);
 
   useEffect(() => {
@@ -456,7 +498,13 @@ const EditAssets = (
                     <InputSelectModal
                       id="originPaymentId"
                       label="Origen de pago"
-                      value={assets.paymentMethodId}
+                      // ACT-06.1 (QA 2026-05-05): el value debe corresponder al id real
+                      // del origen segun el metodo seleccionado, NO al paymentMethodId.
+                      // Por eso al editar el origen no aparecia preseleccionado.
+                      value={
+                        assets.paymentMethodId == 1 ? assets.cashAccountId :
+                        assets.paymentMethodId == 2 ? assets.checkId :
+                        assets.paymentMethodId == 3 ? assets.bankAccountId : null}
                       onChange={(value) =>{
                           setAssets({ ...assets,
                             originPaymentMethodId: Number(value),
@@ -464,7 +512,7 @@ const EditAssets = (
                             checkId: assets.paymentMethodId == 2 ? Number(value) : null,
                             bankAccountId: assets.paymentMethodId == 3 ? Number(value) : null
                           })
-                          
+
                         }
                       }
                       options={
@@ -716,6 +764,38 @@ const EditAssets = (
               }
               error={errors.acquisitionValue}
               required
+            />
+          </div>
+        </div>
+
+        {/* ACT-03.1 (QA 2026-05-05): Estado del activo en edicion */}
+        <div className="row">
+          <div className="col-md-4 mb-4">
+            <InputSelectModal
+              id="status"
+              label="Estado"
+              value={assets.status}
+              onChange={(value) => setAssets({ ...assets, status: value })}
+              options={[
+                { id: "ACTIVE", label: "Activo" },
+                { id: "INACTIVE", label: "Inactivo" }, // HU-ACT-03 E3 (QA 2026-05-05)
+                { id: "IN_REPAIR", label: "En reparacion" },
+                { id: "DECOMMISSIONED", label: "Dado de baja" },
+                { id: "TRANSFERRED", label: "Transferido" },
+              ]}
+              required
+            />
+          </div>
+          <div className="col-md-8 mb-4">
+            <InputModal
+              type="text"
+              id="observations"
+              label="Observaciones"
+              placeholder="Observaciones administrativas"
+              value={assets.observations || ''}
+              onChange={(e) =>
+                setAssets({ ...assets, observations: e.target.value })
+              }
             />
           </div>
         </div>

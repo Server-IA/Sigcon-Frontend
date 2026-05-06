@@ -74,9 +74,15 @@ const IndexFinancialMovements = () => {
             render: (val) => val || '-',
         },
         {
+            // QA-BLOQUE-AY (2026-05-06): tambien revisar matchedJournalEntryId.
+            // El emparejamiento desde la pantalla de Conciliacion Bancaria llama
+            // al endpoint /match-journal-entry que solo setea matchedJournalEntryId,
+            // dejando matchedVoucherId en null. Antes la columna no detectaba ese
+            // caso y siempre mostraba "Pendiente" aunque el movimiento ya estuviera
+            // conciliado contra un JE.
             title: 'Conciliacion', data: 'matchedVoucherId', searchable: false,
             render: (val, _type, row) => {
-                if (row.matchedCheckId || val) {
+                if (row.matchedCheckId || row.matchedJournalEntryId || val) {
                     return '<span class="badge bg-label-success">Conciliado</span>';
                 }
                 return '<span class="badge bg-label-warning">Pendiente</span>';

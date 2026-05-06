@@ -200,19 +200,71 @@ const CreateAssets = (
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // HU-ACT-01 E8: validacion cliente para forma de pago
+    // QA-2026-05-05: validacion frontend exhaustiva. Antes solo paymentFormId
+    // bloqueaba el submit; ahora se acumulan TODOS los obligatorios y se
+    // resaltan en rojo simultaneamente.
     const clientErrors = {};
-    if (!assets.paymentFormId) {
-      clientErrors.paymentFormId = "Debe seleccionar una forma de pago válida (contado o crédito).";
+    if (!assets.supplierId) clientErrors.supplierId = "El proveedor es obligatorio.";
+    if (!assets.paymentFormId) clientErrors.paymentFormId = "Debe seleccionar una forma de pago valida (contado o credito).";
+    if (!assets.acquisitionDate) clientErrors.acquisitionDate = "La fecha de adquisicion es obligatoria.";
+    if (!assets.name || !String(assets.name).trim()) clientErrors.name = "El nombre del activo es obligatorio.";
+    if (!assets.classification) clientErrors.classification = "La clasificacion es obligatoria.";
+    if (!assets.type) clientErrors.type = "El tipo de activo es obligatorio.";
+    if (!assets.accountingAccountId) clientErrors.accountingAccountId = "La cuenta contable es obligatoria.";
+    if (!assets.depreciationRuleId) clientErrors.depreciationRuleId = "La regla de depreciacion es obligatoria.";
+    if (assets.usefulLifeMonths === undefined || assets.usefulLifeMonths === null || assets.usefulLifeMonths === '' || Number(assets.usefulLifeMonths) <= 0) {
+      clientErrors.usefulLifeMonths = "La vida util es obligatoria y debe ser mayor a 0 meses.";
+    }
+    if (!assets.acquisitionValue || Number(assets.acquisitionValue) <= 0) clientErrors.acquisitionValue = "El valor de adquisicion debe ser mayor que cero.";
+    // HU-ACT-01 E9: si CONTADO, el origen de pago (caja/banco/cheque) es obligatorio
+    if (assets.paymentFormId == 1) {
+      if (!assets.paymentMethodId) clientErrors.paymentMethodId = "Debe seleccionar el metodo de pago.";
+      const hasOrigin = assets.cashAccountId || assets.checkId || assets.bankAccountId;
+      if (!hasOrigin) {
+        // QA-2026-05-05: mensaje literal HU-ACT-01 E9.
+        clientErrors.originPaymentMethodId = "Debe especificar cuenta, caja o cheque desde donde se realizo el pago.";
+      }
+    }
+    // HU-ACT-01 E1 (credito): exigir resolucion de factura para crear FC en AP
+    if (assets.paymentFormId == 2) {
+      if (!assets.resolutionInvoice || !String(assets.resolutionInvoice).trim()) {
+        clientErrors.resolutionInvoice = "El numero/resolucion de factura es obligatorio para credito.";
+      }
+      if (!assets.invoiceDueDay || Number(assets.invoiceDueDay) < 1 || Number(assets.invoiceDueDay) > 31) {
+        clientErrors.invoiceDueDay = "El dia de vencimiento debe estar entre 1 y 31.";
+      }
     }
     if (Object.keys(clientErrors).length > 0) {
       setErrors(clientErrors);
+      // QA-2026-05-05: mensaje general que LISTA los campos faltantes para que
+      // el usuario sepa exactamente que corregir, ademas del marcado en rojo.
+      const FIELD_LABELS = {
+        supplierId: "Proveedor",
+        paymentFormId: "Forma de pago",
+        acquisitionDate: "Fecha de adquisicion",
+        name: "Nombre",
+        classification: "Clasificacion",
+        type: "Tipo",
+        accountingAccountId: "Cuenta contable",
+        depreciationRuleId: "Metodo de depreciacion",
+        usefulLifeMonths: "Vida util",
+        acquisitionValue: "Valor de adquisicion",
+        paymentMethodId: "Metodo de pago",
+        originPaymentMethodId: "Origen de pago",
+        resolutionInvoice: "Numero de factura",
+        invoiceDueDay: "Dia de vencimiento",
+      };
+      const missingList = Object.keys(clientErrors)
+        .map((k) => FIELD_LABELS[k] || k)
+        .join(", ");
       setError({
-        message: "Debe seleccionar una forma de pago válida (contado o crédito).",
+        message: `Faltan campos por completar: ${missingList}. Revise los marcados en rojo.`,
         type: "danger",
         show: true,
-        timeout: 5000,
+        timeout: 8000,
       });
+      // Scroll al tope para que la alerta sea visible.
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {}
       return;
     }
 
@@ -437,14 +489,21 @@ const CreateAssets = (
                     id="methodPaymentId"
                     label="Método de pago"
                     value={assets.paymentMethodId}
-                    onChange={(value) =>
-                      setAssets({ ...assets, paymentMethodId: Number(value) })
-                    }
+                    onChange={(value) => {
+                      setAssets({ ...assets, paymentMethodId: Number(value) });
+                      // QA-2026-05-05: limpiar error inline al cambiar.
+                      if (errors.paymentMethodId) {
+                        const { paymentMethodId: _, ...rest } = errors;
+                        setErrors(rest);
+                      }
+                    }}
                     options={[
                       { id: 1, label: "Efectivo" },
                       { id: 2, label: "Cheque" },
                       { id: 3, label: "Transferencia bancaria" },
                     ]}
+                    error={errors.paymentMethodId}
+                    required
                   />
                 </div>
 
@@ -462,8 +521,12 @@ const CreateAssets = (
                             cashAccountId: assets.paymentMethodId == 1 ? Number(value) : null,
                             checkId: assets.paymentMethodId == 2 ? Number(value) : null,
                             bankAccountId: assets.paymentMethodId == 3 ? Number(value) : null
-                          })
-                          
+                          });
+                          // QA-2026-05-05: limpiar error inline al cambiar.
+                          if (errors.originPaymentMethodId) {
+                            const { originPaymentMethodId: _, ...rest } = errors;
+                            setErrors(rest);
+                          }
                         }
                       }
                       options={
@@ -480,6 +543,8 @@ const CreateAssets = (
                         assets.paymentMethodId == 3 ? 'No hay cuentas bancarias activas. Cree una en Bancos y Cajas → Cuentas Bancarias' :
                         'Primero seleccione un método de pago'
                       }
+                      error={errors.originPaymentMethodId}
+                      required
                     />
                 </div>
               </>
@@ -708,12 +773,20 @@ const CreateAssets = (
               label="Vida útil (meses)"
               placeholder="Ej: 60"
               value={assets.usefulLifeMonths}
-              onChange={(e) =>
+              onChange={(e) => {
+                const v = e.target.value;
                 setAssets({
                   ...assets,
-                  usefulLifeMonths: Number(e.target.value),
-                })
-              }
+                  usefulLifeMonths: v === '' ? '' : Number(v),
+                });
+                // QA-2026-05-05: limpiar error inline al modificar.
+                if (errors.usefulLifeMonths && Number(v) > 0) {
+                  const { usefulLifeMonths: _, ...rest } = errors;
+                  setErrors(rest);
+                }
+              }}
+              error={errors.usefulLifeMonths}
+              min="1"
               required
             />
           </div>

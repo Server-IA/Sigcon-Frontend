@@ -158,10 +158,10 @@ const IndexAssets = () => {
       //   );
 
       if (invoicesFCRes.status === "fulfilled")
-        setInvoicesFC(invoicesFCRes.value.data);
+        setInvoicesFC(Array.isArray(invoicesFCRes.value?.data) ? invoicesFCRes.value.data : []);
 
       if (assetsSystemRes.status === "fulfilled")
-        setAssetsSystem(assetsSystemRes.value.data);
+        setAssetsSystem(Array.isArray(assetsSystemRes.value?.data) ? assetsSystemRes.value.data : []);
 
       const failed = [
         depreciationRulerRes,
@@ -249,7 +249,7 @@ const IndexAssets = () => {
       action: openModalBulkUpload,
     },
 
-    user.permissions.find((p) => p.code === "CREATE_ASSETS") || isAdmin
+    ((user?.permissions || []).find((p) => p.code === "CREATE_ASSETS") || isAdmin)
       ? {
           text: '<i className="ri-add-line ri-16px me-sm-2"></i> <span className="d-none d-sm-inline-block">Crear Activo</span>',
           className: "btn rounded-pill btn-primary waves-effect mx-2 my-2 ",
@@ -295,7 +295,11 @@ const IndexAssets = () => {
       return comprobado ? `<span class="badge bg-success">Sí</span>` : `<span class="badge bg-danger">No</span>`;
     }, searchable: false },
     { title: "Código", data: "assetCode", name: "assetCode" },
-    { title: "Nombre", data: "name", name: "name" },
+    // QA-BLOQUE-AY (2026-05-05): la entidad Assets usa `assetName` (no `name`).
+    // El name del DataTable debe apuntar al path JPA real para que el filtro
+    // y ordenamiento funcionen via DataTableSpecificationBuilder. data='name'
+    // sigue mapeando el campo del DTO de respuesta.
+    { title: "Nombre", data: "name", name: "assetName" },
     {
       title: "Clasificación",
       data: "classification",
@@ -307,6 +311,18 @@ const IndexAssets = () => {
         };
         return map[v] || v;
       },
+    },
+    // QA-BLOQUE-AY (2026-05-05): columna `type` invisible para que el filter
+    // "Tipo" del modal aplique sobre la columna real. Antes el sufijo
+    // `type:name` no encajaba con ninguna columna del DataTable y el filtro
+    // se ignoraba silenciosamente.
+    {
+      title: "Tipo",
+      data: "type",
+      // Entidad usa `assetType`, DTO usa `type`.
+      name: "assetType",
+      visible: false,
+      searchable: true,
     },
     {
       title: "Fecha adquisición",
@@ -556,8 +572,8 @@ const IndexAssets = () => {
                     <p className="mb-1">Activos comprobados</p>
                     <h4 className="mb-1">{
                       (() => {
-                        const total = assetsSystem.reduce((acc, asset) => {
-                          const voucher = asset.vouchers.reduce((acc, voucher) => acc + parseFloat(voucher?.amount ?? 0), 0);
+                        const total = (assetsSystem || []).reduce((acc, asset) => {
+                          const voucher = (asset?.vouchers || []).reduce((acc2, voucher) => acc2 + parseFloat(voucher?.amount ?? 0), 0);
                           return acc + (voucher ?? 0);
                         }, 0);
                         return formatPrice(total);
@@ -565,7 +581,7 @@ const IndexAssets = () => {
                       })()
                     }</h4>
                     <p className="mb-0">
-                      <span className="me-2">Total: {separateNumber(assetsSystem.filter((asset) => asset.vouchers.length > 0).length)}</span>
+                      <span className="me-2">Total: {separateNumber((assetsSystem || []).filter((asset) => (asset?.vouchers || []).length > 0).length)}</span>
                     </p>
                   </div>
                 </div>
@@ -576,14 +592,14 @@ const IndexAssets = () => {
                     <p className="mb-1">Activos sin comprobantes</p>
                     <h4 className="mb-1">{
                       (() => {
-                        const total = assetsSystem.filter((asset) => asset.vouchers.length === 0).reduce((acc, asset) => {
-                          return acc + parseFloat(asset.acquisitionValue + asset.taxValue);
+                        const total = (assetsSystem || []).filter((asset) => (asset?.vouchers || []).length === 0).reduce((acc, asset) => {
+                          return acc + parseFloat((Number(asset?.acquisitionValue) || 0) + (Number(asset?.taxValue) || 0));
                         }, 0);
                         return formatPrice(total);
                       })()}
                       </h4>
                     <p className="mb-0">
-                      <span className="me-2">Total: {separateNumber(assetsSystem.filter((asset) => asset.vouchers.length === 0).length)}</span>
+                      <span className="me-2">Total: {separateNumber((assetsSystem || []).filter((asset) => (asset?.vouchers || []).length === 0).length)}</span>
                     </p>
                   </div>
                 </div>

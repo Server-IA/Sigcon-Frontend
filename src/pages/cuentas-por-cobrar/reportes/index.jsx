@@ -49,6 +49,7 @@ const IndexArReports = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
+    const [fieldErrors, setFieldErrors] = useState({});
     // HU-AR-05 E1: lista de clientes para dropdown buscable.
     const [clients, setClients] = useState([]);
 
@@ -90,6 +91,25 @@ const IndexArReports = () => {
     /** Ejecuta la consulta del reporte. */
     const runReport = async () => {
         setMessage({ show: false });
+        // QA-2026-05-05: validar campos obligatorios y mostrar errores en rojo
+        // antes de disparar el reporte.
+        const errs = {};
+        if (reportType !== 'aging') {
+            if (!filters.startDate) errs.startDate = 'La fecha inicial es requerida.';
+            if (!filters.endDate) errs.endDate = 'La fecha final es requerida.';
+        }
+        if (reportType === 'by-customer' && !filters.thirdPartyId) {
+            errs.thirdPartyId = 'Seleccione un cliente.';
+        }
+        if (reportType === 'by-status' && !filters.status) {
+            errs.status = 'Seleccione un estado.';
+        }
+        setFieldErrors(errs);
+        if (Object.keys(errs).length > 0) {
+            setMessage({ show: true, type: 'danger',
+                message: 'Hay campos obligatorios sin completar. Revise los marcados en rojo.' });
+            return;
+        }
         setData(null);
         setLoading(true);
         try {
@@ -267,27 +287,32 @@ const IndexArReports = () => {
                         </select>
                     </div>
                     {reportType === 'by-customer' && (
-                        // HU-AR-05 E1: el contador no debe tener que conocer el ID
-                        // numerico del cliente. Reemplazamos el input por un select
-                        // buscable (Select2) cargado con NIT + razon social + nombre.
                         <div className="col-md-4">
-                            <InputSelectModal
-                                label="Cliente (opcional)"
-                                name="thirdPartyId"
+                            {/* QA-2026-05-05: usar select Bootstrap clasico (label arriba) para
+                                alinear vertical con Tipo de Reporte y Fechas, que usan el mismo
+                                patron. Antes se usaba InputSelectModal con form-floating y la
+                                etiqueta flotante quedaba desalineada visualmente. */}
+                            <label className="form-label">Cliente <span className="text-danger">*</span></label>
+                            <select
+                                className={`form-select${fieldErrors.thirdPartyId ? ' is-invalid' : ''}`}
                                 value={filters.thirdPartyId}
-                                options={clients}
-                                onChange={(val) =>
-                                    setFilters({ ...filters, thirdPartyId: val || '' })
+                                onChange={(e) =>
+                                    setFilters({ ...filters, thirdPartyId: e.target.value })
                                 }
-                                emptyMessage="No hay clientes registrados. Cree uno en Terceros."
-                            />
+                            >
+                                <option value="">{clients.length === 0 ? 'No hay clientes registrados...' : 'Seleccione un cliente...'}</option>
+                                {clients.map((c) => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                            {fieldErrors.thirdPartyId && <div className="invalid-feedback d-block">{fieldErrors.thirdPartyId}</div>}
                         </div>
                     )}
                     {reportType === 'by-status' && (
                         <div className="col-md-3">
-                            <label className="form-label">Estado</label>
+                            <label className="form-label">Estado <span className="text-danger">*</span></label>
                             <select
-                                className="form-select"
+                                className={`form-select${fieldErrors.status ? ' is-invalid' : ''}`}
                                 value={filters.status}
                                 onChange={(e) =>
                                     setFilters({ ...filters, status: e.target.value })
@@ -297,31 +322,34 @@ const IndexArReports = () => {
                                     <option key={s.id} value={s.id}>{s.label}</option>
                                 ))}
                             </select>
+                            {fieldErrors.status && <div className="invalid-feedback d-block">{fieldErrors.status}</div>}
                         </div>
                     )}
                     {reportType !== 'aging' && (
                         <>
                             <div className="col-md-3">
-                                <label className="form-label">Fecha Inicio</label>
+                                <label className="form-label">Fecha Inicio <span className="text-danger">*</span></label>
                                 <input
                                     type="date"
-                                    className="form-control"
+                                    className={`form-control${fieldErrors.startDate ? ' is-invalid' : ''}`}
                                     value={filters.startDate}
                                     onChange={(e) =>
                                         setFilters({ ...filters, startDate: e.target.value })
                                     }
                                 />
+                                {fieldErrors.startDate && <div className="invalid-feedback d-block">{fieldErrors.startDate}</div>}
                             </div>
                             <div className="col-md-3">
-                                <label className="form-label">Fecha Fin</label>
+                                <label className="form-label">Fecha Fin <span className="text-danger">*</span></label>
                                 <input
                                     type="date"
-                                    className="form-control"
+                                    className={`form-control${fieldErrors.endDate ? ' is-invalid' : ''}`}
                                     value={filters.endDate}
                                     onChange={(e) =>
                                         setFilters({ ...filters, endDate: e.target.value })
                                     }
                                 />
+                                {fieldErrors.endDate && <div className="invalid-feedback d-block">{fieldErrors.endDate}</div>}
                             </div>
                         </>
                     )}

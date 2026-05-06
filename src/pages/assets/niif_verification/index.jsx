@@ -50,6 +50,8 @@ const findCorrectionPath = (modules) => {
 };
 
 // ─── Columnas para DataTable ─────────────────────────────────────────────────
+// QA-BLOQUE-AY (2026-05-05) HU-ACT-09 E1: el listado debe mostrar la trazabilidad
+// NIIF completa por activo, no solo un estado global.
 const buildColumns = (onDetail, onCorrection) => [
     {
         title: 'Código Activo',
@@ -64,20 +66,33 @@ const buildColumns = (onDetail, onCorrection) => [
         render: (v, _t, row) => v ?? row.name ?? row.asset?.name ?? '-',
     },
     {
-        title: 'Norma',
+        title: 'Norma aplicable',
         data: 'applicableNorm',
         name: 'applicableNorm',
-        render: (v, _t, row) => v ?? row.norm ?? row.niifNorm ?? '-',
+        render: (v, _t, row) => v ?? row.norm ?? row.niifNorm ?? 'NIC 16 §50',
+    },
+    {
+        title: 'Criterios',
+        data: 'totalCriteria',
+        name: 'totalCriteria',
+        searchable: false,
+        render: (_v, _t, row) => {
+            const total = row.totalCriteria ?? (row.criteria?.length ?? 0);
+            const compliant = row.compliantCount ?? 0;
+            const warn = row.warningCount ?? 0;
+            const noCum = row.nonCompliantCount ?? 0;
+            if (total === 0) return '-';
+            const parts = [`<span class="badge bg-label-success me-1" title="Cumplen">${compliant}/${total}</span>`];
+            if (warn > 0) parts.push(`<span class="badge bg-label-warning me-1" title="Advertencias">${warn}</span>`);
+            if (noCum > 0) parts.push(`<span class="badge bg-label-danger" title="No cumplen">${noCum}</span>`);
+            return parts.join('');
+        },
     },
     {
         title: 'Estado',
         data: 'result',
         name: 'result',
         render: (v, _t, row) => {
-            // HU-ACT-05 E1 (2026-04-28): el backend devuelve `result`
-            // (COMPLIANT/WARNING/NON_COMPLIANT). Antes el frontend leia
-            // `overallStatus/status/complianceStatus` que NO existen y
-            // defaulteaba a 'CUMPLE' para todos los activos.
             const status = v ?? row.overallStatus ?? row.status ?? row.complianceStatus ?? 'CUMPLE';
             const cfg = resolveBadge(status);
             return `<span class="badge ${cfg.badge}">${cfg.label}</span>`;

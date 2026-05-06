@@ -88,15 +88,21 @@ const IndexRoles = () => {
         { title: 'Nombre', data: 'name', name: 'name' },
         { title: 'Estado', data: 'status', name: 'status' },
         {
-            title: 'Acciones', data: 'id', width: '100px', searchable: false, render: (id) => {
-                if (id == 1) return null;
+            // QA-2026-05-05: antes ocultaba acciones cuando id==1, lo cual hacia
+            // que rol CONTADOR (id=1 en empresa QA) saliera sin botones de
+            // ver/editar/eliminar. Mostrar acciones siempre - el backend valida
+            // si el rol esta en uso o es del sistema.
+            title: 'Acciones', data: 'id', width: '120px', searchable: false, render: (id, _, row) => {
+                const name = (row.name || '').toUpperCase();
+                // Solo bloquear botones para PLATFORM_ADMIN (rol del sistema cross-tenant)
+                if (name === 'PLATFORM_ADMIN') return '';
                 return `
                 <div class="d-flex gap-1">
                     ${actions.map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
                             data-action="${a.key}"
                             data-id="${id}">
-                            <i class="fas ${a.icon}"></i>
+                            <i class="${a.icon}"></i>
                         </button>
                     `).join('')}
                 </div>

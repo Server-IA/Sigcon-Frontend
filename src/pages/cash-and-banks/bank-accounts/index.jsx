@@ -168,8 +168,11 @@ const IndexBankAccounts = () => {
         // QA HU-005 E1: el `name` apunta al atributo JPA real (bank.name).
         // Antes era `bankName` (no existe) -> crash *"Could not resolve attribute 'bankDTO'..."*.
         { title: 'Banco',        data: 'bankDTO.name',            name: 'bank.name' },
-        { title: 'Saldo',        data: 'initialBalance',        name: 'initialBalance',
-            render: (v, _, row) => formatPrice(v, row.currencyTypeDTO?.isoCode) },
+        // QA-BLOQUE-AY (2026-05-06): mostrar saldo ACTUAL = initial + sum movimientos.
+        // Antes solo mostraba initialBalance (saldo de apertura), por eso el contador
+        // no veia descontados los pagos a proveedores ni los movimientos posteriores.
+        { title: 'Saldo',        data: 'currentBalance',        name: 'initialBalance',
+            render: (v, _, row) => formatPrice(v ?? row.initialBalance ?? 0, row.currencyTypeDTO?.isoCode) },
         { title: 'Moneda',       data: 'currencyTypeDTO.isoCode',        name: 'currencyType.isoCode' },
         {
             title: 'Estado', data: 'status', name: 'status',

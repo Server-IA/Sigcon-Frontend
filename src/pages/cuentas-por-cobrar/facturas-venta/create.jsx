@@ -88,6 +88,7 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
     const [currencies, setCurrencies] = useState([]);
     const [paymentForms, setPaymentForms] = useState([]);
     const [taxRules, setTaxRules] = useState([]);
+    const [resolutions, setResolutions] = useState([]);
     // HU-AR-01A E3: cache de paymentTermDays por tercero, cargado desde commercial-data.
     const [paymentTermDaysByThird, setPaymentTermDaysByThird] = useState({});
     // Para mostrar warning cuando el cliente NO tiene termino de pago configurado.
@@ -98,7 +99,25 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
         loadCurrencies();
         loadPaymentForms();
         loadTaxRules();
+        loadResolutions();
     }, []);
+
+    const loadResolutions = async () => {
+        try {
+            const resp = await fetchHelper.post(
+                base_url(['api', 'v1', 'ar', 'dian', 'resolutions', 'search']),
+                { start: 0, length: -1, draw: 1 }, {}, 1000, true
+            );
+            const list = Array.isArray(resp?.data) ? resp.data : [];
+            setResolutions(list
+                .filter(r => r.status === 'ACTIVE')
+                .map(r => ({
+                    id: r.id,
+                    name: `${r.resolutionNumber || r.number || r.id} (${r.startNumber}-${r.endNumber})`,
+                    resolutionNumber: r.resolutionNumber || r.number || String(r.id),
+                })));
+        } catch (e) { /* noop */ }
+    };
 
     const loadClients = async () => {
         try {
@@ -128,7 +147,13 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
             const data = resp?.data || resp;
             const list = data?.data || data || [];
             if (Array.isArray(list)) {
-                setCurrencies(list.map((c) => ({ id: c.id, name: `${c.isoCode || c.code} - ${c.name}` })));
+                // QA-2026-05-05: incluir isoCode para que el subtotal muestre la
+                // moneda real (USD/EUR/etc) en lugar de "COP" por defecto.
+                setCurrencies(list.map((c) => ({
+                    id: c.id,
+                    name: `${c.isoCode || c.code} - ${c.name}`,
+                    isoCode: c.isoCode || c.code,
+                })));
             }
         } catch (e) { /* noop */ }
     };
@@ -238,6 +263,34 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
         e.preventDefault();
         setErrorMessage('');
         setFieldErrors({});
+
+        // QA-2026-05-05 (CXC factura venta): validacion frontend para
+        // resaltar TODOS los campos requeridos en rojo + alerta general
+        // antes del POST.
+        const clientErrors = {};
+        if (!record.thirdPartyId) clientErrors.thirdPartyId = 'El cliente es requerido.';
+        if (!record.invoiceDate) clientErrors.invoiceDate = 'La fecha de la factura es requerida.';
+        if (!record.currencyId) clientErrors.currencyId = 'La moneda es requerida.';
+        if (!record.paymentFormId) clientErrors.paymentFormId = 'La forma de pago es requerida.';
+        if (record.currencyId && (!record.exchangeRate || Number(record.exchangeRate) <= 0)) {
+            clientErrors.exchangeRate = 'La tasa de cambio debe ser mayor que cero.';
+        }
+        const linesErrors = [];
+        lines.forEach((l, idx) => {
+            const le = {};
+            if (!l.description || !String(l.description).trim()) le.description = 'Descripcion requerida.';
+            if (!l.quantity || Number(l.quantity) <= 0) le.quantity = 'Cantidad > 0.';
+            if (!l.unitPrice || Number(l.unitPrice) <= 0) le.unitPrice = 'Precio unitario > 0.';
+            if (Object.keys(le).length) {
+                linesErrors[idx] = le;
+                clientErrors[`lines[${idx}]`] = `Linea ${idx+1}: complete los campos obligatorios.`;
+            }
+        });
+        if (Object.keys(clientErrors).length > 0) {
+            setFieldErrors(clientErrors);
+            setErrorMessage('Hay campos obligatorios sin completar. Revise los marcados en rojo.');
+            return;
+        }
         setLoading(true);
         try {
             const payload = {
@@ -303,6 +356,7 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                         value={record.thirdPartyId}
                                         options={clients}
                                         error={fieldErrors.thirdPartyId}
+                                        required
                                         onChange={(val) => {
                                             // HU-AR-01A E3: al cambiar cliente, recalcular venc.
                                             setRecord((prev) => ({ ...prev, thirdPartyId: val }));
@@ -313,6 +367,7 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                     <InputModal label="Fecha factura" name="invoiceDate" type="date"
                                         value={record.invoiceDate}
                                         error={fieldErrors.invoiceDate}
+                                        required
                                         onChange={(e) => {
                                             const v = e.target.value;
                                             setRecord((prev) => ({ ...prev, invoiceDate: v }));
@@ -320,19 +375,15 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                             recalcDueDate(record.thirdPartyId, v);
                                         }} />
                                 </div>
+                                {/* QA-2026-05-05: usar InputModal (form-floating-outline) para que
+                                    se alinee con Cliente y Fecha factura. Antes se usaba un input
+                                    crudo que rompia el alineamiento vertical de la fila. */}
                                 <div className="col-md-3">
-                                    {/* HU-AR-01A E3: la fecha de vencimiento se calcula automaticamente
-                                        sumando los dias del termino de pago configurado en
-                                        commercial-data del cliente. Read-only para evitar manipulacion. */}
-                                    <label className="form-label small fw-semibold">
-                                        Vencimiento <i className="ri-lock-line text-muted" title="Calculado por sistema" />
-                                    </label>
-                                    <input type="date" className="form-control"
-                                        name="dueDate"
+                                    <InputModal label="Vencimiento" name="dueDate" type="date"
                                         value={record.dueDate || ''}
                                         readOnly
                                         disabled
-                                        title="Calculada automaticamente desde los terminos de pago del cliente" />
+                                        onChange={() => { /* readonly */ }} />
                                     {missingPaymentTermWarning && (
                                         <small className="text-danger d-block mt-1">
                                             <i className="ri-error-warning-line me-1" />
@@ -352,12 +403,14 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                         value={record.currencyId}
                                         options={currencies}
                                         error={fieldErrors.currencyId}
+                                        required
                                         onChange={(val) => setRecord({ ...record, currencyId: val })} />
                                 </div>
                                 <div className="col-md-4">
                                     <InputModal label="Tasa de cambio" name="exchangeRate" type="number"
                                         value={record.exchangeRate}
                                         error={fieldErrors.exchangeRate}
+                                        required
                                         onChange={(e) => setRecord({ ...record, exchangeRate: e.target.value })} />
                                 </div>
                                 <div className="col-md-4">
@@ -365,13 +418,28 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                         value={record.paymentFormId}
                                         options={paymentForms}
                                         error={fieldErrors.paymentFormId}
+                                        required
                                         onChange={(val) => setRecord({ ...record, paymentFormId: val })} />
                                 </div>
 
                                 <div className="col-md-6">
-                                    <InputModal label="Resolucion DIAN" name="resolutionNumber" type="text"
-                                        value={record.resolutionNumber}
-                                        onChange={(e) => setRecord({ ...record, resolutionNumber: e.target.value })} />
+                                    {/* QA-2026-05-05: las resoluciones DIAN registradas en el modulo
+                                        deben aparecer como dropdown en la creacion de la factura. */}
+                                    {resolutions.length > 0 ? (
+                                        <InputSelectModal label="Resolucion DIAN (opcional)"
+                                            name="resolutionNumber"
+                                            value={record.resolutionNumber}
+                                            options={resolutions}
+                                            onChange={(val) => {
+                                                const r = resolutions.find(x => String(x.id) === String(val));
+                                                setRecord({ ...record, resolutionNumber: r ? r.resolutionNumber : '' });
+                                            }} />
+                                    ) : (
+                                        <InputModal label="Resolucion DIAN (opcional)" name="resolutionNumber" type="text"
+                                            value={record.resolutionNumber}
+                                            placeholder="No hay resoluciones registradas"
+                                            onChange={(e) => setRecord({ ...record, resolutionNumber: e.target.value })} />
+                                    )}
                                 </div>
                                 <div className="col-md-6">
                                     <InputModal label="Notas" name="notes" type="text"
@@ -408,16 +476,22 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                             <div className="col-md-5">
                                                 <InputModal label="Descripcion" name={`desc_${idx}`} type="text"
                                                     value={line.description}
+                                                    required
+                                                    error={!line.description?.trim() && fieldErrors[`lines[${idx}]`] ? 'Descripcion requerida' : ''}
                                                     onChange={(e) => updateLine(idx, 'description', e.target.value)} />
                                             </div>
                                             <div className="col-md-2">
                                                 <InputModal label="Cantidad" name={`qty_${idx}`} type="number"
                                                     value={line.quantity}
+                                                    required
+                                                    error={(!line.quantity || Number(line.quantity) <= 0) && fieldErrors[`lines[${idx}]`] ? 'Cantidad > 0' : ''}
                                                     onChange={(e) => updateLine(idx, 'quantity', e.target.value)} />
                                             </div>
                                             <div className="col-md-3">
                                                 <InputModal label="Precio unitario" name={`price_${idx}`} type="number"
                                                     value={line.unitPrice}
+                                                    required
+                                                    error={(!line.unitPrice || Number(line.unitPrice) <= 0) && fieldErrors[`lines[${idx}]`] ? 'Precio > 0' : ''}
                                                     onChange={(e) => updateLine(idx, 'unitPrice', e.target.value)} />
                                             </div>
                                             <div className="col-md-2">

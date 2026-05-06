@@ -181,6 +181,10 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
                     name: `${r.name} (${r.typeRulerTax} ${r.percentage}%)`,
                     type: r.typeRulerTax,
                     percentage: Number(r.percentage || 0),
+                    // QA-BLOQUE-AY (2026-05-06): respetar tope UVT (HU-CFG-RF-09).
+                    // Backend omite la retencion si base < minAmountUvt * uvtValueYear.
+                    minAmountUvt: r.minAmountUvt != null ? Number(r.minAmountUvt) : null,
+                    uvtValueYear: r.uvtValueYear != null ? Number(r.uvtValueYear) : null,
                 })));
             }
         } catch (e) {
@@ -220,19 +224,35 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
     /** Subtotal de una linea (cantidad * precio). */
     const lineSubtotal = (l) => Number(l.quantity || 0) * Number(l.price || 0);
 
-    /** Calcula impuestos y retenciones de una linea. */
+    /** Calcula impuestos y retenciones de una linea.
+     *  QA-BLOQUE-AY (2026-05-06): respeta tope UVT como el backend. Si la regla
+     *  es WITHHOLDING y tiene minAmountUvt+uvtValueYear, omite la retencion
+     *  cuando base < minAmountUvt * uvtValueYear. Asi el total mostrado al
+     *  contador coincide con el total final de la factura.
+     */
     const lineFiscal = (l) => {
         const base = lineSubtotal(l);
         let tax = 0;
         let withholding = 0;
+        const omitted = [];
         (l.taxRuleIds || []).forEach((rid) => {
             const rule = taxRules.find((r) => r.id === rid);
             if (!rule) return;
             const amount = (base * rule.percentage) / 100;
-            if (rule.type === 'WITHHOLDING') withholding += amount;
-            else tax += amount;
+            if (rule.type === 'WITHHOLDING') {
+                if (rule.minAmountUvt != null && rule.uvtValueYear != null) {
+                    const tope = rule.minAmountUvt * rule.uvtValueYear;
+                    if (base < tope) {
+                        omitted.push({ ruleName: rule.name, tope });
+                        return;
+                    }
+                }
+                withholding += amount;
+            } else {
+                tax += amount;
+            }
         });
-        return { base, tax, withholding };
+        return { base, tax, withholding, omitted };
     };
 
     /** Totales generales. */
@@ -291,7 +311,14 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
     /** Envia la factura. */
     const handleSubmit = async () => {
         setErrorMessage('');
-        if (!validate()) return;
+        if (!validate()) {
+            // QA-2026-05-05: si validate fallo y no se seteo un mensaje
+            // especifico (ej. cuando solo hay errores de campos individuales),
+            // mostrar una alerta general para que el usuario sepa que hay
+            // campos en rojo que debe corregir.
+            setErrorMessage((current) => current || 'Hay campos obligatorios sin completar. Revise los marcados en rojo.');
+            return;
+        }
 
         // Fallback defensivo: leer directo del DOM si el estado de React
         // no capturo el valor (problema conocido de Select2 + async options).
@@ -515,7 +542,7 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
                         </div>
 
                         {lines.map((l, idx) => {
-                            const { base, tax, withholding } = lineFiscal(l);
+                            const { base, tax, withholding, omitted } = lineFiscal(l);
                             return (
                                 <div className="border rounded p-2 mb-2" key={idx}>
                                     <div className="row">
@@ -605,6 +632,16 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
                                             {' | '}IVA: <strong>${fmt(tax)}</strong>
                                             {' | '}Retenciones: <strong>${fmt(withholding)}</strong>
                                         </div>
+                                        {omitted && omitted.length > 0 && (
+                                            <div className="col-12 text-end small text-warning">
+                                                <i className="ri-alert-line me-1" />
+                                                {omitted.map((o, i) => (
+                                                    <span key={i}>
+                                                        {o.ruleName} no aplica: base inferior al tope UVT (${fmt(o.tope)}){i < omitted.length - 1 ? ' | ' : ''}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );

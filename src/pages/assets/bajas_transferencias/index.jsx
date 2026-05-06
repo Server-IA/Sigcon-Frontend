@@ -105,8 +105,12 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
               {}, 0, false)
           .then(resp => {
               const list = Array.isArray(resp?.data) ? resp.data : [];
+              // QA-2026-05-05: el dropdown DEBE devolver el id NUMERICO del
+              // activo en `id`, NO el assetCode. Antes se usaba `assetCode` y
+              // al hacer Number(formData.assetId) en el submit daba NaN -> el
+              // backend rechazaba con "El identificador del activo es obligatorio".
               setAssetsList(list.map(a => ({
-                  id: a.assetCode || String(a.id),
+                  id: a.id,
                   name: `${a.assetCode || a.id} - ${a.assetName || a.name || ''}`.trim(),
               })));
           })
@@ -327,7 +331,14 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
       return;
     }
 
-    // ACT-03: enviar al backend POST /api/v1/assets/disposals
+    // ACT-03: enviar al backend POST /api/v1/assets/disposals/store
+    // QA-2026-05-05: el endpoint correcto es /store. Antes se usaba la URL
+    // sin sufijo, pero esa ruta en backend es para LISTAR disposiciones
+    // (DataTableRequest). El POST con payload de creacion era interpretado
+    // como un filtro vacio, devolvia un listado y el frontend lo veia como
+    // success — por eso siempre aparecia "Disposicion registrada correctamente"
+    // sin que en realidad se creara nada ni se validaran reglas (periodo cerrado,
+    // fecha anterior a adquisicion, saldos pendientes).
     const payload = {
       assetId: Number(formData.assetId),
       disposalType: formData.tipoOperacion === 'BAJA' ? 'BAJA' : 'TRANSFERENCIA',
@@ -343,7 +354,7 @@ const BajasTransferencias = ({ initialAssetId = '', onClose = null }) => {
 
     try {
       const response = await fetchHelper.post(
-        base_url(['api', 'v1', 'assets', 'disposals']),
+        base_url(['api', 'v1', 'assets', 'disposals', 'store']),
         payload,
         {},
         1000,

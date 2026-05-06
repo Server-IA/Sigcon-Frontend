@@ -21,12 +21,15 @@ const FilterAssets = ({
     return dataTableRef?.current?.table();
   };
   const [filters, setFilters] = useState([
-    { regex: true,  value: "", column: "name:name" },
+    // QA-BLOQUE-AY (2026-05-05): el sufijo ':name' es el pseudo-selector de
+    // DataTables que matchea por column.name. La columna del DataTable debe
+    // declarar el path JPA real de la entidad (assetName / assetType).
+    { regex: true,  value: "", column: "assetName:name" },
     { regex: true,  value: "", column: "classification:name" },
-    { regex: true,  value: "", column: "type:name" },
+    { regex: true,  value: "", column: "assetType:name" },
     { regex: false, value: "", column: "supplier.id:name" },
     { regex: true,  value: "", column: "status:name" },
-    { regex: false, value: "", column: "acquisition_date:name" },
+    { regex: false, value: "", column: "acquisitionDate:name" },
   ]);
 
   const getFilter = (column) => {
@@ -46,7 +49,15 @@ const FilterAssets = ({
     if (!table) return;
 
     filters.forEach((filter) => {
-      table.column(filter.column).search(filter.value, filter.regex, false);
+      // QA-2026-05-05: defensivo - si la columna no existe en el DataTable
+      // (ej. por un name selector que el motor de jQuery no resuelve),
+      // omitir en lugar de romper el render del componente.
+      try {
+        const col = table.column(filter.column);
+        if (col && col.length) {
+          col.search(filter.value || '', filter.regex, false);
+        }
+      } catch (_) { /* column not found - ignore */ }
     });
   }, [filters]);
 
@@ -67,12 +78,12 @@ const FilterAssets = ({
     table.draw();
 
     setFilters([
-      { regex: true,  value: "", column: "name:name" },
+      { regex: true,  value: "", column: "assetName:name" },
       { regex: true,  value: "", column: "classification:name" },
-      { regex: true,  value: "", column: "type:name" },
+      { regex: true,  value: "", column: "assetType:name" },
       { regex: false, value: "", column: "supplier.id:name" },
       { regex: true,  value: "", column: "status:name" },
-      { regex: false, value: "", column: "acquisition_date:name" },
+      { regex: false, value: "", column: "acquisitionDate:name" },
     ]);
 
     filterInstance?.current?.hide();
@@ -104,9 +115,9 @@ const FilterAssets = ({
                       <input
                         type="checkbox"
                         className="form-check-input m-auto"
-                        checked={getFilter("name:name")?.regex}
+                        checked={getFilter("assetName:name")?.regex}
                         onChange={(e) =>
-                          updateFilter("name:name", "regex", e.target.checked)
+                          updateFilter("assetName:name", "regex", e.target.checked)
                         }
                       />
                     </div>
@@ -116,9 +127,9 @@ const FilterAssets = ({
                       id="name_filter"
                       label="Nombre del activo"
                       placeholder="Buscar activo"
-                      value={getFilter("name:name")?.value || ""}
+                      value={getFilter("assetName:name")?.value || ""}
                       onChange={(e) =>
-                        updateFilter("name:name", "value", e.target.value)
+                        updateFilter("assetName:name", "value", e.target.value)
                       }
                     />
                   </div>
@@ -135,9 +146,9 @@ const FilterAssets = ({
                       { id: "CURRENT", label: "Activo corriente" },
                     ]}
                     value={
-                      getFilter("classification:name")?.value === ""
+                      (getFilter("classification:name")?.value || "") === ""
                         ? []
-                        : getFilter("classification:name")?.value.split("|")
+                        : (getFilter("classification:name")?.value || "").split("|")
                     }
                     onChange={(value) =>
                       updateFilter(
@@ -163,12 +174,12 @@ const FilterAssets = ({
                       { id: "INTANGIBLE", label: "Intangible" },
                     ]}
                     value={
-                      getFilter("type:name")?.value === ""
+                      (getFilter("assetType:name")?.value || "") === ""
                         ? []
-                        : getFilter("type:name")?.value.split("|")
+                        : (getFilter("assetType:name")?.value || "").split("|")
                     }
                     onChange={(value) =>
-                      updateFilter("type:name", "value", value.join("|"))
+                      updateFilter("assetType:name", "value", value.join("|"))
                     }
                     multiple
                   />
@@ -185,9 +196,9 @@ const FilterAssets = ({
                       label: s.label || s.name || `Proveedor ${s.id}`,
                     }))}
                     value={
-                      getFilter("supplier.id:name")?.value === ""
+                      (getFilter("supplier.id:name")?.value || "") === ""
                         ? []
-                        : getFilter("supplier.id:name")?.value.split("|")
+                        : (getFilter("supplier.id:name")?.value || "").split("|")
                     }
                     onChange={(value) =>
                       updateFilter("supplier.id:name", "value", value.join("|"))
@@ -210,9 +221,9 @@ const FilterAssets = ({
                       id: s.id || s.name,
                     }))}
                     value={
-                      getFilter("status:name")?.value === ""
+                      (getFilter("status:name")?.value || "") === ""
                         ? []
-                        : getFilter("status:name")?.value.split("|")
+                        : (getFilter("status:name")?.value || "").split("|")
                     }
                     onChange={(value) =>
                       updateFilter("status:name", "value", value.join("|"))
@@ -227,9 +238,9 @@ const FilterAssets = ({
                     type="date"
                     id="acquisition_date_filter"
                     label="Fecha de adquisicion"
-                    value={getFilter("acquisition_date:name")?.value || ""}
+                    value={getFilter("acquisitionDate:name")?.value || ""}
                     onChange={(e) =>
-                      updateFilter("acquisition_date:name", "value", e.target.value)
+                      updateFilter("acquisitionDate:name", "value", e.target.value)
                     }
                   />
                 </div>

@@ -45,8 +45,20 @@ export const sweetAlertExport = async (visibleColumns, dt) => {
 export const exportConfig = {
     format: {
         body: function (inner, coldex, rowdex) {
-            if (inner.length <= 0) return inner;
-            var el = $.parseHTML(inner);
+            // QA-BLOQUE-AY (2026-05-05): manejo defensivo de tipos no-string.
+            // Cuando la columna del DataTable expone valores numericos
+            // (Integer/Long/Double, ej. Vida util en meses, Costo, Cantidad)
+            // o booleanos sin render explicito, `inner` llega como number/bool
+            // crudo. `$.parseHTML(12)` retorna array vacio y el export
+            // descarta la celda silenciosamente. Convertir a String primero.
+            if (inner === null || inner === undefined) return '';
+            if (typeof inner === 'number' || typeof inner === 'boolean') {
+                return String(inner);
+            }
+            const innerStr = String(inner);
+            if (innerStr.length <= 0) return innerStr;
+            var el = $.parseHTML(innerStr);
+            if (!el || el.length === 0) return innerStr;
             var result = '';
             $.each(el, function (index, item) {
                 if (item.classList !== undefined && item.classList.contains('user-name')) {
@@ -157,6 +169,23 @@ export const default_buttons = (url_api, title, exportOptions = {}) => {
             className: 'dropdown-item',
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,
+            // HU-ACT-07 (QA 2026-05-05): orientacion horizontal + tamaño A3 para
+            // tablas con muchas columnas (Activos = 11 columnas). Antes el PDF
+            // salia cortado a la derecha.
+            orientation: 'landscape',
+            pageSize: 'A3',
+            customize: function (doc) {
+                if (doc && doc.defaultStyle) {
+                    doc.defaultStyle.fontSize = 8;
+                }
+                if (doc && Array.isArray(doc.content)) {
+                    doc.content.forEach((entry) => {
+                        if (entry && entry.table) {
+                            entry.table.widths = entry.table.body[0].map(() => '*');
+                        }
+                    });
+                }
+            },
             action: async function (e, dt, button, config) {
                 // 🔹 Traer columnas visibles
                 const visibleColumns = dt.columns(':visible').indexes().toArray();
