@@ -196,12 +196,31 @@ const IndexApReceipts = () => {
                     });
                     if (!result.isConfirmed) return;
                     try {
-                        await fetchHelper.post(
+                        // QA Bloque AU+ HU-AP-19 E5 (2026-05-07): el backend
+                        // devuelve `warning` en payload + el message detalla
+                        // si la recepcion quedo Parcialmente facturada. Antes
+                        // el frontend mostraba siempre "vinculada exitosamente"
+                        // y el contador no veia la advertencia de diferencia.
+                        const response = await fetchHelper.post(
                             base_url(['api', 'v1', 'ap', 'receipts', selected.id, 'link-invoice']),
                             { invoiceId: Number(result.value) }, {}, 1000
                         );
-                        setMessage({ type: 'success', show: true,
-                            message: 'Factura vinculada exitosamente a la recepcion.' });
+                        const w = response?.data?.warning || null;
+                        if (w) {
+                            // Mensaje informativo destacado para el contador
+                            // (HU-AP-19 E5: factura inferior al saldo pendiente)
+                            window.Swal.fire({
+                                icon: 'warning',
+                                title: 'Factura vinculada con advertencia',
+                                html: `<div class="text-start"><p class="mb-2">${response?.message || 'Factura vinculada.'}</p>`
+                                     + `<div class="alert alert-warning py-2 mb-0"><i class="ri-alert-line me-1"></i>${w}</div></div>`,
+                                confirmButtonText: 'Entendido',
+                            });
+                            setMessage({ type: 'warning', show: true, message: w });
+                        } else {
+                            setMessage({ type: 'success', show: true,
+                                message: response?.message || 'Factura vinculada exitosamente a la recepcion.' });
+                        }
                         dataTableRef?.current?.ajax.reload();
                     } catch (error) {
                         setMessage({ type: 'danger', show: true,

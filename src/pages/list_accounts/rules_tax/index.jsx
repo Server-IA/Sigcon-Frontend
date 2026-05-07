@@ -265,7 +265,12 @@ const RulesTaxIndex = () => {
                 statusRulerTax: rulesTaxRef.statusRulerTax,
                 dateStart: rulesTaxRef.dateStart,
                 dateEnd: rulesTaxRef.dateEnd,
-                accountingAccountId: rulesTaxRef.accountingAccountId,
+                // QA Bloque AU+ (2026-05-07) Bug 1: el listado solo expone
+                // accountingAccount (objeto), no accountingAccountId plano.
+                // Antes el state quedaba con id=null y el backend rechazaba
+                // con "La cuenta contable es requerida" aunque el dropdown
+                // mostrara el nombre. Fallback al id del objeto.
+                accountingAccountId: rulesTaxRef.accountingAccountId ?? rulesTaxRef.accountingAccount?.id ?? null,
                 accountingAccount: rulesTaxRef.accountingAccount,
                 // Base gravable (motor UVT del Estatuto Tributario)
                 minAmountUvt: rulesTaxRef.minAmountUvt ?? null,
