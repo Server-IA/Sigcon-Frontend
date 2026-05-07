@@ -32,17 +32,24 @@ const emptyFilter = {
     fechaCreacionHasta: '',
 };
 
-export default function FilterCaja({ filterRef, filterInstance, dataTableRef }) {
+export default function FilterCaja({ filterRef, filterInstance, dataTableRef, onApply }) {
     const [filters, setFilters] = useState(emptyFilter);
 
     const set = (field, value) => setFilters(prev => ({ ...prev, [field]: value }));
 
+    // QA Bloque AU+ (2026-05-07) Bug 1: el filter NO estaba conectado al
+    // DataTable. Solo hacia ajax.reload() sin enviar valores. Ahora avisa al
+    // padre via onApply(filters) para que reconstruya filterColumns que
+    // DataTableReference envia al backend con los search.value por columna.
     const handleApply = () => {
-        dataTableRef?.current?.ajax?.reload?.();
+        if (typeof onApply === 'function') onApply(filters);
         filterInstance?.current?.hide();
     };
 
-    const handleClear = () => setFilters(emptyFilter);
+    const handleClear = () => {
+        setFilters(emptyFilter);
+        if (typeof onApply === 'function') onApply(emptyFilter);
+    };
 
     return (
         <div className="modal fade" ref={filterRef} tabIndex="-1" aria-hidden="true">

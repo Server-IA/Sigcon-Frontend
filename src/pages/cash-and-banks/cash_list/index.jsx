@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import DataTableReference from '../../../components/organism/DataTable';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
@@ -97,6 +97,35 @@ export default function IndexCashList() {
     const [deleteKeyword, setDeleteKeyword] = useState('');
     const [deleteMotivo,  setDeleteMotivo]  = useState('');
     const [deleteError,   setDeleteError]   = useState('');
+
+    // QA Bloque AU+ (2026-05-07) Bug 1: filtros aplicados desde FilterCaja.
+    // Se transforman a filterColumns que el DataTableReference envia al
+    // backend con search.value por columna. Antes el filter solo hacia
+    // ajax.reload() sin enviar nada y los filtros no funcionaban.
+    const [appliedFilters, setAppliedFilters] = useState({});
+    const filterColumns = useMemo(() => {
+        const cols = [];
+        const add = (name, value) => {
+            if (value != null && String(value).trim() !== '') {
+                cols.push({ data: name, name, searchable: true, search: { value: String(value), regex: name.includes('Date') ? false : true } });
+            }
+        };
+        add('cashCode',         appliedFilters.codigoCaja);
+        add('cashName',         appliedFilters.nombreCaja);
+        add('cashType',         appliedFilters.tipoCaja);
+        add('cashStatus',       appliedFilters.estadoCaja);
+        add('physicalLocation', appliedFilters.ubicacionFisica);
+        add('currencyType.isoCode', appliedFilters.monedaCodigo);
+        add('accountingBook',   appliedFilters.libroContable);
+        // Backend acepta rango fecha si se manda como col.search.value="from|to"
+        if (appliedFilters.fechaCreacionDesde || appliedFilters.fechaCreacionHasta) {
+            const from = appliedFilters.fechaCreacionDesde || '';
+            const to   = appliedFilters.fechaCreacionHasta || '';
+            cols.push({ data: 'createdAt', name: 'createdAt', searchable: true,
+                        search: { value: `${from}|${to}`, regex: false } });
+        }
+        return cols;
+    }, [appliedFilters]);
 
     const openConfirmDelete = (id, nombre) => {
         setDeleteTarget({ id, nombre });
@@ -334,6 +363,7 @@ export default function IndexCashList() {
                     <DataTableReference
                         url_api={API_LIST}
                         columns={columns}
+                        filterColumns={filterColumns}
                         tableRef={tableRef}
                         dataTableRef={dataTableRef}
                         method="POST"
@@ -350,6 +380,11 @@ export default function IndexCashList() {
                     filterRef={filterRef}
                     filterInstance={filterInstance}
                     dataTableRef={dataTableRef}
+                    onApply={(f) => {
+                        setAppliedFilters(f);
+                        // Reload con los nuevos filtros
+                        setTimeout(() => dataTableRef?.current?.ajax?.reload?.(), 50);
+                    }}
                 />
             </div>
 

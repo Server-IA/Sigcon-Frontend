@@ -102,10 +102,11 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
         if (statusChanged && cajaUpdated.estadoCaja === 'CLOSED') {
             if (!cajaUpdated.closingDate) e.closingDate = 'Fecha de cierre requerida para CLOSED';
         }
-        // Si el usuario escribió motivo de cambio, debe ser mínimo 10 caracteres
-        if (cajaUpdated.motivoCambio && cajaUpdated.motivoCambio.trim().length > 0
-                && cajaUpdated.motivoCambio.trim().length < 10) {
-            e.motivoCambio = `El motivo del cambio debe tener mínimo 10 caracteres (actual: ${cajaUpdated.motivoCambio.trim().length}).`;
+        // QA Bloque AU+ (2026-05-07) Bug 4: motivo del cambio AHORA es obligatorio
+        // al editar cualquier cosa de la caja (trazabilidad por exigencia de la HU).
+        // Antes era opcional y solo se validaba si el usuario llenaba algo.
+        if (!cajaUpdated.motivoCambio || cajaUpdated.motivoCambio.trim().length < 10) {
+            e.motivoCambio = `El motivo del cambio es obligatorio y debe tener mínimo 10 caracteres (actual: ${(cajaUpdated.motivoCambio || '').trim().length}).`;
         }
         // QA Bloque AU (2026-05-06) — Bug 1: principal y suplente no pueden ser iguales.
         if (cajaUpdated.idResponsablePrincipal && cajaUpdated.idResponsableSuplente
@@ -459,17 +460,23 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                         options={LIBROS_CONTABLES} placeholder="Seleccione libro"
                                         required={!readOnly} disabled={readOnly} />
                                 </div>
-                                {!readOnly && (
-                                    <div className="col-md-12 mb-3">
-                                        <TextareaModal id="cu_motivo" label="Motivo del Cambio"
-                                            value={cajaUpdated.motivoCambio}
-                                            onChange={e => set('motivoCambio', e.target.value)} error={errors.motivoCambio}
-                                            placeholder="Obligatorio para cambios sensibles (mínimo 10 caracteres)" />
-                                    </div>
-                                )}
+                                {/* Campo motivo movido al footer global del modal
+                                    para que sea visible siempre (en cualquier tab). */}
                             </div>
                         )}
                     </div>
+                    {/* QA Bloque AU+ (2026-05-07) Bug 4: Motivo del cambio
+                         OBLIGATORIO siempre visible al editar (cualquier tab). */}
+                    {!readOnly && (
+                        <div className="px-4 pt-2 pb-0 border-top">
+                            <TextareaModal id="cu_motivo_global" label="Motivo del Cambio (obligatorio)"
+                                value={cajaUpdated.motivoCambio}
+                                onChange={e => set('motivoCambio', e.target.value)}
+                                error={errors.motivoCambio}
+                                placeholder="Obligatorio para cualquier edicion (minimo 10 caracteres)"
+                                required />
+                        </div>
+                    )}
                     <div className="modal-footer">
                         <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
                             {readOnly ? 'Cerrar' : 'Cancelar'}

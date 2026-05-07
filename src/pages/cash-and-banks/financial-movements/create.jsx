@@ -12,7 +12,12 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
     const [bankAccounts, setBankAccounts] = useState([]);
+    // QA Bloque AU+ (2026-05-07) Bug 5: cargar tambien bancos para que el
+    // contador elija PRIMERO el banco y luego solo vea las cuentas del banco
+    // seleccionado. Antes el dropdown mostraba todas las cuentas mezcladas.
+    const [banks, setBanks] = useState([]);
     const [form, setForm] = useState({
+        bankId: '',
         bankAccountId: '',
         movementDate: '',
         amount: '',
@@ -29,7 +34,24 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
 
     useEffect(() => {
         loadBankAccounts();
+        loadBanks();
     }, []);
+
+    // QA Bloque AU+ (2026-05-07) Bug 5: cargar lista de bancos para el dropdown.
+    const loadBanks = async () => {
+        try {
+            const resp = await fetchHelper.post(
+                base_url(['api', 'v1', 'banks', 'search']),
+                { draw: 1, start: 0, length: -1, search: { value: '', regex: false }, columns: [], order: [] },
+                {}, 0
+            );
+            const items = Array.isArray(resp?.data) ? resp.data : [];
+            setBanks(items.filter(b => !b.status || b.status === 'ACTIVE')
+                .map(b => ({ id: b.id, name: `${b.code || ''} - ${b.name || ''}`.trim() })));
+        } catch (e) {
+            console.log('Error cargando bancos:', e);
+        }
+    };
 
     /**
      * Carga la lista de cuentas bancarias activas para el selector.
@@ -59,9 +81,10 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
                 return {
                     id: acc.id,
                     name: `${acc.code || ''} - ${acc.accountName || ''}${bank} · Saldo: ${formatted}`.trim(),
-                    // Guardamos extra para el banner informativo.
+                    // Guardamos extra para el banner informativo + filtro por banco.
                     _balance: balance,
                     _isoCode: acc.currencyTypeDTO?.isoCode || 'COP',
+                    _bankId: acc.bankDTO?.id ?? acc.bankId ?? null,
                 };
             }));
         } catch (e) {
@@ -163,13 +186,38 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
                             )}
 
                             <div className="row g-3">
+                                {/* QA Bloque AU+ (2026-05-07) Bug 5: Banco PRIMERO,
+                                    luego cuenta filtrada por banco. Sin banco no
+                                    se puede elegir cuenta. */}
+                                <div className="col-md-6">
+                                    <InputSelectModal
+                                        label="Banco *"
+                                        value={form.bankId}
+                                        onChange={(val) => {
+                                            handleChange('bankId', val);
+                                            // Limpiar cuenta al cambiar banco
+                                            handleChange('bankAccountId', '');
+                                        }}
+                                        options={banks}
+                                        error={errors.bankId}
+                                        emptyMessage={banks.length === 0
+                                            ? 'No hay bancos activos. Cree uno en Bancos y Cajas -> Catalogo.'
+                                            : 'Sin coincidencias'}
+                                    />
+                                </div>
                                 <div className="col-md-6">
                                     <InputSelectModal
                                         label="Cuenta Bancaria *"
                                         value={form.bankAccountId}
                                         onChange={(val) => handleChange('bankAccountId', val)}
-                                        options={bankAccounts}
+                                        options={form.bankId
+                                            ? bankAccounts.filter(a => String(a._bankId) === String(form.bankId))
+                                            : []}
                                         error={errors.bankAccountId}
+                                        disabled={!form.bankId}
+                                        emptyMessage={!form.bankId
+                                            ? 'Seleccione un banco primero'
+                                            : 'El banco no tiene cuentas activas'}
                                     />
                                 </div>
                                 <div className="col-md-6">

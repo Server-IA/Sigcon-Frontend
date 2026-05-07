@@ -382,43 +382,11 @@ const UpdatedCashAndBanks = ({
               </div> */}
             {/* </div> */}
 
+            {/* QA Bloque AU+ (2026-05-07) Bug 2: Formato extracto + URL webservice
+                removidos del form de edicion de banco. Pertenecen al modulo de
+                conciliacion bancaria. */}
             <div className="row">
-              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "4" : "6"} col-md-12 col-sm-12 mb-3`}>
-                <InputSelectModal
-                  id={`FORMATO_EXTRACTO_${sfx}`}
-                  label="Formato extracto"
-                  value={bank.FORMATO_EXTRACTO ?? ""}
-                  onChange={(value) => {
-                    if (readOnly) return;
-                    setBank({
-                      ...bank,
-                      FORMATO_EXTRACTO: value,
-                      URL_WEBSERVICE: value === "API" ? bank.URL_WEBSERVICE : "",
-                    });
-                    setErrors({ ...errors, URL_WEBSERVICE: "" });
-                  }}
-                  options={EXTRACT_FORMATS}
-                  disabled={readOnly}
-                />
-              </div>
-              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "4" : " d-none"} col-md-12 col-sm-12 mb-3`}>
-                <InputModal
-                  type="text"
-                  id={`URL_WEBSERVICE_${sfx}`}
-                  label="URL webservice"
-                  value={bank.URL_WEBSERVICE ?? ""}
-                  onChange={(e) => {
-                    if (readOnly) return;
-                    setBank({ ...bank, URL_WEBSERVICE: sanitizeSimpleText(e.target.value, 500) });
-                    setErrors({ ...errors, URL_WEBSERVICE: "" });
-                  }}
-                  error={errors.URL_WEBSERVICE}
-                  disabled={readOnly || bank.FORMATO_EXTRACTO !== "API"}
-                  readOnly={readOnly}
-                  required={!readOnly && bank.FORMATO_EXTRACTO === "API"}
-                />
-              </div>
-              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "4" : "6"} col-md-12 col-sm-12 mb-3`}>
+              <div className="col-lg-12 col-md-12 col-sm-12 mb-3">
                 <InputSelectModal
                   id={`ESTADO_${sfx}`}
                   label="Estado"

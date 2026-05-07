@@ -398,40 +398,10 @@ const CreateCashAndBanks = ({
               </div> */}
             </div>
 
-            <div className="row">
-              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "4" : "12"} col-md-12 col-sm-12 mb-3`}>
-                <InputSelectModal
-                  id="FORMATO_EXTRACTO"
-                  label="Formato extracto"
-                  value={bank.FORMATO_EXTRACTO}
-                  onChange={(value) => {
-                    setBank({
-                      ...bank,
-                      FORMATO_EXTRACTO: value,
-                      URL_WEBSERVICE: value === "API" ? bank.URL_WEBSERVICE : "",
-                    });
-                    setErrors({ ...errors, FORMATO_EXTRACTO: "", URL_WEBSERVICE: "" });
-                  }}
-                  options={EXTRACT_FORMATS}
-                />
-              </div>
-              <div className={`col-lg-${bank.FORMATO_EXTRACTO === "API" ? "8" : "12 d-none"} col-md-12 col-sm-12 mb-3`}>
-                <InputModal
-                  type="text"
-                  id="URL_WEBSERVICE"
-                  label="URL webservice"
-                  value={bank.URL_WEBSERVICE}
-                  onChange={(e) => {
-                    setBank({ ...bank, URL_WEBSERVICE: sanitizeSimpleText(e.target.value, 500) });
-                    setErrors({ ...errors, URL_WEBSERVICE: "" });
-                  }}
-                  error={errors.URL_WEBSERVICE}
-                  placeholder="https://..."
-                  required={bank.FORMATO_EXTRACTO === "API"}
-                  disabled={bank.FORMATO_EXTRACTO !== "API"}
-                />
-              </div>
-            </div>
+            {/* QA Bloque AU+ (2026-05-07) Bug 2: campo "Formato extracto" +
+                URL webservice removidos del form de creacion. La funcionalidad
+                de importar extractos via API/CSV se gestiona desde el modulo
+                de conciliacion bancaria, no desde el catalogo de bancos. */}
 
             {/* <div className="row">
               <TextareaModal
