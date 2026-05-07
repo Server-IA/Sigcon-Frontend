@@ -242,6 +242,16 @@ const UpdatedCheckbook = ({
                         />
 
                         {/* ID Cuenta bancaria editable? en edición y bloqueada en vista. */}
+                        {/* QA Bloque AU (2026-05-06) — Bug 3: cuenta bancaria,
+                            numero de chequera, cheque inicial y cheque final
+                            son SIEMPRE readonly tras la creacion. La HU exige
+                            preservar la trazabilidad de los cheques emitidos. */}
+                        {!readOnly && (
+                            <div className="alert alert-info py-2 mb-3">
+                                <i className="ri-information-line me-1"></i>
+                                La <strong>cuenta bancaria</strong>, el <strong>número de chequera</strong> y el <strong>rango de cheques</strong> no pueden modificarse después de la creación.
+                            </div>
+                        )}
                         <div className="row">
                             <div className="col-md-6 mb-4 mt-2">
                                 <InputSelectModal
@@ -253,10 +263,10 @@ const UpdatedCheckbook = ({
                                     placeholder="Seleccione cuenta bancaria"
                                     options={banksAccount.map(item => ({ id: item.id, name: `${item.accountName} - ${item?.bankDTO?.name}` }))}
                                     required
-                                    disabled={readOnly}
+                                    disabled
                                 />
                             </div>
-                            
+
                             <div className="col-md-6 mb-4 mt-2">
                                 <InputModal
                                     type="text"
@@ -267,13 +277,13 @@ const UpdatedCheckbook = ({
                                     error={errors.checkbookNumber}
                                     maxLength={MAX_CHECKBOOK_NUMBER}
                                     required
-                                    disabled={readOnly}
-                                    readOnly={readOnly}
+                                    disabled
+                                    readOnly
                                 />
                             </div>
                         </div>
 
-                        {/* Rango de cheques. */}
+                        {/* Rango de cheques: SIEMPRE readonly tras la creacion. */}
                         <div className="row">
                             <div className="col-md-6 mb-4 mt-2">
                                 <InputModal
@@ -285,8 +295,8 @@ const UpdatedCheckbook = ({
                                     error={errors.checkStartNumber}
                                     min={1}
                                     required
-                                    disabled={readOnly}
-                                    readOnly={readOnly}
+                                    disabled
+                                    readOnly
                                 />
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
@@ -299,8 +309,8 @@ const UpdatedCheckbook = ({
                                     error={errors.checkEndNumber}
                                     min={1}
                                     required
-                                    disabled={readOnly}
-                                    readOnly={readOnly}
+                                    disabled
+                                    readOnly
                                 />
                             </div>
                         </div>

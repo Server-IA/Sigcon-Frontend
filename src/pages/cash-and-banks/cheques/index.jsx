@@ -179,6 +179,15 @@ const IndexCheques = () => {
                     </button>`;
                 }
 
+                // QA Bloque AU (2026-05-06) — Bug 5: descargar soporte de cheque VIRTUAL.
+                if (tipo === 'VIRTUAL') {
+                    btns += `
+                    <button class="btn btn-sm btn-label-primary action-btn ms-1"
+                        data-action="download-support" data-id="${id}" title="Descargar soporte virtual">
+                        <i class="ri-download-line"></i>
+                    </button>`;
+                }
+
                 return `<div class="d-flex gap-1 flex-wrap">${btns}</div>`;
             },
         },
@@ -302,6 +311,32 @@ const IndexCheques = () => {
                             setMessage({ message: error?.msg || 'Error al eliminar el cheque', type: 'danger', show: true });
                         }
                     });
+                    break;
+                }
+                case 'download-support': {
+                    // QA Bloque AU (2026-05-06) — Bug 5: descargar soporte virtual.
+                    (async () => {
+                        try {
+                            const url = base_url(['api', 'v1', 'banks', 'checks', ref.id, 'support', 'download']);
+                            const tok = localStorage.getItem('token');
+                            const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + tok } });
+                            if (!resp.ok) {
+                                const err = await resp.json().catch(() => ({}));
+                                throw new Error(err.msg || `HTTP ${resp.status}`);
+                            }
+                            const blob = await resp.blob();
+                            const cd = resp.headers.get('Content-Disposition') || '';
+                            const m = cd.match(/filename="?([^";]+)"?/i);
+                            const fileName = (m && m[1]) || `cheque-${ref.numeroCheque}-soporte`;
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = fileName;
+                            document.body.appendChild(a); a.click();
+                            URL.revokeObjectURL(a.href); a.remove();
+                        } catch (e) {
+                            setMessage({ message: e?.message || 'No se pudo descargar el soporte del cheque', type: 'danger', show: true });
+                        }
+                    })();
                     break;
                 }
                 default: console.warn('Acción no reconocida', action);

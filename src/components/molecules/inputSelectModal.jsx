@@ -103,7 +103,15 @@ const InputSelectModal = ({
         // option[value="1,2,3"]. Resultado: las opciones precargadas no se
         // mostraban en el Select2, el usuario las re-seleccionaba y al guardar
         // sobrescribia con las nuevas (perdiendo las antiguas).
-        if (value === null || value === undefined || value === '') return;
+        // QA Bloque AU (2026-05-06) — Bug 3 BNK: cuando value se reinicia a
+        // null/undefined/'' debemos LIMPIAR el select2 explicitamente para que
+        // el modal de filtros refleje el reset (handleClear). Antes solo se
+        // hacia early-return y la opcion seleccionada quedaba visible aunque
+        // el state interno estuviera en initialFilters.
+        if (value === null || value === undefined || value === '') {
+            $select.val(multiple ? [] : null).trigger('change.select2');
+            return;
+        }
 
         if (multiple) {
             const arr = Array.isArray(value)

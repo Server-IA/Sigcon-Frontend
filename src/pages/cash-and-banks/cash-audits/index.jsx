@@ -177,6 +177,7 @@ const IndexCashAudits = () => {
                         html: `¿Confirma enviar el arqueo <strong>#${row.id}</strong> a revision del supervisor?<br/><br/>Una vez enviado, el cajero ya no podra editarlo hasta que sea aprobado o rechazado.`,
                         icon: 'question',
                         showCancelButton: true,
+                        showDenyButton: false,
                         confirmButtonText: 'Si, enviar',
                         cancelButtonText: 'Cancelar',
                     }).then(async (result) => {
@@ -208,6 +209,7 @@ const IndexCashAudits = () => {
                             return null;
                         },
                         showCancelButton: true,
+                        showDenyButton: false,
                         confirmButtonText: 'Si, rechazar',
                         cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#d33',
@@ -233,6 +235,7 @@ const IndexCashAudits = () => {
                         html: `¿Esta seguro de aprobar el arqueo <strong>#${row.id}</strong> de la caja <strong>${row.cashName}</strong>?`,
                         icon: 'question',
                         showCancelButton: true,
+                        showDenyButton: false,
                         confirmButtonText: 'Si, aprobar',
                         cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#28a745',
@@ -264,6 +267,7 @@ const IndexCashAudits = () => {
                             return null;
                         },
                         showCancelButton: true,
+                        showDenyButton: false,
                         confirmButtonText: 'Si, eliminar',
                         cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#dc3545',
@@ -297,6 +301,7 @@ const IndexCashAudits = () => {
                             return null;
                         },
                         showCancelButton: true,
+                        showDenyButton: false,
                         confirmButtonText: 'Si, anular',
                         cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#ffc107',
@@ -323,6 +328,7 @@ const IndexCashAudits = () => {
                         html: `¿Esta seguro de cerrar el arqueo <strong>#${row.id}</strong>? Esta accion es irreversible.`,
                         icon: 'warning',
                         showCancelButton: true,
+                        showDenyButton: false,
                         confirmButtonText: 'Si, cerrar',
                         cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#6c757d',

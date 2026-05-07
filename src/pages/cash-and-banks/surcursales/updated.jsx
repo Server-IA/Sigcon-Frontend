@@ -69,6 +69,9 @@ const UpdatedBankBranch = ({
       address: branch.address?.trim() || "",
       municipalityId: Number(branch.municipalityId),
       mainBranch: Boolean(branch.mainBranch),
+      // QA Bloque AU (2026-05-06) — Bug 3: enviar telefono actualizado
+      // (string vacio se interpreta en backend como limpiar el campo).
+      phone: (branch.phone ?? "").trim(),
     };
 
     try {
@@ -147,6 +150,25 @@ const UpdatedBankBranch = ({
                   error={errors.address}
                   placeholder="Ej: Carrera 7 # 32-15"
                   required
+                />
+              </div>
+            </div>
+
+            <div className="row">
+              {/* QA Bloque AU (2026-05-06) — Bug 3: telefono editable. */}
+              <div className="col-12 mb-3">
+                <InputModal
+                  type="text"
+                  id="PHONE_UPDATE"
+                  label="Telefono de la sucursal"
+                  value={branch.phone || ""}
+                  onChange={(e) => {
+                    const cleaned = (e.target.value || "")
+                      .replace(/[^\d+ \-]/g, "")
+                      .slice(0, 30);
+                    setBranch({ ...branch, phone: cleaned });
+                  }}
+                  placeholder="Ej: 6017512345"
                 />
               </div>
             </div>

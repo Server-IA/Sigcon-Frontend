@@ -1,38 +1,35 @@
 import { useState } from "react";
 
-import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 
-import { exactRegex } from "../../../utils/bankUtils";
-import { sanitizeSimpleText } from "../../../utils/bankUtils";
-
 const MAIN_BRANCH_OPTIONS = [
-  { id: "", label: "Todas" },
   { id: "true", label: "Principal" },
   { id: "false", label: "Secundaria" },
 ];
 
 const initialFilters = {
-  city: "",
+  municipalityId: "",
   mainBranch: "",
 };
 
-const FilterBankBranch = ({ filterRef, filterInstance, dataTableRef, onApply }) => {
+const FilterBankBranch = ({ filterRef, filterInstance, dataTableRef, onApply, municipalities = [] }) => {
   const [filters, setFilters] = useState(initialFilters);
 
   const applyFiltersToTable = (nextFilters) => {
     const table = dataTableRef?.current;
     if (!table) return;
 
-    table.column("city:name").search(nextFilters.city || "", false, true);
-    const mainBranchValue =
-      nextFilters.mainBranch === "true"
-        ? "Principal"
-        : nextFilters.mainBranch === "false"
-          ? "Secundaria"
-          : "";
+    // QA Bloque AU (2026-05-06) — Bug 3a: el filtro Ciudad ahora pasa por
+    // municipality.id (FK exacta) en lugar de buscar el nombre por LIKE.
+    // El frontend usa el dropdown de municipalities ya cargado.
+    table.column("municipality.id:name").search(nextFilters.municipalityId || "", false, false);
 
-    table.column("mainBranch:name").search(mainBranchValue, false, true);
+    // QA Bloque AU (2026-05-06) — Bug 3b: el backend interpreta mainBranch
+    // como Boolean via Boolean.valueOf(). Antes el frontend enviaba
+    // "Principal"/"Secundaria" (texto en español) y Boolean.valueOf("Principal")
+    // retorna false, asi que ambos valores filtraban por false. Ahora
+    // enviamos "true"/"false" directamente.
+    table.column("mainBranch:name").search(nextFilters.mainBranch || "", false, false);
     table.draw();
   };
 
@@ -42,11 +39,11 @@ const FilterBankBranch = ({ filterRef, filterInstance, dataTableRef, onApply }) 
     filterInstance?.current?.hide();
   };
 
+  // QA Bloque AU — Bug 3c: Limpiar deja el modal abierto (mismo patron AQ).
   const handleClear = () => {
     setFilters(initialFilters);
     applyFiltersToTable(initialFilters);
     onApply?.(initialFilters);
-    filterInstance?.current?.hide();
   };
 
   return (
@@ -65,18 +62,16 @@ const FilterBankBranch = ({ filterRef, filterInstance, dataTableRef, onApply }) 
           <div className="modal-body">
             <div className="row">
               <div className="col-12 mb-3">
-                <InputModal
-                  type="text"
+                <InputSelectModal
                   id="CITY_FILTER"
                   label="Ciudad"
-                  value={filters.city}
-                  onChange={(e) =>
-                    setFilters({
-                      ...filters,
-                      city: sanitizeSimpleText(e.target.value, 100),
-                    })
+                  options={(municipalities || []).map((m) => ({ id: m.id, label: m.name }))}
+                  value={filters.municipalityId}
+                  onChange={(value) =>
+                    setFilters({ ...filters, municipalityId: value || "" })
                   }
-                  placeholder="Ciudad"
+                  clearable
+                  placeholder="Seleccione una ciudad"
                 />
               </div>
               <div className="col-12 mb-3">
@@ -85,7 +80,8 @@ const FilterBankBranch = ({ filterRef, filterInstance, dataTableRef, onApply }) 
                   label="Sucursal principal"
                   options={MAIN_BRANCH_OPTIONS}
                   value={filters.mainBranch}
-                  onChange={(value) => setFilters({ ...filters, mainBranch: value })}
+                  onChange={(value) => setFilters({ ...filters, mainBranch: value || "" })}
+                  clearable
                 />
               </div>
             </div>

@@ -166,11 +166,16 @@ const CreateProjection = ({ modalRef, modalInstance, projection, setProjection, 
                             </div>
                             <div className="col-md-6 mb-3">
                                 <InputModal
-                                    id="proj_netflow" label="Flujo Neto" type="number"
+                                    id="proj_netflow" label="Flujo por periodo (magnitud)" type="number"
                                     value={projection.netFlow}
                                     onChange={e => set('netFlow', e.target.value)}
                                     error={errors.netFlow} required={true}
                                 />
+                                <small className="text-muted d-block mt-1">
+                                    Ingrese siempre un valor positivo. El sistema aplicara el signo
+                                    segun el tipo (INGRESOS suma, EGRESOS resta) y multiplicara por la
+                                    cantidad de periodos del rango antes de calcular el saldo final.
+                                </small>
                             </div>
                         </div>
                     </div>

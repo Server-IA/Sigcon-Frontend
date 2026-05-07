@@ -73,13 +73,43 @@ const CreateCheque = ({
         return () => el.removeEventListener('show.bs.modal', onShow);
     }, [modalRef]);
 
-    // Al seleccionar chequera: sugerir checkStartNumber como primer número disponible
+    // QA Bloque AU (2026-05-06) — Bug 4: al seleccionar chequera, sugerir el
+    // primer numero NO USADO del rango. Antes el form ponia siempre el
+    // checkStartNumber (1) sin importar si ya estaba emitido. Ahora consulta
+    // los cheques existentes y calcula el siguiente disponible.
     useEffect(() => {
         if (!record.idChequera) return;
         const chequera = chequeras.find(c => String(c.id) === String(record.idChequera));
-        if (chequera?.checkStartNumber != null) {
-            setRecord(prev => ({ ...prev, numeroCheque: String(chequera.checkStartNumber) }));
-        }
+        if (!chequera) return;
+
+        const computeNextAvailable = async () => {
+            try {
+                const res = await fetchHelper.post(
+                    base_url(['api', 'v1', 'banks', 'checks', 'search']),
+                    {
+                        draw: 1, start: 0, length: -1,
+                        search: { value: '', regex: false }, order: [],
+                        columns: [
+                            { data: 'checkbook.id', name: 'checkbook.id', searchable: true,
+                              search: { value: String(chequera.id), regex: false } },
+                        ],
+                    }, {}, 0, false
+                );
+                const issued = new Set((res?.data ?? []).map(c => Number(c.numberCheck || c.number || 0)));
+                let next = chequera.checkStartNumber;
+                while (next <= chequera.checkEndNumber && issued.has(next)) next++;
+                if (next > chequera.checkEndNumber) {
+                    // Sin disponibles, dejar el ultimo + 1 (la validacion de rango lo bloqueara)
+                    setRecord(prev => ({ ...prev, numeroCheque: String(chequera.checkEndNumber + 1) }));
+                } else {
+                    setRecord(prev => ({ ...prev, numeroCheque: String(next) }));
+                }
+            } catch {
+                // Fallback: usar el inicio del rango (comportamiento legacy).
+                setRecord(prev => ({ ...prev, numeroCheque: String(chequera.checkStartNumber) }));
+            }
+        };
+        computeNextAvailable();
     }, [record.idChequera, chequeras]);
 
     const chequeraActual = chequeras.find(c => String(c.id) === String(record.idChequera)) ?? null;

@@ -39,8 +39,35 @@ const CreateBankAccount = ({
         return () => el.removeEventListener('hidden.bs.modal', reset);
     }, [modalRef]);
 
+    // QA Bloque AU (2026-05-06) — Bug 4: validacion frontend de campos
+    // requeridos antes del POST. Antes el form mandaba `accountType: ""` o
+    // `bankId: 0` y Spring/Jackson tiraba "JSON parse error: Cannot coerce
+    // empty String to BankAccountType" expuesto al usuario.
+    const validateRequired = () => {
+        const next = {};
+        if (!record.code || !String(record.code).trim()) next.code = 'El código es requerido';
+        if (!record.accountNumber || !String(record.accountNumber).trim()) next.accountNumber = 'El número de cuenta es requerido';
+        if (!record.accountName || !String(record.accountName).trim()) next.accountName = 'El nombre es requerido';
+        if (!record.accountType) next.accountType = 'Seleccione el tipo de cuenta';
+        if (!record.bankId || Number(record.bankId) <= 0) next.bankId = 'Seleccione el banco';
+        if (!record.currencyTypeId || Number(record.currencyTypeId) <= 0) next.currencyTypeId = 'Seleccione la moneda';
+        if (!record.accountingAccountId || Number(record.accountingAccountId) <= 0) next.accountingAccountId = 'Seleccione la cuenta contable';
+        return next;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        const fieldErrors = validateRequired();
+        if (Object.keys(fieldErrors).length > 0) {
+            setErrors(fieldErrors);
+            setError({
+                message: 'Por favor complete los campos obligatorios marcados.',
+                type: 'danger',
+                show: true,
+            });
+            return;
+        }
 
         try {
             const body = {
@@ -63,7 +90,11 @@ const CreateBankAccount = ({
                 notifyLowBalance: record.notifyLowBalance || false,
                 minimumBalance:   Number(record.minimumBalance) || 0,
                 handlesCheckbook: record.handlesCheckbook || false,
-                costCenterId:     Number(record.costCenterId) || 0,
+                // QA Bloque AU (2026-05-06) — Bug 1: enviar null cuando no
+                // hay seleccion. Antes `|| 0` mandaba 0 que el backend
+                // interpretaba como id invalido y lanzaba "Centro de costo
+                // no encontrado".
+                costCenterId:     record.costCenterId ? Number(record.costCenterId) : null,
                 bookId:           Number(record.bookId)       || 0,
             };
 
@@ -210,8 +241,14 @@ const CreateBankAccount = ({
                                 <InputSelectModal
                                     id="ba_costCenterId" label="Centro de costo"
                                     value={record.costCenterId}
-                                    onChange={v => field('costCenterId', v)}
+                                    // QA Bloque AU (2026-05-06) — Bug 1: si el
+                                    // usuario clickea la X (clear), v llega
+                                    // null/undefined. Convertir a '' para que
+                                    // el state quede limpio y el dropdown
+                                    // refleje el cambio visual.
+                                    onChange={v => field('costCenterId', v || '')}
                                     options={costCenters}
+                                    error={errors.costCenterId}
                                     clearable
                                 />
                             </div>

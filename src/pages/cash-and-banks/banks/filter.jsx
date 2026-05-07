@@ -44,9 +44,13 @@ const FilterCashAndBanks = ({
     const table = dataTableRef?.current;
     if (!table) return;
 
+    // QA Bloque AU (2026-05-06) — Bug 2: nombre y nombre corto pasan a busqueda
+    // EXACTA (regex=false). Antes el regex=true generaba LIKE en backend pero
+    // el QA reporta que no devolvia matches y el label decia "(parcial)" lo
+    // cual confundia al usuario.
     table.column("code:name").search(nextFilters.CODIGO_BANCO || "", false, false);
-    table.column("name:name").search(nextFilters.NOMBRE_BANCO || "", false, true);
-    table.column("nameShort:name").search(nextFilters.NOMBRE_CORTO || "", false, true);
+    table.column("name:name").search(nextFilters.NOMBRE_BANCO || "", false, false);
+    table.column("nameShort:name").search(nextFilters.NOMBRE_CORTO || "", false, false);
     table.column("typeBank:name").search(nextFilters.TIPO_BANCO || "", false, false);
     table.column("country.code:name").search(nextFilters.PAIS_CODIGO || "", false, false);
     table.column("status:name").search(nextFilters.ESTADO || "", false, false);
@@ -59,11 +63,14 @@ const FilterCashAndBanks = ({
     filterInstance?.current?.hide();
   };
 
+  // QA Bloque AU (2026-05-06) — Bug 3: Limpiar deja el modal abierto para
+  // que el usuario vea los inputs vaciados (mismo patron Bloque AQ aplicado
+  // en CFG). Cerrar el modal solo se hace por Cancelar/Cerrar o tras
+  // Filtrar exitoso.
   const handleClear = () => {
     setFilters(initialFilters);
     applyFiltersToTable(initialFilters);
     onApply?.(initialFilters);
-    filterInstance?.current?.hide();
   };
 
   return (
@@ -100,7 +107,7 @@ const FilterCashAndBanks = ({
                 <InputModal
                   type="text"
                   id="NOMBRE_BANCO_FILTER"
-                  label="Nombre banco (parcial)"
+                  label="Nombre banco (exacto)"
                   value={filters.NOMBRE_BANCO}
                   onChange={(e) =>
                     setFilters({
@@ -118,7 +125,7 @@ const FilterCashAndBanks = ({
                 <InputModal
                   type="text"
                   id="NOMBRE_CORTO_FILTER"
-                  label="Nombre corto (parcial)"
+                  label="Nombre corto (exacto)"
                   value={filters.NOMBRE_CORTO}
                   onChange={(e) =>
                     setFilters({
@@ -135,7 +142,8 @@ const FilterCashAndBanks = ({
                   label="Tipo banco (exacto)"
                   options={BANK_TYPES}
                   value={filters.TIPO_BANCO}
-                  onChange={(value) => setFilters({ ...filters, TIPO_BANCO: value })}
+                  onChange={(value) => setFilters({ ...filters, TIPO_BANCO: value || "" })}
+                  clearable
                 />
               </div>
             </div>
@@ -148,8 +156,9 @@ const FilterCashAndBanks = ({
                   options={countries}
                   value={filters.PAIS_CODIGO}
                   onChange={(value) =>
-                    setFilters({ ...filters, PAIS_CODIGO: sanitizeCountryCode(value) })
+                    setFilters({ ...filters, PAIS_CODIGO: sanitizeCountryCode(value || "") })
                   }
+                  clearable
                 />
               </div>
               <div className="col-md-6 mb-3">
@@ -158,7 +167,8 @@ const FilterCashAndBanks = ({
                   label="Estado (exacto)"
                   options={BANK_STATUS_OPTIONS}
                   value={filters.ESTADO}
-                  onChange={(value) => setFilters({ ...filters, ESTADO: value })}
+                  onChange={(value) => setFilters({ ...filters, ESTADO: value || "" })}
+                  clearable
                 />
               </div>
             </div>

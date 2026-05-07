@@ -41,6 +41,20 @@ const TABS = [
     { id: 'contabilidad',   label: 'Contabilidad',             icon: 'ri-book-2-line' },
 ];
 
+// QA Bloque AU (2026-05-06) — Bug 2 + Bug 3: campo → tab + restriccion de
+// edicion. Codigo, tipo y moneda NO son editables tras la creacion (HU
+// preservacion contable). Si el usuario intenta cambiarlos, el frontend
+// los muestra como readonly.
+const FIELD_TO_TAB = {
+    codigoCaja: 'identificacion', nombreCaja: 'identificacion', tipoCaja: 'identificacion', descripcion: 'identificacion',
+    ubicacionFisica: 'ubicacion', idResponsablePrincipal: 'ubicacion', idResponsableSuplente: 'ubicacion', horarioOperacion: 'ubicacion',
+    monedaCodigo: 'financiero', saldoInicial: 'financiero', fechaSaldoInicial: 'financiero', fechaCreacionCaja: 'financiero',
+    limiteMaximo: 'limites', limiteMinimo: 'limites', notificarLimite: 'limites',
+    requiereAutorizacion: 'operaciones', montoMaxSinAutorizacion: 'operaciones', periodicidadArqueo: 'operaciones',
+    idCuentaContable: 'contabilidad', libroContable: 'contabilidad', centroCosto: 'contabilidad',
+    motivoCambio: 'identificacion', statusReason: 'identificacion', closingDate: 'identificacion',
+};
+
 export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, dataTableRef, setCajaEdit, readOnly,
     accountingAccounts, currencyTypes, costCenters, users
  }) {
@@ -93,14 +107,29 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                 && cajaUpdated.motivoCambio.trim().length < 10) {
             e.motivoCambio = `El motivo del cambio debe tener mínimo 10 caracteres (actual: ${cajaUpdated.motivoCambio.trim().length}).`;
         }
+        // QA Bloque AU (2026-05-06) — Bug 1: principal y suplente no pueden ser iguales.
+        if (cajaUpdated.idResponsablePrincipal && cajaUpdated.idResponsableSuplente
+            && String(cajaUpdated.idResponsablePrincipal) === String(cajaUpdated.idResponsableSuplente)) {
+            e.idResponsableSuplente = 'El suplente debe ser una persona distinta del responsable principal.';
+        }
         return e;
     };
+
+    // QA Bloque AU (2026-05-06) — Bug 2: marca de tabs con errores.
+    const tabsWithErrors = Object.keys(errors).reduce((acc, key) => {
+        const tab = FIELD_TO_TAB[key];
+        if (tab) acc.add(tab);
+        return acc;
+    }, new Set());
 
     const handleUpdate = async () => {
         const e = validate();
         if (Object.keys(e).length > 0) {
             setErrors(e);
-            setErrorMessage('Por favor corrija los errores antes de continuar.');
+            const firstErrTab = TABS.find(t => Object.keys(e).some(k => FIELD_TO_TAB[k] === t.id));
+            if (firstErrTab) setActiveTab(firstErrTab.id);
+            const list = Object.entries(e).map(([k, v]) => `• ${k}: ${v}`).join('\n');
+            setErrorMessage('Por favor corrija los errores antes de continuar:\n' + list);
             return;
         }
         setErrors({});
@@ -164,29 +193,49 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                         <button type="button" className="btn-close" data-bs-dismiss="modal" />
                     </div>
                     <div className="modal-body">
-                        {errorMessage && !readOnly && <div className="alert alert-danger py-2 mb-3">{errorMessage}</div>}
+                        {/* QA Bloque AU (2026-05-06) — Bug 3: aviso de campos
+                            no editables tras la creacion (HU preservacion). */}
+                        {!readOnly && (
+                            <div className="alert alert-info py-2 mb-3">
+                                <i className="ri-information-line me-1"></i>
+                                El <strong>código</strong>, el <strong>tipo de caja</strong> y la <strong>moneda</strong> no pueden modificarse después de la creación.
+                            </div>
+                        )}
+                        {errorMessage && !readOnly && (
+                            <div className="alert alert-danger py-2 mb-3" style={{whiteSpace: 'pre-line'}}>
+                                {errorMessage}
+                            </div>
+                        )}
 
                         <ul className="nav nav-tabs mb-3 flex-wrap">
-                            {TABS.map(t => (
-                                <li className="nav-item" key={t.id}>
-                                    <button className={`nav-link ${activeTab === t.id ? 'active' : ''}`} onClick={() => setActiveTab(t.id)}>
-                                        <i className={`${t.icon} me-1`} />{t.label}
-                                    </button>
-                                </li>
-                            ))}
+                            {TABS.map(t => {
+                                const hasError = tabsWithErrors.has(t.id);
+                                return (
+                                    <li className="nav-item" key={t.id}>
+                                        <button
+                                            className={`nav-link ${activeTab === t.id ? 'active' : ''} ${hasError ? 'text-danger' : ''}`}
+                                            onClick={() => setActiveTab(t.id)}
+                                            style={hasError ? { borderColor: '#ff5b5c' } : undefined}
+                                            title={hasError ? 'Esta pestaña tiene campos con errores' : undefined}
+                                        >
+                                            <i className={`${t.icon} me-1`} />
+                                            {t.label}
+                                            {hasError && <i className="ri-error-warning-line text-danger ms-1" />}
+                                        </button>
+                                    </li>
+                                );
+                            })}
                         </ul>
 
                         {/* Identificación */}
                         {activeTab === 'identificacion' && (
                             <div className="row">
-                                {/* <div className="col-md-2 mb-3">
-                                    <InputModal id="cu_id" label="ID Caja" value={cajaUpdated.id}
-                                        onChange={() => {}} disabled={true} />
-                                </div> */}
+                                {/* QA Bloque AU (2026-05-06) — Bug 3: codigo,
+                                    tipo y moneda son readonly tras creacion. */}
                                 <div className="col-md-3 mb-3">
                                     <InputModal id="cu_codigo" label="Código de Caja" value={cajaUpdated.codigoCaja}
                                         onChange={e => set('codigoCaja', e.target.value)} error={errors.codigoCaja}
-                                        required={true} disabled={readOnly} />
+                                        required={true} disabled readOnly />
                                 </div>
                                 <div className="col-md-3 mb-3">
                                     <InputModal id="cu_nombre" label="Nombre de Caja" value={cajaUpdated.nombreCaja}
@@ -196,7 +245,7 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                 <div className="col-md-3 mb-3">
                                     <InputSelectModal id="cu_tipo" label="Tipo de Caja" value={cajaUpdated.tipoCaja}
                                         onChange={v => set('tipoCaja', v)} error={errors.tipoCaja}
-                                        options={TIPOS_CAJA} placeholder="Seleccione tipo" required={true} disabled={readOnly} />
+                                        options={TIPOS_CAJA} placeholder="Seleccione tipo" required={true} disabled />
                                 </div>
                                 <div className="col-md-3 mb-3">
                                     <InputSelectModal id="cu_estado" label="Estado" value={cajaUpdated.estadoCaja}
@@ -234,10 +283,41 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                         onChange={e => set('ubicacionFisica', e.target.value)} error={errors.ubicacionFisica}
                                         required={true} disabled={readOnly} />
                                 </div>
+                                {/* QA Bloque AU (2026-05-06) — Bug 5: dos
+                                    inputs type=time concatenados como
+                                    "HH:MM-HH:MM" en operationSchedule. */}
                                 <div className="col-md-6 mb-3">
-                                    <InputModal id="cu_horario" label="Horario de Operación" value={cajaUpdated.horarioOperacion}
-                                        onChange={e => set('horarioOperacion', e.target.value)} error={errors.horarioOperacion}
-                                        placeholder="Ej: L-V 8:00-17:00 (opcional)" disabled={readOnly} />
+                                    <label className="form-label">Horario de Operación</label>
+                                    <div className="d-flex align-items-center">
+                                        <input
+                                            type="time"
+                                            className="form-control me-2"
+                                            value={(cajaUpdated.horarioOperacion || '').split('-')[0] || ''}
+                                            onChange={e => {
+                                                const start = e.target.value;
+                                                const end = (cajaUpdated.horarioOperacion || '').split('-')[1] || '';
+                                                set('horarioOperacion', start || end ? `${start}-${end}` : '');
+                                            }}
+                                            disabled={readOnly}
+                                            aria-label="Hora de inicio"
+                                        />
+                                        <span className="mx-1">a</span>
+                                        <input
+                                            type="time"
+                                            className="form-control"
+                                            value={(cajaUpdated.horarioOperacion || '').split('-')[1] || ''}
+                                            onChange={e => {
+                                                const start = (cajaUpdated.horarioOperacion || '').split('-')[0] || '';
+                                                const end = e.target.value;
+                                                set('horarioOperacion', start || end ? `${start}-${end}` : '');
+                                            }}
+                                            disabled={readOnly}
+                                            aria-label="Hora de cierre"
+                                        />
+                                    </div>
+                                    {errors.horarioOperacion && (
+                                        <div className="text-danger small">{errors.horarioOperacion}</div>
+                                    )}
                                 </div>
                                 <div className="col-md-6 mb-3">
                                     <InputSelectModal id="cu_resp_p" label="Responsable Principal" value={cajaUpdated.idResponsablePrincipal}
@@ -263,13 +343,13 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                         {/* Datos Financieros */}
                         {activeTab === 'financiero' && (
                             <div className="row">
+                                {/* QA Bloque AU (2026-05-06) — Bug 3: moneda
+                                    no editable tras la creacion. */}
                                 <div className="col-md-4 mb-3">
                                     <InputSelectModal id="cu_moneda" label="Moneda" value={cajaUpdated.monedaCodigo}
                                         onChange={v => set('monedaCodigo', v)} error={errors.monedaCodigo}
-                                        options={currencyTypes} placeholder="Seleccione moneda" required={true} />
-                                    {/* <InputModal id="cu_moneda" label="ID Moneda" type="number" value={cajaUpdated.monedaCodigo}
-                                        onChange={e => set('monedaCodigo', e.target.value)} error={errors.monedaCodigo}
-                                        placeholder="ID numérico de la moneda" required={true} disabled={readOnly} /> */}
+                                        options={currencyTypes} placeholder="Seleccione moneda" required={true}
+                                        disabled />
                                 </div>
                                 <div className="col-md-4 mb-3">
                                     <InputModal id="cu_saldo" label="Saldo Inicial" type="number"

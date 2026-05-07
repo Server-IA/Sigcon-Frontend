@@ -146,11 +146,15 @@ const UpdatedProjection = ({ modalRef, modalInstance, projection, setProjection,
                             </div>
                             <div className="col-md-6 mb-3">
                                 <InputModal
-                                    id="proj_u_netflow" label="Flujo Neto" type="number"
+                                    id="proj_u_netflow" label="Flujo por periodo (magnitud)" type="number"
                                     value={projection.netFlow}
                                     onChange={e => set('netFlow', e.target.value)}
                                     error={errors.netFlow} required={true}
                                 />
+                                <small className="text-muted d-block mt-1">
+                                    Ingrese magnitud positiva. Al cambiar Tipo o Periodicidad el saldo
+                                    final se recalcula. NETA acepta positivo o negativo.
+                                </small>
                             </div>
                         </div>
                     </div>

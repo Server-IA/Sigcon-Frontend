@@ -30,10 +30,24 @@ const CreateBankBranch = ({
   setBranch,
   setBranchCreate,
   municipalities,
-  datatable
+  datatable,
+  // QA Bloque AU (2026-05-06) — Bug 1: prop nueva. El index calcula si el banco
+  // ya tiene una sucursal principal y la pasa aqui. Cuando es la primera
+  // (forceMainBranch=true) bloqueamos el dropdown en "Principal" para que
+  // ningun usuario pueda crear una primera sucursal Secundaria.
+  forceMainBranch = false,
 }) => {
   const [errors, setErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
+
+  // QA Bloque AU — Bug 1: si el banco aun no tiene principal, sincronizamos
+  // mainBranch=true en el state inmediatamente al abrir el modal.
+  useEffect(() => {
+    if (forceMainBranch && branch?.mainBranch !== true) {
+      setBranch((prev) => ({ ...prev, mainBranch: true }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceMainBranch]);
 
 
   const handleBackendErrors = (error) => {
@@ -65,6 +79,8 @@ const CreateBankBranch = ({
       mainBranch: Boolean(branch.mainBranch),
       municipalityId: Number(branch.municipalityId),
       address: branch.address?.trim() || "",
+      // QA Bloque AU (2026-05-06) — Bug 3: telefono opcional de la sucursal.
+      phone: (branch.phone || "").trim() || null,
     };
 
     try {
@@ -143,19 +159,51 @@ const CreateBankBranch = ({
             </div>
 
             <div className="row">
+              {/* QA Bloque AU (2026-05-06) — Bug 3: telefono de la sucursal. */}
+              <div className="col-12 mb-3">
+                <InputModal
+                  type="text"
+                  id="PHONE_CREATE"
+                  label="Telefono de la sucursal"
+                  value={branch.phone || ""}
+                  onChange={(e) => {
+                    // Solo digitos, +, espacios y guiones (formato de telefono).
+                    const cleaned = (e.target.value || "")
+                      .replace(/[^\d+ \-]/g, "")
+                      .slice(0, 30);
+                    setBranch({ ...branch, phone: cleaned });
+                  }}
+                  placeholder="Ej: 6017512345"
+                />
+              </div>
+            </div>
+
+            <div className="row">
               <div className="col-12 mb-3">
                 <InputSelectModal
                   id="MAIN_BRANCH_CREATE"
                   label="Sucursal principal"
-                  value={branch.mainBranch ? "true" : "false"}
+                  value={(forceMainBranch || branch.mainBranch) ? "true" : "false"}
                   onChange={(value) =>
                     setBranch({
                       ...branch,
                       mainBranch: value === true || value === "true",
                     })
                   }
-                  options={MAIN_BRANCH_OPTIONS}
+                  options={
+                    forceMainBranch
+                      ? [{ id: "true", label: "Principal" }]
+                      : MAIN_BRANCH_OPTIONS
+                  }
+                  disabled={forceMainBranch}
                 />
+                {forceMainBranch && (
+                  <div className="form-text text-info">
+                    <i className="ri-information-line me-1"></i>
+                    La primera sucursal de un banco debe ser Principal y no se
+                    puede registrar como Secundaria.
+                  </div>
+                )}
               </div>
             </div>
           </div>

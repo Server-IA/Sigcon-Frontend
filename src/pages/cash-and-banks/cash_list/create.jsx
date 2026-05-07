@@ -34,6 +34,20 @@ const TABS = [
     { id: 'contabilidad',   label: 'Contabilidad',             icon: 'ri-book-2-line' },
 ];
 
+// QA Bloque AU (2026-05-06) — Bug 2: mapeo campo → tab para que cuando
+// hay errores podamos resaltar la pestaña afectada y auto-saltar al
+// primer tab con errores. Antes el banner decia "Por favor corrija los
+// errores antes de continuar" pero no indicaba en cual tab estaba el
+// problema.
+const FIELD_TO_TAB = {
+    codigoCaja: 'identificacion', nombreCaja: 'identificacion', tipoCaja: 'identificacion', descripcion: 'identificacion',
+    ubicacionFisica: 'ubicacion', idResponsablePrincipal: 'ubicacion', idResponsableSuplente: 'ubicacion', horarioOperacion: 'ubicacion',
+    monedaCodigo: 'financiero', saldoInicial: 'financiero', fechaSaldoInicial: 'financiero', fechaCreacionCaja: 'financiero',
+    limiteMaximo: 'limites', limiteMinimo: 'limites', notificarLimite: 'limites',
+    requiereAutorizacion: 'operaciones', montoMaxSinAutorizacion: 'operaciones', periodicidadArqueo: 'operaciones',
+    idCuentaContable: 'contabilidad', libroContable: 'contabilidad', centroCosto: 'contabilidad',
+};
+
 const emptyCaja = {
     codigoCaja: '', nombreCaja: '', tipoCaja: '', descripcion: '',
     ubicacionFisica: '', idResponsablePrincipal: '', idResponsableSuplente: '', horarioOperacion: '',
@@ -73,14 +87,36 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
             Number(caja.limiteMaximo) <= Number(caja.limiteMinimo)) e.limiteMaximo = 'Debe ser mayor que el límite mínimo';
         if (caja.requiereAutorizacion && caja.montoMaxSinAutorizacion === '')
             e.montoMaxSinAutorizacion = 'Requerido cuando se activa autorización';
+
+        // QA Bloque AU (2026-05-06) — Bug 1: responsable principal y suplente
+        // no pueden ser la misma persona.
+        if (caja.idResponsablePrincipal && caja.idResponsableSuplente
+            && String(caja.idResponsablePrincipal) === String(caja.idResponsableSuplente)) {
+            e.idResponsableSuplente = 'El suplente debe ser una persona distinta del responsable principal.';
+        }
         return e;
     };
+
+    // QA Bloque AU (2026-05-06) — Bug 2: helper para construir el set de
+    // tabs que tienen errores. Los tabs con errores se renderizan con
+    // borde rojo + icono de alerta. Y al click Guardar, saltamos
+    // automaticamente al primer tab con problemas.
+    const tabsWithErrors = Object.keys(errors).reduce((acc, key) => {
+        const tab = FIELD_TO_TAB[key];
+        if (tab) acc.add(tab);
+        return acc;
+    }, new Set());
 
     const handleCreate = async () => {
         const e = validate();
         if (Object.keys(e).length > 0) {
             setErrors(e);
-            setErrorMessage('Por favor corrija los errores antes de continuar.');
+            // Saltar al primer tab que contenga error.
+            const firstErrTab = TABS.find(t => Object.keys(e).some(k => FIELD_TO_TAB[k] === t.id));
+            if (firstErrTab) setActiveTab(firstErrTab.id);
+            // Listado legible de errores en el banner.
+            const list = Object.entries(e).map(([k, v]) => `• ${k}: ${v}`).join('\n');
+            setErrorMessage('Por favor corrija los errores antes de continuar:\n' + list);
             return;
         }
         setErrors({});
@@ -131,16 +167,30 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                         <button type="button" className="btn-close" data-bs-dismiss="modal" />
                     </div>
                     <div className="modal-body">
-                        {errorMessage && <div className="alert alert-danger py-2 mb-3">{errorMessage}</div>}
+                        {errorMessage && (
+                            <div className="alert alert-danger py-2 mb-3" style={{whiteSpace: 'pre-line'}}>
+                                {errorMessage}
+                            </div>
+                        )}
 
                         <ul className="nav nav-tabs mb-3 flex-wrap">
-                            {TABS.map(t => (
-                                <li className="nav-item" key={t.id}>
-                                    <button className={`nav-link ${activeTab === t.id ? 'active' : ''}`} onClick={() => setActiveTab(t.id)}>
-                                        <i className={`${t.icon} me-1`} />{t.label}
-                                    </button>
-                                </li>
-                            ))}
+                            {TABS.map(t => {
+                                const hasError = tabsWithErrors.has(t.id);
+                                return (
+                                    <li className="nav-item" key={t.id}>
+                                        <button
+                                            className={`nav-link ${activeTab === t.id ? 'active' : ''} ${hasError ? 'text-danger' : ''}`}
+                                            onClick={() => setActiveTab(t.id)}
+                                            style={hasError ? { borderColor: '#ff5b5c' } : undefined}
+                                            title={hasError ? 'Esta pestaña tiene campos con errores' : undefined}
+                                        >
+                                            <i className={`${t.icon} me-1`} />
+                                            {t.label}
+                                            {hasError && <i className="ri-error-warning-line text-danger ms-1" />}
+                                        </button>
+                                    </li>
+                                );
+                            })}
                         </ul>
 
                         {/* Identificación */}
@@ -174,10 +224,41 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                                     <InputModal id="cc_ubicacion" label="Ubicación Física" value={caja.ubicacionFisica}
                                         onChange={e => set('ubicacionFisica', e.target.value)} error={errors.ubicacionFisica} required={true} />
                                 </div>
+                                {/* QA Bloque AU (2026-05-06) — Bug 5: horario
+                                    de operacion como dos inputs type=time
+                                    (reloj nativo del navegador). El estado
+                                    se concatena como "HH:MM-HH:MM" para que
+                                    el backend lo persista en operationSchedule. */}
                                 <div className="col-md-6 mb-3">
-                                    <InputModal id="cc_horario" label="Horario de Operación" value={caja.horarioOperacion}
-                                        onChange={e => set('horarioOperacion', e.target.value)} error={errors.horarioOperacion}
-                                        placeholder="Ej: L-V 8:00-17:00 (opcional)" />
+                                    <label className="form-label">Horario de Operación</label>
+                                    <div className="d-flex align-items-center">
+                                        <input
+                                            type="time"
+                                            className="form-control me-2"
+                                            value={(caja.horarioOperacion || '').split('-')[0] || ''}
+                                            onChange={e => {
+                                                const start = e.target.value;
+                                                const end = (caja.horarioOperacion || '').split('-')[1] || '';
+                                                set('horarioOperacion', start || end ? `${start}-${end}` : '');
+                                            }}
+                                            aria-label="Hora de inicio"
+                                        />
+                                        <span className="mx-1">a</span>
+                                        <input
+                                            type="time"
+                                            className="form-control"
+                                            value={(caja.horarioOperacion || '').split('-')[1] || ''}
+                                            onChange={e => {
+                                                const start = (caja.horarioOperacion || '').split('-')[0] || '';
+                                                const end = e.target.value;
+                                                set('horarioOperacion', start || end ? `${start}-${end}` : '');
+                                            }}
+                                            aria-label="Hora de cierre"
+                                        />
+                                    </div>
+                                    {errors.horarioOperacion && (
+                                        <div className="text-danger small">{errors.horarioOperacion}</div>
+                                    )}
                                 </div>
                                 <div className="col-md-6 mb-3">
                                     <InputSelectModal id="cc_resp_p" label="Responsable Principal" value={caja.idResponsablePrincipal}

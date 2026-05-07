@@ -55,6 +55,8 @@ const IndexBankBranches = () => {
     municipalityId: null,
     mainBranch: false,
     status: "active",
+    // QA Bloque AU (2026-05-06) — Bug 3: telefono de la sucursal.
+    phone: "",
   };
 
   const [branch, setBranch] = useState(INITIAL_BRANCH);
@@ -82,23 +84,47 @@ const IndexBankBranches = () => {
       : []),
   ];
 
+  // QA Bloque AU (2026-05-06) — Bug 2: el backend SOLO filtra por bank.id si
+  // la columna llega con `searchable:true, search.value=<id>`. Antes el
+  // valor venia indefinido cuando id_bank aun no se resolvia y todas las
+  // sucursales del tenant aparecian. Ahora damos `name:'bank.id'` explicito.
   const filterColumns = [
-    { data: "bank.id", searchable: true, search: { value: id_bank, regex: false } },
+    {
+      data: "bank.id",
+      name: "bank.id",
+      searchable: true,
+      orderable: false,
+      search: { value: id_bank ? String(id_bank) : "", regex: false },
+    },
   ];
 
+  // QA Bloque AU — Bug 3a: agregamos columnas ocultas para filtrar por
+  // municipality.id (ciudad como dropdown de catalogo) y por bank.id (ya
+  // viene en filterColumns). El name apunta al path JPA real para que
+  // DataTableSpecificationBuilder.resolveFieldName lo resuelva contra la
+  // entidad BankBranch sin lanzar "Could not resolve attribute".
   const columns = [
     { title: "ID", data: "id", name: "id" },
     {
       title: "Ciudad",
       data: "municipality.name",
-      name: "city",
+      name: "municipality.name",
       render: (value) => highlightMatch(value, appliedFilters.city),
     },
+    // Hidden column: filtro exacto por municipality.id (dropdown ciudades).
+    { data: "municipality.id", name: "municipality.id", visible: false, searchable: true, orderable: false },
     {
       title: "Direccion",
       data: "address",
       name: "address",
       render: (value) => highlightMatch(value, ""),
+    },
+    // QA Bloque AU (2026-05-06) — Bug 3: columna Telefono visible en el listado.
+    {
+      title: "Telefono",
+      data: "phone",
+      name: "phone",
+      render: (value) => value || '<span class="text-muted">—</span>',
     },
     {
       title: "Principal",
@@ -155,6 +181,8 @@ const IndexBankBranches = () => {
       municipalityId: Number(row.municipality?.id ?? row.municipalityId),
       mainBranch: Boolean(row.mainBranch),
       status: row.status,
+      // QA Bloque AU (2026-05-06) — Bug 3: precargar telefono al editar.
+      phone: row.phone || "",
     });
     modalUpdateInstance.current.show();
   };
@@ -337,6 +365,7 @@ const IndexBankBranches = () => {
         filterInstance={filterInstance}
         dataTableRef={dataTableRef}
         onApply={(filters) => setAppliedFilters(filters)}
+        municipalities={municipalities}
       />
 
       <CreateBankBranch
@@ -347,6 +376,10 @@ const IndexBankBranches = () => {
         setBranchCreate={setBranchCreate}
         municipalities={municipalities}
         datatable={dataTableRef}
+        // QA Bloque AU (2026-05-06) — Bug 1: si el banco actual aun no tiene
+        // sucursal principal, forzamos que la primera sea Principal. Asi el
+        // usuario no puede crear una primera sucursal Secundaria.
+        forceMainBranch={!data?.some((row) => row?.mainBranch === true)}
       />
 
       <UpdatedBankBranch

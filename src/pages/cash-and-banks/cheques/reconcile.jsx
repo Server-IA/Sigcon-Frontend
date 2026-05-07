@@ -252,8 +252,13 @@ const ReconcileCheque = ({
                                     required
                                 />
                             </div>
-                            <div className="col-md-6 mb-4 mt-2">
-                                {showMovementSelect ? (
+                            {/* QA Bloque AU (2026-05-06) — Bug 6: si la
+                                conciliacion es MANUAL, ocultar el campo de
+                                movimiento financiero en lugar de mostrarlo
+                                deshabilitado con "—". El backend creara
+                                automaticamente el FM al cobrar. */}
+                            {showMovementSelect && (
+                                <div className="col-md-6 mb-4 mt-2">
                                     <InputSelectModal
                                         id="rec_movimiento_select"
                                         label="Movimiento bancario (extracto)"
@@ -264,18 +269,18 @@ const ReconcileCheque = ({
                                         required
                                         disabled={loadingMovements || !movementOptions.length}
                                     />
-                                ) : (
-                                    <InputModal
-                                        type="text"
-                                        id="rec_movimiento_na"
-                                        label="Movimiento financiero"
-                                        value="—"
-                                        onChange={() => {}}
-                                        disabled
-                                        readOnly
-                                    />
-                                )}
-                            </div>
+                                </div>
+                            )}
+                            {!showMovementSelect && (
+                                <div className="col-md-6 mb-4 mt-2 d-flex align-items-end">
+                                    <div className="alert alert-info py-2 mb-0 w-100">
+                                        <i className="ri-information-line me-1"></i>
+                                        Conciliación manual: el sistema generará
+                                        automáticamente el movimiento bancario
+                                        al registrar el cobro.
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

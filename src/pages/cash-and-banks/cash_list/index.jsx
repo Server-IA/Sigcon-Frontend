@@ -184,17 +184,33 @@ export default function IndexCashList() {
             render: (val) => val != null ? Number(val).toLocaleString('es-CO', { minimumFractionDigits: 2 }) : '-',
         },
         {
+            // QA Bloque AU (2026-05-06) — Bug 4: nuevo boton "Cambiar
+            // estado" (icono toggle). Permite ACTIVA <-> INACTIVA <->
+            // CERRADA segun la HU. Backend valida transiciones.
             title: 'Acciones', data: 'id', searchable: false,
-            render: (val) => `
+            render: (val, _, row) => `
                 <div class="d-flex gap-1 flex-wrap">
                     <button class="btn btn-sm btn-label-info action-btn"    data-action="view"   data-id="${val}" title="Ver datos"><i class="ri-eye-line"></i></button>
                     <button class="btn btn-sm btn-label-primary action-btn" data-action="edit"   data-id="${val}" title="Editar"><i class="ri-edit-line"></i></button>
+                    <button class="btn btn-sm btn-label-warning action-btn" data-action="status" data-id="${val}" title="Cambiar estado"><i class="ri-toggle-line"></i></button>
                     <button class="btn btn-sm btn-label-danger action-btn"  data-action="delete" data-id="${val}" title="Eliminar"><i class="ri-delete-bin-5-line"></i></button>
                 </div>`,
         },
     ];
 
     const buttons = [
+        // QA Bloque AU (2026-05-06) — Bug 4: agregar boton de filtros que
+        // antes no existia en cajas.
+        {
+            text: '<i class="ri-filter-line me-1"></i> Filtrar',
+            className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2',
+            action: () => {
+                if (!filterInstance.current) {
+                    filterInstance.current = new window.bootstrap.Modal(filterRef.current);
+                }
+                filterInstance.current.show();
+            },
+        },
         {
             text: '<i class="ri-add-line me-1"></i> Nueva Caja',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
@@ -232,6 +248,69 @@ export default function IndexCashList() {
                 case 'delete':
                     openConfirmDelete(row.id, row.cahsName ?? row.cashCode);
                     break;
+                case 'status': {
+                    // QA Bloque AU (2026-05-06) — Bug 4: cambio de estado
+                    // ACTIVE/INACTIVE/CLOSED con motivo obligatorio (>= 10 chars).
+                    const currentStatus = row.status || row.cashStatus || 'ACTIVE';
+                    (async () => {
+                        const { value: form } = await window.Swal.fire({
+                            title: 'Cambiar estado de la caja',
+                            html:
+                                `<div class="mb-3 text-start">` +
+                                `<label class="form-label">Estado actual</label>` +
+                                `<input class="form-control" disabled value="${currentStatus}"/>` +
+                                `</div>` +
+                                `<div class="mb-3 text-start">` +
+                                `<label class="form-label">Nuevo estado</label>` +
+                                `<select id="swal-new-status" class="form-control">` +
+                                `<option value="ACTIVE"${currentStatus==='ACTIVE'?' disabled':''}>ACTIVE</option>` +
+                                `<option value="INACTIVE"${currentStatus==='INACTIVE'?' disabled':''}>INACTIVE</option>` +
+                                `<option value="CLOSED"${currentStatus==='CLOSED'?' disabled':''}>CLOSED</option>` +
+                                `</select>` +
+                                `</div>` +
+                                `<div class="mb-1 text-start">` +
+                                `<label class="form-label">Motivo del cambio (mínimo 10 caracteres)</label>` +
+                                `<textarea id="swal-status-reason" class="form-control" rows="3"></textarea>` +
+                                `</div>`,
+                            showCancelButton: true,
+                            confirmButtonText: 'Aplicar',
+                            cancelButtonText: 'Cancelar',
+                            preConfirm: () => {
+                                const newStatus = document.getElementById('swal-new-status').value;
+                                const reason = (document.getElementById('swal-status-reason').value || '').trim();
+                                if (!newStatus || newStatus === currentStatus) {
+                                    window.Swal.showValidationMessage('Seleccione un estado distinto al actual');
+                                    return false;
+                                }
+                                if (reason.length < 10) {
+                                    window.Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres');
+                                    return false;
+                                }
+                                return { newStatus, reason };
+                            },
+                        });
+                        if (!form) return;
+                        try {
+                            // QA Bloque AU (2026-05-06) — Bug 4: el DTO
+                            // backend espera `status` (no newStatus) y
+                            // `reason` (no motivoCambio).
+                            const payload = { status: form.newStatus, reason: form.reason };
+                            if (form.newStatus === 'CLOSED') {
+                                payload.closingDate = new Date().toISOString().split('T')[0];
+                            }
+                            await fetchHelper.put(
+                                base_url(['api', 'v1', 'cash', row.id, 'status']),
+                                payload,
+                                {}, 1000
+                            );
+                            dataTableRef?.current?.ajax.reload();
+                            window.Swal.fire({ icon: 'success', title: 'Estado actualizado', timer: 1500, showConfirmButton: false });
+                        } catch (err) {
+                            window.Swal.fire({ icon: 'error', title: 'Error', text: err?.msg || 'No se pudo cambiar el estado.' });
+                        }
+                    })();
+                    break;
+                }
                 default:
                     break;
             }

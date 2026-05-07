@@ -130,10 +130,15 @@ const IndexApInvoices = () => {
                 const isEditable    = row?.status !== 'VOIDED' && row?.status !== 'SETTLED' && row?.status !== 'PAID';
                 const isDeletable   = row?.status === 'PENDING';
                 const isSettleable  = row?.status === 'PAID';
-                // HU-AP-25 (Bloque AS): solo se puede anular factura en estado
-                // PENDIENTE no originada por AAEF. El backend valida E1-E9; el
-                // boton se deshabilita en la UI segun el estado para mejor UX.
-                const isVoidable    = row?.status === 'PENDING'
+                // HU-AP-25 (Bloque AS/AY): se puede anular factura en estado
+                // PENDIENTE o PARTIALLY_PAID (sin pagos efectivos: el backend
+                // valida que los pagos hayan sido reversados antes de permitir).
+                // No se permite si fue originada por AAEF.
+                // QA-BLOQUE-AY HU-AP-25 E4 (2026-05-06): habilitar para
+                // PARTIALLY_PAID; antes solo PENDIENTE bloqueaba el flujo de
+                // reversion de pagos parciales aunque el backend ya soportaba.
+                const isVoidable    = (row?.status === 'PENDING'
+                                       || row?.status === 'PARTIALLY_PAID')
                                      && row?.source !== 'AAEF';
                 return `
                 <div class="d-flex gap-1">

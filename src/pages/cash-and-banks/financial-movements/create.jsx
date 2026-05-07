@@ -48,14 +48,30 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
             const items = Array.isArray(resp?.data) ? resp.data : [];
             // Solo cuentas activas (status='ACTIVA') son utilizables para movimientos.
             const active = items.filter(acc => !acc.status || acc.status === 'ACTIVA');
-            setBankAccounts(active.map(acc => ({
-                id: acc.id,
-                name: `${acc.code || ''} - ${acc.accountName || ''}`.trim(),
-            })));
+            // QA Bloque AU (2026-05-06) — Bug 5: el dropdown muestra el SALDO
+            // ACTUAL de cada cuenta junto con su codigo+nombre+banco para
+            // que el contador sepa de donde viene/va el dinero. Antes solo
+            // mostraba "BANCO-001 - Cuenta principal sigcom" sin contexto.
+            setBankAccounts(active.map(acc => {
+                const balance = acc.currentBalance != null ? acc.currentBalance : (acc.initialBalance ?? 0);
+                const formatted = Number(balance).toLocaleString('es-CO', { style: 'currency', currency: acc.currencyTypeDTO?.isoCode || 'COP', minimumFractionDigits: 2 });
+                const bank = acc.bankDTO?.name ? ` (${acc.bankDTO.name})` : '';
+                return {
+                    id: acc.id,
+                    name: `${acc.code || ''} - ${acc.accountName || ''}${bank} · Saldo: ${formatted}`.trim(),
+                    // Guardamos extra para el banner informativo.
+                    _balance: balance,
+                    _isoCode: acc.currencyTypeDTO?.isoCode || 'COP',
+                };
+            }));
         } catch (e) {
             console.log('Error cargando cuentas bancarias:', e);
         }
     };
+
+    // QA Bloque AU (2026-05-06) — Bug 5: cuenta seleccionada -> banner
+    // informativo con saldo actual.
+    const selectedAccount = bankAccounts.find(a => String(a.id) === String(form.bankAccountId));
 
     const handleChange = (field, value) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -123,6 +139,27 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
                         <div className="modal-body">
                             {errorMessage && (
                                 <div className="alert alert-danger">{errorMessage}</div>
+                            )}
+
+                            {/* QA Bloque AU (2026-05-06) — Bug 5: banner con
+                                saldo actual de la cuenta seleccionada. El
+                                contador puede asi confirmar que tiene fondos
+                                antes de registrar un egreso. */}
+                            {selectedAccount && (
+                                <div className="alert alert-info py-2 mb-3 d-flex align-items-center">
+                                    <i className="ri-bank-line me-2"></i>
+                                    <div>
+                                        <strong>Saldo actual de la cuenta:</strong>{' '}
+                                        {Number(selectedAccount._balance).toLocaleString('es-CO', {
+                                            style: 'currency',
+                                            currency: selectedAccount._isoCode || 'COP',
+                                            minimumFractionDigits: 2
+                                        })}
+                                        <small className="d-block text-muted">
+                                            Use monto positivo para ingresos y monto negativo para egresos.
+                                        </small>
+                                    </div>
+                                </div>
                             )}
 
                             <div className="row g-3">

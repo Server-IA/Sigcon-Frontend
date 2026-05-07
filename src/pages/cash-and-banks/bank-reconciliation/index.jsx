@@ -680,7 +680,17 @@ const BankReconciliation = () => {
                         </div>
 
                         <div className="col-lg-7">
-                            <h6 className="fw-semibold mb-3">Alta e importación</h6>
+                            <h6 className="fw-semibold mb-3">Alta e importación del extracto</h6>
+                            <div className="alert alert-info py-2 mb-3 small">
+                                <i className="ri-information-line me-1"></i>
+                                <strong>¿Que va aqui?</strong> Cargue las lineas del extracto bancario
+                                (manual o CSV). Los <strong>cheques cobrados</strong> y los pagos generados
+                                desde otros modulos ya generan automaticamente su movimiento financiero
+                                con el tipo MANUAL o BANK_IMPORT — apareceran abajo cuando esten asociados
+                                a esta cuenta. Las <strong>cajas</strong> tienen su propia conciliacion
+                                en <em>Bancos y Cajas &rarr; Cajas</em>; este flujo aplica solo a cuentas
+                                bancarias.
+                            </div>
                             <div className="row g-2 align-items-end mb-3">
                                 <div className="col-md-6">
                                     <InputDate

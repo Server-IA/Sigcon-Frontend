@@ -114,8 +114,12 @@ const ViewBankAccount = ({
                                     <Row label="N° Cuenta"       value={d.accountNumberMasked} />
                                     <Row label="Nombre"          value={d.accountName} />
                                     <Row label="Tipo"            value={accountTypes.find(t => t.id === d.accountType)?.label || d.accountType} />
-                                    <Row label="Banco"           value={d.bankName} />
-                                    <Row label="Moneda"          value={d.currencyCode} />
+                                    {/* QA Bloque AU (2026-05-06) — Bug 2: leer rutas anidadas reales del
+                                        BankAccountDTO. Antes el View leia d.bankName / d.currencyCode /
+                                        d.chartOfAccountCode / d.companyName / d.branchName que el backend
+                                        NO devuelve, asi todos esos campos aparecian vacios "—". */}
+                                    <Row label="Banco"           value={d.bankDTO?.name} />
+                                    <Row label="Moneda"          value={d.currencyTypeDTO?.isoCode} />
                                 </div>
 
                                 {/* ── Contabilidad ───────────────────────── */}
@@ -123,9 +127,10 @@ const ViewBankAccount = ({
                                     <i className="ri-book-2-line me-1"></i>Contabilidad
                                 </p>
                                 <div className="row mb-3">
-                                    <Row label="Cuenta PUC"     value={d.chartOfAccountCode ? `${d.chartOfAccountCode} - ${d.chartOfAccountName}` : d.chartOfAccountName} />
-                                    <Row label="Empresa"        value={d.companyName} />
-                                    <Row label="Saldo inicial"  value={d.initialBalance != null ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: d.currencyCode || 'COP', minimumFractionDigits: 0 }).format(d.initialBalance) : '—'} />
+                                    <Row label="Cuenta contable" value={d.accountingAccountDTO?.customName} />
+                                    <Row label="Centro de costo" value={d.costCenterDTO?.name} />
+                                    <Row label="Saldo inicial"   value={d.initialBalance != null ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: d.currencyTypeDTO?.isoCode || 'COP', minimumFractionDigits: 0 }).format(d.initialBalance) : '—'} />
+                                    <Row label="Saldo actual"    value={d.currentBalance != null ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: d.currencyTypeDTO?.isoCode || 'COP', minimumFractionDigits: 0 }).format(d.currentBalance) : '—'} />
                                 </div>
 
                                 {/* ── Sucursal ───────────────────────────── */}
@@ -133,7 +138,7 @@ const ViewBankAccount = ({
                                     <i className="ri-map-pin-line me-1"></i>Sucursal y contacto
                                 </p>
                                 <div className="row mb-3">
-                                    <Row label="Sucursal"           value={d.branchName} />
+                                    <Row label="Sucursal"           value={d.bankBranchDTO?.address} />
                                     <Row label="Ejecutivo"          value={d.accountExecutive} />
                                     <Row label="Teléfono banco"     value={d.bankPhone} />
                                     <Row label="Fecha apertura"     value={d.openingDate} />

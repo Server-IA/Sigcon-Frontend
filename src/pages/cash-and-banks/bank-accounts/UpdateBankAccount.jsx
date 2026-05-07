@@ -203,17 +203,36 @@ const UpdateBankAccount = ({
     }, [record.bank, banks]);
 
     // ── Guardar cambios ───────────────────────────────────────────────────────
+    // QA Bloque AU (2026-05-06) — Bug 3 + Bug 4: validacion frontend de
+    // campos requeridos antes del PUT. Si fallan, abortar.
+    const validateRequiredUpdate = () => {
+        const next = {};
+        if (!record.accountName || !String(record.accountName).trim()) next.accountName = 'El nombre es requerido';
+        if (!record.changeReason || String(record.changeReason).trim().length < 10) {
+            next.changeReason = 'El motivo del cambio debe tener al menos 10 caracteres';
+        }
+        return next;
+    };
+
     const handleSave = async () => {
+        const fieldErrors = validateRequiredUpdate();
+        if (Object.keys(fieldErrors).length > 0) {
+            setErrors(fieldErrors);
+            setError({
+                message: 'Por favor complete los campos obligatorios marcados.',
+                type: 'danger',
+                show: true,
+            });
+            return;
+        }
         try {
+            // QA Bloque AU (2026-05-06) — Bug 4: solo enviar campos editables
+            // segun la HU. El backend ignora code/accountNumber/bankId/currencyTypeId
+            // y antes el front los mandaba dando la falsa sensacion de "se
+            // actualizo" cuando esos campos no cambiaron en BD.
             const body = {
-                code:             record.code,
-                accountNumber:    record.accountNumber,
-                accountNumberMasked: record.accountNumberMasked,
-                bankId:           record.bankId,
-                currencyTypeId:   record.currencyTypeId,
                 accountName:      record.accountName,
-                branchName:       record.branchName       || '',
-                bankBranchId:     Number(record.bankBranchId)     || 0,
+                bankBranchId:     Number(record.bankBranchId) || null,
                 accountExecutive: record.accountExecutive || '',
                 bankPhone:        record.bankPhone        || '',
                 description:      record.description      || '',
@@ -221,7 +240,7 @@ const UpdateBankAccount = ({
                 creditLimit:      Number(record.creditLimit)    || 0,
                 notifyLowBalance: record.notifyLowBalance  || false,
                 minimumBalance:   Number(record.minimumBalance) || 0,
-                costCenterId:     Number(record.costCenterId)   || 0,
+                costCenterId:     record.costCenterId ? Number(record.costCenterId) : null,
                 changeReason:     record.changeReason,
             };
 
@@ -299,72 +318,41 @@ const UpdateBankAccount = ({
                             </div>
                         ) : (
                             <>
-                                {/* ── Campos de solo lectura ──────────────── */}
-                                {record.used && (
-                                    <div className="alert alert-info py-2 mb-4">
-                                        <i className="ri-information-line me-1"></i>
-                                        El código, número de cuenta, moneda y cuenta contable <strong>no pueden modificarse</strong> si existen movimientos registrados.
-                                    </div>
-                                )}
+                                {/* QA Bloque AU (2026-05-06) — Bug 3 + Bug 4:
+                                    El código, número de cuenta, banco y moneda
+                                    SIEMPRE son readOnly tras la creacion. La
+                                    HU lo exige (preservacion contable + DIAN).
+                                    Antes el flag `record.used` permitia
+                                    editarlos cuando la cuenta no tenia
+                                    movimientos, pero el backend ignora esos
+                                    campos en update -> el front mostraba
+                                    "actualizado correctamente" cuando en
+                                    realidad solo se editaron los campos de
+                                    datos editables. */}
+                                <div className="alert alert-info py-2 mb-4">
+                                    <i className="ri-information-line me-1"></i>
+                                    El código, número de cuenta, banco y moneda <strong>no pueden modificarse</strong> después de la creación. Para corregirlos, anule la cuenta y registre una nueva.
+                                </div>
 
                                 <p className="text-muted fw-semibold mb-3 border-bottom pb-1">
                                     <i className="ri-file-list-3-line me-1"></i>Información de referencia
                                 </p>
                                 <div className="row mb-4">
                                     <div className="col-md-3 mb-3">
-                                        {record.used && (
                                         <InputModal type="text" id="upd_code" label="Código"
                                             value={record.code} readOnly disabled />
-                                        )}
-                                        {!record.used && (
-                                            <InputModal type="text" id="upd_code" label="Código"
-                                                value={record.code} onChange={e => field('code', e.target.value)} />
-                                        )}
                                     </div>
                                     <div className="col-md-3 mb-3">
-                                        {record.used && (
                                         <InputModal type="text" id="upd_accountNumberMasked" label="N° Cuenta"
                                             value={record.accountNumberMasked} readOnly disabled />
-                                        )}
-                                        {!record.used && (
-                                            <InputModal type="text" id="upd_accountNumberMasked" label="N° Cuenta"
-                                                value={record.accountNumberMasked} onChange={e => field('accountNumberMasked', e.target.value)} />
-                                        )}
                                     </div>
                                     <div className="col-md-3 mb-3">
-                                        {record.used && (
                                         <InputModal type="text" id="upd_bankName" label="Banco"
-                                            value={record.bankName} readOnly disabled />
-                                        )}
-                                        {!record.used && (
-                                            <InputSelectModal
-                                                id="upd_bankId" label="Banco"
-                                                value={record?.bank?.id ?? ''}
-                                                onChange={v => field('bankId', v)}
-                                                options={banks.map(b => ({ id: b.id, label: b.name || b.label }))}
-                                                error={errors.bankId}
-                                                required={true}
-
-                                            />
-                                            // <InputModal type="text" id="upd_bankName" label="Banco"
-                                            //     value={record.bankName} onChange={e => field('bankName', e.target.value)} />
-                                        )}
+                                            value={record.bankName || record?.bank?.name || ''} readOnly disabled />
                                     </div>
                                     <div className="col-md-3 mb-3">
-                                        {record.used && (
                                         <InputModal type="text" id="upd_currencyCode" label="Moneda"
-                                            value={record.currencyCode} readOnly disabled />
-                                        )}
-                                        {!record.used && (
-                                            <InputSelectModal
-                                                id="upd_currencyTypeId" label="Moneda"
-                                                value={record?.currency?.id ?? ''}
-                                                onChange={v => field('currencyTypeId', v)}
-                                                options={currencyTypes.map(c => ({ id: c.id, label: c.name || c.label }))}
-                                                error={errors.currencyTypeId}
-                                                required={true}
-                                            />
-                                        )}
+                                            value={record.currencyCode || record?.currency?.isoCode || ''} readOnly disabled />
                                     </div>
                                 </div>
 
@@ -382,12 +370,18 @@ const UpdateBankAccount = ({
                                         />
                                     </div>
                                     <div className="col-md-6 mb-4">
+                                        {/* QA Bloque AU (2026-05-06) — Bug 3:
+                                            NO permitir deseleccionar centro
+                                            de costo (preservar trazabilidad
+                                            contable). Solo permitimos cambiar
+                                            entre centros existentes, no
+                                            quitarlo. clearable=false. */}
                                         <InputSelectModal
                                             id="upd_costCenterId" label="Centro de costo"
                                             value={record.costCenterId}
-                                            onChange={v => field('costCenterId', v)}
+                                            onChange={v => v && field('costCenterId', v)}
                                             options={costCenters}
-                                            clearable
+                                            required
                                         />
                                     </div>
                                 </div>
@@ -484,6 +478,50 @@ const UpdateBankAccount = ({
                                                 error={errors.minimumBalance} min={0}
                                             />
                                         )}
+                                    </div>
+
+                                    {/* QA Bloque AU (2026-05-06) — Bug 2: switch
+                                        para activar/desactivar manejo de chequera
+                                        con reglas. ACTIVAR es libre. DESACTIVAR
+                                        valida en backend que no existan cheques
+                                        EMITIDOS o no conciliados; si los hay,
+                                        muestra mensaje y revierte el toggle. */}
+                                    <div className="col-md-4 mb-4">
+                                        <div className="form-check form-switch mb-2">
+                                            <input className="form-check-input" type="checkbox"
+                                                id="upd_handlesCheckbook"
+                                                checked={!!record.handlesCheckbook}
+                                                onChange={async (e) => {
+                                                    const next = e.target.checked;
+                                                    const motivo = next
+                                                        ? 'Activacion manejo de chequera desde edicion'
+                                                        : 'Desactivacion manejo de chequera desde edicion';
+                                                    try {
+                                                        await fetchHelper.post(
+                                                            base_url(['api', 'v1', 'bank-accounts', record.id, 'toggle-checkbook']),
+                                                            { enable: next, motivo },
+                                                            {}, 1000
+                                                        );
+                                                        field('handlesCheckbook', next);
+                                                        setError({ message: '', type: '', show: false });
+                                                    } catch (err) {
+                                                        setError({
+                                                            message: err?.msg || 'No se pudo cambiar el manejo de chequera.',
+                                                            type: 'danger',
+                                                            show: true,
+                                                        });
+                                                        // Revertir UI
+                                                        e.target.checked = !next;
+                                                    }
+                                                }}
+                                            />
+                                            <label className="form-check-label" htmlFor="upd_handlesCheckbook">
+                                                Maneja chequera
+                                            </label>
+                                        </div>
+                                        <small className="text-muted">
+                                            Activar es libre. Desactivar requiere que no existan cheques EMITIDOS o no conciliados.
+                                        </small>
                                     </div>
                                 </div>
 
