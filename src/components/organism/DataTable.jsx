@@ -33,6 +33,13 @@ const DataTableReference = ({
 }) => {
   const token = useSelector((state) => state.user.token);
 
+  // QA Bloque AU+ (2026-05-07) Bug 2: filterColumns se capturaba como closure
+  // en config.ajax al INICIO. Cualquier cambio posterior del prop quedaba
+  // ignorado y el reload usaba [] viejo. Con este ref leemos el valor actual
+  // en cada llamada al ajax sin re-crear la tabla.
+  const filterColumnsRef = useRef(filterColumns);
+  useEffect(() => { filterColumnsRef.current = filterColumns; }, [filterColumns]);
+
   useEffect(() => {
     if (!tableRef?.current || !dataTableRef) return;
     
@@ -127,9 +134,12 @@ const DataTableReference = ({
     } else {
       config.ajax = async function (data, callback, settings) {
         try {
+          // QA Bloque AU+ (2026-05-07) Bug 2: leer filterColumns desde ref
+          // (no del closure) para que cada reload tome los filtros actuales.
+          const liveFilters = filterColumnsRef.current || [];
           const response = await fetchHelper.post(
             api_back,
-            { ...data, columns: [...(data.columns || []), ...filterColumns] },
+            { ...data, columns: [...(data.columns || []), ...liveFilters] },
             {},
             0,
           );
