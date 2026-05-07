@@ -115,7 +115,11 @@ export default function IndexCashList() {
         add('cashType',         appliedFilters.tipoCaja);
         add('cashStatus',       appliedFilters.estadoCaja);
         add('physicalLocation', appliedFilters.ubicacionFisica);
-        add('currencyType.isoCode', appliedFilters.monedaCodigo);
+        // QA Bloque AU+ Bug 5 (2026-05-07): la entidad Cash expone la relacion
+        // como `currency` (no `currencyType`). Antes el filter por moneda
+        // siempre devolvia 0 resultados porque getPath fallaba al resolver
+        // el dot-path inexistente.
+        add('currency.isoCode', appliedFilters.monedaCodigo);
         add('accountingBook',   appliedFilters.libroContable);
         // Backend acepta rango fecha si se manda como col.search.value="from|to"
         if (appliedFilters.fechaCreacionDesde || appliedFilters.fechaCreacionHasta) {
