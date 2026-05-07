@@ -121,11 +121,16 @@ export default function IndexCashList() {
         // el dot-path inexistente.
         add('currency.isoCode', appliedFilters.monedaCodigo);
         add('accountingBook',   appliedFilters.libroContable);
-        // Backend acepta rango fecha si se manda como col.search.value="from|to"
+        // QA Bloque AU+ Bug 5b (2026-05-07): el filtro "Fecha Creacion" debe
+        // operar sobre `cashCreationDate` (LocalDate, campo de negocio que el
+        // usuario llena en el form al crear/editar la caja) NO sobre `createdAt`
+        // (timestamp tecnico de Hibernate al INSERT). Antes filtraba por
+        // createdAt y siempre devolvia 0 cuando el usuario buscaba por la
+        // fecha contable real de la caja.
         if (appliedFilters.fechaCreacionDesde || appliedFilters.fechaCreacionHasta) {
             const from = appliedFilters.fechaCreacionDesde || '';
             const to   = appliedFilters.fechaCreacionHasta || '';
-            cols.push({ data: 'createdAt', name: 'createdAt', searchable: true,
+            cols.push({ data: 'cashCreationDate', name: 'cashCreationDate', searchable: true,
                         search: { value: `${from}|${to}`, regex: false } });
         }
         return cols;
