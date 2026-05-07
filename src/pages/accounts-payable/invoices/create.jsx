@@ -176,7 +176,14 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
             const data = resp?.data || resp;
             const list = data?.data || data || [];
             if (Array.isArray(list)) {
-                setTaxRules(list.map((r) => ({
+                // QA Bloque AU+ HU-AP-06 E2 (2026-05-06): filtrar SOLO reglas
+                // ACTIVE. Antes el dropdown mostraba reglas inactivas y el QA
+                // reporto que se podia facturar con reglas desactivadas.
+                const active = list.filter((r) => {
+                    const status = (r.statusRulerTax || r.status || '').toString().toUpperCase();
+                    return status === 'ACTIVE' || status === 'ACTIVO' || status === '';
+                });
+                setTaxRules(active.map((r) => ({
                     id: r.id,
                     name: `${r.name} (${r.typeRulerTax} ${r.percentage}%)`,
                     type: r.typeRulerTax,
@@ -311,6 +318,15 @@ const CreateApInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
     /** Envia la factura. */
     const handleSubmit = async () => {
         setErrorMessage('');
+
+        // QA Bloque AU+ HU-AP-06 E2 (2026-05-06): si NO hay reglas tributarias
+        // ACTIVE, bloquear el registro con alerta. Antes el sistema mostraba el
+        // form sin opciones tributarias y permitia crear la factura sin avisar.
+        if (!Array.isArray(taxRules) || taxRules.length === 0) {
+            setErrorMessage('No hay reglas tributarias activas en el sistema. Active al menos una regla en Listas Contables → Reglas Tributarias antes de registrar una factura de compra.');
+            return;
+        }
+
         if (!validate()) {
             // QA-2026-05-05: si validate fallo y no se seteo un mensaje
             // especifico (ej. cuando solo hay errores de campos individuales),

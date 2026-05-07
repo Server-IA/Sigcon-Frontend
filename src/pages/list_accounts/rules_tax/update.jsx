@@ -250,17 +250,34 @@ const UpdateRulesTax = ({ rulesTax, setRulesTax, typeRulerTaxOptions, statusRule
                                 />
                             </div>
                             <div className="col-lg-6 col-md-6 col-sm-12 mb-6 mt-2">
+                                {/* QA Bloque AU+ (2026-05-06) — Bug 1: el dropdown mostraba
+                                    el id crudo "141" como dato fantasma porque el value leia
+                                    de accountingAccount.id pero el onChange solo modificaba
+                                    accountingAccountId. Al guardar sin tocarlo, el backend
+                                    recibia accountingAccountId vacio y devolvia "es requerida".
+                                    Fix: value sincronizado de ambos campos + onChange setea
+                                    los dos para mantener consistencia visual y de envio. */}
                                 <InputSelectModal
                                     id="accountingAccountIdUpdate"
                                     label="Cuenta contable"
-                                    value={rulesTax?.accountingAccount?.id}
+                                    value={rulesTax?.accountingAccountId ?? rulesTax?.accountingAccount?.id ?? ''}
                                     onChange={(value) => {
-                                        setRulesTax({ ...rulesTax, accountingAccountId: value })
+                                        setRulesTax({
+                                            ...rulesTax,
+                                            accountingAccountId: value,
+                                            accountingAccount: value && rulesTax?.accountingAccount?.id == value
+                                                ? rulesTax.accountingAccount
+                                                : { id: value }
+                                        })
+                                        setErrors((prev) => ({ ...prev, accountingAccountId: '' }))
                                     }}
                                     error={errors.accountingAccountId}
                                     placeholder="Cuenta contable"
                                     required={true}
-                                    options={rulesTax?.accountingAccount ? [rulesTax.accountingAccount] : []}
+                                    options={rulesTax?.accountingAccount?.id ? [{
+                                        id: rulesTax.accountingAccount.id,
+                                        label: rulesTax.accountingAccount.customName ?? rulesTax.accountingAccount.label ?? `Cuenta #${rulesTax.accountingAccount.id}`
+                                    }] : []}
                                     url={['api', 'v1', 'accounting-accounts']}
                                     searchFields={['customName']}
                                 />
