@@ -86,11 +86,16 @@ const CreateApReceipt = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
                 0
             );
             const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
-            // Filtrar por estado APPROVED en cliente (el backend puede no exponer filtro directo)
-            const approved = list.filter((po) => !po.status || po.status === 'APPROVED');
-            setPurchaseOrders(approved.map((po) => ({
+            // QA Bloque AU+ HU-AP-18 E2 (2026-05-06): incluir tambien
+            // PARTIALLY_RECEIVED para permitir recepciones adicionales sobre
+            // OCs que ya fueron parcialmente recibidas. Antes el dropdown
+            // ocultaba esas OCs y el QA no podia recepcionar el saldo restante.
+            const eligible = list.filter((po) => !po.status
+                || po.status === 'APPROVED'
+                || po.status === 'PARTIALLY_RECEIVED');
+            setPurchaseOrders(eligible.map((po) => ({
                 id: po.id,
-                name: `#${po.orderNumber || po.id} - ${po.thirdPartyName || ''}`.trim(),
+                name: `#${po.orderNumber || po.id} - ${po.thirdPartyName || ''}${po.status === 'PARTIALLY_RECEIVED' ? ' (parcial)' : ''}`.trim(),
             })));
         } catch (e) {
             // silencioso

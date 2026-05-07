@@ -135,34 +135,104 @@ const IndexGoodsReturns = () => {
             }
 
             if (action === 'return') {
-                window.Swal.fire({
-                    title: 'Registrar devolucion',
-                    text: 'Ingrese el motivo de la devolucion (minimo 20 caracteres).',
-                    input: 'textarea',
-                    inputAttributes: { maxlength: 500 },
-                    inputValidator: (v) => {
-                        if (!v || v.trim().length < 20)
-                            return 'El motivo debe tener al menos 20 caracteres';
-                    },
-                    showCancelButton: true,
-                    confirmButtonText: 'Devolver',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#ff9f43',
-                }).then(async ({ isConfirmed, value }) => {
-                    if (!isConfirmed) return;
+                // QA Bloque AU+ HU-AP-21 (2026-05-06): devolucion parcial real.
+                // Antes el handler llamaba /reject con solo motivo, lo que
+                // marcaba TODA la recepcion como REJECTED sin permitir indicar
+                // cantidades por linea. Ahora cargamos las lineas de la
+                // recepcion, mostramos tabla con cantidad a devolver editable
+                // por linea (max = quantityReceived - quantityReturned) y
+                // llamamos POST /receipts/{id}/return con DTO multilinea.
+                (async () => {
+                    let detail = null;
                     try {
-                        await fetchHelper.post(
-                            base_url(['api', 'v1', 'ap', 'receipts', selected.id, 'reject']),
-                            { reason: value.trim() }, {}, 1000
+                        const respDet = await fetchHelper.get(
+                            base_url(['api', 'v1', 'ap', 'receipts', selected.id]), {}, 1000
                         );
-                        setMessage({ type: 'success', show: true,
-                            message: 'Devolucion registrada exitosamente.' });
-                        dataTableRef?.current?.ajax.reload();
-                    } catch (error) {
-                        setMessage({ type: 'danger', show: true,
-                            message: error?.msg || 'No se pudo registrar la devolucion.' });
+                        detail = respDet?.data || respDet;
+                    } catch (_) {
+                        // fallback: usar lo que ya tengamos en selected
+                        detail = selected;
                     }
-                });
+                    const lines = Array.isArray(detail?.lines) ? detail.lines : [];
+                    if (lines.length === 0) {
+                        setMessage({ type: 'danger', show: true,
+                            message: 'No se pudieron cargar las lineas de la recepcion.' });
+                        return;
+                    }
+                    const linesHtml = `
+                        <div class="text-start">
+                            <label class="form-label small fw-semibold">Motivo (>=20 chars)</label>
+                            <textarea id="rj_reason" class="form-control mb-3" rows="2" maxlength="500"></textarea>
+                            <label class="form-label small fw-semibold">Cantidad a devolver por linea</label>
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                  <tr><th>Descripcion</th><th class="text-end">Recibido</th>
+                                  <th class="text-end">Ya devuelto</th><th style="width:100px">A devolver</th></tr>
+                                </thead>
+                                <tbody>
+                                ${lines.map((l) => {
+                                    const recv = Number(l.quantityReceived || 0);
+                                    const ret  = Number(l.quantityReturned || 0);
+                                    const max  = Math.max(0, recv - ret);
+                                    return `<tr>
+                                        <td>${l.description || ('Linea #' + l.id)}</td>
+                                        <td class="text-end">${recv}</td>
+                                        <td class="text-end">${ret}</td>
+                                        <td><input type="number" class="form-control form-control-sm rj_qty" data-line="${l.id}" min="0" max="${max}" step="0.01" value="0" /></td>
+                                    </tr>`;
+                                }).join('')}
+                                </tbody>
+                            </table>
+                            <p class="small text-muted mt-2 mb-0">Solo se devuelven lineas con cantidad &gt; 0. Total no puede superar lo pendiente.</p>
+                        </div>`;
+                    window.Swal.fire({
+                        title: 'Registrar devolucion',
+                        html: linesHtml,
+                        width: 720,
+                        showCancelButton: true,
+                        confirmButtonText: 'Devolver',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#ff9f43',
+                        focusConfirm: false,
+                        preConfirm: () => {
+                            const reason = (document.getElementById('rj_reason')?.value || '').trim();
+                            if (reason.length < 20) {
+                                window.Swal.showValidationMessage('El motivo debe tener al menos 20 caracteres');
+                                return false;
+                            }
+                            const qtyInputs = Array.from(document.querySelectorAll('.rj_qty'));
+                            const linesPayload = qtyInputs
+                                .map((inp) => ({
+                                    goodsReceiptLineId: Number(inp.dataset.line),
+                                    quantityReturned: Number(inp.value || 0),
+                                }))
+                                .filter((l) => l.quantityReturned > 0);
+                            if (linesPayload.length === 0) {
+                                window.Swal.showValidationMessage('Indique al menos una linea con cantidad > 0');
+                                return false;
+                            }
+                            return {
+                                reason,
+                                returnDate: new Date().toISOString().slice(0, 10),
+                                lines: linesPayload,
+                            };
+                        },
+                    }).then(async ({ isConfirmed, value }) => {
+                        if (!isConfirmed) return;
+                        try {
+                            await fetchHelper.post(
+                                base_url(['api', 'v1', 'ap', 'receipts', selected.id, 'return']),
+                                value, {}, 1000
+                            );
+                            setMessage({ type: 'success', show: true,
+                                message: 'Devolucion registrada exitosamente.' });
+                            dataTableRef?.current?.ajax.reload();
+                        } catch (error) {
+                            setMessage({ type: 'danger', show: true,
+                                message: error?.msg || error?.message || 'No se pudo registrar la devolucion.' });
+                        }
+                    });
+                })();
             }
         };
 
