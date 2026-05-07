@@ -140,7 +140,13 @@ const ViewBankAccount = ({
                                 <div className="row mb-3">
                                     <Row label="Sucursal"           value={d.bankBranchDTO?.address} />
                                     <Row label="Ejecutivo"          value={d.accountExecutive} />
-                                    <Row label="Teléfono banco"     value={d.bankPhone} />
+                                    {/* QA Bloque AU+ (2026-05-07): si la sucursal
+                                        tiene telefono, mostrarlo aqui (es el
+                                        telefono de la sucursal especifica). Antes
+                                        solo mostraba bankPhone (telefono general
+                                        del banco) y QA reporto que el telefono
+                                        de la sucursal no aparecia. */}
+                                    <Row label="Teléfono sucursal"  value={d.bankBranchDTO?.phone || d.bankPhone} />
                                     <Row label="Fecha apertura"     value={d.openingDate} />
                                     <Row label="Última conciliación" value={d.lastReconciliationDate || '—'} />
                                 </div>

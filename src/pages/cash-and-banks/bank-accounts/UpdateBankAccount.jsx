@@ -376,12 +376,18 @@ const UpdateBankAccount = ({
                                             contable). Solo permitimos cambiar
                                             entre centros existentes, no
                                             quitarlo. clearable=false. */}
+                                        {/* QA Bloque AU+ (2026-05-07): centro de
+                                            costo NO debe modificarse al editar la
+                                            cuenta bancaria (rompe trazabilidad
+                                            contable de los movimientos historicos).
+                                            Mostrar como solo-lectura. */}
                                         <InputSelectModal
                                             id="upd_costCenterId" label="Centro de costo"
                                             value={record.costCenterId}
-                                            onChange={v => v && field('costCenterId', v)}
+                                            onChange={() => {}}
                                             options={costCenters}
                                             required
+                                            disabled
                                         />
                                     </div>
                                 </div>
@@ -543,128 +549,56 @@ const UpdateBankAccount = ({
                             </>
                         )}
 
-                        {/* HU-TER-05 (2026-04-27): Terceros vinculados a esta cuenta bancaria.
-                            Mismo modelo que el tab 'Cuentas Bancarias' del modal Tercero,
-                            pero invertido: aqui el contador asigna terceros al abrir la cuenta. */}
+                        {/* QA Bloque AU+ (2026-05-07): vincular terceros desde
+                            esta vista esta DESHABILITADO. La operacion de
+                            vincular/desvincular se hace exclusivamente desde el
+                            modulo Terceros (modal del tercero, tab "Cuentas
+                            Bancarias"). Aqui solo mostramos los terceros que ya
+                            estan vinculados en modo lectura para que el usuario
+                            confirme los titulares de la cuenta. */}
                         <hr className="my-4" />
                         <h6 className="mb-3">
                             <i className="ri-user-shared-line me-2"></i>Terceros vinculados a esta cuenta
                         </h6>
                         <p className="text-muted small mb-3">
-                            Permite asignar el titular o terceros autorizados de la cuenta. Los cambios
-                            se reflejan automaticamente en el modulo de Terceros.
+                            Solo lectura. Para vincular o desvincular un tercero, use el modulo
+                            <em> Terceros &rarr; Editar tercero &rarr; pestaña "Cuentas Bancarias"</em>.
                         </p>
-
-                        <div className="row align-items-end mb-3">
-                            <div className="col-md-9">
-                                <InputSelectModal
-                                    id="upd_link_third_party"
-                                    label="Tercero"
-                                    value={selectedThirdPartyId}
-                                    onChange={(v) => setSelectedThirdPartyId(v)}
-                                    options={thirdPartyOptions.filter(o => {
-                                        // Excluir el ya vinculado activo (no en pending unlink)
-                                        const linkedActive = linkedThirdParties.some(l =>
-                                            l.thirdPartyId === o.id && !pendingTpUnlinks.includes(l.id));
-                                        return !linkedActive;
-                                    })}
-                                    placeholder="Seleccione un tercero"
-                                    emptyMessage={thirdPartyOptions.length === 0
-                                        ? 'No hay terceros registrados. Cree uno en el modulo Terceros.'
-                                        : 'No hay terceros disponibles para vincular.'}
-                                />
-                            </div>
-                            <div className="col-md-3">
-                                <button
-                                    type="button"
-                                    className="btn btn-primary w-100"
-                                    onClick={handleLinkThirdParty}
-                                    disabled={!selectedThirdPartyId
-                                        || (linkedThirdParties.filter(l => !pendingTpUnlinks.includes(l.id)).length > 0)
-                                        || pendingTpLinks.length > 0}
-                                    title={(linkedThirdParties.filter(l => !pendingTpUnlinks.includes(l.id)).length > 0
-                                        || pendingTpLinks.length > 0)
-                                        ? 'Solo se puede vincular un tercero por cuenta'
-                                        : 'Vincular tercero'}
-                                >
-                                    <i className="ri-link me-1"></i>Vincular
-                                </button>
-                            </div>
-                        </div>
-
-                        {(pendingTpLinks.length > 0 || pendingTpUnlinks.length > 0) && (
-                            <div className="alert alert-warning py-2 mb-3" role="alert">
-                                <i className="ri-information-line me-1"></i>
-                                Hay cambios pendientes en terceros vinculados.
-                                Se aplicaran al hacer click en <strong>Guardar Cambios</strong>.
-                                Si cierra sin guardar, se descartaran.
-                            </div>
-                        )}
 
                         {linksLoading && (
                             <p className="text-muted text-center py-2">Cargando...</p>
                         )}
-                        {(() => {
-                            const visibleLinked = linkedThirdParties.filter(l => !pendingTpUnlinks.includes(l.id));
-                            const totalRows = visibleLinked.length + pendingTpLinks.length;
-                            if (linksLoading) return null;
-                            if (totalRows === 0) {
-                                return (
-                                    <p className="text-muted text-center py-2">
-                                        Esta cuenta no tiene terceros vinculados.
-                                    </p>
-                                );
-                            }
-                            return (
-                                <div className="table-responsive">
-                                    <table className="table table-sm table-bordered">
-                                        <thead className="table-light">
-                                            <tr>
-                                                <th>NIT</th>
-                                                <th>Razon Social</th>
-                                                <th>Estado</th>
-                                                <th style={{width:'80px'}}>Acciones</th>
+                        {!linksLoading && linkedThirdParties.length === 0 && (
+                            <p className="text-muted text-center py-2">
+                                Esta cuenta no tiene terceros vinculados.
+                            </p>
+                        )}
+                        {!linksLoading && linkedThirdParties.length > 0 && (
+                            <div className="table-responsive">
+                                <table className="table table-sm table-bordered">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>NIT</th>
+                                            <th>Razon Social</th>
+                                            <th>Principal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {linkedThirdParties.map(link => (
+                                            <tr key={`bd_${link.id}`}>
+                                                <td>{link.thirdPartyNit ?? '-'}</td>
+                                                <td>{link.thirdPartyBusinessName ?? '-'}</td>
+                                                <td>
+                                                    {link.isPrimary
+                                                        ? <span className="badge bg-label-primary">Si</span>
+                                                        : <span className="badge bg-label-secondary">No</span>}
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {visibleLinked.map(link => (
-                                                <tr key={`bd_${link.id}`}>
-                                                    <td>{link.thirdPartyNit ?? '-'}</td>
-                                                    <td>{link.thirdPartyBusinessName ?? '-'}</td>
-                                                    <td><span className="badge bg-label-success">Guardada</span></td>
-                                                    <td>
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-sm btn-outline-danger"
-                                                            title="Desvincular (pendiente hasta Guardar)"
-                                                            onClick={() => handleUnlinkThirdParty(link)}
-                                                        >
-                                                            <i className="ri-link-unlink"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                            {pendingTpLinks.map(pl => (
-                                                <tr key={pl.tempId} className="table-warning">
-                                                    <td colSpan={2}>{pl.label}</td>
-                                                    <td><span className="badge bg-label-warning">Pendiente</span></td>
-                                                    <td>
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-sm btn-outline-danger"
-                                                            title="Quitar de pendientes"
-                                                            onClick={() => handleUnlinkThirdParty(pl)}
-                                                        >
-                                                            <i className="ri-close-line"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            );
-                        })()}
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
                     <div className="modal-footer">

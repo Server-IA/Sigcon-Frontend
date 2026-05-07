@@ -420,7 +420,34 @@ const BankReconciliation = () => {
 
                     {loading ? <p className="text-muted">Cargando…</p> : null}
 
+                    {/* QA Bloque AU+ (2026-05-07): vista simplificada de conciliacion.
+                         Antes habia 4 bloques (Sesion de conciliacion, Sesion para
+                         resumen, Alta e importacion, Movimientos) que confundian al
+                         contador. Ahora solo: Importar CSV (arriba) + Movimientos
+                         (abajo, ya despues del hr). El registro manual + sesiones
+                         queda accesible solo via API/historico. */}
                     <div className="row g-4">
+                        <div className="col-12">
+                            <h6 className="fw-semibold mb-3">Importar extracto bancario (CSV)</h6>
+                            <div className="alert alert-info py-2 mb-3 small">
+                                <i className="ri-information-line me-1"></i>
+                                <strong>¿Que va aqui?</strong> Cargue las lineas del extracto bancario
+                                desde un CSV. Los <strong>cheques cobrados</strong> y los pagos
+                                generados desde otros modulos ya generan automaticamente su movimiento
+                                financiero — apareceran abajo cuando esten asociados a esta cuenta.
+                                Las <strong>cajas</strong> tienen su propia conciliacion en
+                                <em> Bancos y Cajas &rarr; Cajas</em>.
+                            </div>
+                            <label className="form-label small">Archivo CSV (fecha;importe;descripcion;referencia)</label>
+                            <input type="file" accept=".csv,text/csv" className="form-control" onChange={importCsv} />
+                        </div>
+                    </div>
+
+                    {/* Bloques legacy ocultados pero NO eliminados (la logica de
+                         sesiones+matching+saldos sigue activa para el equipo contable
+                         avanzado via API). Si en el futuro se requiere reactivar la
+                         UI completa, basta con quitar el d-none. */}
+                    <div className="row g-4 d-none">
                         <div className="col-lg-5">
                             <h6 className="fw-semibold mb-3">Sesión de conciliación</h6>
                             <p className="small text-muted">
