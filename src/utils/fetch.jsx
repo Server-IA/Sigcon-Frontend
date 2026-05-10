@@ -45,16 +45,55 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
             window.location.href = response.url;
 
         if (response.status == 401) {
+            // QA Bloque PA Bug 72 (HU-PA-PLAT-05 E3, 2026-05-10): mismo patron
+            // que 403. Algunos 401 vienen con mensaje claro del backend (ej.
+            // "Credenciales inválidas o ausentes" en login fallido). Antes
+            // siempre mostrabamos "Por favor inicia sesion nuevamente" que es
+            // engañoso cuando el usuario solo escribio mal su password.
+            let backendMsg = 'Por favor inicia sesión nuevamente';
+            let backendTitle = 'Sesión expirada';
+            try {
+                const data = await response.clone().json();
+                const realMsg = data.msg || data.message || data.error;
+                if (realMsg && typeof realMsg === 'string'
+                        && realMsg !== 'Error en la operación') {
+                    backendMsg = realMsg;
+                    // Si el backend trae mensaje propio, NO es sesion expirada
+                    backendTitle = data.title || 'Acceso denegado';
+                }
+            } catch (_) { /* fallback al mensaje generico */ }
             throw new Error(JSON.stringify({
-                msg: 'Por favor inicia sesión nuevamente',
-                title: 'Sesión expirada',
+                msg: backendMsg,
+                title: backendTitle,
                 error: 'Error general',
                 status: 401
             }));
         } else if (response.status == 403) {
+            // QA Bloque PA Bug 72 (HU-PA-PLAT-05 E3, 2026-05-10): antes el 403
+            // SIEMPRE se mapeaba al mensaje generico "No tienes permisos para
+            // acceder a este recurso", descartando el body real del backend.
+            // Eso ocultaba mensajes legitimos como "La empresa a la que pertenece
+            // esta cuenta está desactivada. Contacte al administrador de
+            // plataforma." (login con empresa INACTIVE), "Tu cuenta esta
+            // bloqueada por el administrador..." (HU-PA-07 E3), etc. Ahora
+            // intentamos leer el body y propagar el mensaje real; el generico
+            // queda solo como fallback.
+            let backendMsg = 'No tienes permisos para acceder a este recurso';
+            let backendTitle = 'Permiso denegado';
+            try {
+                const data = await response.clone().json();
+                const realMsg = data.msg || data.message || data.error;
+                if (realMsg && typeof realMsg === 'string'
+                        && realMsg !== 'Error en la operación') {
+                    backendMsg = realMsg;
+                }
+                if (data.title) backendTitle = data.title;
+            } catch (_) {
+                // body no es JSON o ya fue consumido: usar mensaje generico.
+            }
             throw new Error(JSON.stringify({
-                msg: 'No tienes permisos para acceder a este recurso',
-                title: 'Permiso denegado',
+                msg: backendMsg,
+                title: backendTitle,
                 error: 'Error general',
                 status: 403
             }));
