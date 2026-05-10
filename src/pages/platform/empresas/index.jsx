@@ -48,18 +48,54 @@ const EmpresasIndex = () => {
     const toggleStatus = async (empresa) => {
         const isActive = empresa.status === 'ACTIVE';
         const action = isActive ? 'desactivar' : 'activar';
-        if (!window.confirm(`¿Seguro que deseas ${action} la empresa "${empresa.businessName}"?`)) return;
-        // QA Bloque PA Bug 1 (2026-05-09): la firma de fetchHelper es
-        // (url, data, headers, time, ...). Antes pasaba 1000 como tercer
-        // argumento pensando que era timeout, lo que dejaba `headers=1000`
-        // (numero). El spread {...1000} = {} y el Authorization header no
-        // se inyectaba, causando que el backend respondiera 403 y la UI
-        // mostrara "No tienes permisos para acceder a este recurso" (HU-PA-01 E3).
+
+        // QA Bloque PA Bug 71 (HU-PA-PLAT-05 E1, 2026-05-10): el backend exige
+        // body {reason} con minimo 30 caracteres al desactivar. Antes el
+        // frontend usaba window.confirm() que solo retorna boolean y NO pedia
+        // motivo. Resultado: DELETE sin body, backend respondia 400 "El motivo
+        // de desactivacion es obligatorio" pero la UI nunca pidio el dato.
+        // Activar sigue siendo un confirm simple porque el endpoint /activate
+        // no requiere motivo.
+        let reason = null;
+        if (isActive) {
+            const result = await window.Swal.fire({
+                title: `Desactivar empresa`,
+                html: `<p>Vas a desactivar <b>${empresa.businessName}</b>.</p>
+                       <p class="text-muted small mb-0">Los usuarios de esta empresa no podran iniciar sesion. Ingresa el motivo (minimo 30 caracteres) para auditoria:</p>`,
+                input: 'textarea',
+                inputAttributes: { rows: 3, maxlength: 500 },
+                inputPlaceholder: 'Motivo de la desactivacion (min. 30 caracteres)...',
+                showCancelButton: true,
+                confirmButtonText: 'Desactivar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#dc3545',
+                inputValidator: (value) => {
+                    if (!value || value.trim().length < 30) {
+                        return 'El motivo debe tener al menos 30 caracteres.';
+                    }
+                    return null;
+                }
+            });
+            if (!result.isConfirmed) return;
+            reason = result.value.trim();
+        } else {
+            const result = await window.Swal.fire({
+                title: `Activar empresa`,
+                text: `¿Reactivar la empresa "${empresa.businessName}"?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Activar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#28a745',
+            });
+            if (!result.isConfirmed) return;
+        }
+
         try {
             if (isActive) {
                 await fetchHelper.delete(
                     base_url(['api', 'platform', 'companies', empresa.id]),
-                    {},
+                    { reason },
                     {},
                     1000,
                 );
