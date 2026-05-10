@@ -3,6 +3,82 @@ import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'
 import { store } from './utils/reducers/store.jsx'
 
+// QA Bloque PA Bug 73 (HU-PA-PLAT-XX, 2026-05-10): aislamiento de sesion por
+// pestaña. ANTES el token, user e isLoggedIn vivian en localStorage, que es
+// COMPARTIDO entre TODAS las pestañas del mismo origen. Resultado: si en la
+// pestaña A loguebas como ADMIN_EMPRESA y en la pestaña B como PLATFORM_ADMIN,
+// la ultima escritura ganaba. Cualquier fetch o F5 en la pestaña A leia el
+// token de B y mostraba datos cross-empresa.
+//
+// Fix: interceptar localStorage para las 3 keys de auth y redirigirlas a
+// sessionStorage (que SI esta aislado por pestaña). Los ~26 archivos del
+// proyecto que leen `localStorage.getItem('token')` no se tocan — el override
+// les devuelve transparente lo de sessionStorage.
+//
+// Bridge unico: si la pestaña actual no tiene sesion en sessionStorage pero
+// localStorage tiene un token "huerfano" de la version anterior pre-fix,
+// heredarlo UNA SOLA VEZ y limpiar localStorage. Asi los usuarios que tenian
+// sesion abierta antes del deploy del fix no quedan deslogueados de golpe.
+//
+// Este patron tiene una consecuencia UX intencional: abrir una NUEVA pestaña
+// (Ctrl+T y pegar URL) requiere re-loguear, porque sessionStorage NO se
+// comparte entre pestañas. Si en el futuro se quiere "mismo login en todas
+// las pestañas mientras coincida el usuario", se puede agregar BroadcastChannel
+// para sincronizar logins compatibles. Por ahora, una pestaña = una sesion.
+(function isolateAuthPerTab() {
+    const AUTH_KEYS = new Set(['token', 'user', 'isLoggedIn']);
+    // Chrome NO permite Object.defineProperty directo sobre la instancia
+    // localStorage (no es configurable a nivel instancia). La forma confiable
+    // es modificar Storage.prototype y discriminar por `this === localStorage`
+    // para no afectar sessionStorage normal.
+    const proto = Storage.prototype;
+    const origGetItem = proto.getItem;
+    const origSetItem = proto.setItem;
+    const origRemoveItem = proto.removeItem;
+
+    // Bridge unico: heredar token huerfano de localStorage hacia sessionStorage
+    // (solo la primera vez que esta pestaña se abre tras el deploy del fix).
+    if (!origGetItem.call(sessionStorage, 'token')) {
+        const legacyToken = origGetItem.call(localStorage, 'token');
+        const legacyUser = origGetItem.call(localStorage, 'user');
+        const legacyLogged = origGetItem.call(localStorage, 'isLoggedIn');
+        if (legacyToken) {
+            origSetItem.call(sessionStorage, 'token', legacyToken);
+            if (legacyUser) origSetItem.call(sessionStorage, 'user', legacyUser);
+            if (legacyLogged) origSetItem.call(sessionStorage, 'isLoggedIn', legacyLogged);
+        }
+    }
+    // Limpiar localStorage de auth keys (tras el bridge ya no las necesitamos
+    // ahi y dejarlas seria un riesgo: nuevas pestañas podrian heredar sesion
+    // de un usuario que ya cerro la suya).
+    origRemoveItem.call(localStorage, 'token');
+    origRemoveItem.call(localStorage, 'user');
+    origRemoveItem.call(localStorage, 'isLoggedIn');
+
+    // Override Storage.prototype con discriminacion: si la operacion es sobre
+    // localStorage Y la key es de auth, redirigir a sessionStorage. Cualquier
+    // otra combinacion (sessionStorage normal, localStorage con keys distintas
+    // como theme/prefs/cache) se comporta como siempre.
+    proto.getItem = function(key) {
+        if (this === localStorage && AUTH_KEYS.has(key)) {
+            return origGetItem.call(sessionStorage, key);
+        }
+        return origGetItem.call(this, key);
+    };
+    proto.setItem = function(key, value) {
+        if (this === localStorage && AUTH_KEYS.has(key)) {
+            return origSetItem.call(sessionStorage, key, value);
+        }
+        return origSetItem.call(this, key, value);
+    };
+    proto.removeItem = function(key) {
+        if (this === localStorage && AUTH_KEYS.has(key)) {
+            return origRemoveItem.call(sessionStorage, key);
+        }
+        return origRemoveItem.call(this, key);
+    };
+})();
+
 // import $ from 'jquery';
 
 // window.$ = window.jQuery = $;
