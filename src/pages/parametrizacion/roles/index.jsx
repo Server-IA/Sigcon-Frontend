@@ -42,6 +42,8 @@ const IndexRoles = () => {
     const [role, setRole] = useState({
         id: '',
         name: '',
+        description: '',
+        type: '',
         status: '',
         permissionIds: [],
     });
@@ -83,30 +85,60 @@ const IndexRoles = () => {
         { key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' },
     ];
 
+    // QA Bloque PA Bug 2 (HU-PA-03 E1, 2026-05-09): la HU exige columnas
+    // Descripcion, Tipo (badge Predefinido/Personalizado), Numero de usuarios
+    // asignados y Fecha de creacion ademas de las basicas. Acciones se
+    // restringen para roles GLOBALES (PLATFORM_ADMIN, ADMIN, USER).
+    const formatDate = (iso) => {
+        if (!iso) return '-';
+        try { return new Date(iso).toLocaleDateString('es-CO'); }
+        catch { return iso.slice(0, 10); }
+    };
+    const renderType = (type) => {
+        if (type === 'PREDEFINED') return '<span class="badge bg-label-info">Predefinido</span>';
+        if (type === 'CUSTOM')     return '<span class="badge bg-label-success">Personalizado</span>';
+        if (type === 'GLOBAL')     return '<span class="badge bg-label-warning">Global</span>';
+        return '<span class="badge bg-label-secondary">-</span>';
+    };
+    const renderStatus = (status) => {
+        if (status === 'ACTIVE')   return '<span class="badge bg-label-success">Activo</span>';
+        if (status === 'INACTIVE') return '<span class="badge bg-label-secondary">Inactivo</span>';
+        return status || '-';
+    };
     const [columns, setColumns] = useState([
-        { title: 'ID', data: 'id', searchable: false },
+        { title: 'ID', data: 'id', searchable: false, width: '60px' },
         { title: 'Nombre', data: 'name', name: 'name' },
-        { title: 'Estado', data: 'status', name: 'status' },
+        { title: 'Descripción', data: 'description', name: 'description', orderable: false,
+          render: (v) => v ? `<span class="text-muted">${v}</span>` : '<span class="text-muted">-</span>' },
+        { title: 'Tipo', data: 'type', name: 'type', orderable: true, render: (v) => renderType(v) },
+        { title: 'Usuarios', data: 'assignedUsersCount', name: 'assignedUsersCount', searchable: false,
+          width: '90px', render: (v) => `<span class="badge bg-label-primary">${v ?? 0}</span>` },
+        { title: 'Fecha creación', data: 'createdAt', name: 'createdAt', searchable: false,
+          width: '120px', render: (v) => formatDate(v) },
+        { title: 'Estado', data: 'status', name: 'status', render: (v) => renderStatus(v) },
         {
-            // QA-2026-05-05: antes ocultaba acciones cuando id==1, lo cual hacia
-            // que rol CONTADOR (id=1 en empresa QA) saliera sin botones de
-            // ver/editar/eliminar. Mostrar acciones siempre - el backend valida
-            // si el rol esta en uso o es del sistema.
-            title: 'Acciones', data: 'id', width: '120px', searchable: false, render: (id, _, row) => {
+            title: 'Acciones', data: 'id', width: '140px', searchable: false, render: (id, _, row) => {
                 const name = (row.name || '').toUpperCase();
-                // Solo bloquear botones para PLATFORM_ADMIN (rol del sistema cross-tenant)
-                if (name === 'PLATFORM_ADMIN') return '';
+                const type = (row.type || '').toUpperCase();
+                // Bloquear acciones para roles GLOBALES del sistema (PLATFORM_ADMIN, ADMIN, USER)
+                if (type === 'GLOBAL') return '<span class="text-muted small">Sin acciones</span>';
+                // QA Bloque PA Bug 10/11/12 (HU-PA-06 E4): los roles predefinidos
+                // SI se pueden eliminar (HU-PA-06 E4 dice: "Permitir eliminar
+                // logicamente el rol si no tiene usuarios asignados"). El backend
+                // valida si tiene usuarios y si es el ultimo ADMIN_EMPRESA.
+                const allowedActions = actions;
                 return `
                 <div class="d-flex gap-1">
-                    ${actions.map(a => `
+                    ${allowedActions.map(a => `
                         <button class="btn btn-sm ${a.class} action-btn"
                             data-action="${a.key}"
-                            data-id="${id}">
+                            data-id="${id}"
+                            title="${a.title}">
                             <i class="${a.icon}"></i>
                         </button>
                     `).join('')}
                 </div>
-            `
+            `;
             }
         },
     ]);
@@ -121,6 +153,8 @@ const IndexRoles = () => {
         setRole({
             id: '',
             name: '',
+            description: '',
+            type: '',
             status: '',
             permissionIds: [],
         });
@@ -171,8 +205,13 @@ const IndexRoles = () => {
             const roleData = {
                 id: roleRef.id,
                 name: roleRef.name ?? '',
+                description: roleRef.description ?? '',
+                type: roleRef.type ?? '',
                 status: roleRef.status ?? 'ACTIVE',
                 permissionIds: roleRef.permissionIds ?? [],
+                // QA Bloque PA Bug 9 (HU-PA-05 E4): version optimistic lock
+                version: roleRef.version,
+                assignedUsersCount: roleRef.assignedUsersCount ?? 0,
             };
 
             switch (action) {
@@ -208,37 +247,74 @@ const IndexRoles = () => {
                     modalUpdateInstance.current.show();
                     break;
 
-                case 'delete':
+                case 'delete': {
+                    // QA Bloque PA Bug 12 (HU-PA-06 E4, 2026-05-09): motivo de
+                    // eliminacion obligatorio (>=30 chars). El backend valida
+                    // y devuelve mensaje con cantidad de usuarios afectados +
+                    // listado si los hay (Bug 10/11).
                     window.Swal.fire({
-                        title: '¿Estás seguro?',
-                        text: '¿Estás seguro de querer eliminar este rol?',
+                        title: '¿Eliminar el rol?',
+                        html: `Vas a eliminar el rol <strong>${roleRef.name}</strong>.<br/><br/>
+                               <span class="text-muted small">Ingresa el motivo de eliminación (mínimo 30 caracteres):</span>`,
                         icon: 'warning',
+                        input: 'textarea',
+                        inputAttributes: {
+                            minlength: 30, maxlength: 500,
+                            placeholder: 'Ej: rol creado por error, ya no se usa por la empresa...'
+                        },
+                        inputValidator: (v) => {
+                            if (!v || v.trim().length < 30) {
+                                return 'Debe ingresar un motivo de eliminación de al menos 30 caracteres';
+                            }
+                            return null;
+                        },
                         showCancelButton: true,
                         confirmButtonText: 'Eliminar',
-                        cancelButtonText: 'Cancelar',
+                        cancelButtonText: 'Cancelar'
                     }).then(async (result) => {
-                        if (result.isConfirmed) {
-                            const url = base_url(['roles', 'deleteRole', id]);
-                            try {
-                                await fetchHelper.post(url, {}, {}, 500, false);
-                                setMessageRole({
-                                    message: 'Rol eliminado exitosamente',
-                                    type: 'success',
-                                    show: true,
+                        if (!result.isConfirmed) return;
+                        const reason = (result.value || '').trim();
+                        const url = base_url(['roles', 'deleteRole', id]) + `?reason=${encodeURIComponent(reason)}`;
+                        try {
+                            await fetchHelper.post(url, {}, {}, 500, false);
+                            setMessageRole({
+                                message: 'Rol eliminado exitosamente',
+                                type: 'success',
+                                show: true,
+                            });
+                            dataTableRef?.current?.ajax.reload();
+                        } catch (error) {
+                            console.error(error);
+                            // HU-PA-06 E2/E3: el backend devuelve `affectedUsers` cuando
+                            // el bloqueo es por usuarios asignados. Mostrarlos en un
+                            // SweetAlert2 secundario con enlaces a edicion.
+                            const affected = error?.affectedUsers || error?.data?.affectedUsers;
+                            if (Array.isArray(affected) && affected.length > 0) {
+                                const list = affected.map(u =>
+                                    `<li><strong>${u.email || u.username}</strong> (id=${u.id}) — <a href="${u.editUrl}" target="_blank">Reasignar rol</a></li>`
+                                ).join('');
+                                window.Swal.fire({
+                                    title: 'No se puede eliminar este rol',
+                                    html: `<div class="text-start">
+                                        <p>${error.msg}</p>
+                                        <p class="mb-1"><strong>Usuarios afectados (${affected.length}):</strong></p>
+                                        <ul style="font-size: 0.9em;">${list}</ul>
+                                    </div>`,
+                                    icon: 'error',
+                                    confirmButtonText: 'Entendido',
+                                    width: '600px'
                                 });
-                            } catch (error) {
-                                console.error(error);
+                            } else {
                                 setMessageRole({
-                                    message: error.msg || 'Error al eliminar el rol. Verifique su conexión e intente nuevamente.',
+                                    message: error?.msg || 'Error al eliminar el rol. Verifique su conexión e intente nuevamente.',
                                     type: 'danger',
                                     show: true,
                                 });
-                            } finally {
-                                dataTableRef?.current?.ajax.reload();
                             }
                         }
                     });
                     break;
+                }
             }
         };
 

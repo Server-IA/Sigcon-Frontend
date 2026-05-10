@@ -18,10 +18,39 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
     const [errorMessage, setErrorMessage] = useState('');
     const [allModulesPermissions, setAllModulesPermissions] = useState([]);
 
+    // QA Bloque PA Bug 6 (HU-PA-04 E6, 2026-05-09): los permisos del modulo
+    // "Plataforma" NO aplican a roles custom de empresa. Solo PLATFORM_ADMIN
+    // puede crear/editar roles globales que los incluyan. Para el ADMIN_EMPRESA
+    // se ocultan visualmente del modal.
+    const userRaw = (() => {
+        try { return JSON.parse(localStorage.getItem('user') || '{}'); }
+        catch { return {}; }
+    })();
+    const isPlatformAdmin = !!(userRaw.platformRole === 'PLATFORM_ADMIN'
+        || (userRaw.roles || []).includes('PLATFORM_ADMIN'));
+
+    // Tambien filtramos permisos cuyo code contiene 'PLATFORM' o son del modulo Plataforma
+    const filterApplicableModules = (mods) => {
+        if (isPlatformAdmin) return mods;
+        return (mods || []).filter(m => {
+            const moduleName = (m.module?.name || '').toUpperCase();
+            const moduleUrl = (m.module?.url || '').toLowerCase();
+            // Excluir modulos PLATAFORMA / PLATFORM (son admin del sistema)
+            return moduleName !== 'PLATAFORMA' && moduleName !== 'PLATFORM' && moduleUrl !== 'platform';
+        }).map(m => ({
+            ...m,
+            // Ademas filtrar permisos individuales con prefijo PLATFORM_ o cuyo nombre
+            // sugiera "no aplica" (ej. acciones no soportadas en el submodulo)
+            permissions: (m.permissions || []).filter(p => {
+                const code = (p.code || p.name || '').toUpperCase();
+                return !code.startsWith('PLATFORM_') && !code.includes('PLATFORM_ADMIN');
+            })
+        })).filter(m => m.permissions && m.permissions.length > 0);
+    };
+
     useEffect(() => {
-        setAllModulesPermissions(modules.map(m => {
-            return { ...m, checked: false }
-        }));
+        const filtered = filterApplicableModules(modules);
+        setAllModulesPermissions(filtered.map(m => ({ ...m, checked: false })));
     }, [modules]);
 
     useEffect(() => {
@@ -42,6 +71,8 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
             setRole({
                 id: '',
                 name: '',
+                description: '',
+                type: '',
                 status: '',
                 permissionIds: [],
             })
@@ -90,7 +121,7 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
                         <AlertPage message={errorMessage} type="danger" show={errorMessage !== ''} onChange={() => setErrorMessage('')} />
 
                         <div className="row">
-                            <div className="col mb-6 mt-2">
+                            <div className="col-md-6 mb-6 mt-2">
                                 <InputModal
                                     id="name"
                                     label="Nombre del rol"
@@ -99,6 +130,18 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
                                     error={errors.name}
                                     placeholder="Nombre del rol"
                                     required={true}
+                                />
+                            </div>
+                            {/* QA Bloque PA Bug 2 (HU-PA-03 E1) - descripcion del rol */}
+                            <div className="col-md-6 mb-6 mt-2">
+                                <InputModal
+                                    id="description"
+                                    label="Descripción"
+                                    value={role.description || ''}
+                                    onChange={(e) => setRole({ ...role, description: e.target.value })}
+                                    error={errors.description}
+                                    placeholder="Breve descripción del rol (opcional)"
+                                    required={false}
                                 />
                             </div>
                         </div>

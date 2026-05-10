@@ -130,17 +130,34 @@ const CurrencyIndex = () => {
                     break;
 
                 case 'delete':
+                    // QA Bloque AU+ Bug 1 (2026-05-07): el backend exige motivo
+                    // de eliminacion >=10 chars. Sin SweetAlert con textarea
+                    // se devolvia banner rojo "Debe especificar el motivo".
                     window.Swal.fire({
-                        title: '¿Está seguro?',
-                        text: `¿Está seguro de eliminar el tipo de moneda "${currencyRef.name} (${currencyRef.isoCode})"?`,
+                        title: `¿Eliminar tipo de moneda "${currencyRef.name} (${currencyRef.isoCode})"?`,
+                        html: 'Esta accion inactiva la moneda y queda registrada en auditoria.<br/><br/>Ingrese el motivo (minimo 10 caracteres):',
                         icon: 'warning',
+                        input: 'textarea',
+                        inputAttributes: { 'aria-label': 'Motivo de eliminacion', minlength: 10, maxlength: 500 },
+                        inputValidator: (v) => {
+                            if (!v || v.trim().length < 10) return 'El motivo debe tener al menos 10 caracteres';
+                            if (v.length > 500) return 'Maximo 500 caracteres';
+                            return null;
+                        },
                         showCancelButton: true,
-                        confirmButtonText: 'Sí, continuar',
+                        confirmButtonText: 'Si, eliminar',
                         cancelButtonText: 'Cancelar',
+                        allowOutsideClick: false,
+                        confirmButtonColor: '#dc3545',
+                        customClass: {
+                            confirmButton: 'btn btn-danger me-3 waves-effect waves-light',
+                            cancelButton: 'btn btn-outline-secondary waves-effect'
+                        }
                     }).then(async (result) => {
                         if (!result.isConfirmed) return;
+                        const reason = (result.value || '').trim();
                         try {
-                            const deleteUrl = base_url(['api', 'v1', 'accounting-lists', 'currency-types', id]);
+                            const deleteUrl = base_url(['api', 'v1', 'accounting-lists', 'currency-types', id]) + `?reason=${encodeURIComponent(reason)}`;
                             await fetchHelper.delete(deleteUrl, {}, {}, 500, false);
                             dataTableRef?.current?.ajax.reload();
                             setMessage({

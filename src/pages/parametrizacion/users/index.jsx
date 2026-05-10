@@ -100,9 +100,11 @@ const IndexUsers = () => {
             data: 'status',
             name: 'status',
             render: (status) => {
+                // QA Bloque PA Bug 15 (HU-PA-07 E3): incluir badge para BLOCKED
                 const badges = {
                     'ACTIVE': '<span class="badge bg-label-success">Activo</span>',
-                    'INACTIVE': '<span class="badge bg-label-danger">Inactivo</span>'
+                    'INACTIVE': '<span class="badge bg-label-danger">Inactivo</span>',
+                    'BLOCKED': '<span class="badge bg-label-warning">Bloqueado</span>'
                 };
                 return badges[status] || status;
             }
@@ -128,7 +130,8 @@ const IndexUsers = () => {
         if (!modalCreateInstance.current) {
             modalCreateInstance.current = new window.bootstrap.Modal(modalCreateRef.current);
         }
-        setUser({ id: '', name: '', lastname: '', email: '', username: '', password: '', status: 'ACTIVE', roles: '' });
+        // QA Bloque PA Bug 16 (HU-PA-08 E2): reset roles como array vacio para multi-select
+        setUser({ id: '', name: '', lastname: '', email: '', username: '', password: '', status: 'ACTIVE', roles: [] });
         modalCreateInstance.current.show();
     };
 
@@ -229,7 +232,12 @@ const IndexUsers = () => {
                         username: userRef.username,
                         password: '',
                         status: userRef.status,
-                        roles: userRef.roles.join(', ') || []
+                        // QA Bloque PA Bug 20 (HU-PA-09 E1/E2, 2026-05-09): pasar array
+                        // de nombres de roles para el multi-select. Antes se pasaba un
+                        // string concatenado con join(', ') que solo permitia un rol.
+                        roles: Array.isArray(userRef.roles)
+                            ? Array.from(userRef.roles)
+                            : (userRef.roles ? [userRef.roles] : [])
                     });
                     setClickEdit(true);
                     break;

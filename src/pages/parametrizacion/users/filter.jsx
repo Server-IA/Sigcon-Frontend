@@ -4,9 +4,12 @@ const FilterUser = ({ dataTableRef, filterRef, filterInstance, roles }) => {
 
     const table = dataTableRef?.current?.table();
 
+    // QA Bloque PA Bug 15 (HU-PA-07 E3, 2026-05-09): agregar estado Bloqueado.
+    // Backend acepta ACTIVE / INACTIVE / BLOCKED en el enum Status.
     const statusOptions = [
         { id: 'ACTIVE', name: 'Activo' },
         { id: 'INACTIVE', name: 'Inactivo' },
+        { id: 'BLOCKED', name: 'Bloqueado' },
     ];
 
     return (

@@ -107,12 +107,21 @@ const UpdatedCashAndBanks = ({
   const [errors, setErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
 
+  // QA Bloque AU+ Bug 2 (2026-05-07): cualquier cambio en un campo editable
+  // requiere motivo de auditoria. Antes solo se exigia para nombre, NIT y
+  // estado. Ahora cubre TODOS los campos editables (NIT, nombres, tipo,
+  // SWIFT, ACH, dias conciliacion, estado).
   const sensitiveChanged = useMemo(() => {
     if (!originalBank) return false;
     return (
       bank.NOMBRE_BANCO !== originalBank.NOMBRE_BANCO ||
       bank.NIT_BANCO !== originalBank.NIT_BANCO ||
-      bank.ESTADO !== originalBank.ESTADO
+      bank.ESTADO !== originalBank.ESTADO ||
+      bank.NOMBRE_CORTO !== originalBank.NOMBRE_CORTO ||
+      bank.TIPO_BANCO !== originalBank.TIPO_BANCO ||
+      bank.CODIGO_SWIFT !== originalBank.CODIGO_SWIFT ||
+      bank.CODIGO_ACH !== originalBank.CODIGO_ACH ||
+      String(bank.DIAS_CONCILIACION ?? '') !== String(originalBank.DIAS_CONCILIACION ?? '')
     );
   }, [bank, originalBank]);
 
@@ -188,19 +197,18 @@ const UpdatedCashAndBanks = ({
                 />
               </div>
               <div className="col-lg-5 col-md-12 col-sm-12 mb-3">
+                {/* QA Bloque AU+ Bug 2 (2026-05-07): el codigo del banco
+                    es inmutable una vez creado (identifica el catalogo y
+                    podria romper trazabilidad de cuentas/movimientos). */}
                 <InputModal
                   type="text"
                   id={`CODIGO_BANCO_${sfx}`}
-                  label="Codigo banco"
+                  label="Codigo banco (no editable)"
                   value={bank.CODIGO_BANCO ?? ""}
-                  onChange={(e) => {
-                    if (readOnly || bank.HAS_ASSOCIATED_ACCOUNTS) return;
-                    setBank({ ...bank, CODIGO_BANCO: sanitizeUpperAlphaNum(e.target.value) });
-                    setErrors({ ...errors, CODIGO_BANCO: "" });
-                  }}
+                  onChange={() => { /* inmutable */ }}
                   error={errors.CODIGO_BANCO}
                   required={!readOnly}
-                  readOnly={readOnly || bank.HAS_ASSOCIATED_ACCOUNTS}
+                  readOnly
                 />
               </div>
               <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
@@ -274,19 +282,18 @@ const UpdatedCashAndBanks = ({
                 />
               </div>
               <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
+                {/* QA Bloque AU+ Bug 2 (2026-05-07): el pais es inmutable
+                    una vez creado (afecta moneda, regimen tributario y
+                    sucursales asociadas). */}
                 <InputSelectModal
                   id={`PAIS_ID_${sfx}`}
-                  label="Pais"
+                  label="Pais (no editable)"
                   value={bank.PAIS_ID ?? ""}
-                  onChange={(value) => {
-                    if (readOnly) return;
-                    setBank({ ...bank, PAIS_ID: Number(value) || null });
-                    setErrors({ ...errors, PAIS_ID: "" });
-                  }}
+                  onChange={() => { /* inmutable */ }}
                   options={countries}
                   error={errors.PAIS_ID}
                   required={!readOnly}
-                  disabled={readOnly}
+                  disabled
                 />
               </div>
               <div className="col-lg-4 col-md-12 col-sm-12 mb-3">
@@ -409,7 +416,7 @@ const UpdatedCashAndBanks = ({
                 <div className="col-12 mb-3">
                   <TextareaModal
                     id={`MOTIVO_CAMBIO_${sfx}`}
-                    label="Motivo de cambio (requerido para nombre, NIT o estado)"
+                    label="Motivo de cambio (obligatorio para cualquier modificacion - minimo 10 caracteres)"
                     value={bank.MOTIVO_CAMBIO ?? ""}
                     onChange={(e) => {
                       setBank({ ...bank, MOTIVO_CAMBIO: sanitizeSimpleText(e.target.value, 500) });

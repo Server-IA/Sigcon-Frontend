@@ -11,6 +11,7 @@ import IndexModules from "../pages/parametrizacion/modules/index";
 import IndexMenus from "../pages/parametrizacion/menus/index";
 import PermissionsIndex from "../pages/parametrizacion/permissions/index";
 import IndexUsers from "../pages/parametrizacion/users/index";
+import IndexTemporaryPermissions from "../pages/parametrizacion/permisos-temporales/index";
 
 import IndexRoles from "../pages/parametrizacion/roles/index";
 import IndexParameters from "../pages/parametrizacion/parameters/index";
@@ -169,12 +170,20 @@ export const buildFullPath = (parent = "", current = "") => {
 /**
  * Obtiene todas las rutas del sistema (independiente de permisos del usuario)
  * para poder distinguir 403 (sin permisos) de 404 (no existe).
+ *
+ * QA Bloque PA Bug 23 (HU-PA-09 E7, 2026-05-09): el destructuring
+ * `{ data, error } = await fetchHelper.get(...)` estaba MAL: fetchHelper.get
+ * retorna el JSON parseado directamente (un array), no un objeto envoltorio.
+ * Resultado: `data=undefined`, `Array.isArray(undefined)=false`, retorno `[]`.
+ * `allSystemPaths` quedaba vacio en Redux y el CatchAllRoute siempre devolvia
+ * 404 (HU-PA-09 E7). Fix: tratar la respuesta como array directo.
  */
 export const getAllSystemMenuPaths = async () => {
   const url = base_url(['api', 'modules', 'menu', 'all-paths']);
   try {
-    const { data, error } = await fetchHelper.get(url, {}, 0);
-    if (!error && Array.isArray(data)) return data;
+    const response = await fetchHelper.get(url, {}, 0);
+    if (Array.isArray(response)) return response;
+    if (response && Array.isArray(response.data)) return response.data;
   } catch (error) {
     console.log('Error fetching system paths:', error);
   }
@@ -284,6 +293,8 @@ export const COMPONENT_MAP = [
   { id: "MENUS", name: "Menus", component: platformOnly(IndexMenus) },
   { id: "PERMISSIONS", name: "Permisos", component: platformOnly(PermissionsIndex) },
   { id: "USERS", name: "Usuarios", component: IndexUsers },
+  // QA Bloque PA Bug 31-43 (HU-PA-13/14, 2026-05-09): permisos temporales
+  { id: "TEMPORARY_PERMISSIONS", name: "Permisos Temporales", component: IndexTemporaryPermissions },
   { id: "ROLES", name: "Roles", component: IndexRoles },
   // Parametros del sistema: solo PLATFORM_ADMIN (config global FONT/COLOR/etc.).
   { id: "PARAMETROS", name: "Parámetros", component: platformOnly(IndexParameters) },

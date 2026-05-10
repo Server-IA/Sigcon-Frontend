@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import { base_url } from '../../../utils/functions';
@@ -12,21 +12,34 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
 
     const statusOptions = [
         { id: 'ACTIVE', name: 'Activo' },
-        { id: 'INACTIVE', name: 'Inactivo' }
+        { id: 'INACTIVE', name: 'Inactivo' },
+        // QA Bloque PA Bug 15 (HU-PA-07 E3): permitir BLOCKED en edicion
+        { id: 'BLOCKED', name: 'Bloqueado' }
     ];
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // QA Bloque PA Bug 21 (HU-PA-09 E3, 2026-05-09): validar al menos un rol antes
+        // de enviar al backend. El array `user.roles` contiene los nombres de roles
+        // seleccionados en el multi-select.
+        const selectedRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : []);
+        if (selectedRoles.length === 0) {
+            setErrors({ ...errors, roles: 'El usuario debe tener al menos un rol activo. Asigne otro rol antes de remover este' });
+            setErrorMessage('El usuario debe tener al menos un rol activo. Asigne otro rol antes de remover este');
+            return;
+        }
+
         try {
             const url = base_url(['users', 'updateUser', user.id]);
-            
+
             const body = {
                 name: user.name,
                 lastname: user.lastname,
                 email: user.email,
                 status: user.status,
-                roles: [user.roles],
+                // QA Bloque PA Bug 20 (HU-PA-09 E1/E2): array de varios roles
+                roles: selectedRoles,
                 username: user.username
             };
 
@@ -36,7 +49,7 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
             }
 
             await fetchHelper.put(url, body, {}, 1000);
-            
+
             setUser({
                 id: '',
                 name: '',
@@ -44,10 +57,10 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
                 email: '',
                 password: '',
                 status: 'ACTIVE',
-                roles: '',
+                roles: [],
                 username: ''
             });
-            
+
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
             setUserUpdate(true);
@@ -165,21 +178,23 @@ const UpdatedUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, set
                                 />
                                 <small className="text-muted">Dejar en blanco si no desea cambiar la contraseña</small>
                             </div>
+                            {/* QA Bloque PA Bug 20 (HU-PA-09 E1/E2): multi-select de roles en edicion */}
                             <div className="col mb-6 mt-2">
                                 <InputSelectModal
                                     id="roles_updated"
-                                    label="Rol del usuario"
-                                    value={user.roles}
+                                    label="Roles del usuario"
+                                    value={Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : [])}
                                     onChange={(value) => setUser({
                                         ...user,
-                                        roles: value
+                                        roles: Array.isArray(value) ? value : (value ? [value] : [])
                                     })}
-                                    error={errors.roles_updated}
-                                    placeholder="Seleccione un rol"
+                                    error={errors.roles || errors.roles_updated}
+                                    placeholder="Seleccione uno o varios roles"
                                     options={roles.map(role => ({
                                         label: role.name,
                                         id: role.name
                                     }))}
+                                    multiple={true}
                                 />
                             </div>
                         </div>

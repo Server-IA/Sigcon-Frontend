@@ -212,20 +212,35 @@ const ExchangeRateIndex = () => {
                     break;
 
                 case 'delete':
+                    // QA Bloque AU+ Bug 1 (2026-05-07): el backend exige motivo
+                    // de eliminacion >=10 chars. Antes se eliminaba sin pedir
+                    // motivo y aparecia el banner rojo "Debe especificar el
+                    // motivo de eliminacion (minimo 10 caracteres)".
                     window.Swal.fire({
-                        title: '¿Está seguro?',
-                        text: `¿Está seguro de eliminar la tasa de cambio?`,
+                        title: '¿Eliminar tasa de cambio?',
+                        html: 'Esta accion inactiva la tasa y queda registrada en auditoria.<br/><br/>Ingrese el motivo (minimo 10 caracteres):',
+                        icon: 'warning',
+                        input: 'textarea',
+                        inputAttributes: { 'aria-label': 'Motivo de eliminacion', minlength: 10, maxlength: 500 },
+                        inputValidator: (v) => {
+                            if (!v || v.trim().length < 10) return 'El motivo debe tener al menos 10 caracteres';
+                            if (v.length > 500) return 'Maximo 500 caracteres';
+                            return null;
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: 'Si, eliminar',
                         cancelButtonText: 'Cancelar',
+                        allowOutsideClick: false,
+                        confirmButtonColor: '#dc3545',
                         customClass: {
-                            confirmButton: 'btn btn-primary waves-effect',
-                            cancelButton: 'btn btn-danger waves-effect'
+                            confirmButton: 'btn btn-danger me-3 waves-effect waves-light',
+                            cancelButton: 'btn btn-outline-secondary waves-effect'
                         }
-
-                        
                     }).then(async (result) => {
                         if (!result.isConfirmed) return;
+                        const reason = (result.value || '').trim();
                         try {
-                            const deleteUrl = base_url(['api', 'v1', 'exchange-rates', id]);
+                            const deleteUrl = base_url(['api', 'v1', 'exchange-rates', id]) + `?reason=${encodeURIComponent(reason)}`;
                             const { message } = await fetchHelper.delete(deleteUrl, {}, {}, 1000);
                             setExchangeRateMessage({ message: message, type: 'success', show: true });
                             dataTableRef.current.draw(false);

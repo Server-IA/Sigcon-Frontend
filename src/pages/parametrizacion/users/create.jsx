@@ -12,22 +12,30 @@ const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setU
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // QA Bloque PA Bug 17 (HU-PA-08 E4, 2026-05-09): validar al menos un rol
+        // asignado antes de enviar al backend. El array `user.roles` contiene
+        // los nombres de roles seleccionados en multi-select.
+        const selectedRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : []);
+        if (selectedRoles.length === 0) {
+            setErrors({...errors, roles: 'Debe asignar al menos un rol al usuario'});
+            setErrorMessage('Debe asignar al menos un rol al usuario');
+            return;
+        }
+
         try {
             const url = base_url(['users', 'store']);
-
-            console.log(user);
-            
             const body = {
                 name: user.name,
                 lastname: user.lastname,
                 email: user.email,
                 username: user.username,
                 password: user.password,
-                roles: [user.roles]
+                // QA Bloque PA Bug 16 (HU-PA-08 E2): array de varios roles
+                roles: selectedRoles
             };
 
-            const {data} = await fetchHelper.post(url, body, {}, 1000);
-            
+            await fetchHelper.post(url, body, {}, 1000);
+
             setUser({
                 id: '',
                 name: '',
@@ -36,9 +44,9 @@ const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setU
                 username: '',
                 password: '',
                 status: 'ACTIVE',
-                roleId: null
+                roles: []
             });
-            
+
             dataTableRef?.current?.ajax.reload();
             modalInstance?.current?.hide();
             setUserCreate(true);
@@ -148,21 +156,23 @@ const CreateUser = ({ modalRef, modalInstance, user, setUser, dataTableRef, setU
                                 />
                             </div>
 
+                            {/* QA Bloque PA Bug 16 (HU-PA-08 E2): multi-select de roles */}
                             <div className="col mb-6 mt-2">
                                 <InputSelectModal
                                     id="roleId"
-                                    label="Rol del usuario"
-                                    value={user.roles}
+                                    label="Roles del usuario"
+                                    value={Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : [])}
                                     onChange={(value) => setUser({
                                         ...user,
-                                        roles: value
+                                        roles: Array.isArray(value) ? value : (value ? [value] : [])
                                     })}
-                                    error={errors.roleId}
-                                    placeholder="Seleccione un rol"
+                                    error={errors.roles || errors.roleId}
+                                    placeholder="Seleccione uno o varios roles"
                                     options={roles.map(role => ({
                                         label: role.name,
                                         id: role.name
                                     }))}
+                                    multiple={true}
                                 />
                             </div>
                         </div>

@@ -67,12 +67,19 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
             // sin msg/message. Aceptamos cualquiera de los tres para no mostrar
             // "Error desconocido" cuando el backend si dio un mensaje claro.
             const backendMsg = errorData.msg || errorData.message || errorData.error;
+            // QA Bloque PA Bug 10/11 (2026-05-09): propagar campos extra que algunos
+            // endpoints incluyen en el body de error (ej. affectedUsers en deleteRole).
+            // Sin esto el frontend no puede mostrar la lista detallada al usuario.
+            const extraKeys = ['affectedUsers', 'affectedUsersCount', 'usersWithOnlyThisRole', 'data'];
+            const extra = {};
+            extraKeys.forEach(k => { if (errorData[k] !== undefined) extra[k] = errorData[k]; });
             throw new Error(JSON.stringify({
                 msg: backendMsg || 'Error desconocido',
                 title: errorData.title || 'Error en la consulta',
                 error: errorData.error || 'Error general',
                 status: response.status,
-                errors: errorData.errors || errorData.details || []
+                errors: errorData.errors || errorData.details || [],
+                ...extra
             }));
         }
 

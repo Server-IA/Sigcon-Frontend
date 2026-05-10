@@ -49,10 +49,17 @@ const EmpresasIndex = () => {
         const isActive = empresa.status === 'ACTIVE';
         const action = isActive ? 'desactivar' : 'activar';
         if (!window.confirm(`¿Seguro que deseas ${action} la empresa "${empresa.businessName}"?`)) return;
+        // QA Bloque PA Bug 1 (2026-05-09): la firma de fetchHelper es
+        // (url, data, headers, time, ...). Antes pasaba 1000 como tercer
+        // argumento pensando que era timeout, lo que dejaba `headers=1000`
+        // (numero). El spread {...1000} = {} y el Authorization header no
+        // se inyectaba, causando que el backend respondiera 403 y la UI
+        // mostrara "No tienes permisos para acceder a este recurso" (HU-PA-01 E3).
         try {
             if (isActive) {
                 await fetchHelper.delete(
                     base_url(['api', 'platform', 'companies', empresa.id]),
+                    {},
                     {},
                     1000,
                 );
@@ -64,7 +71,10 @@ const EmpresasIndex = () => {
                     1000,
                 );
             }
-            setOkMsg(`Empresa ${action}da correctamente.`);
+            // QA Bloque PA Bug 1 (2026-05-09): conjugar correctamente.
+            // Antes generaba "desactivarda"/"activarda" por concatenar `${action}+da`.
+            const conjugado = isActive ? 'desactivada' : 'activada';
+            setOkMsg(`Empresa ${conjugado} correctamente.`);
             load();
         } catch (e) {
             setErr(e?.msg || `Error al ${action} la empresa`);

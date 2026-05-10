@@ -8,6 +8,9 @@ const FilterRole = ({ filterRef, filterInstance, dataTableRef }) => {
         return dataTableRef?.current?.table();
     };
 
+    // QA Bloque PA Bug 3 (HU-PA-03 E2, 2026-05-09): agregar filtro por Tipo
+    // (Predefinido / Personalizado). El backend resuelve `type` en el name de
+    // la columna del DataTableRequest (ver RoleService.extractTypeFilter).
     const [filters, setFilters] = useState([
         {
             regex: true,
@@ -18,6 +21,11 @@ const FilterRole = ({ filterRef, filterInstance, dataTableRef }) => {
             regex: true,
             value: '',
             column: 'status:name',
+        },
+        {
+            regex: false,
+            value: '',
+            column: 'type:name',
         },
     ]);
 
@@ -116,6 +124,38 @@ const FilterRole = ({ filterRef, filterInstance, dataTableRef }) => {
                                                 } : filter));
                                             }}
                                             multiple={true}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* QA Bloque PA Bug 3 (HU-PA-03 E2): filtro por Tipo */}
+                                <div className="col-lg-6 col-md-12 col-sm-12 mb-6 mt-2">
+                                    <div className="input-group">
+                                        <div className="input-group-text form-check mb-0">
+                                            <input
+                                                className="form-check-input m-auto"
+                                                type="checkbox"
+                                                checked={true}
+                                                disabled
+                                                aria-label="Filtro tipo" />
+                                        </div>
+                                        <InputSelectModal
+                                            id="type_filter"
+                                            label="Tipo de rol"
+                                            options={[
+                                                { name: 'Predefinido', id: 'PREDEFINED' },
+                                                { name: 'Personalizado', id: 'CUSTOM' },
+                                            ]}
+                                            value={filters.find(f => f.column === 'type:name')?.value
+                                                ? [filters.find(f => f.column === 'type:name').value]
+                                                : []}
+                                            onChange={(value) => {
+                                                setFilters(prev => prev.map(filter => filter.column === 'type:name' ? {
+                                                    ...filter,
+                                                    value: Array.isArray(value) && value.length > 0 ? value[0] : '',
+                                                } : filter));
+                                            }}
+                                            multiple={false}
                                         />
                                     </div>
                                 </div>
