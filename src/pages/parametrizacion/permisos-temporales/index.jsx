@@ -73,21 +73,29 @@ const IndexTemporaryPermissions = () => {
             const resp = await fetchHelper.get(url);
             setData(resp?.data || []);
         } catch (err) {
-            setErrMsg(err?.message || 'No se pudieron cargar los permisos temporales');
+            setErrMsg(err?.msg || err?.message || 'No se pudieron cargar los permisos temporales');
             setData([]);
         } finally {
             setLoading(false);
         }
     };
 
+    // QA Bloque PA Bug 80 (HU-PA-13 E7, 2026-05-11): restriccion de delegacion.
+    // El actor NO puede asignarse permisos temporales a si mismo (anti-self-grant).
+    // El backend tambien valida, pero excluirlo del dropdown evita confusion al
+    // QA. Otros usuarios del tenant SI deben aparecer todos.
+    const currentUserId = useSelector(state => state.user.user)?.userId
+        || useSelector(state => state.user.user)?.id;
     const loadUsers = async () => {
         try {
             const resp = await fetchHelper.post(base_url(['users', 'getUsers']),
                 { draw: 1, start: 0, length: 200, search: { value: '' }, order: [], columns: [] });
-            const list = (resp?.data || []).map(u => ({
-                id: u.id,
-                name: `${u.name} ${u.lastname} (${u.email})`,
-            }));
+            const list = (resp?.data || [])
+                .filter(u => !currentUserId || u.id !== currentUserId)
+                .map(u => ({
+                    id: u.id,
+                    name: `${u.name} ${u.lastname} (${u.email})`,
+                }));
             setUsers(list);
         } catch { /* ignore */ }
     };
@@ -165,7 +173,7 @@ const IndexTemporaryPermissions = () => {
             setErrMsg('');
             await loadList();
         } catch (err) {
-            setErrMsg(err?.message || 'Error al asignar permisos temporales');
+            setErrMsg(err?.msg || err?.message || 'Error al asignar permisos temporales');
         }
     };
 
@@ -191,7 +199,7 @@ const IndexTemporaryPermissions = () => {
             setErrMsg('');
             await loadList();
         } catch (err) {
-            setErrMsg(err?.message || 'Error al revocar el permiso temporal');
+            setErrMsg(err?.msg || err?.message || 'Error al revocar el permiso temporal');
         }
     };
 
