@@ -265,6 +265,63 @@ const IndexUsers = () => {
         setClickEdit(false);
     }, [clickEdit]);
 
+    // QA Bloque PA Bug 77 (HU-PA-06 E2, 2026-05-11): cuando se llega a la
+    // pagina via ?edit={id} (link "Reasignar rol" desde el SweetAlert de
+    // eliminar rol con usuarios asignados), abrir automaticamente el modal
+    // de edicion de ese usuario. Si esta en el DataTable lo usa; si no,
+    // hace POST /users/getUsers (sin paginar) y busca por id.
+    const [editParamProcessed, setEditParamProcessed] = useState(false);
+    useEffect(() => {
+        if (editParamProcessed) return;
+        const params = new URLSearchParams(window.location.search);
+        const editId = params.get('edit');
+        if (!editId) return;
+        const editIdNum = Number(editId);
+        if (!editIdNum) return;
+
+        const loadAndOpen = async () => {
+            try {
+                let userRef = (data || []).find(u => u.id === editIdNum);
+                if (!userRef) {
+                    // No esta en el DataTable actual (otra pagina o filtro):
+                    // traer todos los users y buscarlo. length=-1 = sin limite.
+                    const resp = await fetchHelper.post(
+                        base_url(['users', 'getUsers']),
+                        { length: -1, start: 0 },
+                        {}, 0
+                    );
+                    const list = resp?.data || [];
+                    userRef = list.find(u => u.id === editIdNum);
+                }
+                if (!userRef || !userRef.id) {
+                    console.warn('No se encontro el usuario id=' + editIdNum);
+                    return;
+                }
+                setUser({
+                    id: userRef.id,
+                    name: userRef.name,
+                    lastname: userRef.lastname,
+                    email: userRef.email,
+                    username: userRef.username,
+                    password: '',
+                    status: userRef.status,
+                    roles: Array.isArray(userRef.roles)
+                        ? Array.from(userRef.roles)
+                        : (userRef.roles ? [userRef.roles] : [])
+                });
+                setClickEdit(true);
+            } catch (e) {
+                console.warn('Error abriendo modal edit via query param:', e);
+            } finally {
+                setEditParamProcessed(true);
+                // Limpiar query param para no re-abrir en re-renders.
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        };
+        loadAndOpen();
+    }, [data, editParamProcessed]);
+
     return (
         <div className="card">
             <h5 className="card-header text-md-start text-center">

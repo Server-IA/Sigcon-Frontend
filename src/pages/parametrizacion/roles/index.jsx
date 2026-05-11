@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSelector } from 'react-redux';
 import DataTableReference from '../../../components/organism/DataTable';
 import ViewRole from '../../../components/organism/ViewRole';
 
@@ -11,6 +12,13 @@ import FilterRole from './filter';
 import AlertPage from '../../../components/molecules/AlertPage';
 
 const IndexRoles = () => {
+    // QA Bloque PA Bug 75 (HU-PA-03 E3, 2026-05-11): el listado para
+    // PLATFORM_ADMIN debe mostrar la empresa duenia de cada rol para
+    // distinguir CONTADOR de SIGCON DEMO vs CONTADOR de EMPRESA QA 2.
+    const currentUser = useSelector((state) => state.user.user);
+    const isPlatformAdmin = !!currentUser?.isPlatformAdmin
+        || (Array.isArray(currentUser?.roles) && currentUser.roles.some(
+                r => (typeof r === 'string' ? r : r?.name) === 'PLATFORM_ADMIN'));
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -105,9 +113,18 @@ const IndexRoles = () => {
         if (status === 'INACTIVE') return '<span class="badge bg-label-secondary">Inactivo</span>';
         return status || '-';
     };
+    const renderCompany = (v) => v
+        ? `<span class="badge bg-label-info">${v}</span>`
+        : '<span class="badge bg-label-secondary">Global</span>';
     const [columns, setColumns] = useState([
         { title: 'ID', data: 'id', searchable: false, width: '60px' },
         { title: 'Nombre', data: 'name', name: 'name' },
+        // QA Bloque PA Bug 75 (HU-PA-03 E3, 2026-05-11): columna Empresa SOLO
+        // visible para PLATFORM_ADMIN (que ve cross-empresa). ADMIN_EMPRESA
+        // solo ve roles de su empresa, no necesita la columna.
+        ...(isPlatformAdmin ? [{ title: 'Empresa', data: 'companyName', name: 'companyName',
+            orderable: false, searchable: false, width: '160px',
+            render: (v) => renderCompany(v) }] : []),
         { title: 'Descripción', data: 'description', name: 'description', orderable: false,
           render: (v) => v ? `<span class="text-muted">${v}</span>` : '<span class="text-muted">-</span>' },
         { title: 'Tipo', data: 'type', name: 'type', orderable: true, render: (v) => renderType(v) },
@@ -290,8 +307,15 @@ const IndexRoles = () => {
                             // SweetAlert2 secundario con enlaces a edicion.
                             const affected = error?.affectedUsers || error?.data?.affectedUsers;
                             if (Array.isArray(affected) && affected.length > 0) {
+                                // QA Bloque PA Bug 77 (HU-PA-06 E2, 2026-05-11):
+                                // navegacion en la MISMA pestaña (sin target=_blank)
+                                // porque tras el fix de aislamiento de sesion por
+                                // pestaña (sessionStorage), abrir nueva pestaña
+                                // requeriria re-login. El SweetAlert se cierra al
+                                // click y la pagina navega a /users?edit={id} que
+                                // automaticamente abre el modal de edicion.
                                 const list = affected.map(u =>
-                                    `<li><strong>${u.email || u.username}</strong> (id=${u.id}) — <a href="${u.editUrl}" target="_blank">Reasignar rol</a></li>`
+                                    `<li><strong>${u.email || u.username}</strong> (id=${u.id}) — <a href="${u.editUrl}">Reasignar rol</a></li>`
                                 ).join('');
                                 window.Swal.fire({
                                     title: 'No se puede eliminar este rol',

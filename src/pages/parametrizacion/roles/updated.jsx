@@ -221,16 +221,27 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
                                     options={[{ label: 'Activo', id: 'ACTIVE' }, { label: 'Inactivo', id: 'INACTIVE' }]}
                                 />
                             </div>
-                            {/* QA Bloque PA Bug 2: campo descripcion en edicion */}
+                            {/* QA Bloque PA Bug 2: campo descripcion en edicion.
+                                QA Bloque PA Bug 76 (HU-PA-05 E2, 2026-05-11):
+                                la descripcion de roles predefinidos tambien es
+                                readonly (igual que el nombre). Solo se puede
+                                editar status + permisos. */}
                             <div className="col-12 mb-6 mt-2">
                                 <InputModal
                                     id="description_update"
-                                    label="Descripción"
+                                    label={isPredefined
+                                        ? "Descripción (predefinido, no editable)"
+                                        : "Descripción"}
                                     value={roleUpdated.description || ''}
-                                    onChange={(e) => setRoleUpdated({ ...roleUpdated, description: e.target.value })}
+                                    onChange={(e) => {
+                                        if (isPredefined) return;
+                                        setRoleUpdated({ ...roleUpdated, description: e.target.value });
+                                    }}
                                     error={errors.description}
                                     placeholder="Breve descripción del rol (opcional)"
                                     required={false}
+                                    readOnly={isPredefined}
+                                    disabled={isPredefined}
                                 />
                             </div>
                         </div>

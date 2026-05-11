@@ -146,13 +146,20 @@ const FilterRole = ({ filterRef, filterInstance, dataTableRef }) => {
                                                 { name: 'Predefinido', id: 'PREDEFINED' },
                                                 { name: 'Personalizado', id: 'CUSTOM' },
                                             ]}
-                                            value={filters.find(f => f.column === 'type:name')?.value
-                                                ? [filters.find(f => f.column === 'type:name').value]
-                                                : []}
+                                            value={filters.find(f => f.column === 'type:name')?.value || ''}
                                             onChange={(value) => {
+                                                // QA Bloque PA Bug 74 (HU-PA-03 E2, 2026-05-11):
+                                                // InputSelectModal con multiple=false retorna STRING
+                                                // (no array). Antes hacia Array.isArray(value) &&
+                                                // value[0], asi que el filtro NUNCA se aplicaba y
+                                                // la opcion seleccionada se reseteaba a "" en cada
+                                                // cambio. Ahora trabajamos con string directo.
+                                                const v = Array.isArray(value)
+                                                    ? (value.length > 0 ? value[0] : '')
+                                                    : (value || '');
                                                 setFilters(prev => prev.map(filter => filter.column === 'type:name' ? {
                                                     ...filter,
-                                                    value: Array.isArray(value) && value.length > 0 ? value[0] : '',
+                                                    value: v,
                                                 } : filter));
                                             }}
                                             multiple={false}
