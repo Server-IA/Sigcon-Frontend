@@ -31,18 +31,29 @@ const PlatformDashboard = () => {
     const [aaefAlerts, setAaefAlerts] = useState(null);
     const [aaefCompanyFilter, setAaefCompanyFilter] = useState('');
 
+    // QA Bloque PA Bug 90 (HU-PA-PLAT-06 E5, 2026-05-11): auto-refresh cada 60s
+    // configurable. Antes el dashboard quedaba estatico hasta F5 manual del user.
+    const [refreshIntervalMs] = useState(60000);
+    const [lastRefresh, setLastRefresh] = useState(null);
+    const loadDashboard = async (silent = false) => {
+        try {
+            if (!silent) setLoading(true);
+            const resp = await fetchHelper.get(base_url(['api', 'platform', 'dashboard']));
+            setData(resp?.data ?? resp);
+            setLastRefresh(new Date());
+            setErr(null);
+        } catch (e) {
+            if (!silent) setErr(e?.msg || 'Error al cargar el dashboard');
+        } finally {
+            if (!silent) setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        (async () => {
-            try {
-                const resp = await fetchHelper.get(base_url(['api', 'platform', 'dashboard']));
-                setData(resp?.data ?? resp);
-            } catch (e) {
-                setErr(e?.msg || 'Error al cargar el dashboard');
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, []);
+        loadDashboard(false);
+        const id = setInterval(() => loadDashboard(true), refreshIntervalMs);
+        return () => clearInterval(id);
+    }, [refreshIntervalMs]);
 
     const loadAaefMonitor = async (companyId) => {
         try {
@@ -89,9 +100,24 @@ const PlatformDashboard = () => {
 
     return (
         <div>
-            <div className="d-flex justify-content-between align-items-center mb-4">
+            <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                 <h4 className="mb-0">Resumen de la plataforma</h4>
-                <small className="text-muted">Indicadores globales de todas las empresas</small>
+                <div className="d-flex align-items-center gap-2">
+                    {lastRefresh && (
+                        <small className="text-muted">
+                            <i className="ri-time-line me-1"></i>
+                            Actualizado: {lastRefresh.toLocaleTimeString('es-CO')}
+                            <span className="ms-2 text-muted" style={{fontSize:'0.85em'}}>
+                                (auto-refresh cada 60s)
+                            </span>
+                        </small>
+                    )}
+                    <button className="btn btn-sm btn-outline-primary"
+                            onClick={() => loadDashboard(false)}
+                            title="Refrescar ahora">
+                        <i className="ri-refresh-line"></i>
+                    </button>
+                </div>
             </div>
 
             <div className="row">

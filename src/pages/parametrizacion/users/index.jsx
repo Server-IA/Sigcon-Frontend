@@ -12,6 +12,13 @@ const IndexUsers = () => {
 
     const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => {return p.code.includes('USER')})|| []; // Permisos del usuario
     const isAdmin = useSelector(state => state.user.user)?.isAdmin || false; // Verificar si el usuario es admin
+    // QA Bloque PA Bug 89 (HU-PA-PLAT-04, 2026-05-11): un PLATFORM_ADMIN
+    // (sin company_id) NO puede crear users tenant desde /parametrizacion/users
+    // porque el backend exige TenantContext.getCompanyId() != null. Los users
+    // de plataforma se crean desde /platform/users (modulo Plataforma -> Usuarios).
+    // Aqui ocultamos el boton "Crear Usuario" cuando el actor es PLATFORM_ADMIN
+    // y mostramos un alert informativo.
+    const isPlatformAdmin = useSelector(state => state.user.user)?.isPlatformAdmin || false;
 
     const [data, setData] = useState([]);
     const tableRefUser = useRef(null);
@@ -64,7 +71,9 @@ const IndexUsers = () => {
                 filterInstance.current.show();
             }
         },
-        ...(userPermissions.some(p => p.code === 'CREATE_USER' && p.type === 'CREATE') || isAdmin ? [{
+        // QA Bloque PA Bug 89 (HU-PA-PLAT-04): bloquear Crear Usuario para PLATFORM_ADMIN
+        // en este modulo. Ellos deben usar /platform/users (modulo Plataforma).
+        ...((userPermissions.some(p => p.code === 'CREATE_USER' && p.type === 'CREATE') || isAdmin) && !isPlatformAdmin ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Crear Usuario</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: function () {
@@ -333,6 +342,16 @@ const IndexUsers = () => {
             <AlertPage message='Usuario creado exitosamente' type='success' show={userCreate} onChange={() => setUserCreate(false)} />
             <AlertPage message='Usuario editado exitosamente' type='success' show={userUpdate} onChange={() => setUserUpdate(false)} />
             <AlertPage message='Usuario eliminado exitosamente' type='success' show={userDelete} onChange={() => setUserDelete(false)} />
+
+            {/* QA Bloque PA Bug 89 (HU-PA-PLAT-04, 2026-05-11): aviso para PLATFORM_ADMIN */}
+            {isPlatformAdmin && (
+                <div className="alert alert-info mx-3 mt-3 mb-0" role="alert">
+                    <i className="ri-information-line me-2"></i>
+                    <strong>Modo plataforma:</strong> aquí solo se gestionan usuarios de empresas existentes.
+                    Para crear nuevos administradores de plataforma vaya a {' '}
+                    <a href="/platform/users" className="alert-link">Plataforma · Usuarios</a>.
+                </div>
+            )}
 
             <div className="card-datatable text-nowrap">
                 <DataTableReference

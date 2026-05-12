@@ -93,14 +93,50 @@ const NavegacionPage = () => {
         }
     };
 
-    const handleCancel = () => {
-        if (isDirty && !window.confirm('Hay cambios sin guardar. ¿Descartar?')) return;
+    // QA Bloque PA Bug 91 (HU-PA-NAV-01 E4, 2026-05-11): SweetAlert al cancelar
+    // con cambios sin guardar. Antes usabamos window.confirm que no tiene el
+    // estilo del sistema y a veces es bloqueado por el browser. La HU exige
+    // SweetAlert (estilo coherente con el resto de la app) que confirme y
+    // restaure el orden persistido si el user aprueba descartar.
+    const handleCancel = async () => {
+        if (!isDirty) {
+            // sin cambios: solo informar
+            setNotification({ type: 'info', text: 'No hay cambios para descartar' });
+            return;
+        }
+        const result = await window.Swal.fire({
+            title: 'Hay cambios sin guardar',
+            text: '¿Desea descartar los cambios y restablecer el orden?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, descartar',
+            cancelButtonText: 'No, seguir editando',
+            customClass: {
+                confirmButton: 'btn btn-warning me-2',
+                cancelButton: 'btn btn-secondary'
+            },
+            buttonsStyling: false
+        });
+        if (!result.isConfirmed) return;
         setOrder([...persistedOrder]);
-        setNotification({ type: 'info', text: 'Cambios descartados' });
+        setNotification({ type: 'success', text: 'Cambios descartados. Orden restablecido al guardado anterior.' });
     };
 
     const handleReset = async () => {
-        if (!window.confirm('¿Restablecer el orden al default del sistema?')) return;
+        const result = await window.Swal.fire({
+            title: '¿Restablecer al orden default del sistema?',
+            text: 'El orden actual se reemplazara por el orden predeterminado de SIGCON.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, restablecer',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'btn btn-danger me-2',
+                cancelButton: 'btn btn-secondary'
+            },
+            buttonsStyling: false
+        });
+        if (!result.isConfirmed) return;
         try {
             await fetchHelper.del(base_url(['api', 'parametrization', 'nav-settings', 'module-order']));
             await load();
