@@ -163,6 +163,74 @@ const PlatformDashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* QA Bloque PA Bug 86 (HU-PA-15 E5, 2026-05-11): scheduler de
+                vencimiento de permisos temporales en el dashboard centralizado. */}
+            {data?.tempPermSchedulerStatus && (
+                <div className="row">
+                    <div className="col-md-12 mb-4">
+                        <div className="card shadow-sm border-0">
+                            <div className="card-header fw-semibold d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i className="ri-time-line me-2"></i>
+                                    Scheduler de vencimiento de permisos temporales
+                                </span>
+                                <span className={`badge ${
+                                    data.tempPermSchedulerStatus.status === 'OK' ? 'bg-label-success' :
+                                    data.tempPermSchedulerStatus.status === 'NEVER_RAN' ? 'bg-label-secondary' :
+                                    'bg-label-danger'
+                                }`}>
+                                    {data.tempPermSchedulerStatus.status}
+                                </span>
+                            </div>
+                            <div className="card-body">
+                                {data.tempPermSchedulerStatus.status === 'NEVER_RAN' ? (
+                                    <p className="text-muted mb-0">
+                                        El scheduler aún no se ha ejecutado. Se programa nocturno; al primer run
+                                        aparecerá aquí el resumen.
+                                    </p>
+                                ) : (
+                                    <div className="row text-center">
+                                        <div className="col-md-3">
+                                            <small className="text-muted d-block">Permisos vencidos</small>
+                                            <strong className="fs-5">
+                                                {data.tempPermSchedulerStatus.expiredCount ?? '-'}
+                                            </strong>
+                                        </div>
+                                        <div className="col-md-3">
+                                            <small className="text-muted d-block">Usuarios notificados</small>
+                                            <strong className="fs-5">
+                                                {data.tempPermSchedulerStatus.notifiedCount ?? '-'}
+                                            </strong>
+                                        </div>
+                                        <div className="col-md-3">
+                                            <small className="text-muted d-block">Duración</small>
+                                            <strong className="fs-5">
+                                                {data.tempPermSchedulerStatus.durationMs != null
+                                                    ? `${data.tempPermSchedulerStatus.durationMs} ms`
+                                                    : '-'}
+                                            </strong>
+                                        </div>
+                                        <div className="col-md-3">
+                                            <small className="text-muted d-block">Último run</small>
+                                            <strong className="fs-6">
+                                                {data.tempPermSchedulerStatus.endedAt
+                                                    ? new Date(data.tempPermSchedulerStatus.endedAt).toLocaleString('es-CO')
+                                                    : '-'}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                )}
+                                {data.tempPermSchedulerStatus.errorMessage && (
+                                    <div className="alert alert-danger mt-3 mb-0">
+                                        <strong>Error del último run:</strong> {data.tempPermSchedulerStatus.errorMessage}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -186,6 +186,38 @@ const IndexTemporaryPermissions = () => {
         modalRevokeInstance.current.show();
     };
 
+    // QA Bloque PA Bug 85 (HU-PA-16 E5, 2026-05-11): exportar historial con
+    // los filtros actuales aplicados. El backend ya tiene los endpoints
+    // /export.csv y /export.xlsx con los mismos parametros del listado.
+    const exportHistorial = async (formato) => {
+        try {
+            const params = new URLSearchParams();
+            if (filterUserId) params.append('userId', filterUserId);
+            if (filterStatus) params.append('status', filterStatus);
+            const ext = formato === 'xlsx' ? 'export.xlsx' : 'export.csv';
+            const url = `${base_url(['api', 'parametrization', 'temporary-permissions', ext])}?${params}`;
+            const token = localStorage.getItem('token');
+            const resp = await fetch(url, {
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+            });
+            if (!resp.ok) {
+                setErrMsg('Error al exportar (HTTP ' + resp.status + ')');
+                return;
+            }
+            const blob = await resp.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `permisos_temporales_${new Date().toISOString().slice(0,10)}.${formato}`;
+            document.body.appendChild(a);
+            a.click();
+            URL.revokeObjectURL(a.href);
+            a.remove();
+            setOkMsg(`Historial exportado a ${formato.toUpperCase()} correctamente`);
+        } catch (err) {
+            setErrMsg(err?.msg || err?.message || 'Error al exportar el historial');
+        }
+    };
+
     const submitRevoke = async () => {
         if (!revokeReason || revokeReason.trim().length < 30) {
             setErrMsg('La justificacion de revocacion es obligatoria (minimo 30 caracteres)');
@@ -231,9 +263,20 @@ const IndexTemporaryPermissions = () => {
                             <option value="EXPIRED">Vencido</option>
                         </select>
                     </div>
-                    <div className="col-md-5 d-flex align-items-end gap-2">
+                    <div className="col-md-5 d-flex align-items-end gap-2 flex-wrap">
                         <button className="btn btn-outline-primary" onClick={loadList} disabled={loading}>
                             <i className="ri-refresh-line me-1"></i> Refrescar
+                        </button>
+                        {/* QA Bloque PA Bug 85 (HU-PA-16 E5, 2026-05-11): exportar
+                            historial a CSV/XLSX. Los endpoints backend ya existen
+                            (/export.csv y /export.xlsx); solo faltaba el boton. */}
+                        <button className="btn btn-outline-success" onClick={() => exportHistorial('csv')}
+                                disabled={loading} title="Exportar a CSV">
+                            <i className="ri-file-text-line me-1"></i> CSV
+                        </button>
+                        <button className="btn btn-outline-success" onClick={() => exportHistorial('xlsx')}
+                                disabled={loading} title="Exportar a Excel">
+                            <i className="ri-file-excel-2-line me-1"></i> Excel
                         </button>
                         {canAssign && (
                             <button className="btn btn-primary" onClick={openAssign}>

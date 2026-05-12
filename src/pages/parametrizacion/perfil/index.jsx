@@ -19,6 +19,13 @@ const PerfilPage = () => {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.user?.user) || {};
   const fileInputRef = useRef(null);
+  // QA Bloque PA Bug 84 (HU-PA-17 E1, 2026-05-11): mostrar al usuario receptor
+  // sus permisos temporales activos con dias restantes y origen. La HU exige
+  // que cualquier user pueda ver en su perfil sus permisos temporales para
+  // saber que tiene acceso temporal y por que.
+  const [myTempPerms, setMyTempPerms] = useState([]);
+  const [loadingTempPerms, setLoadingTempPerms] = useState(false);
+
   const [form, setForm] = useState({
     name: '',
     lastname: '',
@@ -49,6 +56,26 @@ const PerfilPage = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token || !user?.id) setNotification({ type: 'error', message: 'Debe iniciar sesión para visualizar sus parámetros.' });
+  }, [user?.id]);
+
+  // QA Bloque PA Bug 84 (HU-PA-17 E1, 2026-05-11): cargar permisos temporales
+  // activos del usuario autenticado al montar.
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingTempPerms(true);
+      try {
+        const url = base_url(['api', 'parametrization', 'temporary-permissions', 'me']);
+        const resp = await fetchHelper.get(url);
+        if (!cancelled) setMyTempPerms(resp?.data || []);
+      } catch {
+        if (!cancelled) setMyTempPerms([]);
+      } finally {
+        if (!cancelled) setLoadingTempPerms(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user?.id]);
 
   const clearNotification = () => setNotification({ type: null, message: '' });
@@ -215,6 +242,44 @@ const PerfilPage = () => {
                   <PasswordInput id="confirmPassword" name="confirmPassword" label="Confirmación de contraseña" placeholder="Repita la contraseña" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} hasError={!!errors.confirmPassword} />
                   {errors.confirmPassword && <div className="profile-field-error">{errors.confirmPassword}</div>}
                 </div>
+              </section>
+
+              {/* QA Bloque PA Bug 84 (HU-PA-17 E1, 2026-05-11): Mis Permisos Temporales */}
+              <section className="profile-section">
+                <span className="profile-section-title">Mis Permisos Temporales</span>
+                <p style={{margin:'0 0 12px', fontSize:'0.85em', color:'#666'}}>
+                  Permisos adicionales otorgados temporalmente por un administrador.
+                  Vencen automáticamente al llegar la fecha de fin.
+                </p>
+                {loadingTempPerms ? (
+                  <div style={{padding:'12px', color:'#888'}}>Cargando...</div>
+                ) : (myTempPerms || []).length === 0 ? (
+                  <div className="alert alert-secondary" style={{padding:'12px'}}>
+                    No tiene permisos temporales activos.
+                  </div>
+                ) : (
+                  <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px,1fr))', gap:'12px'}}>
+                    {myTempPerms.map(tp => {
+                      const days = tp.daysRemaining ?? 0;
+                      const badgeColor = days > 7 ? 'bg-label-success'
+                                       : days > 0 ? 'bg-label-warning'
+                                                  : 'bg-label-danger';
+                      return (
+                        <div key={tp.id} className="card" style={{padding:'12px', borderLeft:'4px solid var(--config-primary, #6c63ff)'}}>
+                          <div style={{display:'flex', justifyContent:'space-between', alignItems:'start', gap:'8px'}}>
+                            <strong style={{fontSize:'0.85em', wordBreak:'break-word'}}>{tp.permissionCode}</strong>
+                            <span className={`badge ${badgeColor}`} style={{whiteSpace:'nowrap'}}>{days} día{days===1?'':'s'}</span>
+                          </div>
+                          <div style={{fontSize:'0.78em', color:'#666', marginTop:'8px'}}>
+                            <div><strong>Otorgado por:</strong> {tp.grantedByEmail || '-'}</div>
+                            <div><strong>Vence:</strong> {tp.endDate ? new Date(tp.endDate).toLocaleString('es-CO') : '-'}</div>
+                            <div style={{marginTop:'4px', fontStyle:'italic'}}>{tp.justification}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
 
               {/* Notificación */}
