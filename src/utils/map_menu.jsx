@@ -258,6 +258,9 @@ import AdminRoute from "../components/organism/AdminRoute";
 // Bloque F (multi-tenant): gatekeeper para rutas /platform/* (solo PLATFORM_ADMIN).
 import PlatformRoute from "../components/organism/PlatformRoute";
 import TenantOnlyRoute from "../components/organism/TenantOnlyRoute";
+// QA Bloque PA Bug 97 (HU-PA-09 E7 + HU-PA-12 E3, 2026-05-13): gatekeeper por
+// permiso granular. Cierra DEF-30 y DEF-25.
+import PermissionRoute from "../components/organism/PermissionRoute";
 
 // Plataforma (HU-PLAT-01/02/05/06)
 import IndexEmpresas from "../pages/platform/empresas/index";
@@ -278,6 +281,16 @@ const tenantOnly = (Component) => () => (
     <TenantOnlyRoute><Component /></TenantOnlyRoute>
 );
 
+/**
+ * QA Bloque PA Bug 97 (HU-PA-09 E7 + HU-PA-12 E3, 2026-05-13): envuelve un
+ * componente con PermissionRoute exigiendo un permiso atomico. Si el usuario
+ * no tiene el permiso, redirige a Page403. ADMIN_EMPRESA y PLATFORM_ADMIN
+ * pasan por bypass (ver usePermissions).
+ */
+const requirePerm = (Component, permission) => () => (
+    <PermissionRoute permission={permission}><Component /></PermissionRoute>
+);
+
 export const COMPONENT_MAP = [
   { id: "HOME", name: "Home", component: Home },
   { id: "PERFIL", name: "Perfil", component: PerfilPage },
@@ -292,7 +305,10 @@ export const COMPONENT_MAP = [
   { id: "MODULOS", name: "Módulos", component: platformOnly(IndexModules) },
   { id: "MENUS", name: "Menus", component: platformOnly(IndexMenus) },
   { id: "PERMISSIONS", name: "Permisos", component: platformOnly(PermissionsIndex) },
-  { id: "USERS", name: "Usuarios", component: IndexUsers },
+  // QA Bloque PA Bug 97 (HU-PA-12 E3): proteger ruta de usuarios por permiso
+  // granular. Un usuario sin PAR.USUARIOS.VER que navegue manualmente a
+  // /parametrizacion/users debe ver Page403, no el listado.
+  { id: "USERS", name: "Usuarios", component: requirePerm(IndexUsers, "PAR.USUARIOS.VER") },
   // QA Bloque PA Bug 31-43 (HU-PA-13/14, 2026-05-09): permisos temporales
   { id: "TEMPORARY_PERMISSIONS", name: "Permisos Temporales", component: IndexTemporaryPermissions },
   { id: "ROLES", name: "Roles", component: IndexRoles },
