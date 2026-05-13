@@ -134,7 +134,17 @@ const IndexTemporaryPermissions = () => {
             setErrMsg('Debe seleccionar un usuario destino');
             return;
         }
-        if (!assignForm.permissionIds || assignForm.permissionIds.length === 0) {
+        // QA Bloque PA Bug 99 (HU-PA-13 E3, 2026-05-13): filtrar valores
+        // vacios/null que select2 puede inyectar cuando el usuario interactua
+        // con el placeholder antes de seleccionar opciones reales. Sin este
+        // filtro el array contenia ['', '4172', '4145'] y el backend lo
+        // contaba como 3 permisos pero al traducir a Number('') -> NaN, BD
+        // rechazaba el INSERT y el contador se disparaba con Vigentes: [].
+        const cleanedPermissionIds = (assignForm.permissionIds || [])
+            .filter(v => v !== '' && v !== null && v !== undefined)
+            .map(v => Number(v))
+            .filter(n => !isNaN(n) && n > 0);
+        if (cleanedPermissionIds.length === 0) {
             setErrMsg('Debe seleccionar al menos un permiso atomico');
             return;
         }
@@ -162,7 +172,7 @@ const IndexTemporaryPermissions = () => {
             const url = base_url(['api', 'parametrization', 'temporary-permissions']);
             const body = {
                 userId: Number(assignForm.userId),
-                permissionIds: assignForm.permissionIds.map(Number),
+                permissionIds: cleanedPermissionIds,
                 justification: assignForm.justification,
                 startDate: assignForm.startDate.includes('T') ? assignForm.startDate : `${assignForm.startDate}T00:00:00`,
                 endDate: assignForm.endDate.includes('T') ? assignForm.endDate : `${assignForm.endDate}T23:59:59`,
