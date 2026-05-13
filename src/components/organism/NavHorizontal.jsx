@@ -8,6 +8,8 @@ import { fetchHelper } from "../../utils/fetch";
 import avatar from '../../../public/assets/img/avatars/1.png';
 import { refreshMenu } from "../../routes/routes";
 import NotificationBell from "./NotificationBell";
+import { usePermissions } from "../../utils/hooks/usePermissions.jsx";
+import { isMenuItemVisible } from "../../utils/menuPermissionMap.jsx";
 
 // import { ComponentsFinal } from "../../utils/map_menu";
 
@@ -15,6 +17,7 @@ const NavHorizontal = () => {
 
     const user = useSelector(state => state.user).user;
     const modulos = useSelector(state => state.modules).modules || [];
+    const { has } = usePermissions();
 
     const urlPerfil = `${
         modulos.find(modulo => modulo.id === 1)?.url
@@ -260,6 +263,13 @@ const NavHorizontal = () => {
                                             }
                                             return !PLATFORM_ONLY.has(comp);
                                         })
+                                        /* QA Bloque AT (HU-PA-13, 2026-05-13):
+                                           filtro adicional por permiso efectivo
+                                           (rol + permisos temporales ACTIVE) para
+                                           que un OPERADOR_NOMINA con un permiso
+                                           temporal puntual NO vea items del rol
+                                           ADMIN_EMPRESA en su dropdown. */
+                                        ?.filter((menu) => isMenuItemVisible(menu, has))
                                         ?.map((menu) => {
                                         return (
                                             <li key={menu.id}>

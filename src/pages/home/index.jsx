@@ -1,5 +1,7 @@
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { usePermissions } from "../../utils/hooks/usePermissions.jsx";
+import { isMenuItemVisible } from "../../utils/menuPermissionMap.jsx";
 
 /**
  * Dashboard principal con mosaico de modulos habilitados segun permisos del usuario.
@@ -10,8 +12,24 @@ import { useNavigate } from "react-router-dom";
 const Home = () => {
     const user = useSelector(state => state.user)?.user;
     const allModules = useSelector(state => state.modules)?.modules || [];
-    const modules = allModules.filter(mod => mod.id !== 0);
+    const { has } = usePermissions();
     const navigate = useNavigate();
+
+    // QA Bloque AT (HU-PA-13, 2026-05-13): filtrar tambien por permisos
+    // efectivos (rol + permisos temporales). Antes solo mostraba modulos
+    // tal cual venian del backend; ahora oculta los modulos cuyos menus
+    // estan TODOS sin permiso para el usuario actual. Asi un usuario con
+    // permiso temporal puntual ve solo el modulo que le corresponde, y
+    // no se muestran modulos vacios.
+    const modules = allModules
+        .filter(mod => mod.id !== 0)
+        .map(mod => ({
+            ...mod,
+            menus: (mod.menus ?? [])
+                .filter(m => m.visible)
+                .filter(m => isMenuItemVisible(m, has)),
+        }))
+        .filter(mod => (mod.menus ?? []).length > 0);
 
     /**
      * Navega al primer submenu visible del modulo.
@@ -40,10 +58,31 @@ const Home = () => {
 
     // Titulo principal del dashboard:
     //  - PLATFORM_ADMIN: muestra "SIGCON" con inicial "S" (marca del sistema)
-    //  - Usuario tenant: muestra el nombre de la empresa con su inicial
+    //  - Usuario tenant: muestra el nombre comercial guardado en Identidad
+    //    Visual (sigcon_brand_theme_{companyId}.brandName) con fallback al
+    //    companyName de la empresa si el admin no configuro brand custom.
+    // QA Bloque AT (HU-PA-BRAND-01, 2026-05-13): leer del theme scoped permite
+    // que al guardar nuevo brandName en /parametrizacion/identidad-visual el
+    // dashboard refleje el cambio inmediatamente (igual que el sidebar).
     const isPlatformAdmin = user?.isPlatformAdmin === true;
     const companyName = user?.companyName || '';
-    const brandTitle = isPlatformAdmin ? 'SIGCON' : (companyName || 'SIGCON');
+    let themeBrandName = null;
+    if (!isPlatformAdmin && user?.companyId) {
+        try {
+            const scopedKey = `sigcon_brand_theme_${user.companyId}`;
+            const theme = JSON.parse(
+                localStorage.getItem(scopedKey)
+                || localStorage.getItem('sigcon_brand_theme')
+                || '{}'
+            );
+            if (theme.brandName && theme.brandName.trim().length > 0) {
+                themeBrandName = theme.brandName.trim();
+            }
+        } catch (_) { /* fallback */ }
+    }
+    const brandTitle = isPlatformAdmin
+        ? 'SIGCON'
+        : (themeBrandName || companyName || 'SIGCON');
     const brandInitial = (brandTitle.trim()[0] || 'S').toUpperCase();
     const brandSubtitle = isPlatformAdmin
         ? 'Administración de la plataforma'

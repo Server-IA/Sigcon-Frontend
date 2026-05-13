@@ -5,6 +5,8 @@ import { useSelector, useDispatch } from "react-redux";
 import ItemMenu from "../molecules/ItemMenu.jsx";
 import LogoBrand from "../molecules/LogoBrand.jsx";
 import { refreshMenu } from "../../routes/routes.jsx";
+import { usePermissions } from "../../utils/hooks/usePermissions.jsx";
+import { isMenuItemVisible } from "../../utils/menuPermissionMap.jsx";
 
 const MenuNav = () =>{
 
@@ -14,6 +16,28 @@ const MenuNav = () =>{
 
     const modules = useSelector(state => state.modules.modules ?? []);
     const user = useSelector(state => state.user?.user);
+    const { has } = usePermissions();
+    // QA Bloque AT (HU-PA-BRAND-01, 2026-05-13): re-render del sidebar cuando
+    // IdentidadVisualPage guarda nuevo theme. Sin esto, el sidebar lee
+    // localStorage solo al primer mount y se queda con el brandName antiguo
+    // hasta que el usuario navega/refresca. Se escucha tanto el evento nativo
+    // 'storage' (cambios en OTRO tab) como un custom event 'sigcon-brand-changed'
+    // que dispara IdentidadVisualPage tras Guardar (mismo tab).
+    const [brandTick, setBrandTick] = useState(0);
+    useEffect(() => {
+        const onStorage = (e) => {
+            if (!e || !e.key || e.key.startsWith('sigcon_brand_theme')) {
+                setBrandTick(t => t + 1);
+            }
+        };
+        const onCustom = () => setBrandTick(t => t + 1);
+        window.addEventListener('storage', onStorage);
+        window.addEventListener('sigcon-brand-changed', onCustom);
+        return () => {
+            window.removeEventListener('storage', onStorage);
+            window.removeEventListener('sigcon-brand-changed', onCustom);
+        };
+    }, []);
 
     /*
      * Bloque AM (2026-05-03): el sidebar mostraba "S SIGCON" hardcoded ignorando
@@ -21,12 +45,27 @@ const MenuNav = () =>{
      * Ahora: PLATFORM_ADMIN ve el branding default SIGCON. ADMIN_EMPRESA lee
      * sigcon_brand_theme (logo + nombre comercial) que se persiste al Guardar.
      */
+    // brandTick fuerza re-evaluacion de localStorage cuando cambia
+    void brandTick;
     let brandName = 'SIGCON';
     let brandLetter = 'S';
     let brandLogo = null;
     if (user && !user.isPlatformAdmin) {
         try {
-            const theme = JSON.parse(localStorage.getItem('sigcon_brand_theme') || '{}');
+            // QA Bloque AT (HU-PA-BRAND-01, 2026-05-13): la clave del theme
+            // esta scoped por companyId (sigcon_brand_theme_{N}) desde la
+            // migracion cross-tenant del bloque QA 2026-05-05. Si leemos la
+            // clave global hardcoded, NUNCA encontramos el theme guardado por
+            // el admin de la empresa actual y el sidebar se queda con el
+            // brandName="SIGCON" default aunque la empresa haya configurado
+            // su nombre comercial. Resolvemos primero por companyId, luego
+            // fallback a la clave global por compat.
+            const scopedKey = user.companyId ? `sigcon_brand_theme_${user.companyId}` : null;
+            const theme = JSON.parse(
+                (scopedKey && localStorage.getItem(scopedKey))
+                || localStorage.getItem('sigcon_brand_theme')
+                || '{}'
+            );
             if (theme.brandName && theme.brandName.trim().length > 0) {
                 brandName = theme.brandName.trim();
                 brandLetter = brandName.charAt(0).toUpperCase();
@@ -117,10 +156,21 @@ const MenuNav = () =>{
 
                     {
                         modules?.filter((module) => module.id != 1).map((module) => {
+                            // QA Bloque AT (HU-PA-13, 2026-05-13): ademas del flag
+                            // visible del backend, filtramos por permisos efectivos
+                            // (rol + permisos temporales ACTIVE). Si el componente
+                            // no esta mapeado en menuPermissionMap, el filtro adicional
+                            // se omite (legacy: menu.visible manda).
+                            const filteredMenus = (module.menus ?? [])
+                                .filter((menu) => menu.visible)
+                                .filter((menu) => isMenuItemVisible(menu, has));
                             const safeModule = {
                                 ...module,
-                                childrens: module.menus.filter((menu) => menu.visible) ?? []
+                                childrens: filteredMenus
                             };
+                            // Si no quedan menus visibles tras filtrar, ocultar
+                            // el modulo entero (evita "carpetas vacias" en sidebar).
+                            if (filteredMenus.length === 0) return null;
                             return <ItemMenu key={module.id} item={safeModule} parentPath="" />
                         })
                     }

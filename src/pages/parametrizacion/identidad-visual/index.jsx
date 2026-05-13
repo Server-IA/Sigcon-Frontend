@@ -109,6 +109,11 @@ const IdentidadVisualPage = () => {
             setNotification({ type: 'success', text: resp?.message || 'Identidad visual guardada' });
             // E1: aplicar al instante en la sesion (no requiere refresh)
             applyThemeToDocument(draft);
+            // QA Bloque AT (HU-PA-BRAND-01, 2026-05-13): notificar al sidebar +
+            // dashboard + cualquier consumer del theme para que re-lean el
+            // localStorage actualizado. Sin esto, MenuNav lee el theme solo
+            // al primer mount y NO refleja el cambio hasta refresh manual.
+            try { window.dispatchEvent(new Event('sigcon-brand-changed')); } catch (_) {}
         } catch (e) {
             setNotification({ type: 'danger', text: e?.msg || e?.message || 'Error guardando' });
         } finally {
@@ -119,11 +124,18 @@ const IdentidadVisualPage = () => {
     const handleReset = async () => {
         if (!window.confirm('¿Restablecer la identidad visual al theme default de SIGCON?')) return;
         try {
-            await fetchHelper.del(base_url(['api', 'parametrization', 'brand-config']));
+            // QA Bloque AT (HU-PA-BRAND-01, 2026-05-13): fetchHelper expone
+            // .delete (no .del). El nombre erroneo causaba TypeError silencioso
+            // que el catch traducia a "Error al resetear" aunque el backend
+            // estaba listo. Fix: usar el nombre real del export.
+            await fetchHelper.delete(base_url(['api', 'parametrization', 'brand-config']));
             setDraft({ primaryColor: DEFAULT_PRIMARY, secondaryColor: DEFAULT_SECONDARY, brandName: '', logoData: null });
             setPersisted({});
             setNotification({ type: 'success', text: 'Identidad visual reseteada al default' });
             applyThemeToDocument({ primaryColor: DEFAULT_PRIMARY, secondaryColor: DEFAULT_SECONDARY });
+            // QA Bloque AT (HU-PA-BRAND-01, 2026-05-13): mismo notify para
+            // forzar re-render del sidebar tras reset.
+            try { window.dispatchEvent(new Event('sigcon-brand-changed')); } catch (_) {}
         } catch (e) {
             setNotification({ type: 'danger', text: e?.msg || 'Error al resetear' });
         }

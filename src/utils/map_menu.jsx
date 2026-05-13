@@ -295,13 +295,17 @@ export const COMPONENT_MAP = [
   { id: "HOME", name: "Home", component: Home },
   { id: "PERFIL", name: "Perfil", component: PerfilPage },
   // Sprint 2 — Branding (HU-PA-BRAND-01) y Navegacion (HU-PA-NAV-01)
-  { id: "IDENTIDAD_VISUAL", name: "Identidad Visual", component: tenantOnly(IdentidadVisualPage) },
+  // QA Bloque AT (HU-PA-13, 2026-05-13): ademas de tenantOnly, exige
+  // permiso atomico granular. Asi un OPERADOR_NOMINA sin el permiso
+  // recibe 403 si entra por URL directa (consistente con el filtro de
+  // menu del sidebar).
+  { id: "IDENTIDAD_VISUAL", name: "Identidad Visual", component: tenantOnly(requirePerm(IdentidadVisualPage, "PAR.IDENTIDAD_VISUAL.VER")) },
   // Bloque AM ajuste fino (2026-05-03): Navegacion y Notificaciones por rol
   // son personalizacion del admin de empresa (cada empresa decide qué eventos
   // disparan notificacion in-app y qué orden tiene su navegacion). Pasan a
   // tenantOnly para que el platform admin no las vea (no opera una empresa).
-  { id: "NAVEGACION", name: "Navegacion", component: tenantOnly(NavegacionPage) },
-  { id: "NOTIFICACIONES_ROL", name: "Notificaciones por rol", component: tenantOnly(NotificacionesRolPage) },
+  { id: "NAVEGACION", name: "Navegacion", component: tenantOnly(requirePerm(NavegacionPage, "PAR.NAVEGACION.EDITAR")) },
+  { id: "NOTIFICACIONES_ROL", name: "Notificaciones por rol", component: tenantOnly(requirePerm(NotificacionesRolPage, "PAR.NOTIFICACIONES.CONFIGURAR_ROL")) },
   { id: "MODULOS", name: "Módulos", component: platformOnly(IndexModules) },
   { id: "MENUS", name: "Menus", component: platformOnly(IndexMenus) },
   { id: "PERMISSIONS", name: "Permisos", component: platformOnly(PermissionsIndex) },
@@ -309,9 +313,11 @@ export const COMPONENT_MAP = [
   // granular. Un usuario sin PAR.USUARIOS.VER que navegue manualmente a
   // /parametrizacion/users debe ver Page403, no el listado.
   { id: "USERS", name: "Usuarios", component: requirePerm(IndexUsers, "PAR.USUARIOS.VER") },
-  // QA Bloque PA Bug 31-43 (HU-PA-13/14, 2026-05-09): permisos temporales
-  { id: "TEMPORARY_PERMISSIONS", name: "Permisos Temporales", component: IndexTemporaryPermissions },
-  { id: "ROLES", name: "Roles", component: IndexRoles },
+  // QA Bloque PA Bug 31-43 (HU-PA-13/14, 2026-05-09): permisos temporales.
+  // QA Bloque AT (HU-PA-13 E7, 2026-05-13): proteger con PermissionRoute
+  // para que un usuario sin PAR.PERMISOS_TEMPORALES.VER no acceda via URL.
+  { id: "TEMPORARY_PERMISSIONS", name: "Permisos Temporales", component: requirePerm(IndexTemporaryPermissions, "PAR.PERMISOS_TEMPORALES.VER") },
+  { id: "ROLES", name: "Roles", component: requirePerm(IndexRoles, "PAR.ROLES.VER") },
   // Parametros del sistema: solo PLATFORM_ADMIN (config global FONT/COLOR/etc.).
   { id: "PARAMETROS", name: "Parámetros", component: platformOnly(IndexParameters) },
   { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
@@ -347,8 +353,9 @@ export const COMPONENT_MAP = [
   // Bloque AM (2026-05-03): Paises y Municipios son catalogos globales del sistema.
   { id: "PAISES", name: "Países", component: platformOnly(IndexPaises) },
   { id: "MUNICIPIOS", name: "Municipios", component: platformOnly(IndexMunicipios) },
-  { id: "REPORT_TYPES", name: "Tipos de Reporte", component: tenantOnly(IndexReportTypes) },
-  { id: "REPORT_TEMPLATES", name: "Plantillas de Reporte", component: tenantOnly(IndexReportTemplates) },
+  // QA Bloque AT (HU-PA-13, 2026-05-13): tenantOnly + permiso atomico
+  { id: "REPORT_TYPES", name: "Tipos de Reporte", component: tenantOnly(requirePerm(IndexReportTypes, "PAR.REPORTES_TIPOS.VER")) },
+  { id: "REPORT_TEMPLATES", name: "Plantillas de Reporte", component: tenantOnly(requirePerm(IndexReportTemplates, "PAR.REPORTES_PLANTILLAS.VER")) },
   { id: "SYSTEM_WITHHOLDINGS", name: "Retenciones del Sistema", component: tenantOnly(IndexSystemWithholdings) },
   { id: "COMMERCIAL_DATA", name: "Datos Comerciales", component: IndexCommercialData },
   { id: "CASH_FLOW_PROJECTIONS", name: "Proyecciones de Flujo de Caja", component: IndexProjections },
