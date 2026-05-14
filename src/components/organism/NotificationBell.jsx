@@ -95,7 +95,14 @@ const NotificationBell = () => {
             await loadUnread();
             const url = r?.actionUrl || n.actionUrl;
             setOpen(false);
-            if (url) navigate(url);
+            // QA Bloque AV (Bug 4, 2026-05-14): solo navegar si actionUrl es
+            // una ruta valida. Patron: comienza con "/" y NO usa hash legacy
+            // "/perfil#..." (rutas obsoletas que daban 404). Si la URL es
+            // null/vacia, solo marcar como leida sin navegar (comportamiento
+            // pedido por la HU para eventos de permisos).
+            if (url && typeof url === 'string' && url.startsWith('/') && !url.includes('#')) {
+                navigate(url);
+            }
         } catch (e) {
             console.error('Error al click notif', e);
         }
