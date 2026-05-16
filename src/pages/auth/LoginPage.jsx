@@ -89,8 +89,44 @@ const LoginPage = () => {
                   : (userResponse.data.roles || []),
         };
         dispatch({ type: "SET_USER", payload: enriched });
+
+        // QA Bloque AV (HU-PA-BRAND-01 post-login refresh, 2026-05-14): cargar
+        // la identidad visual de la empresa del usuario y persistir en
+        // localStorage ANTES del redirect. Asi tras window.location.href, el
+        // IIFE hydrateBrandThemeAtBoot() en main.jsx lee el localStorage
+        // recien populado y aplica el theme correcto al primer paint, sin
+        // requerir entrar al apartado Identidad Visual ni recargar la pagina.
+        //
+        // Antes (Bug QA 2026-05-14): LOGOUT borra localStorage[sigcon_brand_theme_*]
+        // por aislamiento cross-tenant. Tras re-login el localStorage estaba
+        // vacio y el dashboard mostraba "Barcelona" (companyName del backend)
+        // en lugar del brandName custom hasta que el usuario refrescara la
+        // pagina o entrara a Identidad Visual.
+        if (enriched.companyId && !enriched.isPlatformAdmin) {
+          try {
+            const brandResp = await fetchHelper.get(
+              base_url(['api', 'parametrization', 'brand-config'])
+            );
+            const cfg = brandResp?.data;
+            if (cfg) {
+              const scopedKey = `sigcon_brand_theme_${enriched.companyId}`;
+              localStorage.setItem(scopedKey, JSON.stringify({
+                primaryColor: cfg.primaryColor || '#1E5DAB',
+                secondaryColor: cfg.secondaryColor || '#F4A623',
+                brandName: cfg.brandName ?? null,
+                logoData: cfg.logoData ?? null,
+                savedAt: new Date().toISOString(),
+              }));
+            }
+          } catch (brandErr) {
+            // Defensive: si el fetch del brand falla, no romper el login.
+            // El usuario vera el theme default hasta que entre a Identidad
+            // Visual.
+            console.warn('[login] no se pudo precargar brand-config:', brandErr?.message || brandErr);
+          }
+        }
       }
-      //Redirigir al DashBoard 
+      //Redirigir al DashBoard
       window.location.href = base_redirect_path(false);
     } catch (err) {
       console.error('Error en el login:', err);

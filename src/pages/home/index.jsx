@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { usePermissions } from "../../utils/hooks/usePermissions.jsx";
 import { isMenuItemVisible } from "../../utils/menuPermissionMap.jsx";
+import { fetchHelper } from "../../utils/fetch.jsx";
+import { base_url } from "../../utils/functions.jsx";
 
 /**
  * Dashboard principal con mosaico de modulos habilitados segun permisos del usuario.
@@ -14,6 +17,91 @@ const Home = () => {
     const allModules = useSelector(state => state.modules)?.modules || [];
     const { has } = usePermissions();
     const navigate = useNavigate();
+
+    // QA Bloque AV (HU-PA-BRAND-01, 2026-05-14): refrescar identidad visual
+    // de la empresa al entrar al dashboard. Soluciona el caso "otro usuario
+    // de la empresa cambio el brand": al navegar al home, el usuario en
+    // sesion lee la version fresca desde backend, actualiza localStorage,
+    // aplica las CSS vars al document Y dispara el evento sigcon-brand-changed
+    // para que MenuNav + chrome re-rendericen sin requerir refresh manual.
+    useEffect(() => {
+        if (!user?.companyId || user?.isPlatformAdmin) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const resp = await fetchHelper.get(base_url(['api', 'parametrization', 'brand-config']));
+                if (cancelled || !resp?.data) return;
+                const cfg = resp.data;
+                const scopedKey = `sigcon_brand_theme_${user.companyId}`;
+                const existing = localStorage.getItem(scopedKey);
+                const next = JSON.stringify({
+                    primaryColor: cfg.primaryColor || '#1E5DAB',
+                    secondaryColor: cfg.secondaryColor || '#F4A623',
+                    brandName: cfg.brandName ?? null,
+                    logoData: cfg.logoData ?? null,
+                    savedAt: new Date().toISOString(),
+                });
+                // Solo dispatchear evento si cambio algo (evita re-renders innecesarios).
+                let prevWithoutTimestamp = null;
+                let nextWithoutTimestamp = null;
+                try {
+                    const e = existing ? JSON.parse(existing) : {};
+                    prevWithoutTimestamp = JSON.stringify({
+                        primaryColor: e.primaryColor, secondaryColor: e.secondaryColor,
+                        brandName: e.brandName, logoData: e.logoData
+                    });
+                    const n = JSON.parse(next);
+                    nextWithoutTimestamp = JSON.stringify({
+                        primaryColor: n.primaryColor, secondaryColor: n.secondaryColor,
+                        brandName: n.brandName, logoData: n.logoData
+                    });
+                } catch (_) { /* fallback */ }
+                if (prevWithoutTimestamp !== nextWithoutTimestamp) {
+                    localStorage.setItem(scopedKey, next);
+                    // Aplicar CSS vars al document (replica logica de
+                    // applyThemeToDocument en IdentidadVisualPage para evitar
+                    // tener que importar todo el modulo). Sobreescribe --bs-primary,
+                    // --config-primary y derivadas.
+                    try {
+                        const root = document.documentElement;
+                        const primary = cfg.primaryColor || '#1E5DAB';
+                        const secondary = cfg.secondaryColor || '#F4A623';
+                        const toRgb = (h) => {
+                            const c = h?.startsWith('#') ? h.substring(1) : (h || '');
+                            const f = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
+                            if (f.length !== 6) return '30, 93, 171';
+                            return `${parseInt(f.substring(0,2),16)}, ${parseInt(f.substring(2,4),16)}, ${parseInt(f.substring(4,6),16)}`;
+                        };
+                        const lighten = (h, pct) => {
+                            const c = h?.startsWith('#') ? h.substring(1) : (h || '');
+                            const f = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
+                            if (f.length !== 6) return h;
+                            let r = parseInt(f.substring(0,2),16), g = parseInt(f.substring(2,4),16), b = parseInt(f.substring(4,6),16);
+                            const factor = pct / 100;
+                            if (factor >= 0) { r = Math.round(r + (255-r)*factor); g = Math.round(g + (255-g)*factor); b = Math.round(b + (255-b)*factor); }
+                            else { r = Math.round(r*(1+factor)); g = Math.round(g*(1+factor)); b = Math.round(b*(1+factor)); }
+                            const hx = n => Math.max(0,Math.min(255,n)).toString(16).padStart(2,'0');
+                            return `#${hx(r)}${hx(g)}${hx(b)}`;
+                        };
+                        root.style.setProperty('--brand-primary', primary);
+                        root.style.setProperty('--brand-secondary', secondary);
+                        root.style.setProperty('--bs-primary', primary);
+                        root.style.setProperty('--bs-primary-rgb', toRgb(primary));
+                        root.style.setProperty('--bs-secondary', secondary);
+                        root.style.setProperty('--bs-secondary-rgb', toRgb(secondary));
+                        root.style.setProperty('--config-primary', primary);
+                        root.style.setProperty('--config-primary-rgb', toRgb(primary));
+                        root.style.setProperty('--config-primary-label', lighten(primary, 90));
+                        root.style.setProperty('--config-primary-hover', lighten(primary, -20));
+                        root.style.setProperty('--config-primary-focus', lighten(primary, 70));
+                        root.style.setProperty('--config-dark-primary', lighten(primary, -30));
+                    } catch (_) { /* ignore */ }
+                    try { window.dispatchEvent(new Event('sigcon-brand-changed')); } catch (_) {}
+                }
+            } catch (_) { /* defensive */ }
+        })();
+        return () => { cancelled = true; };
+    }, [user?.companyId, user?.isPlatformAdmin]);
 
     // QA Bloque AT (HU-PA-13, 2026-05-13): filtrar tambien por permisos
     // efectivos (rol + permisos temporales). Antes solo mostraba modulos
@@ -66,8 +154,13 @@ const Home = () => {
     // dashboard refleje el cambio inmediatamente (igual que el sidebar).
     const isPlatformAdmin = user?.isPlatformAdmin === true;
     const companyName = user?.companyName || '';
-    let themeBrandName = null;
-    if (!isPlatformAdmin && user?.companyId) {
+
+    // QA Bloque AV (HU-PA-BRAND-01, 2026-05-14): leer brandName desde state
+    // que se re-pueble en eventos sigcon-brand-changed. Asi el dashboard
+    // refleja cambios sin requerir refresh manual cuando el usuario actual
+    // u otro de la misma empresa modifica la identidad visual.
+    const readBrandFromStorage = () => {
+        if (isPlatformAdmin || !user?.companyId) return null;
         try {
             const scopedKey = `sigcon_brand_theme_${user.companyId}`;
             const theme = JSON.parse(
@@ -75,11 +168,23 @@ const Home = () => {
                 || localStorage.getItem('sigcon_brand_theme')
                 || '{}'
             );
-            if (theme.brandName && theme.brandName.trim().length > 0) {
-                themeBrandName = theme.brandName.trim();
-            }
-        } catch (_) { /* fallback */ }
-    }
+            return theme.brandName && theme.brandName.trim().length > 0
+                ? theme.brandName.trim()
+                : null;
+        } catch (_) { return null; }
+    };
+    const [themeBrandName, setThemeBrandName] = useState(readBrandFromStorage);
+    useEffect(() => {
+        const handler = () => setThemeBrandName(readBrandFromStorage());
+        window.addEventListener('sigcon-brand-changed', handler);
+        // Tambien escuchar storage events (cambios desde otra pestaña).
+        window.addEventListener('storage', handler);
+        return () => {
+            window.removeEventListener('sigcon-brand-changed', handler);
+            window.removeEventListener('storage', handler);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.companyId]);
     const brandTitle = isPlatformAdmin
         ? 'SIGCON'
         : (themeBrandName || companyName || 'SIGCON');
