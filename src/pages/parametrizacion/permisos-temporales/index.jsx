@@ -29,12 +29,18 @@ const STATUS_LABEL = {
 };
 
 const IndexTemporaryPermissions = () => {
-    const userPermissions = useSelector(state => state.user.user)?.permissions?.filter(p => p.code?.includes('PERMISOS_TEMPORALES')) || [];
     const isAdmin = useSelector(state => state.user.user)?.isAdmin || false;
     const userRoles = useSelector(state => state.user.user)?.roles || [];
     const isAdminEmpresa = userRoles.some(r => r === 'ADMIN_EMPRESA' || r === 'ADMIN');
-    const canAssign = isAdmin || isAdminEmpresa || userPermissions.some(p => p.code === 'PAR.PERMISOS_TEMPORALES.ASIGNAR');
-    const canRevoke = isAdmin || isAdminEmpresa || userPermissions.some(p => p.code === 'PAR.PERMISOS_TEMPORALES.REVOCAR');
+
+    // QA Bloque AV (HU-PA-13 E7 regla #11, 2026-05-14): canAssign/canRevoke
+    // se calculan desde rolePermissions devuelto por /auth/me/effective-permissions
+    // (NO desde localStorage stale). La regla #11 dice que solo permisos del
+    // ROL habilitan asignar/revocar - NO temporales. Por eso se usa
+    // rolePermissions y no temporaryPermissions ni effectivePermissions.
+    const [rolePermCodes, setRolePermCodes] = useState([]);
+    const canAssign = isAdmin || isAdminEmpresa || rolePermCodes.includes('PAR.PERMISOS_TEMPORALES.ASIGNAR');
+    const canRevoke = isAdmin || isAdminEmpresa || rolePermCodes.includes('PAR.PERMISOS_TEMPORALES.REVOCAR');
 
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -114,11 +120,34 @@ const IndexTemporaryPermissions = () => {
         } catch { /* ignore */ }
     };
 
+    // QA Bloque AV (HU-PA-13 E7, 2026-05-14): sincronizar rolePermCodes desde
+    // backend al montar. Asi se respeta la regla #11 incluso si el usuario
+    // recibio un permiso temporal post-login (cuyo source es "temporal", NO
+    // habilita asignar/revocar).
+    const refreshRolePermissions = async () => {
+        try {
+            const resp = await fetchHelper.get(base_url(['auth', 'me', 'effective-permissions']));
+            const role = resp?.data?.rolePermissions || [];
+            setRolePermCodes(Array.isArray(role) ? role : Array.from(role));
+        } catch { /* defensive: si falla, deja canAssign basado en isAdmin */ }
+    };
+
     useEffect(() => {
+        refreshRolePermissions();
         loadList();
-        loadUsers();
-        loadPermissions();
+        // QA Bloque AV: cargar users/permissions SOLO si el usuario puede asignar.
+        // Si no, las llamadas devuelven 403 generando ruido en consola y banner
+        // de error innecesario al usuario que solo viene a VER.
+        // Diferimos la carga al click de "Asignar" usando estado canAssign.
     }, []);
+
+    // Cargar users/permissions cuando ya conocemos canAssign (post refresh).
+    useEffect(() => {
+        if (canAssign) {
+            loadUsers();
+            loadPermissions();
+        }
+    }, [canAssign]);
 
     const openAssign = () => {
         setAssignForm({ userId: '', permissionIds: [], justification: '', startDate: '', endDate: '' });
