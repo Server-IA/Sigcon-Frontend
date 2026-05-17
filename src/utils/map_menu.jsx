@@ -390,8 +390,11 @@ export const COMPONENT_MAP = [
   { id: "CG_CIERRE", name: "Cierre Contable", component: CgCierre },
   { id: "CG_REPORTES_DIAN", name: "Reportes DIAN", component: CgReportesDian },
 
-  // Integracion AAEF (HU-INT-RF-14 + 15) - Solo ADMIN (HU-INT-RF-14 E5)
-  { id: "INTEGRACION_LOTES", name: "Lotes AAEF recibidos", component: adminOnly(IndexLotes) },
+  // Integracion AAEF (HU-INT-RF-14 + 15)
+  // QA Bloque BE (2026-05-17): de adminOnly -> requirePerm 'INT.LOTES.VER'.
+  // Asi AUDITOR (que tiene INT.LOTES.VER) tambien accede a /integracion/lotes,
+  // no solo admin. ADMIN/PLATFORM_ADMIN siguen pasando por bypass de usePermissions.
+  { id: "INTEGRACION_LOTES", name: "Lotes AAEF recibidos", component: requirePerm(IndexLotes, 'INT.LOTES.VER') },
 
   // Nomina (HU-NOM-01 a 06) - standalone, sin integracion AAEF
   { id: "NOMINA_EMPLEADOS", name: "Empleados", component: IndexEmpleados },
@@ -401,13 +404,17 @@ export const COMPONENT_MAP = [
   { id: "NOMINA_PILA", name: "Reporte PILA", component: IndexPila },
   { id: "NOMINA_RESUMEN", name: "Resumen contable", component: IndexResumenContable },
 
-  // Auditoria (HU-AU-01 a 10) - TODO el modulo es solo ADMIN (HU-AU-08)
-  { id: "AU_LOGS", name: "Logs de Auditoría", component: adminOnly(IndexAuditLogs) },
-  { id: "AU_DASHBOARD", name: "Dashboard Auditoría", component: adminOnly(IndexAuditDashboard) },
-  { id: "AU_EXPORT", name: "Exportación Auditoría", component: adminOnly(IndexAuditExport) },
-  { id: "AU_RISK_RULES", name: "Reglas de Riesgo", component: adminOnly(IndexRiskRules) },
-  { id: "AU_RETENTION", name: "Retención y Purga", component: adminOnly(IndexRetention) },
-  { id: "AU_FINDINGS", name: "Hallazgos", component: adminOnly(IndexFindings) },
+  // Auditoria (HU-AU-01 a 10)
+  // QA Bloque BE (2026-05-17): de adminOnly -> requirePerm. HU-AU-08 dice
+  // "consulta y exportacion de evidencias por rol AUDITOR". AUDITOR debe poder
+  // entrar; antes solo ADMIN/PLATFORM_ADMIN podian. Cada pagina exige el perm
+  // atomico corresponciente; backend tambien lo valida via @PreAuthorize.
+  { id: "AU_LOGS", name: "Logs de Auditoría", component: requirePerm(IndexAuditLogs, 'AU.LOG.VER') },
+  { id: "AU_DASHBOARD", name: "Dashboard Auditoría", component: requirePerm(IndexAuditDashboard, 'AU.LOG.VER') },
+  { id: "AU_EXPORT", name: "Exportación Auditoría", component: requirePerm(IndexAuditExport, 'AU.LOG.EXPORTAR') },
+  { id: "AU_RISK_RULES", name: "Reglas de Riesgo", component: requirePerm(IndexRiskRules, 'AU.REGLAS.VER') },
+  { id: "AU_RETENTION", name: "Retención y Purga", component: requirePerm(IndexRetention, 'AU.RETENCION.VER') },
+  { id: "AU_FINDINGS", name: "Hallazgos", component: requirePerm(IndexFindings, 'AU.HALLAZGOS.VER') },
 
   // Bloque F - Plataforma (solo PLATFORM_ADMIN cross-empresa)
   { id: "PLATFORM_EMPRESAS", name: "Empresas (plataforma)", component: platformOnly(IndexEmpresas) },
