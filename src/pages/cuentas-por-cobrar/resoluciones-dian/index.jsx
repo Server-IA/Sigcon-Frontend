@@ -105,8 +105,12 @@ const IndexDianResolutions = () => {
         });
         if (!c.isConfirmed) return;
         try {
+            // QA Bloque BG (2026-05-17): firma de fetchHelper.delete es
+            // (url, data, headers, time). Pasar `1000` como 3er arg fallaba
+            // con 'Cannot create property Authorization on number 1000'.
             await fetchHelper.delete(
                 base_url(['api', 'v1', 'ar', 'dian', 'resolutions', 'delete', record.id]),
+                {},
                 {},
                 1000
             );

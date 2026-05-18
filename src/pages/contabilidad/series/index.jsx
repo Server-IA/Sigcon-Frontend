@@ -112,9 +112,12 @@ const VoucherSeriesAdmin = () => {
     const handleDelete = async (s) => {
         if (!window.confirm(`Eliminar serie ${s.voucherType}? Esta accion es reversible (soft delete).`)) return;
         try {
+            // QA Bloque BG (2026-05-17): firma de fetchHelper.delete es
+            // (url, data, headers, time). Pasar `0` como 3er arg fallaba
+            // con 'Cannot create property Authorization on number 0'.
             await fetchHelper.delete(
                 base_url(['api', 'v1', 'voucher-series', s.id]),
-                {}, 0
+                {}, {}, 0
             );
             setMessage({ type: 'success', show: true, message: 'Serie eliminada' });
             await reload();

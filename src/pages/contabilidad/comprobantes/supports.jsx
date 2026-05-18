@@ -111,9 +111,13 @@ const SupportsModal = ({ modalRef, journalEntryId, voucherCode, onChange }) => {
     const handleDelete = async (s) => {
         if (!window.confirm(`Eliminar soporte "${s.fileName}"?`)) return;
         try {
+            // QA Bloque BG (2026-05-17): firma de fetchHelper.delete es
+            // (url, data, headers, time). Pasar `0` como 3er arg lo
+            // interpretaba como `headers` (Number) y rompia con
+            // 'Cannot create property Authorization on number 0'.
             await fetchHelper.delete(
                 base_url(['api', 'v1', 'journal-entries', 'supports', s.id]),
-                {}, 0
+                {}, {}, 0
             );
             setSuccess('Soporte eliminado');
             await reload();
