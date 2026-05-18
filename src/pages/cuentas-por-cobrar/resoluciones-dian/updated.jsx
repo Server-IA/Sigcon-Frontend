@@ -34,8 +34,12 @@ const UpdatedDianResolution = ({ modalRef, modalInstance, dataTableRef, record, 
         }
     }, [record]);
 
-    const onChange = (e) => {
-        const { name, value } = e.target;
+    // QA Bloque BJ (2026-05-17): InputModal y InputSelectModal entregan shapes
+    // distintos (evento DOM vs value directo). Usar factory por campo.
+    const setField = (name) => (eOrValue) => {
+        const value = (eOrValue && eOrValue.target !== undefined)
+            ? eOrValue.target.value
+            : eOrValue;
         setForm((f) => ({ ...f, [name]: value }));
     };
 
@@ -78,24 +82,26 @@ const UpdatedDianResolution = ({ modalRef, modalInstance, dataTableRef, record, 
                     </div>
                     <div className="modal-body">
                         <div className="row g-3">
-                            <InputModal col="col-md-6" label="# Resolucion" name="resolutionNumber" type="text"
-                                value={form.resolutionNumber || ''} onChange={onChange} error={errors.resolutionNumber} required />
-                            <InputModal col="col-md-3" label="Prefijo" name="prefix" type="text"
-                                value={form.prefix || ''} onChange={onChange} error={errors.prefix} required />
-                            <InputSelectModal col="col-md-3" label="Estado" name="status"
-                                value={form.status || 'ACTIVE'} onChange={onChange} options={STATUS_OPTIONS} />
-                            <InputModal col="col-md-6" label="Numero inicial" name="startNumber" type="number"
-                                value={form.startNumber ?? ''} onChange={onChange} error={errors.startNumber} required />
-                            <InputModal col="col-md-6" label="Numero final" name="endNumber" type="number"
-                                value={form.endNumber ?? ''} onChange={onChange} error={errors.endNumber} required />
-                            <InputModal col="col-md-6" label="Fecha inicio" name="startDate" type="date"
-                                value={form.startDate || ''} onChange={onChange} error={errors.startDate} required />
-                            <InputModal col="col-md-6" label="Fecha fin" name="endDate" type="date"
-                                value={form.endDate || ''} onChange={onChange} error={errors.endDate} required />
-                            <InputModal col="col-md-12" label="Clave tecnica" name="technicalKey" type="text"
-                                value={form.technicalKey || ''} onChange={onChange} />
-                            <InputModal col="col-md-12" label="Notas" name="notes" type="text"
-                                value={form.notes || ''} onChange={onChange} />
+                            <InputModal col="col-md-6" id="dian_u_res_num" label="# Resolucion" name="resolutionNumber" type="text"
+                                value={form.resolutionNumber || ''} onChange={setField('resolutionNumber')} error={errors.resolutionNumber} required />
+                            <InputModal col="col-md-3" id="dian_u_prefix" label="Prefijo" name="prefix" type="text"
+                                value={form.prefix || ''} onChange={setField('prefix')} error={errors.prefix} required />
+                            <div className="col-md-3">
+                                <InputSelectModal id="dian_u_status" label="Estado"
+                                    value={form.status || 'ACTIVE'} onChange={setField('status')} options={STATUS_OPTIONS} />
+                            </div>
+                            <InputModal col="col-md-6" id="dian_u_start_num" label="Numero inicial" name="startNumber" type="number"
+                                value={form.startNumber ?? ''} onChange={setField('startNumber')} error={errors.startNumber} required />
+                            <InputModal col="col-md-6" id="dian_u_end_num" label="Numero final" name="endNumber" type="number"
+                                value={form.endNumber ?? ''} onChange={setField('endNumber')} error={errors.endNumber} required />
+                            <InputModal col="col-md-6" id="dian_u_start_date" label="Fecha inicio" name="startDate" type="date"
+                                value={form.startDate || ''} onChange={setField('startDate')} error={errors.startDate} required />
+                            <InputModal col="col-md-6" id="dian_u_end_date" label="Fecha fin" name="endDate" type="date"
+                                value={form.endDate || ''} onChange={setField('endDate')} error={errors.endDate} required />
+                            <InputModal col="col-md-12" id="dian_u_key" label="Clave tecnica" name="technicalKey" type="text"
+                                value={form.technicalKey || ''} onChange={setField('technicalKey')} />
+                            <InputModal col="col-md-12" id="dian_u_notes" label="Notas" name="notes" type="text"
+                                value={form.notes || ''} onChange={setField('notes')} />
                         </div>
                     </div>
                     <div className="modal-footer">

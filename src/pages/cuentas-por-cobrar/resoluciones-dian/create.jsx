@@ -30,8 +30,17 @@ const CreateDianResolution = ({ modalRef, modalInstance, dataTableRef, setMessag
     const [record, setRecord] = useState({ ...emptyRecord });
     const [errors, setErrors] = useState({});
 
-    const onChange = (e) => {
-        const { name, value } = e.target;
+    // QA Bloque BJ (2026-05-17): los handlers de InputModal y InputSelectModal
+    // entregan distintos shapes:
+    //   - InputModal -> evento DOM nativo (e.target.name, e.target.value)
+    //   - InputSelectModal -> el value directo (string), sin envoltorio evento
+    // Por eso usamos una factory `setField(name)` que retorna el handler
+    // adecuado para cada campo. Antes el form se rompia porque ningun input
+    // tenia `name` y el setRecord({...r, [undefined]: value}) no persistia.
+    const setField = (name) => (eOrValue) => {
+        const value = (eOrValue && eOrValue.target !== undefined)
+            ? eOrValue.target.value
+            : eOrValue;
         setRecord((r) => ({ ...r, [name]: value }));
     };
 
@@ -74,24 +83,26 @@ const CreateDianResolution = ({ modalRef, modalInstance, dataTableRef, setMessag
                     </div>
                     <div className="modal-body">
                         <div className="row g-3">
-                            <InputModal col="col-md-6" label="# Resolucion" name="resolutionNumber" type="text"
-                                value={record.resolutionNumber} onChange={onChange} error={errors.resolutionNumber} required />
-                            <InputModal col="col-md-3" label="Prefijo" name="prefix" type="text"
-                                value={record.prefix} onChange={onChange} error={errors.prefix} required />
-                            <InputSelectModal col="col-md-3" label="Estado" name="status"
-                                value={record.status} onChange={onChange} options={STATUS_OPTIONS} />
-                            <InputModal col="col-md-6" label="Numero inicial" name="startNumber" type="number"
-                                value={record.startNumber} onChange={onChange} error={errors.startNumber} required />
-                            <InputModal col="col-md-6" label="Numero final" name="endNumber" type="number"
-                                value={record.endNumber} onChange={onChange} error={errors.endNumber} required />
-                            <InputModal col="col-md-6" label="Fecha inicio" name="startDate" type="date"
-                                value={record.startDate} onChange={onChange} error={errors.startDate} required />
-                            <InputModal col="col-md-6" label="Fecha fin" name="endDate" type="date"
-                                value={record.endDate} onChange={onChange} error={errors.endDate} required />
-                            <InputModal col="col-md-12" label="Clave tecnica" name="technicalKey" type="text"
-                                value={record.technicalKey} onChange={onChange} />
-                            <InputModal col="col-md-12" label="Notas" name="notes" type="text"
-                                value={record.notes} onChange={onChange} />
+                            <InputModal col="col-md-6" id="dian_res_num" label="# Resolucion" name="resolutionNumber" type="text"
+                                value={record.resolutionNumber} onChange={setField('resolutionNumber')} error={errors.resolutionNumber} required />
+                            <InputModal col="col-md-3" id="dian_prefix" label="Prefijo" name="prefix" type="text"
+                                value={record.prefix} onChange={setField('prefix')} error={errors.prefix} required />
+                            <div className="col-md-3">
+                                <InputSelectModal id="dian_status" label="Estado"
+                                    value={record.status} onChange={setField('status')} options={STATUS_OPTIONS} />
+                            </div>
+                            <InputModal col="col-md-6" id="dian_start_num" label="Numero inicial" name="startNumber" type="number"
+                                value={record.startNumber} onChange={setField('startNumber')} error={errors.startNumber} required />
+                            <InputModal col="col-md-6" id="dian_end_num" label="Numero final" name="endNumber" type="number"
+                                value={record.endNumber} onChange={setField('endNumber')} error={errors.endNumber} required />
+                            <InputModal col="col-md-6" id="dian_start_date" label="Fecha inicio" name="startDate" type="date"
+                                value={record.startDate} onChange={setField('startDate')} error={errors.startDate} required />
+                            <InputModal col="col-md-6" id="dian_end_date" label="Fecha fin" name="endDate" type="date"
+                                value={record.endDate} onChange={setField('endDate')} error={errors.endDate} required />
+                            <InputModal col="col-md-12" id="dian_key" label="Clave tecnica" name="technicalKey" type="text"
+                                value={record.technicalKey} onChange={setField('technicalKey')} />
+                            <InputModal col="col-md-12" id="dian_notes" label="Notas" name="notes" type="text"
+                                value={record.notes} onChange={setField('notes')} />
                         </div>
                     </div>
                     <div className="modal-footer">

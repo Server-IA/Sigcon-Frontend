@@ -157,6 +157,29 @@ const LoteDetail = ({ modalRef, modalInstance, batch, onRetry }) => {
                                     </div>
                                 )}
 
+                                {/* QA Bloque BK (HU-INT-RF-02 E5 + HU-INT-RF-03 E4, 2026-05-18):
+                                    warnings informativos detectados al recibir el lote
+                                    (UpdatedAt ausente, DocumentId duplicado intra-batch).
+                                    NO bloquean el procesamiento; se muestran al QA/Soporte
+                                    para que pueda actuar (notificar a AgroFusion, etc.) */}
+                                {batch.warnings && batch.warnings.length > 0 && (
+                                    <div className="alert alert-warning mt-3">
+                                        <h6 className="alert-heading mb-2">
+                                            <i className="ri-error-warning-line me-1"></i>
+                                            Advertencias informativas ({batch.warnings.length})
+                                        </h6>
+                                        <ul className="mb-0 small">
+                                            {batch.warnings.map((w, i) => (
+                                                <li key={i}>{w}</li>
+                                            ))}
+                                        </ul>
+                                        <div className="small text-muted mt-2">
+                                            <em>El lote fue aceptado y procesado. Estas advertencias se
+                                            registran solo para trazabilidad — no requieren reenvio.</em>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <h6 className="text-uppercase text-muted small mt-4">
                                     Documentos del lote ({batch.transfers?.length || 0})
                                 </h6>

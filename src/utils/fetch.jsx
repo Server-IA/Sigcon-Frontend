@@ -122,7 +122,39 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
             }));
         }
 
-        const responseData = await response.json();
+        // QA Bloque BJ (2026-05-17): respuestas exitosas pueden venir SIN body
+        // (`ResponseEntity.ok().build()` -> 200 con Content-Length: 0) o con
+        // body que NO es JSON (`ResponseEntity.ok("texto")` -> raw string).
+        // Sintoma observado: DELETE /retention/policies/{id} retorna 200 OK
+        // pero el cliente mostraba "No se pudo eliminar" porque
+        // `response.json()` lanzaba SyntaxError: Unexpected end of JSON input
+        // y caia al catch. Backend si habia ejecutado el soft-delete, asi que
+        // al recargar la pagina el registro aparecia eliminado.
+        //
+        // Fix transversal: leer el body como texto, intentar parsear JSON, y
+        // si esta vacio o no es JSON devolver un envelope minimo de exito.
+        // Aplica a 4+ endpoints (RetentionService, RiskRuleService,
+        // EmployeeService, PayrollConceptService, etc.) sin tocar el backend.
+        const status = response.status;
+        if (status === 204) {
+            return new Promise(resolve => {
+                window.Swal.close();
+                resolve({ success: true, status });
+            });
+        }
+        const rawText = await response.text();
+        let responseData;
+        if (!rawText || rawText.trim() === '') {
+            responseData = { success: true, status };
+        } else {
+            try {
+                responseData = JSON.parse(rawText);
+            } catch (_) {
+                // Body es texto plano (ej. ResponseEntity.ok("Eliminado")).
+                // Envolvemos en objeto para preservar contrato {msg/message}.
+                responseData = { success: true, status, message: rawText, msg: rawText };
+            }
+        }
         return new Promise(resolve => {
             window.Swal.close();
             resolve(responseData);
