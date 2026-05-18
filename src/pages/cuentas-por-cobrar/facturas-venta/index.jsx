@@ -229,6 +229,63 @@ const IndexSalesInvoices = () => {
         }
     };
 
+    // QA Bloque BN (2026-05-18): export "completo" server-side que reemplaza
+    // funcionalmente al dropdown "Opciones" del DataTable nativo. El export del
+    // DataTable nativo (PDFmake/Excel HTML5) NO traia header empresa, ni
+    // filtros aplicados, ni fila TOTAL. Este export hace fetch al endpoint
+    // /api/v1/sales-invoices/export/{format} que genera el archivo con el
+    // formato unificado del proyecto (mismo modelo que "Estado de cuenta
+    // proveedor" exigido por el lider).
+    const handleExportServer = async (format) => {
+        try {
+            // Detectar filtros activos del DataTable para pasarlos al backend.
+            const dt = dataTableRef?.current;
+            let status = '';
+            if (dt) {
+                const sCol = dt.column('status:name');
+                if (sCol) status = (sCol.search() || '').toString();
+            }
+            const qs = new URLSearchParams();
+            // Solo pasamos status si es un valor simple (no la cadena multi
+            // "PARTIALLY_PAID,ISSUED,OVERDUE" del filtro "Solo pendientes").
+            if (status && !status.includes(',')) qs.append('status', status);
+            const url = `${base_url(['api', 'v1', 'sales-invoices', 'export', format])}${qs.toString() ? '?' + qs.toString() : ''}`;
+            const token = localStorage.getItem('token');
+            const resp = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!resp.ok) {
+                let detail = `HTTP ${resp.status}`;
+                try {
+                    const errJson = await resp.json();
+                    detail = errJson.msg || errJson.message || errJson.error || detail;
+                } catch (_) { /* binary, no json */ }
+                throw new Error(detail);
+            }
+            const blob = await resp.blob();
+            const fileName = `facturas-venta.${format === 'xlsx' ? 'xlsx' : 'csv'}`;
+            const dlUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = dlUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(dlUrl);
+            setMessage({
+                type: 'success',
+                show: true,
+                message: `Reporte ${format.toUpperCase()} descargado con encabezado de empresa y fila TOTAL.`,
+            });
+        } catch (err) {
+            setMessage({
+                type: 'danger',
+                show: true,
+                message: 'No se pudo exportar el reporte: ' + (err?.message || 'error desconocido'),
+            });
+        }
+    };
+
     const buttons = [
         {
             text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
@@ -237,6 +294,19 @@ const IndexSalesInvoices = () => {
                 if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
                 filterInstance.current.show();
             }
+        },
+        // QA Bloque BN: boton dedicado "Exportar reporte" que llama al endpoint
+        // server-side. Diferenciado del dropdown "Opciones" (export nativo del
+        // DataTable, sin header empresa) hasta que migremos todo a server-side.
+        {
+            text: '<i class="ri-file-download-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Exportar (Excel)</span>',
+            className: 'btn rounded-pill btn-success waves-effect mx-1 my-2',
+            action: () => handleExportServer('xlsx'),
+        },
+        {
+            text: '<i class="ri-file-text-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Exportar (CSV)</span>',
+            className: 'btn rounded-pill btn-outline-success waves-effect mx-1 my-2',
+            action: () => handleExportServer('csv'),
         },
         // HU-AR-12 E1: toggle "Solo pendientes" filtra por status PARTIALLY_PAID/ISSUED/OVERDUE
         // (facturas con saldo > 0). Click 2 veces limpia. Usa coma como separador

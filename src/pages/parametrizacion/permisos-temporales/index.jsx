@@ -42,6 +42,18 @@ const IndexTemporaryPermissions = () => {
     const canAssign = isAdmin || isAdminEmpresa || rolePermCodes.includes('PAR.PERMISOS_TEMPORALES.ASIGNAR');
     const canRevoke = isAdmin || isAdminEmpresa || rolePermCodes.includes('PAR.PERMISOS_TEMPORALES.REVOCAR');
 
+    // QA Bloque BN (HU-PA-13 E7, 2026-05-18): si el usuario tiene
+    // PAR.PERMISOS_TEMPORALES.ASIGNAR o .REVOCAR como TEMPORAL pero NO en su
+    // rol, el boton no aparece (regla #11). Para evitar que QA lo interprete
+    // como bug, mostramos un banner informativo explicando por que.
+    const [tempPermCodes, setTempPermCodes] = useState([]);
+    const hasTempAssignNoRole = tempPermCodes.includes('PAR.PERMISOS_TEMPORALES.ASIGNAR')
+        && !rolePermCodes.includes('PAR.PERMISOS_TEMPORALES.ASIGNAR')
+        && !isAdmin && !isAdminEmpresa;
+    const hasTempRevokeNoRole = tempPermCodes.includes('PAR.PERMISOS_TEMPORALES.REVOCAR')
+        && !rolePermCodes.includes('PAR.PERMISOS_TEMPORALES.REVOCAR')
+        && !isAdmin && !isAdminEmpresa;
+
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [filterUserId, setFilterUserId] = useState('');
@@ -129,6 +141,11 @@ const IndexTemporaryPermissions = () => {
             const resp = await fetchHelper.get(base_url(['auth', 'me', 'effective-permissions']));
             const role = resp?.data?.rolePermissions || [];
             setRolePermCodes(Array.isArray(role) ? role : Array.from(role));
+            // QA Bloque BN: tambien guardamos temporaryPermissions para detectar
+            // el caso "tienes el permiso como temporal pero la regla #11 lo
+            // ignora" y mostrar banner informativo.
+            const temp = resp?.data?.temporaryPermissions || [];
+            setTempPermCodes(Array.isArray(temp) ? temp : Array.from(temp));
         } catch { /* defensive: si falla, deja canAssign basado en isAdmin */ }
     };
 
@@ -283,6 +300,35 @@ const IndexTemporaryPermissions = () => {
 
             <AlertPage type="success" message={okMsg} show={okMsg !== ''} onChange={() => setOkMsg('')} />
             <AlertPage type="danger" message={errMsg} show={errMsg !== ''} onChange={() => setErrMsg('')} />
+
+            {/* QA Bloque BN (HU-PA-13 E7 regla #11, 2026-05-18): banner
+                informativo. Si el usuario recibio PAR.PERMISOS_TEMPORALES.ASIGNAR
+                o .REVOCAR como TEMPORAL pero NO en rol, el sistema
+                INTENCIONALMENTE oculta los botones (regla #11). Explicamos por
+                que para que el QA no lo interprete como bug. */}
+            {(hasTempAssignNoRole || hasTempRevokeNoRole) && (
+                <div className="alert alert-info mx-3" role="alert">
+                    <h6 className="alert-heading mb-2">
+                        <i className="ri-information-line me-1"></i>
+                        Comportamiento esperado por regla #11 (HU-PA-13 E7)
+                    </h6>
+                    <p className="mb-1 small">
+                        Tienes asignado{' '}
+                        {hasTempAssignNoRole && <code>PAR.PERMISOS_TEMPORALES.ASIGNAR</code>}
+                        {hasTempAssignNoRole && hasTempRevokeNoRole && ' y '}
+                        {hasTempRevokeNoRole && <code>PAR.PERMISOS_TEMPORALES.REVOCAR</code>}
+                        {' '}como permiso(s) <strong>temporal(es)</strong>, pero <strong>no</strong>
+                        {' '}en tu rol. La regla #11 establece que solo los permisos del{' '}
+                        <strong>rol</strong> habilitan asignar o revocar permisos temporales —
+                        delegar esa accion via asignacion temporal generaria una escalada
+                        recursiva no permitida.
+                    </p>
+                    <p className="mb-0 small text-muted">
+                        Para usar estas acciones, solicita al administrador que agregue el
+                        permiso a tu <strong>rol</strong> (no como temporal).
+                    </p>
+                </div>
+            )}
 
             <div className="card-body">
                 <div className="row mb-3">

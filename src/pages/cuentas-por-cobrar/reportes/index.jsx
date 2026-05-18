@@ -38,6 +38,21 @@ const formatCurrency = (val) => {
     }).format(Number(val));
 };
 
+// QA Bloque BN (2026-05-18): mapeo enum -> etiqueta espanol. Antes la columna
+// Estado mostraba "ISSUED" / "PAID" / etc. crudos del enum del backend, lo
+// que confunde al contador. Espejo del helper SalesInvoiceStatus.labelOf del
+// backend (sincronizado con esa fuente unica de verdad).
+const STATUS_LABEL_MAP = {
+    DRAFT: 'Borrador',
+    ISSUED: 'Emitida',
+    PARTIALLY_PAID: 'Pago Parcial',
+    PAID: 'Pagada',
+    OVERDUE: 'Vencida',
+    VOIDED: 'Anulada',
+    SETTLED: 'Liquidada',
+};
+const labelStatus = (raw) => (raw && STATUS_LABEL_MAP[raw]) || raw || '';
+
 const IndexArReports = () => {
     const [reportType, setReportType] = useState('by-customer');
     const [filters, setFilters] = useState({
@@ -253,10 +268,24 @@ const IndexArReports = () => {
                                 <td>{row.dueDate}</td>
                                 <td>{formatCurrency(row.totalAmount)}</td>
                                 <td>{formatCurrency(row.balanceDue)}</td>
-                                <td>{row.status}</td>
+                                <td>{labelStatus(row.status)}</td>
                             </tr>
                         ))}
                     </tbody>
+                    {/* QA Bloque BN (2026-05-18): fila TOTAL con sumatorias.
+                        HU exige que los reportes muestren totales agregados
+                        para que el contador vea de un vistazo el monto total
+                        y saldo total de la cartera filtrada. */}
+                    {data.length > 0 && (
+                        <tfoot className="table-light fw-bold">
+                            <tr>
+                                <td colSpan={5} className="text-end">TOTAL ({data.length} facturas):</td>
+                                <td>{formatCurrency(data.reduce((s, r) => s + Number(r.totalAmount || 0), 0))}</td>
+                                <td>{formatCurrency(data.reduce((s, r) => s + Number(r.balanceDue || 0), 0))}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    )}
                 </table>
             );
         }
