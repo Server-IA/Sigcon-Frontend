@@ -2,12 +2,20 @@ import '../../../styles/vendor/animate-css/animate.css'
 import { base_url, chunkArray } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import { useEffect, useState } from 'react';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 
 import InputModal from "../../../components/molecules/InputModal";
 import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import AlertPage from '../../../components/molecules/AlertPage';
 
 const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setMessageRole, modules }) => {
+
+    // QA Bloque BF (2026-05-17): refresca effectivePermissions del admin actual
+    // tras guardar cambios al rol. Si el admin modifica un rol que tiene
+    // asignado (caso comun: admin edita el rol BASE que comparte con otros),
+    // los botones condicionales en la UI se re-renderizan inmediato sin
+    // necesidad de logout/login.
+    const { refresh: refreshPerms } = usePermissions();
 
     const [errors, setErrors] = useState({});
     const [errorMessage, setErrorMessage] = useState('');
@@ -154,6 +162,11 @@ const UpdatedRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, set
             });
             setErrors({});
             setErrorMessage('');
+            // QA Bloque BF (2026-05-17): si el admin edito un rol que el comparte,
+            // refrescar sus propios effectivePermissions para que los botones
+            // condicionales se re-rendericen inmediato. El refresh es defensivo
+            // (no rompe si falla porque el rol no era suyo).
+            try { await refreshPerms(); } catch (_) { /* ignore */ }
         } catch (error) {
             console.error('Error al actualizar rol:', error);
             // HU-PA-05 E4: 409 conflict
