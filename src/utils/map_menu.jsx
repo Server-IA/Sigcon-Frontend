@@ -75,6 +75,28 @@ import IndexCashAudits from "../pages/cash-and-banks/cash-audits/index";
 // Financial Movements
 import IndexFinancialMovements from "../pages/cash-and-banks/financial-movements/index";
 
+// BNK-HU-069/070/071/072 — Conciliación: motor de matching, reglas, parámetros
+import IndexMatchingWorkspace from "../pages/cash-and-banks/matching-workspace/index";
+import IndexReglasClasificacion from "../pages/cash-and-banks/reglas-clasificacion/index";
+import IndexParametrosMatching from "../pages/cash-and-banks/parametros-matching/index";
+// BNK-HU-068 pre-procesamiento + HU-062/063 soportes conservados
+import IndexPreprocesamiento from "../pages/cash-and-banks/preprocesamiento/index";
+import IndexSoportesConciliacion from "../pages/cash-and-banks/soportes-conciliacion/index";
+import IndexPartidasConciliatorias from "../pages/cash-and-banks/partidas-conciliatorias/index";
+import IndexGmf from "../pages/cash-and-banks/gmf/index";
+import IndexSesionesFirma from "../pages/cash-and-banks/sesiones-conciliacion/index";
+import IndexConfigFirma from "../pages/cash-and-banks/config-firma/index";
+import IndexPartidasAntiguedad from "../pages/cash-and-banks/partidas-antiguedad/index";
+// BNK-HU-076 TRM + diferencia en cambio (moneda extranjera)
+import IndexTrmHistorica from "../pages/cash-and-banks/trm/index";
+import IndexDiferenciaCambio from "../pages/cash-and-banks/diferencia-cambio/index";
+// BNK FASE 7 (DIAN): HU-078 cruce factura electrónica, HU-079 exógena, HU-080 conciliación fiscal
+import IndexCruceFE from "../pages/cash-and-banks/cruce-factura-electronica/index";
+import IndexExogenaDian from "../pages/cash-and-banks/exogena-dian/index";
+import IndexConciliacionFiscal from "../pages/cash-and-banks/conciliacion-fiscal/index";
+// BNK-HU-065 verificación de integridad del log (Auditoría)
+import IndexIntegridadLog from "../pages/auditoria/integridad/index";
+
 // Invoices
 
 import { base_url } from "./functions";
@@ -231,6 +253,8 @@ import CgBalanceComprobacion from "../pages/contabilidad/libros/balance-comproba
 import CgEstadosFinancieros from "../pages/contabilidad/estados-financieros/index";
 import CgCierre from "../pages/contabilidad/cierre/index";
 import CgReportesDian from "../pages/contabilidad/reportes-dian/index";
+// HU-CG-12 (QA Bloque BP, 2026-05-19): Reportes tributarios consolidados.
+import CgReportesTributarios from "../pages/contabilidad/reportes-tributarios/index";
 
 // Integracion AAEF (HU-INT-RF-14 + 15)
 import IndexLotes from "../pages/integracion/lotes/index";
@@ -361,6 +385,22 @@ export const COMPONENT_MAP = [
   { id: "CASH_FLOW_PROJECTIONS", name: "Proyecciones de Flujo de Caja", component: IndexProjections },
   { id: "CASH_AUDITS", name: "Arqueos de Caja", component: IndexCashAudits },
   { id: "FINANCIAL_MOVEMENTS", name: "Movimientos Financieros", component: IndexFinancialMovements },
+  { id: "MATCHING_WORKSPACE", name: "Conciliación (Matching)", component: IndexMatchingWorkspace },
+  { id: "REGLAS_CLASIFICACION", name: "Reglas de Clasificación", component: IndexReglasClasificacion },
+  { id: "PARAMETROS_MATCHING", name: "Parámetros de Matching", component: IndexParametrosMatching },
+  { id: "PREPROCESAMIENTO", name: "Pre-procesamiento", component: IndexPreprocesamiento },
+  { id: "SOPORTES_CONCILIACION", name: "Soportes de Conciliación", component: IndexSoportesConciliacion },
+  { id: "PARTIDAS_CONCILIATORIAS", name: "Partidas Conciliatorias", component: IndexPartidasConciliatorias },
+  { id: "GMF", name: "GMF (4x1000)", component: IndexGmf },
+  { id: "SESIONES_FIRMA", name: "Cierre y Firma", component: IndexSesionesFirma },
+  { id: "CONFIG_FIRMA", name: "Config. de Firma", component: IndexConfigFirma },
+  { id: "PARTIDAS_ANTIGUEDAD", name: "Antigüedad de Partidas", component: IndexPartidasAntiguedad },
+  { id: "TRM_HISTORICA", name: "TRM (Moneda extranjera)", component: IndexTrmHistorica },
+  { id: "DIFERENCIA_CAMBIO", name: "Diferencia en cambio", component: IndexDiferenciaCambio },
+  { id: "CRUCE_FE", name: "Cruce Factura Electrónica", component: IndexCruceFE },
+  { id: "EXOGENA_DIAN", name: "Exógena DIAN", component: IndexExogenaDian },
+  { id: "CONCILIACION_FISCAL", name: "Conciliación Fiscal", component: IndexConciliacionFiscal },
+  { id: "AU_INTEGRIDAD", name: "Integridad del Log", component: IndexIntegridadLog },
   { id: "AP_INVOICES", name: "Facturas de Compra", component: IndexApInvoices },
   { id: "SALES_INVOICES", name: "Facturas de Venta", component: IndexSalesInvoices },
   { id: "AR_PAYMENTS", name: "Cobros", component: IndexArPayments },
@@ -389,6 +429,7 @@ export const COMPONENT_MAP = [
   { id: "CG_ESTADOS_FINANCIEROS", name: "Estados Financieros", component: CgEstadosFinancieros },
   { id: "CG_CIERRE", name: "Cierre Contable", component: CgCierre },
   { id: "CG_REPORTES_DIAN", name: "Reportes DIAN", component: CgReportesDian },
+  { id: "CG_REPORTES_TRIBUTARIOS", name: "Reportes Tributarios", component: CgReportesTributarios },
 
   // Integracion AAEF (HU-INT-RF-14 + 15)
   // QA Bloque BE (2026-05-17): de adminOnly -> requirePerm 'INT.LOTES.VER'.

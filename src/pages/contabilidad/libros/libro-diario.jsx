@@ -84,6 +84,42 @@ const CgLibroDiario = () => {
     };
 
     /**
+     * QA Bloque BP (HU-CG-14 E5): descarga del Libro Diario en PDF/XLSX/CSV.
+     * El endpoint PDF /diario/pdf ya existe; los CSV/XLSX se sirven desde
+     * /diario/export/{format}.
+     */
+    const downloadBook = async (fmt) => {
+        try {
+            const token = localStorage.getItem('token');
+            const url = fmt === 'pdf'
+                ? base_url(['api', 'v1', 'cg', 'books', 'diario', 'pdf'])
+                    + `?year=${year}&month=${month}`
+                : base_url(['api', 'v1', 'cg', 'books', 'diario', 'export', fmt])
+                    + `?year=${year}&month=${month}`;
+            const resp = await fetch(url, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(text || 'Error descargando archivo');
+            }
+            const blob = await resp.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `LibroDiario_${year}-${String(month).padStart(2, '0')}.${fmt}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            setMessage({ type: 'danger', show: true,
+                message: err?.message || `No se pudo descargar el archivo ${fmt.toUpperCase()}.` });
+        }
+    };
+
+    /**
      * Totales del periodo: suman los totalDebit/totalCredit de CADA comprobante
      * (no de las lineas, porque el backend ya trae los totales agregados).
      */
@@ -123,13 +159,26 @@ const CgLibroDiario = () => {
                             ))}
                         </select>
                     </div>
-                    <div className="col-md-3 mb-2 d-flex align-items-end gap-2">
+                    <div className="col-md-8 mb-2 d-flex align-items-end gap-2 flex-wrap">
                         <button className="btn btn-primary" onClick={handleGenerate} disabled={loading}>
                             {loading ? (
                                 <><span className="spinner-border spinner-border-sm me-2" />Generando...</>
                             ) : (
                                 <><i className="ri-search-line me-1" />Generar</>
                             )}
+                        </button>
+                        {/* QA Bloque BP (HU-CG-14 E5): exportaciones */}
+                        <button className="btn btn-outline-danger" onClick={() => downloadBook('pdf')}
+                                disabled={!generated || entries.length === 0}>
+                            <i className="ri-file-pdf-line me-1" />PDF
+                        </button>
+                        <button className="btn btn-outline-success" onClick={() => downloadBook('xlsx')}
+                                disabled={!generated || entries.length === 0}>
+                            <i className="ri-file-excel-2-line me-1" />Excel
+                        </button>
+                        <button className="btn btn-outline-secondary" onClick={() => downloadBook('csv')}
+                                disabled={!generated || entries.length === 0}>
+                            <i className="ri-file-text-line me-1" />CSV
                         </button>
                     </div>
                 </div>

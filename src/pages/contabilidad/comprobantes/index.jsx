@@ -176,6 +176,62 @@ const IndexCgComprobantes = () => {
         modalCreateInstance.current.show();
     };
 
+    /**
+     * QA HU-CG-02B E3 (2026-05-19): exporta el listado completo de
+     * comprobantes filtrados a XLSX o CSV. Reusa el state actual del
+     * DataTable (filtros + ordenamiento) construyendo un DataTableRequest
+     * equivalente al que envia el listado.
+     */
+    const exportListing = async (format) => {
+        try {
+            const token = localStorage.getItem('token');
+            const dt = dataTableRef?.current;
+            // Construir payload similar al DataTableRequest del listado actual.
+            const colsPayload = (columns || []).map((c, idx) => ({
+                data: c.data, name: c.name || c.data,
+                searchable: c.searchable !== false,
+                orderable: c.orderable !== false,
+                search: {
+                    value: dt && c.name ? (dt.column(`${c.name}:name`).search() || '') : '',
+                    regex: false
+                }
+            }));
+            const payload = {
+                draw: 1, start: 0, length: 100000, // hasta 100k filas
+                search: { value: dt ? (dt.search() || '') : '', regex: false },
+                order: [{ column: 0, dir: 'desc' }],
+                columns: colsPayload,
+            };
+            const url = base_url(['api', 'v1', 'journal-entries', 'export', format]);
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
+            });
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(text || 'Error descargando archivo');
+            }
+            const blob = await resp.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `Comprobantes.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            setMessage({
+                type: 'danger', show: true,
+                message: err?.message || 'No se pudo exportar el listado.',
+            });
+        }
+    };
+
     /** Botones de cabecera del DataTable. */
     const buttons = [
         {
@@ -185,6 +241,16 @@ const IndexCgComprobantes = () => {
                 if (!filterInstance.current) filterInstance.current = new window.bootstrap.Modal(filterRef.current);
                 filterInstance.current.show();
             },
+        },
+        {
+            text: '<i class="ri-file-excel-2-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Exportar Excel</span>',
+            className: 'btn rounded-pill btn-outline-success waves-effect mx-1 my-2',
+            action: () => exportListing('xlsx'),
+        },
+        {
+            text: '<i class="ri-file-text-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Exportar CSV</span>',
+            className: 'btn rounded-pill btn-outline-secondary waves-effect mx-1 my-2',
+            action: () => exportListing('csv'),
         },
         {
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Nuevo Comprobante</span>',
@@ -530,6 +596,8 @@ const IndexCgComprobantes = () => {
                 dataTableRef={dataTableRef}
                 title="Filtrar Comprobantes Contables"
                 columns={[
+                    // QA HU-CG-02B / HU-CG-03C: busqueda por ID unico del comprobante.
+                    { column: 'id:name',           label: 'ID del comprobante', type: 'number' },
                     { column: 'entryNumber:name',  label: '# Comprobante', type: 'number' },
                     { column: 'entryDate:name',    label: 'Fecha',         type: 'date' },
                     { column: 'description:name',  label: 'Descripción' },

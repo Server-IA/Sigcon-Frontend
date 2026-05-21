@@ -35,11 +35,18 @@ const STATEMENT_TYPES = [
     { id: 'balance-general',      label: 'Balance General',       icon: 'ri-scales-3-line' },
     { id: 'estado-resultados',    label: 'Estado de Resultados',  icon: 'ri-line-chart-line' },
     { id: 'flujo-efectivo',       label: 'Flujo de Efectivo',     icon: 'ri-money-dollar-circle-line' },
+    // QA Bloque BP (HU-CG-18): cuarto estado financiero NIC 1.
+    { id: 'cambios-patrimonio',   label: 'Cambios en el Patrimonio', icon: 'ri-bank-line' },
+    // QA Bloque BP (HU-CG-13): balance comparativo entre dos periodos.
+    { id: 'comparativo',          label: 'Comparativo',           icon: 'ri-arrow-left-right-line' },
 ];
 
 const CgEstadosFinancieros = () => {
     const [year, setYear]               = useState(new Date().getFullYear());
     const [month, setMonth]             = useState(new Date().getMonth() + 1);
+    // QA Bloque BP (HU-CG-13): segundo periodo para comparativo
+    const [year2, setYear2]             = useState(new Date().getFullYear());
+    const [month2, setMonth2]           = useState(Math.max(1, new Date().getMonth()));
     const [activeType, setActiveType]   = useState('balance-general');
     const [statementData, setStatementData] = useState(null);
     const [loading, setLoading]         = useState(false);
@@ -52,9 +59,12 @@ const CgEstadosFinancieros = () => {
         setGenerated(false);
         setStatementData(null);
         try {
+            const payload = activeType === 'comparativo'
+                ? { year1: year, month1: month, year2: year2, month2: month2 }
+                : { year, month };
             const { data, error } = await fetchHelper.post(
                 base_url(['api', 'v1', 'cg', 'statements', activeType]),
-                { year, month }, {}, 1000, true
+                payload, {}, 1000, true
             );
             if (!error) {
                 setStatementData(data);
@@ -66,6 +76,51 @@ const CgEstadosFinancieros = () => {
             setMessage({ type: 'danger', show: true, message: err?.msg || 'Error al generar el estado financiero.' });
         } finally {
             setLoading(false);
+        }
+    };
+
+    /**
+     * QA Bloque BP (HU-CG-09 E5 / HU-CG-10 E5 / HU-CG-11 E4 / HU-CG-13 E4 /
+     * HU-CG-18): descarga el estado financiero en PDF/XLSX/CSV. La url final
+     * es /api/v1/cg/statements/<type>/export/<format>?year=...&month=...
+     * (comparativo recibe year1/month1/year2/month2).
+     */
+    const handleExport = async (format) => {
+        try {
+            const token = localStorage.getItem('token');
+            let url;
+            if (activeType === 'comparativo') {
+                url = base_url(['api', 'v1', 'cg', 'statements', 'comparativo', 'export', format])
+                    + `?year1=${year}&month1=${month}&year2=${year2}&month2=${month2}`;
+            } else {
+                url = base_url(['api', 'v1', 'cg', 'statements', activeType, 'export', format])
+                    + `?year=${year}&month=${month}`;
+            }
+            const resp = await fetch(url, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(text || 'Error descargando archivo');
+            }
+            const blob = await resp.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            const stamp = activeType === 'comparativo'
+                ? `${year}-${String(month).padStart(2, '0')}_vs_${year2}-${String(month2).padStart(2, '0')}`
+                : `${year}-${String(month).padStart(2, '0')}`;
+            a.download = `${activeType}-${stamp}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            setMessage({
+                type: 'danger', show: true,
+                message: err?.message || 'No se pudo exportar el estado financiero.',
+            });
         }
     };
 
@@ -231,6 +286,77 @@ const CgEstadosFinancieros = () => {
         </>
     );
 
+    /** QA Bloque BP (HU-CG-18): renderiza Estado de Cambios en el Patrimonio. */
+    const renderCambiosPatrimonio = (d) => (
+        <>
+            <div className="row">
+                <SummaryCard label="Saldo Inicial"     value={d.saldoInicial}     color="primary" icon="ri-history-line" />
+                <SummaryCard label="Aportes"           value={d.aportes}          color="success" icon="ri-coins-line" />
+                <SummaryCard label="Utilidad Neta"     value={d.utilidadNeta}     color="info"    icon="ri-line-chart-line" />
+                <SummaryCard label="Saldo Final"       value={d.saldoFinal}       color="warning" icon="ri-bank-line" />
+            </div>
+            <div className="row mb-3">
+                <SummaryCard label="Reservas"             value={d.reservas}             color="info"    icon="ri-archive-line" />
+                <SummaryCard label="Resultados Acumulados" value={d.resultadosAcumulados} color="primary" icon="ri-stack-line" />
+                <SummaryCard label="Dividendos"           value={d.dividendosDecretados} color="warning" icon="ri-arrow-down-line" />
+                <SummaryCard label="Otros movimientos"    value={d.otrosMovimientos}     color="secondary" icon="ri-exchange-line" />
+            </div>
+            <table className="table table-bordered table-sm">
+                <thead className="table-light">
+                    <tr>
+                        <th style={{ width: 120 }}>Codigo PUC</th>
+                        <th>Cuenta</th>
+                        <th className="text-end" style={{ width: 140 }}>Saldo Inicial</th>
+                        <th className="text-end" style={{ width: 140 }}>Debito</th>
+                        <th className="text-end" style={{ width: 140 }}>Credito</th>
+                        <th className="text-end" style={{ width: 140 }}>Saldo Final</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {(d.details || []).map((row, idx) => (
+                        <tr key={idx}>
+                            <td><code>{row.pucCode || '-'}</code></td>
+                            <td>{row.accountName || '-'}</td>
+                            <td className="text-end">{formatCurrency(row.saldoInicial)}</td>
+                            <td className="text-end">{formatCurrency(row.movimientosDebito)}</td>
+                            <td className="text-end">{formatCurrency(row.movimientosCredito)}</td>
+                            <td className="text-end">{formatCurrency(row.saldoFinal)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </>
+    );
+
+    /** QA Bloque BP (HU-CG-13): renderiza Balance Comparativo entre periodos. */
+    const renderComparativo = (d) => {
+        const rows = Array.isArray(d) ? d : [];
+        return (
+            <table className="table table-bordered table-sm">
+                <thead className="table-light">
+                    <tr>
+                        <th style={{ width: 160 }}>Clase</th>
+                        <th className="text-end" style={{ width: 140 }}>Periodo A</th>
+                        <th className="text-end" style={{ width: 140 }}>Periodo B</th>
+                        <th className="text-end" style={{ width: 140 }}>Variacion Absoluta</th>
+                        <th className="text-end" style={{ width: 140 }}>Variacion %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((row, idx) => (
+                        <tr key={idx}>
+                            <td className="fw-bold">{row.className}</td>
+                            <td className="text-end">{formatCurrency(row.period1Value)}</td>
+                            <td className="text-end">{formatCurrency(row.period2Value)}</td>
+                            <td className="text-end">{formatCurrency(row.variacionAbsoluta)}</td>
+                            <td className="text-end">{Number(row.variacionPorcentual || 0).toFixed(2)}%</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        );
+    };
+
     /** Renderiza los datos del estado financiero segun el tipo activo. */
     const renderStatementTable = () => {
         if (!statementData) return null;
@@ -238,9 +364,11 @@ const CgEstadosFinancieros = () => {
         if (!d || typeof d !== 'object') return null;
 
         switch (activeType) {
-            case 'balance-general':   return renderBalanceGeneral(d);
-            case 'estado-resultados': return renderEstadoResultados(d);
-            case 'flujo-efectivo':    return renderFlujoEfectivo(d);
+            case 'balance-general':     return renderBalanceGeneral(d);
+            case 'estado-resultados':   return renderEstadoResultados(d);
+            case 'flujo-efectivo':      return renderFlujoEfectivo(d);
+            case 'cambios-patrimonio':  return renderCambiosPatrimonio(d);
+            case 'comparativo':         return renderComparativo(d);
             default: return null;
         }
     };
@@ -271,9 +399,11 @@ const CgEstadosFinancieros = () => {
                 </div>
 
                 {/* Filtros */}
-                <div className="row mb-4">
+                <div className="row mb-2">
                     <div className="col-md-3 mb-2">
-                        <label className="form-label">Año</label>
+                        <label className="form-label">
+                            {activeType === 'comparativo' ? 'Año A' : 'Año'}
+                        </label>
                         <select className="form-select" value={year} onChange={e => setYear(Number(e.target.value))}>
                             {getYearOptions().map(y => (
                                 <option key={y} value={y}>{y}</option>
@@ -281,7 +411,9 @@ const CgEstadosFinancieros = () => {
                         </select>
                     </div>
                     <div className="col-md-3 mb-2">
-                        <label className="form-label">Mes</label>
+                        <label className="form-label">
+                            {activeType === 'comparativo' ? 'Mes A' : 'Mes'}
+                        </label>
                         <select className="form-select" value={month} onChange={e => setMonth(Number(e.target.value))}>
                             {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
                                 <option key={m} value={m}>
@@ -290,13 +422,50 @@ const CgEstadosFinancieros = () => {
                             ))}
                         </select>
                     </div>
-                    <div className="col-md-3 mb-2 d-flex align-items-end">
+                    {activeType === 'comparativo' && (
+                        <>
+                            <div className="col-md-3 mb-2">
+                                <label className="form-label">Año B</label>
+                                <select className="form-select" value={year2} onChange={e => setYear2(Number(e.target.value))}>
+                                    {getYearOptions().map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="col-md-3 mb-2">
+                                <label className="form-label">Mes B</label>
+                                <select className="form-select" value={month2} onChange={e => setMonth2(Number(e.target.value))}>
+                                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                                        <option key={m} value={m}>
+                                            {new Date(2000, m - 1).toLocaleString('es-CO', { month: 'long' })}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </>
+                    )}
+                </div>
+                {/* Acciones */}
+                <div className="row mb-4">
+                    <div className="col-12 d-flex flex-wrap gap-2">
                         <button className="btn btn-primary" onClick={handleGenerate} disabled={loading}>
                             {loading ? (
                                 <><span className="spinner-border spinner-border-sm me-2" />Generando...</>
                             ) : (
                                 <><i className="ri-file-chart-line me-1" />Generar</>
                             )}
+                        </button>
+                        <button className="btn btn-outline-danger" onClick={() => handleExport('pdf')}
+                                disabled={!generated || !statementData}>
+                            <i className="ri-file-pdf-line me-1" />Exportar PDF
+                        </button>
+                        <button className="btn btn-outline-success" onClick={() => handleExport('xlsx')}
+                                disabled={!generated || !statementData}>
+                            <i className="ri-file-excel-2-line me-1" />Exportar Excel
+                        </button>
+                        <button className="btn btn-outline-secondary" onClick={() => handleExport('csv')}
+                                disabled={!generated || !statementData}>
+                            <i className="ri-file-text-line me-1" />Exportar CSV
                         </button>
                     </div>
                 </div>

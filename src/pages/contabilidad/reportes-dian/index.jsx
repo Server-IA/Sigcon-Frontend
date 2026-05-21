@@ -110,23 +110,31 @@ const CgReportesDian = () => {
     };
 
     /** Descarga CSV usando fetch con header Authorization. */
-    const handleDownloadCsv = async () => {
+    const handleDownloadCsv = async () => downloadDian('csv', `DIAN_${formato}_${year}.csv`);
+
+    /**
+     * QA Bloque BP (HU-CG-19 E4): descarga PDF formal del reporte DIAN.
+     * El backend genera el PDF con encabezado de empresa + tabla por tercero.
+     */
+    const handleDownloadPdf = async () => downloadDian('pdf', `DIAN_${formato}_${year}.pdf`);
+
+    const downloadDian = async (fmt, downloadName) => {
         try {
             const token = localStorage.getItem('token');
-            const url = base_url(['api', 'v1', 'cg', 'dian-reports', formato, year, 'csv']);
+            const url = base_url(['api', 'v1', 'cg', 'dian-reports', formato, year, fmt]);
             const resp = await fetch(url, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!resp.ok) {
                 const text = await resp.text();
-                throw new Error(text || 'Error descargando CSV');
+                throw new Error(text || 'Error descargando archivo');
             }
             const blob = await resp.blob();
             const blobUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = blobUrl;
-            a.download = `DIAN_${formato}_${year}.csv`;
+            a.download = downloadName;
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -135,7 +143,7 @@ const CgReportesDian = () => {
             setMessage({
                 type: 'danger',
                 show: true,
-                message: err?.message || 'Error descargando el archivo CSV.',
+                message: err?.message || `Error descargando el archivo ${fmt.toUpperCase()}.`,
             });
         }
     };
@@ -195,7 +203,14 @@ const CgReportesDian = () => {
                             onClick={handleDownloadCsv}
                             disabled={!report || rows.length === 0}
                         >
-                            <i className="ri-download-2-line me-1" />Descargar CSV
+                            <i className="ri-file-text-line me-1" />CSV
+                        </button>
+                        <button
+                            className="btn btn-outline-danger"
+                            onClick={handleDownloadPdf}
+                            disabled={!report || rows.length === 0}
+                        >
+                            <i className="ri-file-pdf-line me-1" />PDF
                         </button>
                     </div>
                 </div>
