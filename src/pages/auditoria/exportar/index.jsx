@@ -18,11 +18,23 @@ const IndexAuditExport = () => {
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            // HU-AU-08 E7: cuando no hay registros el backend responde 200 con JSON
+            // {success:false, message}. No hay que descargar un archivo basura.
+            const ctype = resp.headers.get('content-type') || '';
+            if (ctype.includes('application/json')) {
+                const j = await resp.json().catch(() => ({}));
+                setAlert({ show: true, type: 'warning',
+                    message: j.message || 'No se encontraron registros para los parametros seleccionados' });
+                return;
+            }
             const blob = await resp.blob();
             const downloadUrl = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = downloadUrl;
-            a.download = `audit-logs.${format === 'pdf' ? 'txt' : format}`;
+            // HU-AU-06 E1: el backend genera PDF real (iText). Antes el front forzaba
+            // la extension .txt para PDF (residuo del stub de texto), por eso el
+            // archivo se descargaba como .txt. Usar la extension real del formato.
+            a.download = `audit-logs.${format}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);

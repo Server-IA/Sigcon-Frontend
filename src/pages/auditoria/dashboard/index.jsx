@@ -30,6 +30,33 @@ const IndexAuditDashboard = () => {
 
     useEffect(() => { load(); }, []);
 
+    /** HU-AU-07 E5: exporta el dashboard (KPIs + conteos) a PDF real. */
+    const [exporting, setExporting] = useState(false);
+    const downloadDashboardPdf = async () => {
+        setExporting(true);
+        try {
+            const url = base_url(['api', 'v1', 'audit', 'dashboard', 'export', 'pdf']);
+            const token = localStorage.getItem('token');
+            const resp = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const blob = await resp.blob();
+            const dlUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = dlUrl;
+            a.download = 'audit-dashboard.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(dlUrl);
+            setAlert({ show: true, type: 'success', message: 'Dashboard exportado a PDF correctamente' });
+        } catch (err) {
+            console.error(err);
+            setAlert({ show: true, type: 'danger', message: 'No se pudo exportar el dashboard a PDF' });
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const severityColor = (s) => ({
         LOW: '#28a745', MEDIUM: '#17a2b8',
         HIGH: '#ffc107', CRITICAL: '#dc3545'
@@ -51,9 +78,17 @@ const IndexAuditDashboard = () => {
 
     return (
         <div>
-            <h5 className="mb-3">
-                <i className="ri-dashboard-line me-2"></i> Dashboard de Auditoría
-            </h5>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="mb-0">
+                    <i className="ri-dashboard-line me-2"></i> Dashboard de Auditoría
+                </h5>
+                <button className="btn btn-danger btn-sm" onClick={downloadDashboardPdf}
+                        disabled={loading || exporting}>
+                    {exporting
+                        ? <><span className="spinner-border spinner-border-sm me-1"></span>Exportando...</>
+                        : <><i className="ri-file-pdf-line me-1"></i>Exportar PDF</>}
+                </button>
+            </div>
 
             <AlertPage message={alert.message} type={alert.type} show={alert.show}
                        onChange={() => setAlert({ show: false, type: '', message: '' })} />
@@ -105,6 +140,57 @@ const IndexAuditDashboard = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* HU-AU-07 E3/E4: cumplimiento normativo (NIIF / SOX) + eventos criticos recientes */}
+                    {(data.niifCompliancePct != null || data.soxControlPct != null
+                        || data.criticalEventsRecent != null) && (
+                        <div className="row g-3 mb-4">
+                            <div className="col-md-3">
+                                <div className="card border-success">
+                                    <div className="card-body text-center">
+                                        <div className="small text-muted">Cumplimiento NIIF</div>
+                                        <h3 className="mb-0 text-success">
+                                            {data.niifCompliancePct != null ? data.niifCompliancePct.toFixed(1) + '%' : '—'}
+                                        </h3>
+                                        <small className="text-muted">
+                                            {data.niifVerificationsTotal != null ? data.niifVerificationsTotal + ' verificaciones' : ''}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-md-3">
+                                <div className="card border-info">
+                                    <div className="card-body text-center">
+                                        <div className="small text-muted">Control interno (SOX)</div>
+                                        <h3 className="mb-0 text-info">
+                                            {data.soxControlPct != null ? data.soxControlPct.toFixed(1) + '%' : '—'}
+                                        </h3>
+                                        <small className="text-muted">proxy de control interno</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-md-3">
+                                <div className="card border-warning">
+                                    <div className="card-body text-center">
+                                        <div className="small text-muted">Alertas NIIF abiertas</div>
+                                        <h3 className="mb-0 text-warning">{data.niifAlertsOpen != null ? data.niifAlertsOpen : '—'}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-md-3">
+                                {/* Semáforo de riesgo: rojo si hay criticos recientes, verde si no */}
+                                <div className={`card ${(data.criticalEventsRecent || 0) > 0 ? 'bg-label-danger' : 'bg-label-success'}`}>
+                                    <div className="card-body text-center">
+                                        <div className="small">Eventos CRITICAL (últ. 7 días)</div>
+                                        <h3 className="mb-0">
+                                            <i className={`${(data.criticalEventsRecent || 0) > 0 ? 'ri-alarm-warning-line' : 'ri-shield-check-line'} me-1`}></i>
+                                            {data.criticalEventsRecent != null ? data.criticalEventsRecent : 0}
+                                        </h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="row g-3 mb-4">
                         {/* Semáforo de severidad */}

@@ -138,6 +138,10 @@ const IndexCgComprobantes = () => {
                     <button class="btn btn-sm btn-label-secondary action-btn"
                         data-action="export-xlsx" data-id="${id}" title="Exportar Excel">
                         <i class="ri-file-excel-2-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-label-info action-btn"
+                        data-action="versions" data-id="${id}" title="Historial de versiones">
+                        <i class="ri-git-branch-line"></i>
                     </button>`;
 
                 if (isDraft) {
@@ -327,6 +331,70 @@ const IndexCgComprobantes = () => {
                     supportsModalInstance.current.show();
                     break;
                 }
+                case 'versions': {
+                    // HU-CG-07C: historial completo de versiones del comprobante (arbol
+                    // recursivo original -> reversiones -> correcciones). El backend
+                    // /versions devuelve cada nodo con depth, relation y parentId y
+                    // registra la consulta en auditoria (HU-CG-07C E4).
+                    fetchHelper.get(
+                        base_url(['api', 'v1', 'journal-entries', row.id, 'versions']),
+                        {}, 0
+                    ).then((resp) => {
+                        const nodes = Array.isArray(resp?.data) ? resp.data : (resp?.data?.data || []);
+                        const relationLabel = {
+                            ORIGINAL:   '<span class="badge bg-label-primary">Original</span>',
+                            REVERSAL:   '<span class="badge bg-label-warning">Reversion</span>',
+                            CORRECTION: '<span class="badge bg-label-info">Correccion</span>',
+                        };
+                        const statusLabel = {
+                            DRAFT:    '<span class="badge bg-label-secondary">Borrador</span>',
+                            POSTED:   '<span class="badge bg-label-success">Contabilizado</span>',
+                            REVERSED: '<span class="badge bg-label-danger">Reversado</span>',
+                        };
+                        // HU-CG-07C E2: comprobante sin versiones previas (solo el original).
+                        if (nodes.length <= 1) {
+                            window.Swal.fire({
+                                icon: 'info',
+                                title: `Historial de ${row.voucherCode || ('#' + (row.entryNumber || row.id))}`,
+                                html: '<p class="text-muted mb-0">Este comprobante no tiene versiones previas. No ha sido reversado ni corregido.</p>',
+                                confirmButtonText: 'Cerrar',
+                            });
+                            return;
+                        }
+                        const rowsHtml = nodes.map((n) => `
+                            <tr>
+                                <td style="padding-left:${(n.depth || 0) * 18 + 8}px;">
+                                    ${(n.depth || 0) > 0 ? '↳ ' : ''}<code>${n.voucherCode || ('#' + n.entryNumber)}</code>
+                                </td>
+                                <td>${relationLabel[n.relation] || n.relation || '-'}</td>
+                                <td>${statusLabel[n.status] || n.status || '-'}</td>
+                                <td>${n.entryDate || '-'}</td>
+                                <td class="text-end">${formatCurrency(n.totalDebit)}</td>
+                                <td class="small text-muted">${n.createdBy || '-'}</td>
+                            </tr>`).join('');
+                        window.Swal.fire({
+                            title: `Historial de versiones — ${row.voucherCode || ('#' + (row.entryNumber || row.id))}`,
+                            html: `<div class="text-start">
+                                <p class="small text-muted mb-2">Trazabilidad completa: comprobante original, reversiones y correcciones (${nodes.length} versiones).</p>
+                                <div class="table-responsive" style="max-height:340px;overflow-y:auto;">
+                                  <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
+                                    <thead class="table-light"><tr>
+                                      <th>Comprobante</th><th>Relacion</th><th>Estado</th><th>Fecha</th>
+                                      <th class="text-end">Total</th><th>Usuario</th>
+                                    </tr></thead>
+                                    <tbody>${rowsHtml}</tbody>
+                                  </table>
+                                </div></div>`,
+                            width: 820,
+                            showCancelButton: false,
+                            confirmButtonText: 'Cerrar',
+                        });
+                    }).catch((err) => {
+                        setMessage({ type: 'danger', show: true,
+                            message: err?.msg || 'No se pudo cargar el historial de versiones.' });
+                    });
+                    break;
+                }
                 case 'view': {
                     // HU-CG-08C E2: documentos relacionados (REV original/reverso, CORR).
                     // HU-AR-04 E3: desglose de lineas del comprobante (D/C por cuenta,
@@ -345,6 +413,17 @@ const IndexCgComprobantes = () => {
                         const related = (relResp?.data || []);
                         const detail = detailResp?.data || detailResp || {};
                         const lines = Array.isArray(detail.lines) ? detail.lines : [];
+                        // HU-CG-05C E3: aviso si algun tercero asociado quedo inactivo.
+                        const inactiveNits = [...new Set(lines
+                            .filter(l => l.thirdPartyInactive && l.thirdPartyNit)
+                            .map(l => l.thirdPartyNit))];
+                        const avisoInactivoHtml = inactiveNits.length > 0
+                            ? `<div class="alert alert-warning py-2 mt-2 mb-0">
+                                 <i class="ri-alert-line me-1"></i>
+                                 El tercero asociado a este comprobante esta actualmente inactivo en el sistema
+                                 <span class="text-muted">(NIT ${inactiveNits.join(', ')})</span>.
+                               </div>`
+                            : '';
                         const relationLabel = {
                             REVERSA_A:     'Reversa al',
                             CORRIGE_A:     'Corrige al',
@@ -406,6 +485,7 @@ const IndexCgComprobantes = () => {
                                     <p class="mb-1"><strong>Estado:</strong> ${STATUS_LABEL[row.status] || row.status}</p>
                                     <p class="mb-1"><strong>Total Debito:</strong> ${formatCurrency(row.totalDebit)}</p>
                                     <p class="mb-1"><strong>Total Credito:</strong> ${formatCurrency(row.totalCredit)}</p>
+                                    ${avisoInactivoHtml}
                                     ${linesHtml}
                                     ${relatedHtml}
                                 </div>`,

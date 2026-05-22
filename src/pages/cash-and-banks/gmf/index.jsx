@@ -7,9 +7,9 @@ import { fetchHelper } from '@/utils/fetch';
  * E3: validación cruzada del período (esperado 0.004 × Σ retiros gravados vs
  * cargado por el banco). E4: reporte por cuenta y período, exportable a Excel/CSV/PDF.
  */
-const GmfPage = () => {
+const GmfPage = ({ embeddedAccountId } = {}) => {
     const [accounts, setAccounts] = useState([]);
-    const [accountId, setAccountId] = useState('');
+    const [accountId, setAccountId] = useState(embeddedAccountId ? String(embeddedAccountId) : '');
     const [from, setFrom] = useState('');
     const [to, setTo] = useState('');
     const [rep, setRep] = useState(null);
@@ -41,6 +41,12 @@ const GmfPage = () => {
 
     const onSelect = (e) => { setAccountId(e.target.value); setRep(null); };
 
+    // Embebido en el panel de conciliación: cuenta fija de la URL, carga automática.
+    useEffect(() => {
+        if (embeddedAccountId) cargar();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [embeddedAccountId]);
+
     const descargar = async (format) => {
         try {
             const token = localStorage.getItem('token');
@@ -63,6 +69,7 @@ const GmfPage = () => {
             <div className="card-body">
                 <p className="text-muted small">Compara el GMF cargado por el banco contra el esperado (0.4% de los retiros gravados, excluyendo GMF, comisiones y transferencias internas). No bloquea el cierre.</p>
                 <div className="row g-3 align-items-end mb-4">
+                    {!embeddedAccountId && (
                     <div className="col-md-4">
                         <label className="form-label">Cuenta bancaria</label>
                         <select className="form-select" value={accountId} onChange={onSelect}>
@@ -70,6 +77,7 @@ const GmfPage = () => {
                             {accounts.map(a => <option key={a.id} value={a.id}>{accLabel(a)}</option>)}
                         </select>
                     </div>
+                    )}
                     <div className="col-md-3"><label className="form-label">Desde</label><input type="date" className="form-control" value={from} onChange={e => setFrom(e.target.value)} /></div>
                     <div className="col-md-3"><label className="form-label">Hasta</label><input type="date" className="form-control" value={to} onChange={e => setTo(e.target.value)} /></div>
                     <div className="col-md-2">

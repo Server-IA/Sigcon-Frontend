@@ -15,9 +15,9 @@ const bucketStyle = (b) => ({
     CRITICA: { cls: 'bg-label-danger' }
 }[b] || { cls: 'bg-label-secondary' });
 
-const PartidasAntiguedad = () => {
+const PartidasAntiguedad = ({ embeddedAccountId } = {}) => {
     const [accounts, setAccounts] = useState([]);
-    const [accountId, setAccountId] = useState('');
+    const [accountId, setAccountId] = useState(embeddedAccountId ? String(embeddedAccountId) : '');
     const [dash, setDash] = useState(null);
     const [rep, setRep] = useState(null);
     const [diasMin, setDiasMin] = useState('');
@@ -30,8 +30,10 @@ const PartidasAntiguedad = () => {
                     { draw: 1, start: 0, length: 200, search: { value: '' } }, {}, 1, false, true);
                 setAccounts(res?.data || []);
             } catch (_) { setAccounts([]); }
-            cargar('');
+            // Embebido: cuenta fija de la URL; standalone: todas las cuentas.
+            cargar(embeddedAccountId ? String(embeddedAccountId) : '');
         })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const aUrl = (...p) => base_url(['api', 'v1', 'banks', 'partidas-antiguedad', ...p]);
@@ -120,6 +122,7 @@ const PartidasAntiguedad = () => {
             </h5>
             <div className="card-body">
                 <div className="row g-3 align-items-end mb-4">
+                    {!embeddedAccountId && (
                     <div className="col-md-4">
                         <label className="form-label">Cuenta bancaria</label>
                         <select className="form-select" value={accountId} onChange={onSelect}>
@@ -127,6 +130,7 @@ const PartidasAntiguedad = () => {
                             {accounts.map(a => <option key={a.id} value={a.id}>{accLabel(a)}</option>)}
                         </select>
                     </div>
+                    )}
                     <div className="col-md-2"><label className="form-label">Días mín.</label><input type="number" className="form-control" value={diasMin} onChange={e => setDiasMin(e.target.value)} /></div>
                     <div className="col-md-2"><label className="form-label">Días máx.</label><input type="number" className="form-control" value={diasMax} onChange={e => setDiasMax(e.target.value)} /></div>
                     <div className="col-md-4">

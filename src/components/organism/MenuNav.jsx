@@ -8,6 +8,43 @@ import { refreshMenu } from "../../routes/routes.jsx";
 import { usePermissions } from "../../utils/hooks/usePermissions.jsx";
 import { isMenuItemVisible } from "../../utils/menuPermissionMap.jsx";
 
+/**
+ * F4.6 — Agrupación visual del módulo "Bancos y Cajas".
+ *
+ * El módulo BNK acumula muchos submódulos de conciliación (config + reportes +
+ * cumplimiento DIAN) que saturan el sidebar. En vez de ocultarlos (perderían
+ * acceso) los agrupamos bajo cabeceras colapsables, SOLO en el frontend: no se
+ * toca la BD, ni el backend, ni las rutas (cada hijo conserva su path/route).
+ * La cabecera es un nodo sintético con `childrens`; ItemMenu ya renderiza el
+ * anidamiento. Path vacío => actúa solo como toggle (no navega).
+ */
+// F4.7: las 6 herramientas por-cuenta (GMF, Partidas Conciliatorias, Antigüedad,
+// Soportes, Cruce FE, Diferencia en cambio) se movieron DENTRO del panel de
+// conciliación (pestaña "Herramientas") y se ocultan del sidebar. Aquí quedan
+// solo la config global de empresa y los reportes fiscales anuales DIAN.
+const BNK_MENU_GROUPS = [
+    { id: 'bnk-grp-config', label: 'Conciliación · Configuración', icon: 'ri-settings-4-line',
+      components: ['REGLAS_CLASIFICACION', 'PARAMETROS_MATCHING', 'CONFIG_FIRMA', 'TRM_HISTORICA'] },
+    { id: 'bnk-grp-dian', label: 'Cumplimiento DIAN', icon: 'ri-government-line',
+      components: ['EXOGENA_DIAN', 'CONCILIACION_FISCAL'] },
+];
+
+/** Agrupa los submódulos de conciliación del BNK bajo cabeceras sintéticas colapsables. */
+const groupBankMenus = (menus) => {
+    const byComponent = new Map();
+    menus.forEach((m) => { if (m.component) byComponent.set(m.component, m); });
+    const grouped = new Set();
+    const groups = BNK_MENU_GROUPS.map((g) => {
+        const childrens = g.components.map((c) => byComponent.get(c)).filter(Boolean);
+        childrens.forEach((c) => grouped.add(c.component));
+        if (!childrens.length) return null;
+        return { id: g.id, label: g.label, icon: g.icon, path: '', visible: true, component: null, childrens };
+    }).filter(Boolean);
+    const rest = menus.filter((m) => !m.component || !grouped.has(m.component));
+    // Base CRUD primero (orden original), cabeceras de grupo al final.
+    return [...rest, ...groups];
+};
+
 const MenuNav = () =>{
 
     const dispatch = useDispatch();
@@ -164,9 +201,13 @@ const MenuNav = () =>{
                             const filteredMenus = (module.menus ?? [])
                                 .filter((menu) => menu.visible)
                                 .filter((menu) => isMenuItemVisible(menu, has));
+                            // F4.6: agrupar los submódulos de conciliación SOLO en BNK.
+                            const finalMenus = (module.url === 'cash-and-banks')
+                                ? groupBankMenus(filteredMenus)
+                                : filteredMenus;
                             const safeModule = {
                                 ...module,
-                                childrens: filteredMenus
+                                childrens: finalMenus
                             };
                             // Si no quedan menus visibles tras filtrar, ocultar
                             // el modulo entero (evita "carpetas vacias" en sidebar).

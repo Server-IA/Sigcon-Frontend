@@ -26,6 +26,8 @@ const SupportsModal = ({ modalRef, journalEntryId, voucherCode, onChange }) => {
     const [description, setDescription] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    // HU-CG-05C E2: visor embebido del soporte (PDF/imagen) sin salir del modal.
+    const [viewer, setViewer] = useState(null); // { url, mime, name }
 
     const reload = useCallback(async () => {
         if (!journalEntryId) return;
@@ -106,6 +108,34 @@ const SupportsModal = ({ modalRef, journalEntryId, voucherCode, onChange }) => {
         } catch (err) {
             setError(err?.message || 'Error al descargar');
         }
+    };
+
+    /**
+     * HU-CG-05C E2: visor embebido del soporte. Descarga el binario autenticado,
+     * crea un object URL y lo muestra inline (iframe para PDF, img para imagenes)
+     * sin forzar la descarga.
+     */
+    const handleView = async (s) => {
+        setError('');
+        try {
+            const url = base_url(['api', 'v1', 'journal-entries', 'supports', s.id, 'download']);
+            const resp = await fetch(url, {
+                headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') },
+            });
+            if (!resp.ok) throw new Error('Error abriendo el soporte');
+            const blob = await resp.blob();
+            // Revoca el visor anterior si existe
+            if (viewer?.url) URL.revokeObjectURL(viewer.url);
+            const objUrl = URL.createObjectURL(blob);
+            setViewer({ url: objUrl, mime: s.mimeType || blob.type, name: s.fileName });
+        } catch (err) {
+            setError(err?.message || 'No se pudo abrir el soporte');
+        }
+    };
+
+    const closeViewer = () => {
+        if (viewer?.url) URL.revokeObjectURL(viewer.url);
+        setViewer(null);
     };
 
     const handleDelete = async (s) => {
@@ -242,6 +272,14 @@ const SupportsModal = ({ modalRef, journalEntryId, voucherCode, onChange }) => {
                                                 <td className="text-center">
                                                     <button
                                                         type="button"
+                                                        className="btn btn-sm btn-label-primary me-1"
+                                                        title="Ver soporte"
+                                                        onClick={() => handleView(s)}
+                                                    >
+                                                        <i className="ri-eye-line"></i>
+                                                    </button>
+                                                    <button
+                                                        type="button"
                                                         className="btn btn-sm btn-label-info me-1"
                                                         title="Descargar"
                                                         onClick={() => handleDownload(s)}
@@ -261,6 +299,41 @@ const SupportsModal = ({ modalRef, journalEntryId, voucherCode, onChange }) => {
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+                        )}
+
+                        {/* HU-CG-05C E2: visor embebido del soporte seleccionado */}
+                        {viewer && (
+                            <div className="mt-3 border rounded p-2">
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 className="mb-0">
+                                        <i className="ri-file-search-line me-1" />
+                                        Visor · <code style={{ fontSize: '0.8rem' }}>{viewer.name}</code>
+                                    </h6>
+                                    <div>
+                                        <a className="btn btn-sm btn-label-info me-1" href={viewer.url}
+                                           target="_blank" rel="noopener noreferrer" title="Abrir en pestaña nueva">
+                                            <i className="ri-external-link-line"></i>
+                                        </a>
+                                        <button type="button" className="btn btn-sm btn-label-secondary"
+                                                onClick={closeViewer} title="Cerrar visor">
+                                            <i className="ri-close-line"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {String(viewer.mime).includes('pdf') ? (
+                                    <iframe title="Soporte" src={viewer.url}
+                                            style={{ width: '100%', height: 460, border: 'none' }} />
+                                ) : String(viewer.mime).startsWith('image/') ? (
+                                    <div className="text-center">
+                                        <img src={viewer.url} alt={viewer.name}
+                                             style={{ maxWidth: '100%', maxHeight: 460, objectFit: 'contain' }} />
+                                    </div>
+                                ) : (
+                                    <p className="text-muted small mb-0">
+                                        Vista previa no disponible para este tipo de archivo. Use Descargar.
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>

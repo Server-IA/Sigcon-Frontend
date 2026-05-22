@@ -8,9 +8,9 @@ import { fetchHelper } from '@/utils/fetch';
  * - E6: generar el comprobante de diferencia en cambio en BORRADOR.
  * - E7: reporte de movimientos en moneda extranjera, exportable a Excel/CSV.
  */
-const DiferenciaCambio = () => {
+const DiferenciaCambio = ({ embeddedAccountId } = {}) => {
     const [accounts, setAccounts] = useState([]);
-    const [accountId, setAccountId] = useState('');
+    const [accountId, setAccountId] = useState(embeddedAccountId ? String(embeddedAccountId) : '');
     const [fechaCierre, setFechaCierre] = useState(new Date().toISOString().slice(0, 10));
     const [calc, setCalc] = useState(null);
     const [rep, setRep] = useState(null);
@@ -27,9 +27,12 @@ const DiferenciaCambio = () => {
                     return iso && iso !== 'COP';
                 });
                 setAccounts(foreign);
-                if (foreign.length) setAccountId(String(foreign[0].id));
+                // Standalone: auto-selecciona la primera cuenta extranjera. Embebido:
+                // se respeta la cuenta fija de la URL (aunque sea COP; el backend responde).
+                if (!embeddedAccountId && foreign.length) setAccountId(String(foreign[0].id));
             } catch (_) { setAccounts([]); }
         })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const accLabel = (a) => `${a.code || a.accountNumber || ('#' + a.id)} · ${a.currencyTypeDTO?.isoCode || a.currencyType?.isoCode || ''}`;
@@ -90,12 +93,18 @@ const DiferenciaCambio = () => {
         <div className="card">
             <h5 className="card-header">Diferencia en cambio (NIC 21)</h5>
             <div className="card-body">
-                {accounts.length === 0 && (
+                {!embeddedAccountId && accounts.length === 0 && (
                     <div className="alert alert-warning">
                         No hay cuentas bancarias en moneda extranjera. Cree una cuenta con moneda distinta de COP en Bancos y Cajas → Cuentas Bancarias.
                     </div>
                 )}
+                {embeddedAccountId && (
+                    <div className="alert alert-light border py-2 small">
+                        <i className="ri-information-line me-1" />Esta herramienta aplica solo a cuentas en <strong>moneda extranjera</strong>. Si esta cuenta es en COP, el cálculo no arrojará diferencias.
+                    </div>
+                )}
                 <div className="row g-3 align-items-end mb-4">
+                    {!embeddedAccountId && (
                     <div className="col-md-5">
                         <label className="form-label">Cuenta (moneda extranjera)</label>
                         <select className="form-select" value={accountId} onChange={e => { setAccountId(e.target.value); setCalc(null); setRep(null); }}>
@@ -103,6 +112,7 @@ const DiferenciaCambio = () => {
                             {accounts.map(a => <option key={a.id} value={a.id}>{accLabel(a)}</option>)}
                         </select>
                     </div>
+                    )}
                     <div className="col-md-3"><label className="form-label">Fecha de cierre</label>
                         <input type="date" className="form-control" value={fechaCierre} onChange={e => setFechaCierre(e.target.value)} /></div>
                     <div className="col-md-4">

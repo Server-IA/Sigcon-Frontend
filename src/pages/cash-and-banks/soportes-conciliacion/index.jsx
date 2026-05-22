@@ -14,9 +14,9 @@ const fmtBytes = (n) => {
     return (n / 1048576).toFixed(2) + ' MB';
 };
 
-const SoportesConciliacion = () => {
+const SoportesConciliacion = ({ embeddedAccountId } = {}) => {
     const [accounts, setAccounts] = useState([]);
-    const [accountId, setAccountId] = useState('');
+    const [accountId, setAccountId] = useState(embeddedAccountId ? String(embeddedAccountId) : '');
     const [soportes, setSoportes] = useState([]);
 
     useEffect(() => {
@@ -38,6 +38,12 @@ const SoportesConciliacion = () => {
     };
 
     const onSelect = (e) => { setAccountId(e.target.value); load(e.target.value); };
+
+    // Embebido: cuenta fija de la URL, carga automática.
+    useEffect(() => {
+        if (embeddedAccountId) load(String(embeddedAccountId));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [embeddedAccountId]);
 
     const verificar = async (id) => {
         try {
@@ -88,6 +94,7 @@ const SoportesConciliacion = () => {
                 <button className="btn btn-sm btn-label-info" onClick={reporteRetencion}><i className="ri-archive-line me-1"></i>Reporte de retención</button>
             </h5>
             <div className="card-body">
+                {!embeddedAccountId && (
                 <div className="row g-3 mb-4">
                     <div className="col-md-6">
                         <label className="form-label">Cuenta bancaria</label>
@@ -97,6 +104,7 @@ const SoportesConciliacion = () => {
                         </select>
                     </div>
                 </div>
+                )}
 
                 <div className="table-responsive">
                     <table className="table table-sm">

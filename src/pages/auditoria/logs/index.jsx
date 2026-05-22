@@ -124,6 +124,15 @@ const IndexAuditLogs = () => {
                     message: msg || 'No se pudo generar el reporte en el formato solicitado' });
                 return;
             }
+            // HU-AU-08 E7: sin resultados el backend responde 200 con JSON
+            // {success:false, message} (no 204). Mostrar el mensaje, no descargar.
+            const ctype = resp.headers.get('content-type') || '';
+            if (ctype.includes('application/json')) {
+                const j = await resp.json().catch(() => ({}));
+                setAlert({ show: true, type: 'warning',
+                    message: j.message || 'No se encontraron registros para los parametros seleccionados' });
+                return;
+            }
             const blob = await resp.blob();
             const dlUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');

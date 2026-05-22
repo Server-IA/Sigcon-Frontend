@@ -24,6 +24,51 @@ const ENTITIES_BY_MODULE = {
 };
 
 /**
+ * HU-AU-04 E1 (QA Bloque AJ-AU): nombres de modulo en espanol para el listado y
+ * los selectores (antes se mostraba el codigo crudo PA/TER/CFG...).
+ */
+const MODULE_LABELS = {
+    PA: 'Parametrizacion', TER: 'Terceros', CFG: 'Listas Contables', ACT: 'Activos Fijos',
+    AP: 'Cuentas por Pagar', AR: 'Cuentas por Cobrar', BNK: 'Bancos y Cajas',
+    CG: 'Contabilidad General', NOM: 'Nomina', INT: 'Integracion AAEF', AU: 'Auditoria',
+};
+
+/** Etiquetas en espanol de las entidades auditables (antes se mostraban en ingles). */
+const ENTITY_LABELS = {
+    User: 'Usuario', Role: 'Rol', Module: 'Modulo', Menu: 'Menu', Parameter: 'Parametro',
+    ReportTemplate: 'Plantilla de reporte', ReportType: 'Tipo de reporte',
+    SystemWithholdingAssignment: 'Retencion del sistema',
+    ThirdParty: 'Tercero', CommercialData: 'Datos comerciales', EclSegmentation: 'Segmentacion ECL',
+    ThirdPartyBankAccount: 'Cuenta bancaria de tercero',
+    AccountingAccount: 'Cuenta contable', ChartOfAccount: 'Cuenta PUC', CostCenter: 'Centro de costo',
+    ExchangeRate: 'Tasa de cambio', RuleTax: 'Regla tributaria', DepretationRule: 'Regla de depreciacion',
+    CurrencyType: 'Tipo de moneda',
+    Asset: 'Activo fijo', AssetDisposal: 'Baja de activo', NiifVerification: 'Verificacion NIIF',
+    Invoice: 'Factura de compra', ApPayment: 'Pago a proveedor', ApAdvance: 'Anticipo a proveedor',
+    ApNote: 'Nota credito/debito (compra)', PurchaseOrder: 'Orden de compra', GoodsReceipt: 'Recepcion',
+    InvoiceAttachment: 'Soporte de factura',
+    SalesInvoice: 'Factura de venta', ArPayment: 'Cobro', ArAdvance: 'Anticipo de cliente',
+    ArNote: 'Nota credito/debito (venta)', DianResolution: 'Resolucion DIAN',
+    SalesInvoiceAttachment: 'Soporte de factura de venta',
+    Bank: 'Banco', BankAccount: 'Cuenta bancaria', BankBranch: 'Sucursal bancaria',
+    Checkbook: 'Chequera', Check: 'Cheque', Cash: 'Caja', CashAudit: 'Arqueo de caja',
+    FinancialMovement: 'Movimiento financiero', BankReconciliationSession: 'Conciliacion bancaria',
+    CashFlowProjection: 'Proyeccion de flujo',
+    JournalEntry: 'Comprobante contable', AccountingPeriod: 'Periodo contable',
+    JournalEntrySupport: 'Soporte de comprobante', VoucherSeriesConfig: 'Serie de consecutivos',
+    ClosingEntry: 'Asiento de cierre',
+    Employee: 'Empleado', PayrollConcept: 'Concepto de nomina', PayrollReceipt: 'Recibo de nomina',
+    PayrollLine: 'Linea de nomina', BenefitLiquidation: 'Liquidacion de prestaciones',
+    IntegrationBatch: 'Lote de integracion', IntegrationTransfer: 'Transferencia de integracion',
+    AuditLog: 'Log de auditoria', AuditRiskRule: 'Regla de riesgo',
+    AuditRetentionPolicy: 'Politica de retencion', AuditPurgeRecord: 'Registro de purga',
+    AccessDenied: 'Acceso denegado',
+};
+
+const moduleLabel = (code) => code ? (MODULE_LABELS[code] || code) : null;
+const entityLabel = (name) => name ? (ENTITY_LABELS[name] || name) : null;
+
+/**
  * HU-AU-04: CRUD de reglas configurables de clasificación por riesgo.
  *
  * <p>El admin define reglas (módulo + acción + tipo entidad → severidad)
@@ -41,6 +86,9 @@ const IndexRiskRules = () => {
     };
     const [form, setForm] = useState(empty);
     const [editingId, setEditingId] = useState(null);
+    // HU-AU-04 E1 (QA Bloque AJ-AU): paginacion cliente del listado de reglas.
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     const load = async () => {
         setLoading(true);
@@ -173,10 +221,9 @@ const IndexRiskRules = () => {
                             <select className="form-select form-select-sm" value={form.matchModule}
                                     onChange={(e) => setForm({...form, matchModule: e.target.value})}>
                                 <option value="">(cualquiera)</option>
-                                <option>PA</option><option>TER</option><option>CFG</option>
-                                <option>ACT</option><option>AP</option><option>AR</option>
-                                <option>BNK</option><option>CG</option><option>NOM</option>
-                                <option>INT</option><option>AU</option>
+                                {Object.keys(MODULE_LABELS).map(code => (
+                                    <option key={code} value={code}>{MODULE_LABELS[code]}</option>
+                                ))}
                             </select>
                         </div>
                         <div className="col-md-3">
@@ -199,7 +246,7 @@ const IndexRiskRules = () => {
                                     disabled={!form.matchModule}>
                                 <option value="">(cualquiera)</option>
                                 {ENTITIES_BY_MODULE[form.matchModule]?.map(e => (
-                                    <option key={e} value={e}>{e}</option>
+                                    <option key={e} value={e}>{entityLabel(e)}</option>
                                 ))}
                             </select>
                             {!form.matchModule && (
@@ -237,7 +284,7 @@ const IndexRiskRules = () => {
                         <tbody>
                             {loading && <tr><td colSpan="9" className="text-center"><div className="spinner-border text-primary"></div></td></tr>}
                             {!loading && rules.length === 0 && <tr><td colSpan="9" className="text-center text-muted">Sin reglas configuradas</td></tr>}
-                            {!loading && rules.map(r => (
+                            {!loading && rules.slice((page - 1) * pageSize, page * pageSize).map(r => (
                                 <tr key={r.id}>
                                     <td>#{r.id}</td>
                                     <td>{r.priority}</td>
@@ -245,9 +292,9 @@ const IndexRiskRules = () => {
                                         <div>{r.name}</div>
                                         <small className="text-muted">{r.description}</small>
                                     </td>
-                                    <td>{r.matchModule || <em className="text-muted">cualquiera</em>}</td>
+                                    <td>{moduleLabel(r.matchModule) || <em className="text-muted">cualquiera</em>}</td>
                                     <td>{r.matchAction || <em className="text-muted">cualquiera</em>}</td>
-                                    <td>{r.matchEntityType || <em className="text-muted">cualquiera</em>}</td>
+                                    <td>{entityLabel(r.matchEntityType) || <em className="text-muted">cualquiera</em>}</td>
                                     <td>{sevBadge(r.severity)}</td>
                                     <td>
                                         {r.enabled
@@ -273,6 +320,34 @@ const IndexRiskRules = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* HU-AU-04 E1: paginacion del listado de reglas */}
+                {!loading && rules.length > pageSize && (() => {
+                    const totalPages = Math.ceil(rules.length / pageSize);
+                    const cur = Math.min(page, totalPages);
+                    return (
+                        <div className="d-flex justify-content-between align-items-center mt-2">
+                            <small className="text-muted">
+                                Mostrando {(cur - 1) * pageSize + 1}–{Math.min(cur * pageSize, rules.length)} de {rules.length} reglas
+                            </small>
+                            <nav>
+                                <ul className="pagination pagination-sm mb-0">
+                                    <li className={`page-item ${cur === 1 ? 'disabled' : ''}`}>
+                                        <button className="page-link" onClick={() => setPage(cur - 1)}>«</button>
+                                    </li>
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                        <li key={p} className={`page-item ${p === cur ? 'active' : ''}`}>
+                                            <button className="page-link" onClick={() => setPage(p)}>{p}</button>
+                                        </li>
+                                    ))}
+                                    <li className={`page-item ${cur === totalPages ? 'disabled' : ''}`}>
+                                        <button className="page-link" onClick={() => setPage(cur + 1)}>»</button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    );
+                })()}
             </div>
         </div>
     );

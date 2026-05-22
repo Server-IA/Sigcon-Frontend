@@ -79,11 +79,19 @@ const CgReportesTributarios = () => {
         }
     };
 
+    /**
+     * QA Bloque BR (HU-CG-12 E2): exporta el reporte tributario ACTIVO en
+     * CSV/XLSX/PDF via el endpoint generico /tax-reports/{type}/export/{format}.
+     * Antes solo el Resumen Anual exportaba (CSV/XLSX); ahora los 4 sub-reportes
+     * exportan en los 3 formatos.
+     */
     const handleExport = async (format) => {
         try {
             const token = localStorage.getItem('token');
-            const url = base_url(['api', 'v1', 'cg', 'tax-reports', 'taxes-summary', 'export', format])
-                + `?year=${year}`;
+            let qs = `?year=${year}`;
+            if (activeType === 'iva') qs += `&bimester=${bimester}`;
+            if (activeType === 'exchange-differences') qs += `&month=${month}`;
+            const url = base_url(['api', 'v1', 'cg', 'tax-reports', activeType, 'export', format]) + qs;
             const resp = await fetch(url, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
@@ -96,7 +104,10 @@ const CgReportesTributarios = () => {
             const blobUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = blobUrl;
-            a.download = `ResumenImpuestos_${year}.${format}`;
+            const stamp = activeType === 'iva' ? `${year}-B${bimester}`
+                : activeType === 'exchange-differences' ? `${year}-${String(month).padStart(2, '0')}`
+                : `${year}`;
+            a.download = `${activeType}_${stamp}.${format}`;
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -321,8 +332,11 @@ const CgReportesTributarios = () => {
                                 <><i className="ri-file-chart-line me-1" />Generar</>
                             )}
                         </button>
-                        {activeType === 'taxes-summary' && reportData && (
+                        {reportData && (
                             <>
+                                <button className="btn btn-outline-danger" onClick={() => handleExport('pdf')}>
+                                    <i className="ri-file-pdf-line me-1" />PDF
+                                </button>
                                 <button className="btn btn-outline-success" onClick={() => handleExport('xlsx')}>
                                     <i className="ri-file-excel-2-line me-1" />Excel
                                 </button>

@@ -106,14 +106,24 @@ const CgBalanceComprobacion = () => {
         }
     };
 
-    /** Calcula totales por columna. */
+    /**
+     * Calcula totales por columna.
+     * QA HU-CG-16: el backend devuelve los campos con nombres en espanol
+     * (saldoAnteriorDebit, movimientoDebit, saldoFinalDebit...). Antes el front leia
+     * previousDebit/movementDebit/finalDebit y todos los montos salian en blanco.
+     * Se leen los nombres reales con fallback a los antiguos por compatibilidad.
+     */
+    const num = (...vals) => {
+        for (const v of vals) { if (v !== null && v !== undefined) return Number(v) || 0; }
+        return 0;
+    };
     const totals = rows.reduce((acc, r) => ({
-        prevDebit:  acc.prevDebit  + (Number(r.previousDebit) || 0),
-        prevCredit: acc.prevCredit + (Number(r.previousCredit) || 0),
-        movDebit:   acc.movDebit   + (Number(r.movementDebit) || 0),
-        movCredit:  acc.movCredit  + (Number(r.movementCredit) || 0),
-        finDebit:   acc.finDebit   + (Number(r.finalDebit) || 0),
-        finCredit:  acc.finCredit  + (Number(r.finalCredit) || 0),
+        prevDebit:  acc.prevDebit  + num(r.saldoAnteriorDebit, r.previousDebit),
+        prevCredit: acc.prevCredit + num(r.saldoAnteriorCredit, r.previousCredit),
+        movDebit:   acc.movDebit   + num(r.movimientoDebit, r.movementDebit),
+        movCredit:  acc.movCredit  + num(r.movimientoCredit, r.movementCredit),
+        finDebit:   acc.finDebit   + num(r.saldoFinalDebit, r.finalDebit),
+        finCredit:  acc.finCredit  + num(r.saldoFinalCredit, r.finalCredit),
     }), { prevDebit: 0, prevCredit: 0, movDebit: 0, movCredit: 0, finDebit: 0, finCredit: 0 });
 
     return (
@@ -207,14 +217,14 @@ const CgBalanceComprobacion = () => {
                                 <tbody>
                                     {rows.map((r, idx) => (
                                         <tr key={idx}>
-                                            <td>{r.accountCode || r.pucCode || '-'}</td>
+                                            <td>{r.pucCode || r.accountCode || '-'}</td>
                                             <td>{r.accountName || r.pucName || '-'}</td>
-                                            <td className="text-end">{formatCurrency(r.previousDebit)}</td>
-                                            <td className="text-end">{formatCurrency(r.previousCredit)}</td>
-                                            <td className="text-end">{formatCurrency(r.movementDebit)}</td>
-                                            <td className="text-end">{formatCurrency(r.movementCredit)}</td>
-                                            <td className="text-end">{formatCurrency(r.finalDebit)}</td>
-                                            <td className="text-end">{formatCurrency(r.finalCredit)}</td>
+                                            <td className="text-end">{formatCurrency(r.saldoAnteriorDebit ?? r.previousDebit)}</td>
+                                            <td className="text-end">{formatCurrency(r.saldoAnteriorCredit ?? r.previousCredit)}</td>
+                                            <td className="text-end">{formatCurrency(r.movimientoDebit ?? r.movementDebit)}</td>
+                                            <td className="text-end">{formatCurrency(r.movimientoCredit ?? r.movementCredit)}</td>
+                                            <td className="text-end">{formatCurrency(r.saldoFinalDebit ?? r.finalDebit)}</td>
+                                            <td className="text-end">{formatCurrency(r.saldoFinalCredit ?? r.finalCredit)}</td>
                                         </tr>
                                     ))}
                                 </tbody>

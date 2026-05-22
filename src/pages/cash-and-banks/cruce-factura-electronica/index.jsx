@@ -7,9 +7,9 @@ import { fetchHelper } from '@/utils/fetch';
  * Sugiere facturas coincidentes (E1/E2), aplica el cobro/pago — total/parcial/consolidado —
  * (E3/E5/E6) marcando la factura, y muestra el reporte de cumplimiento DIAN (E7).
  */
-const CruceFacturaElectronica = () => {
+const CruceFacturaElectronica = ({ embeddedAccountId } = {}) => {
     const [accounts, setAccounts] = useState([]);
-    const [accountId, setAccountId] = useState('');
+    const [accountId, setAccountId] = useState(embeddedAccountId ? String(embeddedAccountId) : '');
     const [movs, setMovs] = useState([]);
     const [movId, setMovId] = useState('');
     const [sug, setSug] = useState(null);
@@ -37,6 +37,12 @@ const CruceFacturaElectronica = () => {
             setMovs((w?.extracto || []).filter(m => m.estadoConciliacion !== 'CONCILIADO'));
         } catch (_) { setMovs([]); }
     };
+
+    // Embebido: cuenta fija de la URL, carga automática de sus movimientos.
+    useEffect(() => {
+        if (embeddedAccountId) cargarMovs(String(embeddedAccountId));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [embeddedAccountId]);
 
     const sugerir = async () => {
         setSug(null); setSel([]);
@@ -82,6 +88,7 @@ const CruceFacturaElectronica = () => {
                     <h5 className="card-header">Cruce con factura electrónica (DIAN)</h5>
                     <div className="card-body">
                         <div className="row g-3 align-items-end mb-3">
+                            {!embeddedAccountId && (
                             <div className="col-md-5">
                                 <label className="form-label">Cuenta bancaria</label>
                                 <select className="form-select" value={accountId} onChange={e => { setAccountId(e.target.value); cargarMovs(e.target.value); }}>
@@ -89,6 +96,7 @@ const CruceFacturaElectronica = () => {
                                     {accounts.map(a => <option key={a.id} value={a.id}>{accLabel(a)}</option>)}
                                 </select>
                             </div>
+                            )}
                             <div className="col-md-5">
                                 <label className="form-label">Movimiento del extracto (no conciliado)</label>
                                 <select className="form-select" value={movId} onChange={e => { setMovId(e.target.value); setSug(null); }}>

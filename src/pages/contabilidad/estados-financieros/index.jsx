@@ -47,6 +47,10 @@ const CgEstadosFinancieros = () => {
     // QA Bloque BP (HU-CG-13): segundo periodo para comparativo
     const [year2, setYear2]             = useState(new Date().getFullYear());
     const [month2, setMonth2]           = useState(Math.max(1, new Date().getMonth()));
+    // HU-CG-13 E1: tercer periodo OPCIONAL para comparativo (hasta 3 periodos)
+    const [use3Periods, setUse3Periods] = useState(false);
+    const [year3, setYear3]             = useState(new Date().getFullYear());
+    const [month3, setMonth3]           = useState(Math.max(1, new Date().getMonth() - 1));
     const [activeType, setActiveType]   = useState('balance-general');
     const [statementData, setStatementData] = useState(null);
     const [loading, setLoading]         = useState(false);
@@ -60,7 +64,10 @@ const CgEstadosFinancieros = () => {
         setStatementData(null);
         try {
             const payload = activeType === 'comparativo'
-                ? { year1: year, month1: month, year2: year2, month2: month2 }
+                ? {
+                    year1: year, month1: month, year2: year2, month2: month2,
+                    ...(use3Periods ? { year3, month3 } : {}),
+                  }
                 : { year, month };
             const { data, error } = await fetchHelper.post(
                 base_url(['api', 'v1', 'cg', 'statements', activeType]),
@@ -91,7 +98,8 @@ const CgEstadosFinancieros = () => {
             let url;
             if (activeType === 'comparativo') {
                 url = base_url(['api', 'v1', 'cg', 'statements', 'comparativo', 'export', format])
-                    + `?year1=${year}&month1=${month}&year2=${year2}&month2=${month2}`;
+                    + `?year1=${year}&month1=${month}&year2=${year2}&month2=${month2}`
+                    + (use3Periods ? `&year3=${year3}&month3=${month3}` : '');
             } else {
                 url = base_url(['api', 'v1', 'cg', 'statements', activeType, 'export', format])
                     + `?year=${year}&month=${month}`;
@@ -244,6 +252,25 @@ const CgEstadosFinancieros = () => {
                 <SummaryCard label="Flujo Financiacion"  value={d.flujoFinanciacion}  color="info"    icon="ri-bank-card-line" />
                 <SummaryCard label="Flujo Neto"          value={d.flujoNeto}          color="primary" icon="ri-exchange-funds-line" />
             </div>
+            {/* HU-CG-11 E2: conciliacion de efectivo NIC 7 (saldo inicial + flujo neto = saldo final) */}
+            {(d.saldoInicialEfectivo !== undefined && d.saldoInicialEfectivo !== null) && (
+                <div className="row mb-3">
+                    <SummaryCard label="Efectivo Inicial" value={d.saldoInicialEfectivo} color="secondary" icon="ri-history-line" />
+                    <SummaryCard label="Efectivo Final"   value={d.saldoFinalEfectivo}   color="primary"   icon="ri-safe-2-line" />
+                    <div className="col-md-6 col-sm-12 mb-3">
+                        <div className={`card border-0 shadow-sm h-100 ${d.conciliado ? 'bg-label-success' : 'bg-label-danger'}`}>
+                            <div className="card-body text-center">
+                                <p className="text-muted mb-1 small">Conciliacion de efectivo</p>
+                                <h5 className="fw-bold mb-0">
+                                    <i className={`${d.conciliado ? 'ri-check-double-line' : 'ri-error-warning-line'} me-1`} />
+                                    {d.conciliado ? 'Conciliado' : 'No concilia'}
+                                </h5>
+                                <p className="text-muted small mb-0 mt-1">Efectivo inicial + Flujo neto = Efectivo final</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             {Array.isArray(d.details) && d.details.length > 0 ? (
                 d.details.map((act, idx) => (
                     <div key={idx} className="mb-4">
@@ -328,32 +355,59 @@ const CgEstadosFinancieros = () => {
         </>
     );
 
-    /** QA Bloque BP (HU-CG-13): renderiza Balance Comparativo entre periodos. */
+    /**
+     * QA Bloque BP/BR (HU-CG-13): renderiza Balance Comparativo entre 2 o 3 periodos.
+     * E1: soporta tercer periodo. E3: resalta en rojo+negrita las variaciones
+     * porcentuales que superan +/-10% (umbral de variacion significativa).
+     */
     const renderComparativo = (d) => {
         const rows = Array.isArray(d) ? d : [];
+        const has3 = rows.some(r => r.period3Value !== undefined && r.period3Value !== null);
+        // E3: celda de variacion % con resaltado si supera +/-10%.
+        const pctCell = (val) => {
+            const v = Number(val || 0);
+            const exceeds = Math.abs(v) > 10;
+            return (
+                <td className={`text-end ${exceeds ? 'fw-bold text-danger' : ''}`}>
+                    {exceeds && <i className="ri-alert-line me-1" />}{v.toFixed(2)}%
+                </td>
+            );
+        };
         return (
-            <table className="table table-bordered table-sm">
-                <thead className="table-light">
-                    <tr>
-                        <th style={{ width: 160 }}>Clase</th>
-                        <th className="text-end" style={{ width: 140 }}>Periodo A</th>
-                        <th className="text-end" style={{ width: 140 }}>Periodo B</th>
-                        <th className="text-end" style={{ width: 140 }}>Variacion Absoluta</th>
-                        <th className="text-end" style={{ width: 140 }}>Variacion %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((row, idx) => (
-                        <tr key={idx}>
-                            <td className="fw-bold">{row.className}</td>
-                            <td className="text-end">{formatCurrency(row.period1Value)}</td>
-                            <td className="text-end">{formatCurrency(row.period2Value)}</td>
-                            <td className="text-end">{formatCurrency(row.variacionAbsoluta)}</td>
-                            <td className="text-end">{Number(row.variacionPorcentual || 0).toFixed(2)}%</td>
+            <>
+                <div className="alert alert-light border small mb-2">
+                    <i className="ri-information-line me-1" />
+                    Las variaciones superiores a <strong>±10%</strong> se resaltan en rojo.
+                </div>
+                <table className="table table-bordered table-sm">
+                    <thead className="table-light">
+                        <tr>
+                            <th style={{ width: 140 }}>Clase</th>
+                            <th className="text-end">{rows[0]?.period1Label || 'Periodo A'}</th>
+                            <th className="text-end">{rows[0]?.period2Label || 'Periodo B'}</th>
+                            <th className="text-end">Var. Abs. A-B</th>
+                            <th className="text-end">Var. % A-B</th>
+                            {has3 && <th className="text-end">{rows[0]?.period3Label || 'Periodo C'}</th>}
+                            {has3 && <th className="text-end">Var. Abs. B-C</th>}
+                            {has3 && <th className="text-end">Var. % B-C</th>}
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {rows.map((row, idx) => (
+                            <tr key={idx}>
+                                <td className="fw-bold">{row.className}</td>
+                                <td className="text-end">{formatCurrency(row.period1Value)}</td>
+                                <td className="text-end">{formatCurrency(row.period2Value)}</td>
+                                <td className="text-end">{formatCurrency(row.variacionAbsoluta)}</td>
+                                {pctCell(row.variacionPorcentual)}
+                                {has3 && <td className="text-end">{formatCurrency(row.period3Value)}</td>}
+                                {has3 && <td className="text-end">{formatCurrency(row.variacionAbsoluta2)}</td>}
+                                {has3 && pctCell(row.variacionPorcentual2)}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </>
         );
     };
 
@@ -442,6 +496,38 @@ const CgEstadosFinancieros = () => {
                                     ))}
                                 </select>
                             </div>
+                            {/* HU-CG-13 E1: tercer periodo opcional */}
+                            <div className="col-md-3 mb-2 d-flex align-items-end">
+                                <div className="form-check">
+                                    <input className="form-check-input" type="checkbox" id="use3Periods"
+                                           checked={use3Periods} onChange={e => setUse3Periods(e.target.checked)} />
+                                    <label className="form-check-label" htmlFor="use3Periods">
+                                        Comparar un 3er periodo
+                                    </label>
+                                </div>
+                            </div>
+                            {use3Periods && (
+                                <>
+                                    <div className="col-md-3 mb-2">
+                                        <label className="form-label">Año C</label>
+                                        <select className="form-select" value={year3} onChange={e => setYear3(Number(e.target.value))}>
+                                            {getYearOptions().map(y => (
+                                                <option key={y} value={y}>{y}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="col-md-3 mb-2">
+                                        <label className="form-label">Mes C</label>
+                                        <select className="form-select" value={month3} onChange={e => setMonth3(Number(e.target.value))}>
+                                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                                                <option key={m} value={m}>
+                                                    {new Date(2000, m - 1).toLocaleString('es-CO', { month: 'long' })}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </>
+                            )}
                         </>
                     )}
                 </div>

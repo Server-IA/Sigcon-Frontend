@@ -10,9 +10,9 @@ import { fetchHelper } from '@/utils/fetch';
  */
 const estadoBadge = (e) => e === 'RESUELTA_AJUSTE' ? 'bg-label-success' : (e === 'DESCARTADA' ? 'bg-label-secondary' : 'bg-label-warning');
 
-const PartidasConciliatorias = () => {
+const PartidasConciliatorias = ({ embeddedAccountId } = {}) => {
     const [accounts, setAccounts] = useState([]);
-    const [accountId, setAccountId] = useState('');
+    const [accountId, setAccountId] = useState(embeddedAccountId ? String(embeddedAccountId) : '');
     const [partidas, setPartidas] = useState([]);
     const [pucOptions, setPucOptions] = useState([]);
     const [sel, setSel] = useState({});      // {financialMovementId: true}
@@ -53,6 +53,12 @@ const PartidasConciliatorias = () => {
     };
 
     const onSelect = (e) => { setAccountId(e.target.value); load(e.target.value); };
+
+    // Embebido: cuenta fija de la URL, carga automática.
+    useEffect(() => {
+        if (embeddedAccountId) load(String(embeddedAccountId));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [embeddedAccountId]);
 
     const detectar = async () => {
         if (!accountId) return;
@@ -137,6 +143,7 @@ const PartidasConciliatorias = () => {
             <div className="card-body">
                 <p className="text-muted small">Movimientos del extracto que el banco cargó/abonó y no están en libros (GMF, comisiones, intereses, notas). Genere el asiento de ajuste; queda en <b>BORRADOR</b> para aprobación del contador.</p>
                 <div className="row g-3 align-items-end mb-4">
+                    {!embeddedAccountId && (
                     <div className="col-md-5">
                         <label className="form-label">Cuenta bancaria</label>
                         <select className="form-select" value={accountId} onChange={onSelect}>
@@ -144,6 +151,7 @@ const PartidasConciliatorias = () => {
                             {accounts.map(a => <option key={a.id} value={a.id}>{accLabel(a)}</option>)}
                         </select>
                     </div>
+                    )}
                     <div className="col-md-7">
                         <button className="btn btn-label-secondary me-2" disabled={!accountId || loading} onClick={detectar}>
                             <i className="ri-search-eye-line me-1"></i>{loading ? 'Detectando...' : 'Detectar partidas'}
