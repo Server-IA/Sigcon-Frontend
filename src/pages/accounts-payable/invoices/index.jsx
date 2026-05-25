@@ -133,13 +133,15 @@ const IndexApInvoices = () => {
                 // HU-AP-25 (Bloque AS/AY): se puede anular factura en estado
                 // PENDIENTE o PARTIALLY_PAID (sin pagos efectivos: el backend
                 // valida que los pagos hayan sido reversados antes de permitir).
-                // No se permite si fue originada por AAEF.
                 // QA-BLOQUE-AY HU-AP-25 E4 (2026-05-06): habilitar para
                 // PARTIALLY_PAID; antes solo PENDIENTE bloqueaba el flujo de
                 // reversion de pagos parciales aunque el backend ya soportaba.
+                // Fallo 3 (HU-AP-25 E6, informe AgroFusion): el boton tambien se
+                // habilita para facturas AAEF para que, al pulsarlo, el usuario
+                // reciba un mensaje claro explicando que deben corregirse desde
+                // AgroFusion (antes el boton salia deshabilitado, sin explicacion).
                 const isVoidable    = (row?.status === 'PENDING'
-                                       || row?.status === 'PARTIALLY_PAID')
-                                     && row?.source !== 'AAEF';
+                                       || row?.status === 'PARTIALLY_PAID');
                 return `
                 <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-label-info action-btn"
@@ -315,6 +317,19 @@ const IndexApInvoices = () => {
             }
 
             if (action === 'void') {
+                // Fallo 3 (HU-AP-25 E6, informe AgroFusion): si la factura fue
+                // originada por integracion AAEF, NO se anula manualmente. Antes el
+                // boton salia deshabilitado sin explicacion; ahora mostramos el
+                // mensaje exacto de la HU para orientar al usuario.
+                if (selected?.source === 'AAEF') {
+                    window.Swal.fire({
+                        icon: 'info',
+                        title: 'Factura de integracion AAEF',
+                        text: 'Las facturas originadas por integración AAEF solo pueden anularse o corregirse mediante el proceso de corrección de AgroFusion',
+                        confirmButtonText: 'Entendido',
+                    });
+                    return;
+                }
                 // HU-AP-25 (Bloque AS): anular factura con motivo (>=10 chars).
                 // Backend valida E1-E9: AAEF, PAGADA, PARCIAL, periodo cerrado.
                 window.Swal.fire({

@@ -34,6 +34,10 @@ const FIELD_LABELS = {
     pendingSeverance: 'Cesantías pendientes',
     vacationCompensation: 'Vacaciones compensadas',
     indemnity: 'Indemnización Art. 64',
+    // QA Nomina (2026-05-25) ERR-NOM-006: el backend devuelve la indemnizacion
+    // en la clave `severancePay`, no `indemnity`. Sin esta etiqueta el campo
+    // salia con el nombre crudo "severancePay" y el contador no lo reconocia.
+    severancePay: 'Indemnización Art. 64',
     severanceInterest: 'Intereses cesantías',
     totalPayable: 'Total a pagar',
     journalEntryId: 'Comprobante (JE #)',
@@ -145,7 +149,7 @@ const IndexPrestaciones = () => {
         }
         const moneyKeys = new Set(['baseSalary','severance','interest','severanceInterest',
             'bonus','serviceBonus','proportionalBonus','pendingSeverance',
-            'vacationCompensation','indemnity','totalPayable']);
+            'vacationCompensation','indemnity','severancePay','totalPayable']);
         const rows = Object.entries(result)
             .filter(([k]) => k !== 'legalRef')
             .map(([k, v]) => {

@@ -4,6 +4,7 @@ import DataTableReference from "../../../components/organism/DataTable";
 
 import { fetchHelper } from "../../../utils/fetch";
 import { base_url } from "../../../utils/functions";
+import { statusBadge } from "../../../utils/statusLabels";
 
 import CreateAssignment from "./create";
 import AlertPage from "../../../components/molecules/AlertPage";
@@ -59,7 +60,7 @@ const IndexRetenciones = () => {
     { title: "Codigo", data: "withholdingCode", name: "withholdingCode" },
     { title: "Vigencia Desde", data: "effectiveFrom" },
     { title: "Vigencia Hasta", data: "effectiveTo" },
-    { title: "Estado", data: "status", name: "status" },
+    { title: "Estado", data: "status", name: "status", render: (val) => statusBadge(val) },
     {
       title: "Acciones",
       data: "id",

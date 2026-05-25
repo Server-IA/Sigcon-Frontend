@@ -4,6 +4,7 @@ import DataTableReference from "../../../../components/organism/DataTable";
 
 import { fetchHelper } from "../../../../utils/fetch";
 import { base_url } from "../../../../utils/functions";
+import { statusBadge } from "../../../../utils/statusLabels";
 
 import CreateTemplate from "./create";
 import AlertPage from "../../../../components/molecules/AlertPage";
@@ -85,7 +86,7 @@ const IndexReportTemplates = () => {
       searchable: false,
     },
     { title: "Descripcion", data: "description" },
-    { title: "Estado", data: "status", name: "status" },
+    { title: "Estado", data: "status", name: "status", render: (val) => statusBadge(val) },
     {
       title: "Acciones",
       data: null,

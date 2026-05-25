@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import AlertPage from '@/components/molecules/AlertPage';
 import { base_url, formatPrice } from '@/utils/functions';
@@ -10,13 +10,13 @@ import InputSelectModal from '@/components/molecules/inputSelectModal';
 
 import DataTableReference from '@/components/organism/DataTable';
 
-// F4.7: herramientas de conciliación por-cuenta embebidas (cuenta fija de la URL).
-import GmfPage from '../gmf';
+// CONC-5: la conservación de soportes es la única herramienta que permanece en la
+// pestaña "Herramientas" (junto con reportes/reapertura/versionado de la sesión).
+// Los demás apartados (partidas, GMF, antigüedad, cruce FE, diferencia en cambio)
+// se retiraron de la navegación según la reorganización del módulo.
 import SoportesConciliacion from '../soportes-conciliacion';
-import PartidasConciliatorias from '../partidas-conciliatorias';
-import PartidasAntiguedad from '../partidas-antiguedad';
-import CruceFacturaElectronica from '../cruce-factura-electronica';
-import DiferenciaCambio from '../diferencia-cambio';
+// CONC #4: traducción de enums crudos (tipo/método/estado de emparejamientos) a español.
+import { traducir } from '@/utils/statusLabels';
 
 /**
  * Conciliación bancaria — pantalla guiada única por cuenta (cuenta fija por URL).
@@ -68,16 +68,6 @@ const confBadge = (c) => {
     return 'bg-label-warning';
 };
 
-// F4.7: herramientas por-cuenta accesibles desde la pestaña "Herramientas".
-const TOOLS = [
-    { id: 'partidas', label: 'Partidas conciliatorias', icon: 'ri-scales-3-line', Comp: PartidasConciliatorias },
-    { id: 'gmf', label: 'GMF (4x1000)', icon: 'ri-percent-line', Comp: GmfPage },
-    { id: 'antiguedad', label: 'Antigüedad de partidas', icon: 'ri-time-line', Comp: PartidasAntiguedad },
-    { id: 'soportes', label: 'Soportes de conciliación', icon: 'ri-folder-shield-2-line', Comp: SoportesConciliacion },
-    { id: 'cruce', label: 'Cruce factura electrónica', icon: 'ri-link', Comp: CruceFacturaElectronica },
-    { id: 'fx', label: 'Diferencia en cambio', icon: 'ri-exchange-dollar-line', Comp: DiferenciaCambio },
-];
-
 const STEPS = [
     { id: 1, label: 'Sesión y período' },
     { id: 2, label: 'Libros del período' },
@@ -91,6 +81,7 @@ const STEPS = [
 const BankReconciliation = () => {
     const { bankAccountId } = useParams();
     const id = Number(bankAccountId);
+    const navigate = useNavigate();
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -124,7 +115,6 @@ const BankReconciliation = () => {
     // ---- F4: cierre/firma (Paso 7) + Conciliaciones cerradas (Sec 12) ----
     const [cierre, setCierre] = useState(null);          // resumenCierre (enCero, pendientes…)
     const [viewMode, setViewMode] = useState('guiada');  // 'guiada' | 'cerradas' | 'herramientas'
-    const [activeTool, setActiveTool] = useState('partidas'); // herramienta por-cuenta activa
     const [cerradas, setCerradas] = useState([]);        // CERRADA activas
     const [archivadas, setArchivadas] = useState([]);    // archivadas (read-only)
     const [showArchivadas, setShowArchivadas] = useState(false);
@@ -518,10 +508,11 @@ const BankReconciliation = () => {
             const endpoint = type === 'journalEntry' ? 'match-journal-entry' : 'match-voucher';
             const url = base_url(['api', 'v1', 'bank-accounts', id, 'financial-movements', matchModal.movement.id, endpoint]);
             await fetchHelper.put(url, { voucherId: Number(targetId), bankAccountId: id }, {}, 1000);
-            notify('Movimiento emparejado con comprobante');
+            notify('Movimiento conciliado con el asiento contable');
             closeMatchModal();
-            refreshMovements();
-            if (selectedSessionId) loadLibros(selectedSessionId);
+            // CONC-3b: refrescar el workspace de la sesión para que el movimiento
+            // recién conciliado salga de "extracto libre" y cuente en el cierre.
+            if (selectedSessionId) reloadConciliacion(); else refreshMovements();
         } catch (e) {
             notify(e?.msg || 'Error al emparejar', 'danger');
         }
@@ -605,9 +596,13 @@ const BankReconciliation = () => {
 
     const manualMatch = async () => {
         if (!selExt.length && !selLib.length) { notify('Seleccione movimientos a emparejar', 'warning'); return; }
+        // CONC-3d: motivo OBLIGATORIO por cada conciliación manual (no uno general).
+        if (manualMotivo.trim().length < 10) {
+            notify('Escriba el motivo de esta conciliación manual (mínimo 10 caracteres)', 'warning');
+            return;
+        }
         try {
-            const body = { bankAccountId: id, extractoIds: selExt, librosIds: selLib };
-            if (manualMotivo.trim()) body.motivo = manualMotivo.trim();
+            const body = { bankAccountId: id, extractoIds: selExt, librosIds: selLib, motivo: manualMotivo.trim() };
             await fetchHelper.post(base_url(['api', 'v1', 'banks', 'emparejamientos']), body, {}, 1000);
             notify('Emparejamiento manual creado');
             setSelExt([]); setSelLib([]); setManualMotivo('');
@@ -947,41 +942,11 @@ const BankReconciliation = () => {
                                     </table>
                                 </div>
 
-                                <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                                    <h6 className="fw-semibold mb-0">Movimientos de la cuenta</h6>
-                                    <div className="form-check">
-                                        <input className="form-check-input" type="checkbox" id="unmatched" checked={unmatchedOnly} onChange={(e) => setUnmatchedOnly(e.target.checked)} />
-                                        <label className="form-check-label small" htmlFor="unmatched">Solo pendientes</label>
-                                    </div>
-                                </div>
-
-                                <DataTableReference
-                                    data={movements}
-                                    columns={[
-                                        { data: 'movementDate', title: 'Fecha' },
-                                        { data: 'amount', title: 'Importe', render: (a) => formatPrice(a) },
-                                        { data: 'description', title: 'Descripción' },
-                                        { data: 'externalReference', title: 'Ref.' },
-                                        { data: 'sourceType', title: 'Origen' },
-                                        { data: 'matchedCheckId', title: 'Emparejado', render: (data, type, row) => matchLabel(row) },
-                                        { data: 'actions', title: 'Acciones', render: (data, type, m) => {
-                                            const isUnmatched = !m.matchedCheckId && !m.matchedVoucherId && !m.matchedJournalEntryId;
-                                            const canUnmatch = !m.matchedCheckId && (m.matchedVoucherId || m.matchedJournalEntryId);
-                                            return `
-                                                ${isUnmatched ? `<button type="button" class="btn btn-sm btn-label-primary" data-action="match" data-id="${m.id}">Emparejar</button>` : ''}
-                                                ${canUnmatch ? `<button type="button" class="btn btn-sm btn-label-secondary ms-1" data-action="unmatch" data-id="${m.id}">Quitar</button>` : ''}
-                                            `;
-                                        } },
-                                    ]}
-                                    filtered={false}
-                                    tableRef={tableRef}
-                                    dataTableRef={dataTableRef}
-                                    method="POST"
-                                    buttons={[]}
-                                    title="Movimientos"
-                                    setData={setMovements}
-                                    lengthMenu={[10, 25, 50, 100, 200]}
-                                />
+                                {/* CONC-1: la antigua tabla "Movimientos de la cuenta" (con
+                                    Emparejar/Quitar y el menu Opciones) se RETIRO del Paso 3.
+                                    Era redundante con el extracto importado de arriba y con los
+                                    Pasos 4-6 de matching de la sesion, y confundia al usuario
+                                    (no cumplia ninguna funcion propia del flujo guiado). */}
                             </div>
 
                             {/* ===== Paso 4: Matching automático ===== */}
@@ -1017,7 +982,19 @@ const BankReconciliation = () => {
                                             ))}
                                         </div>
                                     )}
-                                    {!matchSummary && <p className="text-muted small">Aún no se ha ejecutado el matching de esta sesión.</p>}
+                                    {/* CONC-2: antes mostraba "aún no ejecutado" aunque ya se hubiera
+                                        corrido en una visita previa (matchSummary solo vive en memoria de
+                                        esta carga). Ahora se detecta también por los emparejamientos ya
+                                        persistidos de la sesión. */}
+                                    {!matchSummary && emparejamientos.length > 0 && (
+                                        <div className="alert alert-success py-2 small mb-0">
+                                            <i className="ri-check-line me-1" />
+                                            El matching ya se ejecutó para esta sesión: hay <strong>{emparejamientos.length}</strong> emparejamiento(s). Revíselos en el <strong>Paso 5</strong>, o vuelva a ejecutar para recalcular.
+                                        </div>
+                                    )}
+                                    {!matchSummary && emparejamientos.length === 0 && (
+                                        <p className="text-muted small">Aún no se ha ejecutado el matching de esta sesión.</p>
+                                    )}
                                 </div>
                             )}
 
@@ -1034,11 +1011,11 @@ const BankReconciliation = () => {
                                                     const decidible = e.estado === 'PROPUESTO' || e.estado === 'AMBIGUO';
                                                     return (
                                                         <tr key={e.id}>
-                                                            <td>{e.id}</td><td><small>{e.tipo}</small></td><td><small>{e.metodo}</small></td>
+                                                            <td>{e.id}</td><td><small>{traducir(e.tipo)}</small></td><td><small>{traducir(e.metodo)}</small></td>
                                                             <td className="text-end">{e.score}</td>
                                                             <td className="text-end text-nowrap">{formatPrice(e.sumaExtracto)}</td>
                                                             <td className="text-end text-nowrap">{formatPrice(e.sumaLibros)}</td>
-                                                            <td><span className={`badge ${badge}`}>{e.estado}</span></td>
+                                                            <td><span className={`badge ${badge}`}>{traducir(e.estado)}</span></td>
                                                             <td className="text-end text-nowrap">
                                                                 {decidible ? (
                                                                     <>
@@ -1062,7 +1039,8 @@ const BankReconciliation = () => {
                                 <div>
                                     <div className="alert alert-info py-2 small">
                                         <i className="ri-information-line me-1" />
-                                        Seleccione movimientos del extracto y de libros para emparejarlos manualmente (1:1, 1:N, N:1, N:M). Para un movimiento del extracto sin contraparte en libros (GMF, cheque no cobrado…), use <strong>Generar asiento</strong>.
+                                        Seleccione movimientos del extracto y de libros para emparejarlos manualmente (1:1, 1:N, N:1, N:M); la fecha no restringe la selección. Cada emparejamiento exige su propio motivo.
+                                        Para un movimiento del extracto sin contraparte en libros, use <i className="ri-link"></i> <strong>Emparejar con asiento contable</strong> existente, o <i className="ri-external-link-line"></i> <strong>Crear asiento en Contabilidad General</strong> y luego emparejarlo.
                                     </div>
                                     <div className="row g-3">
                                         <div className="col-md-6">
@@ -1076,7 +1054,12 @@ const BankReconciliation = () => {
                                                                 <td className="small">{m.fecha}</td>
                                                                 <td className="text-end small text-nowrap">{formatPrice(m.monto ?? m.importe)}</td>
                                                                 <td className="small">{m.descripcion}</td>
-                                                                <td className="text-end"><button type="button" className="btn btn-sm btn-label-secondary" title="Generar asiento de ajuste (sin contraparte)" onClick={() => generateAdjustment(m.id)}><i className="ri-file-add-line"></i></button></td>
+                                                                <td className="text-end text-nowrap">
+                                                                    {/* CONC-3b: emparejar el movimiento del extracto con un asiento contable existente. */}
+                                                                    <button type="button" className="btn btn-sm btn-icon btn-text-primary" title="Emparejar con un asiento contable existente" onClick={() => openMatchModal({ id: m.id, movementDate: m.fecha, amount: (m.monto ?? m.importe) })}><i className="ri-link"></i></button>
+                                                                    {/* CONC-3c: crear el asiento en Contabilidad General (comprobantes) y luego volver a emparejarlo. */}
+                                                                    <button type="button" className="btn btn-sm btn-icon btn-text-secondary" title="Crear asiento en Contabilidad General" onClick={() => navigate('/contabilidad/comprobantes')}><i className="ri-external-link-line"></i></button>
+                                                                </td>
                                                             </tr>
                                                         ))}
                                                         {!wsExtracto.length && <tr><td colSpan={5} className="text-center text-muted small py-2">Sin extracto libre.</td></tr>}
@@ -1104,10 +1087,10 @@ const BankReconciliation = () => {
                                         </div>
                                     </div>
                                     <div className="mt-2">
-                                        <label className="form-label small">Motivo / clasificación (obligatorio para N:M o diferencia tolerada)</label>
-                                        <textarea className="form-control form-control-sm" rows={2} value={manualMotivo} onChange={(e) => setManualMotivo(e.target.value)} placeholder="Explique el asiento que se genera al emparejar…" />
+                                        <label className="form-label small">Motivo de la conciliación manual <span className="text-danger">*</span> <span className="text-muted">(obligatorio, mínimo 10 caracteres — uno por cada emparejamiento)</span></label>
+                                        <textarea className="form-control form-control-sm" rows={2} value={manualMotivo} onChange={(e) => setManualMotivo(e.target.value)} placeholder="Explique por qué estos movimientos corresponden entre sí…" />
                                     </div>
-                                    <button type="button" className="btn btn-primary btn-sm mt-2" onClick={manualMatch} disabled={!selExt.length && !selLib.length}>
+                                    <button type="button" className="btn btn-primary btn-sm mt-2" onClick={manualMatch} disabled={(!selExt.length && !selLib.length) || manualMotivo.trim().length < 10}>
                                         <i className="ri-links-line me-1" />Emparejar seleccionados
                                     </button>
                                 </div>
@@ -1278,24 +1261,40 @@ const BankReconciliation = () => {
                     {/* ===== Vista: Herramientas de conciliación por-cuenta (F4.7) ===== */}
                     {viewMode === 'herramientas' && (
                         <div>
+                            {/* CONC-5: la pestaña Herramientas ya no expone los apartados sueltos
+                                (partidas, GMF, antigüedad, cruce FE, diferencia en cambio): ahora
+                                contiene los reportes de la sesión, la conservación de soportes, la
+                                reapertura y el versionado. */}
                             <div className="alert alert-info py-2 small d-flex align-items-start gap-2">
                                 <i className="ri-information-line mt-1" />
-                                <div>Herramientas de conciliación de <strong>esta cuenta</strong> ({accountLabel}). Operan sobre la cuenta fijada en la URL; por eso ya no aparecen sueltas en el menú lateral.</div>
+                                <div>Herramientas de la conciliación de <strong>esta cuenta</strong> ({accountLabel}): reportes de la sesión, conservación de soportes, reapertura y versionado.</div>
                             </div>
-                            <ul className="nav nav-pills flex-wrap gap-1 mb-3">
-                                {TOOLS.map((t) => (
-                                    <li className="nav-item" key={t.id}>
-                                        <button type="button" className={`nav-link ${activeTool === t.id ? 'active' : ''}`} onClick={() => setActiveTool(t.id)}>
-                                            <i className={`${t.icon} me-1`} />{t.label}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                            {(() => {
-                                const tool = TOOLS.find((t) => t.id === activeTool) || TOOLS[0];
-                                const ToolComp = tool.Comp;
-                                return <ToolComp embeddedAccountId={id} />;
-                            })()}
+
+                            {/* Reportes / reapertura / versionado de la sesión seleccionada */}
+                            <div className="border rounded p-3 mb-4">
+                                <h6 className="fw-semibold mb-3"><i className="ri-file-chart-line me-1" />Reportes y versionado de la sesión</h6>
+                                {selectedSession ? (
+                                    <>
+                                        <div className="mb-2 small text-muted">
+                                            Sesión #{selectedSession.id} · {selectedSession.periodStart} → {selectedSession.periodEnd} ·
+                                            <span className={`badge ms-1 ${estadoBadge(selectedSession.estado).cls}`}>{estadoBadge(selectedSession.estado).label}</span> · v{selectedSession.version}
+                                        </div>
+                                        <div className="d-flex flex-wrap gap-2">
+                                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => descargarPdf(selectedSession.id)}><i className="ri-download-line me-1" />Informe PDF</button>
+                                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verificarFirmas(selectedSession.id)}><i className="ri-shield-check-line me-1" />Verificar firmas</button>
+                                            <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => solicitarReapertura(selectedSession.id)}><i className="ri-folder-open-line me-1" />Solicitar reapertura</button>
+                                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verSolicitudes(selectedSession.id)}><i className="ri-list-check-2 me-1" />Solicitudes</button>
+                                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verHistorial(selectedSession.id)}><i className="ri-history-line me-1" />Historial de versiones</button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="alert alert-secondary mb-0 small">Seleccione una sesión en la pestaña <strong>Conciliación guiada</strong> para ver sus reportes y versiones.</div>
+                                )}
+                            </div>
+
+                            {/* Conservación de soportes (extractos + hash SHA-256 + retención 10 años) */}
+                            <h6 className="fw-semibold mb-2"><i className="ri-folder-shield-2-line me-1" />Conservación de soportes</h6>
+                            <SoportesConciliacion embeddedAccountId={id} />
                         </div>
                     )}
                 </div>

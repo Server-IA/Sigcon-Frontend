@@ -7,6 +7,7 @@ import UpdatedMenu from "./updated";
 
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
+import { statusBadge } from "../../../utils/statusLabels";
 import { useSelector, useDispatch } from "react-redux";
 import { COMPONENT_MAP } from "../../../utils/map_menu";
 import AlertPage from "../../../components/molecules/AlertPage";
@@ -164,7 +165,7 @@ const IndexMenus = () => {
       },
     },
     { title: "Posición", data: "menuOrder", name: "menuOrder" },
-    { title: "Estado", data: "status", name: "status" },
+    { title: "Estado", data: "status", name: "status", render: (val) => statusBadge(val) },
     {
       title: "Módulo",
       data: "module.name",

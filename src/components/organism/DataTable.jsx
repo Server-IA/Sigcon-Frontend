@@ -81,49 +81,13 @@ const DataTableReference = ({
       },
       language: esES,
       buttons: [
-        {
-          extend: "collection",
-          className:
-            "btn rounded-pill btn-label-primary waves-effect mx-2 my-2 dropdown-toggle",
-          text: '<i class="ri-apps-2-line me-sm-1"></i> <span class="d-none d-sm-inline-block">Opciones</span>',
-          autoClose: false,
-          buttons: [
-            // ==== SECCIÓN: CONFIGURACIÓN ====
-            // {
-            //     text: '<span class="fw-bold text-primary">Configuración</span>',
-            //     className: 'dropdown-header',
-            //     action: function(){ return false; }
-            // },
-            // {
-            //     extend: 'colvis',
-            //     text: '<i class="ri-eye-line me-1"></i> Mostrar / Ocultar Columnas',
-            //     className: 'dropdown-item'
-            // },
-            // {
-            //     extend: 'colvisRestore',
-            //     text: '<i class="ri-refresh-line me-1"></i> Restaurar Columnas',
-            //     className: 'dropdown-item'
-            // },
-
-            // // Separator visual
-            // {
-            //     text: '<hr class="dropdown-divider m-1">',
-            //     className: 'dt-divider',
-            //     action: function(){ return false; }
-            // },
-
-            // ==== SECCIÓN: REPORTES ====
-            {
-              text: '<span class="fw-bold text-primary">Exportar Información</span>',
-              className: "dropdown-header",
-              action: function () {
-                return false;
-              },
-            },
-
-            ...default_buttons(url_buttons, title, { method: exportMethod, params: exportParams }),
-          ],
-        },
+        // QA (2026-05-25): se elimino el boton/dropdown "Opciones" que agrupaba
+        // los formatos de exportacion. Ahora los botones de exportacion
+        // (Excel / CSV / PDF) son DIRECTOS y visibles en la barra de acciones,
+        // en TODOS los modulos (cambio en este organism compartido). El motor
+        // de exportacion se conserva (trae todos los datos del backend y arma
+        // el archivo con seleccion de columnas).
+        ...default_buttons(url_buttons, title, { method: exportMethod, params: exportParams }),
 
         ...buttons,
       ],

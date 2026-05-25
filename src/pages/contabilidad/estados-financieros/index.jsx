@@ -271,7 +271,25 @@ const CgEstadosFinancieros = () => {
                     </div>
                 </div>
             )}
-            {Array.isArray(d.details) && d.details.length > 0 ? (
+            {/* QA CG (2026-05-25) CG-11: `details` siempre trae las 3 actividades aunque
+                esten vacias, por eso antes se veian 3 tablas en cero y parecia "no calcula".
+                Si NINGUNA actividad tiene movimientos de efectivo, mostramos un mensaje
+                explicativo NIC 7 (las causaciones que no mueven caja se excluyen) en vez de
+                tablas vacias. */}
+            {!(Array.isArray(d.details) && d.details.some(a => (a.entries || []).length > 0)) ? (
+                <div className="alert alert-info">
+                    <i className="ri-information-line me-1" />
+                    <strong>No se registraron movimientos de efectivo en este período.</strong>
+                    <div className="small mt-1">
+                        El Estado de Flujo de Efectivo (NIC 7) solo refleja transacciones que afectan
+                        cuentas de <strong>efectivo y equivalentes</strong> (caja, bancos — PUC clase 11).
+                        Las causaciones contables que NO mueven caja (p. ej. liquidación de nómina,
+                        depreciaciones, provisiones) se excluyen y se reflejan en otros estados.
+                        Registre pagos, cobros o movimientos bancarios <strong>contabilizados (POSTED)</strong>
+                        en este período para visualizar los flujos aquí.
+                    </div>
+                </div>
+            ) : (
                 d.details.map((act, idx) => (
                     <div key={idx} className="mb-4">
                         <h6 className="fw-bold text-primary mb-2">
@@ -305,10 +323,6 @@ const CgEstadosFinancieros = () => {
                         </table>
                     </div>
                 ))
-            ) : (
-                <div className="alert alert-info text-center">
-                    <i className="ri-information-line me-1" />Sin movimientos registrados en el periodo.
-                </div>
             )}
         </>
     );
@@ -407,6 +421,60 @@ const CgEstadosFinancieros = () => {
                         ))}
                     </tbody>
                 </table>
+                {/* HU-CG-13 E4: grafica de barras por clase (paridad con el PDF). */}
+                {(() => {
+                    const bars = rows.filter(r =>
+                        Number(r.period1Value || 0) !== 0 ||
+                        Number(r.period2Value || 0) !== 0 ||
+                        Number(r.period3Value || 0) !== 0);
+                    if (bars.length === 0) return null;
+                    let maxAbs = 0;
+                    bars.forEach(r => {
+                        maxAbs = Math.max(maxAbs,
+                            Math.abs(Number(r.period1Value || 0)),
+                            Math.abs(Number(r.period2Value || 0)),
+                            Math.abs(Number(r.period3Value || 0)));
+                    });
+                    if (maxAbs <= 0) maxAbs = 1;
+                    const series = [
+                        { key: 'period1Value', label: rows[0]?.period1Label || 'Periodo A', color: '#3b82f6' },
+                        { key: 'period2Value', label: rows[0]?.period2Label || 'Periodo B', color: '#10b981' },
+                    ];
+                    if (has3) series.push({ key: 'period3Value', label: rows[0]?.period3Label || 'Periodo C', color: '#f59e0b' });
+                    return (
+                        <div className="card mt-3">
+                            <div className="card-header py-2 d-flex align-items-center" style={{ gap: 12 }}>
+                                <strong className="me-2"><i className="ri-bar-chart-2-line me-1" />Gráfica comparativa por clase</strong>
+                                {series.map(s => (
+                                    <span key={s.key} className="small d-inline-flex align-items-center">
+                                        <span style={{ display: 'inline-block', width: 12, height: 12, background: s.color, borderRadius: 2, marginRight: 4 }} />
+                                        {s.label}
+                                    </span>
+                                ))}
+                            </div>
+                            <div className="card-body py-3">
+                                {bars.map((r, i) => (
+                                    <div key={i} className="mb-3">
+                                        <div className="small fw-bold mb-1">{r.className}</div>
+                                        {series.map(s => {
+                                            const val = Number(r[s.key] || 0);
+                                            const pct = Math.min(100, Math.abs(val) / maxAbs * 100);
+                                            return (
+                                                <div key={s.key} className="d-flex align-items-center mb-1" style={{ gap: 8 }}>
+                                                    <span className="text-muted" style={{ width: 70, fontSize: 11 }}>{s.label}</span>
+                                                    <div className="flex-grow-1" style={{ background: '#f1f1f4', borderRadius: 3, height: 14 }}>
+                                                        <div style={{ width: `${pct}%`, background: s.color, height: '100%', borderRadius: 3, minWidth: val !== 0 ? 2 : 0 }} />
+                                                    </div>
+                                                    <span className="text-end" style={{ width: 120, fontSize: 11 }}>{formatCurrency(val)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })()}
             </>
         );
     };

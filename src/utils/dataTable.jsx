@@ -79,8 +79,8 @@ export const default_buttons = (url_api, title, exportOptions = {}) => {
     const buttons = [
         {
             extend: 'excel',
-            text: '<i class="ri-file-excel-line me-1"></i>  Excel',
-            className: `dropdown-item`,
+            text: '<i class="ri-file-excel-line me-1"></i> Excel',
+            className: `btn rounded-pill btn-label-success waves-effect mx-1 my-2`,
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,
             action: async function (e, dt, button, config) {
@@ -124,7 +124,7 @@ export const default_buttons = (url_api, title, exportOptions = {}) => {
         {
             extend: 'csv',
             text: '<i class="ri-file-text-line me-1"></i> CSV',
-            className: 'dropdown-item',
+            className: 'btn rounded-pill btn-label-info waves-effect mx-1 my-2',
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,
             action: async function (e, dt, button, config) {
@@ -166,7 +166,7 @@ export const default_buttons = (url_api, title, exportOptions = {}) => {
         {
             extend: 'pdf',
             text: '<i class="ri-file-pdf-2-line me-1"></i> PDF',
-            className: 'dropdown-item',
+            className: 'btn rounded-pill btn-label-danger waves-effect mx-1 my-2',
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,
             // HU-ACT-07 (QA 2026-05-05): orientacion horizontal + tamaño A3 para

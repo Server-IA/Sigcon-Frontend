@@ -270,6 +270,62 @@ const IndexCgComprobantes = () => {
         return [];
     }, [data]);
 
+    /**
+     * CG-06B E4 / adic#3: abre el detalle de un comprobante por id (usado cuando
+     * el Libro Diario navega aqui con ?view=ID). Muestra encabezado, lineas,
+     * aviso de tercero inactivo (HU-CG-05C) y documentos relacionados.
+     */
+    const openEntryViewById = async (id) => {
+        try {
+            const [relResp, detResp] = await Promise.all([
+                fetchHelper.get(base_url(['api', 'v1', 'journal-entries', id, 'related-docs']), {}, 0).catch(() => ({ data: [] })),
+                fetchHelper.get(base_url(['api', 'v1', 'journal-entries', id]), {}, 0).catch(() => null),
+            ]);
+            const related = relResp?.data || [];
+            const d = detResp?.data || detResp || {};
+            const lines = Array.isArray(d.lines) ? d.lines : [];
+            const inactiveNits = [...new Set(lines.filter(l => l.thirdPartyInactive && l.thirdPartyNit).map(l => l.thirdPartyNit))];
+            const avisoInactivoHtml = inactiveNits.length > 0
+                ? `<div class="alert alert-warning py-2 mt-2 mb-0"><i class="ri-alert-line me-1"></i>El tercero asociado a este comprobante esta actualmente inactivo en el sistema <span class="text-muted">(NIT ${inactiveNits.join(', ')})</span>.</div>` : '';
+            const linesHtml = lines.length > 0
+                ? `<div class="mt-3 pt-2 border-top"><strong class="d-block mb-2">Detalle del comprobante</strong>
+                    <div class="table-responsive" style="max-height:260px;overflow-y:auto;">
+                      <table class="table table-sm table-bordered mb-0" style="font-size:0.78rem;">
+                        <thead class="table-light"><tr><th>Cuenta</th><th>Descripcion</th><th>Tercero</th><th>CC</th><th class="text-end">Debito</th><th class="text-end">Credito</th></tr></thead>
+                        <tbody>${lines.map(l => `<tr><td><code>${l.accountCode || '-'}</code><br/><small class="text-muted">${l.accountName || ''}</small></td><td>${l.description || '-'}</td><td>${l.thirdPartyNit || '-'}</td><td>${l.costCenterName || '-'}</td><td class="text-end">${l.debitAmount && Number(l.debitAmount) > 0 ? formatCurrency(l.debitAmount) : '-'}</td><td class="text-end">${l.creditAmount && Number(l.creditAmount) > 0 ? formatCurrency(l.creditAmount) : '-'}</td></tr>`).join('')}</tbody>
+                      </table></div></div>` : '';
+            window.Swal.fire({
+                title: `Comprobante ${d.voucherCode || ('#' + (d.entryNumber || id))}`,
+                html: `<div class="text-start">
+                        <p class="mb-1"><strong>Fecha:</strong> ${d.entryDate || '-'}</p>
+                        <p class="mb-1"><strong>Descripcion:</strong> ${d.description || '-'}</p>
+                        <p class="mb-1"><strong>Modulo Origen:</strong> ${SOURCE_LABEL[d.sourceModule] || d.sourceModule || '-'}</p>
+                        <p class="mb-1"><strong>Estado:</strong> ${STATUS_LABEL[d.status] || d.status}</p>
+                        <p class="mb-1"><strong>Total Debito:</strong> ${formatCurrency(d.totalDebit)}</p>
+                        <p class="mb-1"><strong>Total Credito:</strong> ${formatCurrency(d.totalCredit)}</p>
+                        ${avisoInactivoHtml}${linesHtml}</div>`,
+                width: 880, confirmButtonText: 'Cerrar',
+            });
+        } catch (e) {
+            setMessage({ type: 'danger', show: true, message: 'No se pudo cargar el comprobante solicitado.' });
+        }
+    };
+
+    /** Si llega ?view=ID (desde el Libro Diario), abre ese comprobante. */
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const viewId = params.get('view');
+        if (viewId) {
+            const u = new URL(window.location.href);
+            u.searchParams.delete('view');
+            window.history.replaceState({}, '', u);
+            // Delay para no competir con los SweetAlert de carga inicial
+            // (menu/permisos/DataTable) que cerrarian el modal de detalle.
+            setTimeout(() => openEntryViewById(viewId), 1300);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     /** Listener de acciones por fila (view, post, reverse, delete). */
     useEffect(() => {
         const table = dataTableRef?.current;
@@ -372,11 +428,14 @@ const IndexCgComprobantes = () => {
                                 <td class="text-end">${formatCurrency(n.totalDebit)}</td>
                                 <td class="small text-muted">${n.createdBy || '-'}</td>
                             </tr>`).join('');
+                        // HU-CG-07C E3: selector de 2 versiones para comparar el diff.
+                        const optsHtml = nodes.map(n =>
+                            `<option value="${n.id}">${n.voucherCode || ('#' + n.entryNumber)} (${n.relation})</option>`).join('');
                         window.Swal.fire({
                             title: `Historial de versiones — ${row.voucherCode || ('#' + (row.entryNumber || row.id))}`,
                             html: `<div class="text-start">
                                 <p class="small text-muted mb-2">Trazabilidad completa: comprobante original, reversiones y correcciones (${nodes.length} versiones).</p>
-                                <div class="table-responsive" style="max-height:340px;overflow-y:auto;">
+                                <div class="table-responsive" style="max-height:280px;overflow-y:auto;">
                                   <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
                                     <thead class="table-light"><tr>
                                       <th>Comprobante</th><th>Relacion</th><th>Estado</th><th>Fecha</th>
@@ -384,10 +443,65 @@ const IndexCgComprobantes = () => {
                                     </tr></thead>
                                     <tbody>${rowsHtml}</tbody>
                                   </table>
-                                </div></div>`,
-                            width: 820,
+                                </div>
+                                <hr/>
+                                <p class="small fw-bold mb-1"><i class="ri-git-compare-line me-1"></i>Comparar dos versiones (HU-CG-07C E3)</p>
+                                <div class="d-flex gap-2 align-items-end flex-wrap">
+                                  <div><label class="form-label small mb-0">Versión A</label>
+                                    <select id="cmp-a" class="form-select form-select-sm">${optsHtml}</select></div>
+                                  <div><label class="form-label small mb-0">Versión B</label>
+                                    <select id="cmp-b" class="form-select form-select-sm">${optsHtml}</select></div>
+                                  <button id="cmp-btn" class="btn btn-sm btn-primary"><i class="ri-git-compare-line me-1"></i>Comparar</button>
+                                </div>
+                                <div id="cmp-result" class="mt-2"></div>
+                              </div>`,
+                            width: 860,
                             showCancelButton: false,
                             confirmButtonText: 'Cerrar',
+                            didOpen: () => {
+                                // preseleccionar A=primera, B=segunda
+                                const selB = document.getElementById('cmp-b');
+                                if (selB && selB.options.length > 1) selB.selectedIndex = 1;
+                                document.getElementById('cmp-btn')?.addEventListener('click', async () => {
+                                    const idA = document.getElementById('cmp-a')?.value;
+                                    const idB = document.getElementById('cmp-b')?.value;
+                                    const box = document.getElementById('cmp-result');
+                                    if (!idA || !idB || idA === idB) {
+                                        box.innerHTML = '<div class="alert alert-warning py-2 mb-0 small">Seleccione dos versiones distintas.</div>';
+                                        return;
+                                    }
+                                    box.innerHTML = '<div class="text-muted small">Comparando...</div>';
+                                    try {
+                                        const cmp = await fetchHelper.get(
+                                            base_url(['api', 'v1', 'journal-entries', idA, 'versions', 'compare', idB]), {}, 0);
+                                        const d = cmp?.data || cmp;
+                                        const hdr = (d.headerDiffs || []).map(h => `
+                                            <tr class="${h.changed ? 'table-warning' : ''}">
+                                              <td>${h.field}</td><td>${h.valueA ?? '-'}</td><td>${h.valueB ?? '-'}</td>
+                                              <td>${h.changed ? '<span class="badge bg-label-warning">Cambió</span>' : ''}</td>
+                                            </tr>`).join('');
+                                        const ctBadge = { ADDED:'bg-label-success', REMOVED:'bg-label-danger', MODIFIED:'bg-label-warning', UNCHANGED:'bg-label-secondary' };
+                                        const lns = (d.lineDiffs || []).map(l => `
+                                            <tr>
+                                              <td>${l.account}</td>
+                                              <td><span class="badge ${ctBadge[l.changeType] || ''}">${l.changeType}</span></td>
+                                              <td class="text-end">${formatCurrency(l.debitA)}/${formatCurrency(l.creditA)}</td>
+                                              <td class="text-end">${formatCurrency(l.debitB)}/${formatCurrency(l.creditB)}</td>
+                                            </tr>`).join('');
+                                        box.innerHTML = `
+                                            <div class="small fw-bold mt-1">Cabecera</div>
+                                            <table class="table table-sm table-bordered mb-2" style="font-size:0.75rem;">
+                                              <thead class="table-light"><tr><th>Campo</th><th>Versión A</th><th>Versión B</th><th></th></tr></thead>
+                                              <tbody>${hdr}</tbody></table>
+                                            <div class="small fw-bold">Líneas (Débito/Crédito A vs B)</div>
+                                            <table class="table table-sm table-bordered mb-0" style="font-size:0.75rem;">
+                                              <thead class="table-light"><tr><th>Cuenta</th><th>Cambio</th><th class="text-end">A (D/C)</th><th class="text-end">B (D/C)</th></tr></thead>
+                                              <tbody>${lns}</tbody></table>`;
+                                    } catch (e) {
+                                        box.innerHTML = '<div class="alert alert-danger py-2 mb-0 small">No se pudo comparar.</div>';
+                                    }
+                                });
+                            },
                         });
                     }).catch((err) => {
                         setMessage({ type: 'danger', show: true,
@@ -537,37 +651,49 @@ const IndexCgComprobantes = () => {
                 }
                 case 'reverse': {
                     // El backend exige 'description' obligatorio (@NotBlank en
-                    // ReverseEntryRequest). Pedimos el motivo al usuario con un input.
+                    // ReverseEntryRequest). Pedimos el motivo + opcion de generar
+                    // borrador correctivo (HU-CG-07B E1): al reversar se crea el
+                    // comprobante REV-XXXXX (asientos espejo) y, si se marca la
+                    // casilla, ademas un nuevo BORRADOR correctivo vinculado por
+                    // correction_of para re-capturar el asiento corregido.
                     window.Swal.fire({
                         title: 'Reversar comprobante',
-                        html: `<p>Reversar comprobante <strong>#${row.entryNumber || row.id}</strong>. Se creara un comprobante de reversion.</p>`,
-                        input: 'text',
-                        inputLabel: 'Motivo de la reversion (obligatorio)',
-                        inputPlaceholder: 'Ej: error en la cuenta contable seleccionada',
-                        inputAttributes: { maxlength: 500 },
-                        inputValidator: (value) => {
-                            if (!value || !value.trim()) {
-                                return 'El motivo es obligatorio.';
-                            }
-                            if (value.trim().length < 10) {
-                                return 'El motivo debe tener al menos 10 caracteres.';
-                            }
-                            return null;
-                        },
+                        html: `
+                            <p class="mb-2">Reversar comprobante <strong>#${row.entryNumber || row.id}</strong>.
+                            Se creará un comprobante de reversión <strong>REV-XXXXX</strong> con asientos espejo.</p>
+                            <textarea id="rev-motivo" class="form-control" rows="2"
+                                placeholder="Motivo de la reversión (mínimo 10 caracteres)" maxlength="500"></textarea>
+                            <div class="form-check mt-3 text-start">
+                                <input class="form-check-input" type="checkbox" id="rev-draft">
+                                <label class="form-check-label" for="rev-draft">
+                                    Crear además un <strong>BORRADOR correctivo</strong> (copia del original para corregir y re-contabilizar)
+                                </label>
+                            </div>`,
                         showCancelButton: true,
-                        confirmButtonText: 'Si, reversar',
+                        confirmButtonText: 'Sí, reversar',
                         cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#d33',
                         icon: 'warning',
+                        preConfirm: () => {
+                            const motivo = (document.getElementById('rev-motivo')?.value || '').trim();
+                            const draft = document.getElementById('rev-draft')?.checked || false;
+                            if (!motivo) { window.Swal.showValidationMessage('El motivo es obligatorio.'); return false; }
+                            if (motivo.length < 10) { window.Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres.'); return false; }
+                            return { motivo, draft };
+                        },
                     }).then(async (result) => {
                         if (!result.isConfirmed) return;
                         try {
                             await fetchHelper.post(
                                 base_url(['api', 'v1', 'journal-entries', row.id, 'reverse']),
-                                { description: result.value.trim() }, {}, 1000, true
+                                { description: result.value.motivo, createCorrectionDraft: result.value.draft },
+                                {}, 1000, true
                             );
                             dataTableRef?.current?.ajax?.reload?.();
-                            setMessage({ type: 'success', show: true, message: 'Comprobante reversado exitosamente.' });
+                            setMessage({ type: 'success', show: true,
+                                message: result.value.draft
+                                    ? 'Comprobante reversado (REV) y borrador correctivo generado.'
+                                    : 'Comprobante reversado exitosamente (REV creado).' });
                         } catch (error) {
                             setMessage({
                                 type: 'danger', show: true,

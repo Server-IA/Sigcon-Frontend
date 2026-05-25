@@ -1,7 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 import AlertPage from '../../../components/molecules/AlertPage';
+
+/** QA CG (2026-05-25) CG-17/adic#5: tipos de comprobante (modulo origen) para filtrar. */
+const SOURCE_OPTIONS = [
+    { id: '', label: 'Todos los tipos' },
+    { id: 'CG', label: 'Contabilidad General' },
+    { id: 'AP', label: 'Cuentas por Pagar' },
+    { id: 'AR', label: 'Cuentas por Cobrar' },
+    { id: 'BNK', label: 'Bancos y Cajas' },
+    { id: 'ACT', label: 'Activos Fijos' },
+    { id: 'NOM', label: 'Nomina' },
+];
 
 /**
  * Pagina de Libro Diario (CG).
@@ -49,12 +61,32 @@ const getMonthLabel = (m) => {
 };
 
 const CgLibroDiario = () => {
+    const navigate = useNavigate();
     const [year, setYear]         = useState(new Date().getFullYear());
     const [month, setMonth]       = useState(new Date().getMonth() + 1);
     const [entries, setEntries]   = useState([]);
     const [loading, setLoading]   = useState(false);
     const [generated, setGenerated] = useState(false);
     const [message, setMessage]   = useState({ message: '', type: '', show: false });
+    // CG-17 / adic#5: filtros adicionales por tipo de comprobante y centro de costo
+    const [sourceModule, setSourceModule] = useState('');
+    const [costCenterId, setCostCenterId] = useState('');
+    const [costCenters, setCostCenters]   = useState([]);
+
+    /** CG-17: carga el catalogo de centros de costo para el filtro. */
+    useEffect(() => {
+        fetchHelper.post(base_url(['api', 'v1', 'cost-centers', 'search']),
+                { start: 0, length: -1, draw: 1 }, {}, 0)
+            .then(resp => {
+                const list = resp?.data ?? resp ?? [];
+                const arr = Array.isArray(list) ? list : (list?.data || []);
+                if (Array.isArray(arr)) {
+                    setCostCenters(arr.map(cc => ({
+                        id: cc.id, name: `${cc.code || cc.id} - ${cc.name || ''}`.trim(),
+                    })));
+                }
+            }).catch(() => {});
+    }, []);
 
     /** Consulta los datos del libro diario al backend. */
     const handleGenerate = async () => {
@@ -62,8 +94,11 @@ const CgLibroDiario = () => {
         setGenerated(false);
         setEntries([]);
         try {
+            let qs = `?year=${year}&month=${month}`;
+            if (sourceModule) qs += `&sourceModule=${encodeURIComponent(sourceModule)}`;
+            if (costCenterId) qs += `&costCenterId=${encodeURIComponent(costCenterId)}`;
             const { data, error } = await fetchHelper.get(
-                base_url(['api', 'v1', 'cg', 'books', 'diario']) + `?year=${year}&month=${month}`,
+                base_url(['api', 'v1', 'cg', 'books', 'diario']) + qs,
                 {}, 0
             );
             if (!error) {
@@ -159,7 +194,23 @@ const CgLibroDiario = () => {
                             ))}
                         </select>
                     </div>
-                    <div className="col-md-8 mb-2 d-flex align-items-end gap-2 flex-wrap">
+                    {/* CG-17 / adic#5: filtros por tipo de comprobante y centro de costo */}
+                    <div className="col-md-3 mb-2">
+                        <label className="form-label">Tipo de comprobante</label>
+                        <select className="form-select" value={sourceModule}
+                                onChange={e => setSourceModule(e.target.value)}>
+                            {SOURCE_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                        </select>
+                    </div>
+                    <div className="col-md-3 mb-2">
+                        <label className="form-label">Centro de costo</label>
+                        <select className="form-select" value={costCenterId}
+                                onChange={e => setCostCenterId(e.target.value)}>
+                            <option value="">Todos los centros</option>
+                            {costCenters.map(cc => <option key={cc.id} value={cc.id}>{cc.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="col-md-12 mb-2 d-flex align-items-end gap-2 flex-wrap">
                         <button className="btn btn-primary" onClick={handleGenerate} disabled={loading}>
                             {loading ? (
                                 <><span className="spinner-border spinner-border-sm me-2" />Generando...</>
@@ -209,7 +260,15 @@ const CgLibroDiario = () => {
                                             {entry.voucherCode || `#${entry.entryNumber || entry.entryId}`}
                                             <span className="text-muted ms-2 small">{entry.date || ''}</span>
                                         </strong>
-                                        <span className="text-muted small">{entry.description || ''}</span>
+                                        <div className="d-flex align-items-center gap-2">
+                                            <span className="text-muted small">{entry.description || ''}</span>
+                                            {/* CG-06B E4 / adic#3: ver el comprobante contable completo */}
+                                            <button className="btn btn-sm btn-label-info"
+                                                    title="Ver comprobante contable completo"
+                                                    onClick={() => navigate('/contabilidad/comprobantes?view=' + (entry.entryId))}>
+                                                <i className="ri-eye-line me-1" />Ver comprobante
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="table-responsive">
                                         <table className="table table-sm mb-0">

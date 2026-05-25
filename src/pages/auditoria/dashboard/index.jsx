@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
+import { actionLabel, severityLabel, moduleLabel, entityLabel } from '../../../utils/auditLabels';
 
 /**
  * HU-AU-07: Dashboard centralizado de auditoría con KPIs y semáforos.
@@ -67,7 +68,7 @@ const IndexAuditDashboard = () => {
             LOW: 'bg-label-success', MEDIUM: 'bg-label-info',
             HIGH: 'bg-label-warning', CRITICAL: 'bg-label-danger'
         };
-        return <span className={`badge ${map[s] || 'bg-label-secondary'}`}>{s}</span>;
+        return <span className={`badge ${map[s] || 'bg-label-secondary'}`}>{severityLabel(s)}</span>;
     };
 
     const totalLast30Days = data ? Object.values(data.countBySeverity || {}).reduce((a, b) => a + b, 0) : 0;
@@ -125,7 +126,7 @@ const IndexAuditDashboard = () => {
                             <div className="card bg-label-warning">
                                 <div className="card-body text-center">
                                     <i className="ri-alert-line ri-24px"></i>
-                                    <div className="small mt-1">Eventos HIGH</div>
+                                    <div className="small mt-1">Eventos de severidad Alta</div>
                                     <h3 className="mb-0">{highCount}</h3>
                                 </div>
                             </div>
@@ -134,7 +135,7 @@ const IndexAuditDashboard = () => {
                             <div className="card bg-label-danger">
                                 <div className="card-body text-center">
                                     <i className="ri-error-warning-line ri-24px"></i>
-                                    <div className="small mt-1">Eventos CRITICAL</div>
+                                    <div className="small mt-1">Eventos de severidad Critica</div>
                                     <h3 className="mb-0">{criticalCount}</h3>
                                 </div>
                             </div>
@@ -181,7 +182,7 @@ const IndexAuditDashboard = () => {
                                 {/* Semáforo de riesgo: rojo si hay criticos recientes, verde si no */}
                                 <div className={`card ${(data.criticalEventsRecent || 0) > 0 ? 'bg-label-danger' : 'bg-label-success'}`}>
                                     <div className="card-body text-center">
-                                        <div className="small">Eventos CRITICAL (últ. 7 días)</div>
+                                        <div className="small">Eventos criticos (últ. 7 días)</div>
                                         <h3 className="mb-0">
                                             <i className={`${(data.criticalEventsRecent || 0) > 0 ? 'ri-alarm-warning-line' : 'ri-shield-check-line'} me-1`}></i>
                                             {data.criticalEventsRecent != null ? data.criticalEventsRecent : 0}
@@ -208,7 +209,7 @@ const IndexAuditDashboard = () => {
                                                 borderRadius: '50%', background: severityColor(sev),
                                                 marginRight: '10px'
                                             }}></div>
-                                            <span className="me-2 fw-bold" style={{minWidth: '80px'}}>{sev}</span>
+                                            <span className="me-2 fw-bold" style={{minWidth: '80px'}}>{severityLabel(sev)}</span>
                                             <div className="progress flex-grow-1" style={{height: '20px'}}>
                                                 <div className="progress-bar"
                                                      role="progressbar"
@@ -236,7 +237,7 @@ const IndexAuditDashboard = () => {
                                     {Object.entries(data.countByModule || {}).map(([mod, count]) => (
                                         <div key={mod} className="d-flex align-items-center mb-2">
                                             <span className="badge bg-label-secondary me-2"
-                                                  style={{minWidth: '50px'}}>{mod}</span>
+                                                  style={{minWidth: '120px'}} title={mod}>{moduleLabel(mod)}</span>
                                             <div className="progress flex-grow-1" style={{height: '20px'}}>
                                                 <div className="progress-bar bg-primary"
                                                      role="progressbar"
@@ -273,9 +274,9 @@ const IndexAuditDashboard = () => {
                                             <tr key={e.id}>
                                                 <td><small>{e.timestamp?.replace('T', ' ').substring(0, 19)}</small></td>
                                                 <td><small>{e.userEmail}</small></td>
-                                                <td><small><code>{e.action}</code></small></td>
-                                                <td><small>{e.entityType} {e.entityId && `#${e.entityId}`}</small></td>
-                                                <td><small>{e.module}</small></td>
+                                                <td><small>{actionLabel(e.action)}</small></td>
+                                                <td><small>{entityLabel(e.entityType)} {e.entityId && `#${e.entityId}`}</small></td>
+                                                <td><small>{moduleLabel(e.module)}</small></td>
                                                 <td>{severityBadge(e.severity)}</td>
                                                 <td><small>{e.description}</small></td>
                                             </tr>

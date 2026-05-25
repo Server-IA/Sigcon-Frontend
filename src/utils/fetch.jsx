@@ -24,15 +24,31 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
         options.body = isFormData ? data : JSON.stringify(data);
     }
 
+    // QA (2026-05-25): el modal de carga aparecia en CADA peticion (time=1 por
+    // defecto en fetchHelper) y bloqueaba la UI con allowOutsideClick:false, lo
+    // que interrumpia el ingreso de datos y resultaba molesto visualmente.
+    // Ahora el loader es DIFERIDO: solo se abre si la peticion supera
+    // LOADER_DELAY_MS. La inmensa mayoria resuelven antes (<300ms) y NUNCA
+    // muestran modal; solo operaciones realmente lentas (reportes, exportaciones,
+    // consultas pesadas) lo veran tras el umbral. El cierre se conserva igual.
+    const LOADER_DELAY_MS = 600;
+    let loaderTimer = null;
+    let loaderShown = false;
+    const stopLoader = () => {
+        if (loaderTimer) { clearTimeout(loaderTimer); loaderTimer = null; }
+    };
     if (time != 0) {
-        window.Swal.fire({
-            showConfirmButton: false,
-            allowOutsideClick: false,
-            customClass: {},
-            willOpen: function () {
-                Swal.showLoading();
-            }
-        });
+        loaderTimer = setTimeout(() => {
+            loaderShown = true;
+            window.Swal.fire({
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                customClass: {},
+                willOpen: function () {
+                    Swal.showLoading();
+                }
+            });
+        }, LOADER_DELAY_MS);
     }
     // Timeout de 15 segundos para evitar que se quede colgado
     const controller = new AbortController();
@@ -137,6 +153,7 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
         // EmployeeService, PayrollConceptService, etc.) sin tocar el backend.
         const status = response.status;
         if (status === 204) {
+            stopLoader();
             return new Promise(resolve => {
                 window.Swal.close();
                 resolve({ success: true, status });
@@ -155,12 +172,14 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
                 responseData = { success: true, status, message: rawText, msg: rawText };
             }
         }
+        stopLoader();
         return new Promise(resolve => {
             window.Swal.close();
             resolve(responseData);
         });
     }).catch(async error => {
         clearTimeout(timeoutId);
+        stopLoader();
         window.Swal.close();
         // Errores de red (fetch fail por backend caido, CORS, abort) usan
         // console.debug para no llenar la consola en escenarios esperados

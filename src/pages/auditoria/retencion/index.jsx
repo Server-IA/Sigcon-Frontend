@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
+import { severityLabel, moduleLabel,
+         MODULE_OPTIONS, SEVERITY_OPTIONS } from '../../../utils/auditLabels';
 
 /**
  * HU-AU-10: Gestión de políticas de retención + legal hold + purga manual.
@@ -26,6 +28,23 @@ const IndexRetention = () => {
     };
     const [form, setForm] = useState(empty);
     const [editingId, setEditingId] = useState(null);
+
+    // QA Bloque AU (2026-05-25): el alta/edicion de politicas se hace en un modal
+    // desplegable (como el resto de modulos), no en un form inline poco intuitivo.
+    const modalRef = useRef(null);
+    const modalInstance = useRef(null);
+    const ensureModal = () => {
+        if (!modalInstance.current && modalRef.current) {
+            modalInstance.current = new window.bootstrap.Modal(modalRef.current);
+        }
+        return modalInstance.current;
+    };
+    const openCreate = () => {
+        setForm(empty);
+        setEditingId(null);
+        ensureModal()?.show();
+    };
+    const closeModal = () => { modalInstance.current?.hide(); };
 
     const loadAll = async () => {
         setLoading(true);
@@ -69,6 +88,7 @@ const IndexRetention = () => {
             }
             setForm(empty);
             setEditingId(null);
+            closeModal();
             loadAll();
         } catch (err) {
             setAlert({ show: true, type: 'danger', message: err?.msg || err?.message || 'Error al guardar' });
@@ -83,9 +103,10 @@ const IndexRetention = () => {
             enabled: p.enabled
         });
         setEditingId(p.id);
+        ensureModal()?.show();
     };
 
-    const cancel = () => { setForm(empty); setEditingId(null); };
+    const cancel = () => { setForm(empty); setEditingId(null); closeModal(); };
 
     const removePolicy = async (p) => {
         if (!window.confirm(`¿Eliminar política "${p.name}"?`)) return;
@@ -180,63 +201,11 @@ const IndexRetention = () => {
             {tab === 'policies' && (
                 <div className="card">
                     <div className="card-body">
-                        <form onSubmit={submit} className="bg-light p-3 mb-4 rounded">
-                            <div className="row g-2">
-                                <div className="col-md-3">
-                                    <label className="form-label small">Nombre *</label>
-                                    <input type="text" className="form-control form-control-sm" required
-                                           value={form.name}
-                                           onChange={(e) => setForm({...form, name: e.target.value})} />
-                                </div>
-                                <div className="col-md-3">
-                                    <label className="form-label small">Descripción</label>
-                                    <input type="text" className="form-control form-control-sm"
-                                           value={form.description}
-                                           onChange={(e) => setForm({...form, description: e.target.value})} />
-                                </div>
-                                <div className="col-md-2">
-                                    <label className="form-label small">Match módulo</label>
-                                    <select className="form-select form-select-sm" value={form.matchModule}
-                                            onChange={(e) => setForm({...form, matchModule: e.target.value})}>
-                                        <option value="">(todos)</option>
-                                        <option>PA</option><option>TER</option><option>CFG</option>
-                                        <option>ACT</option><option>AP</option><option>AR</option>
-                                        <option>BNK</option><option>CG</option><option>NOM</option>
-                                        <option>INT</option><option>AU</option>
-                                    </select>
-                                </div>
-                                <div className="col-md-2">
-                                    <label className="form-label small">Match severidad</label>
-                                    <select className="form-select form-select-sm" value={form.matchSeverity}
-                                            onChange={(e) => setForm({...form, matchSeverity: e.target.value})}>
-                                        <option value="">(todas)</option>
-                                        <option>LOW</option><option>MEDIUM</option>
-                                        <option>HIGH</option><option>CRITICAL</option>
-                                    </select>
-                                </div>
-                                <div className="col-md-2">
-                                    <label className="form-label small">Días retención *</label>
-                                    <input type="number" min="1" className="form-control form-control-sm" required
-                                           value={form.retentionDays}
-                                           onChange={(e) => setForm({...form, retentionDays: e.target.value})} />
-                                </div>
-                                <div className="col-md-9">
-                                    <label className="form-label small">Norma legal de respaldo</label>
-                                    <input type="text" className="form-control form-control-sm"
-                                           placeholder="ej: Decreto 2649/1993 Art. 134"
-                                           value={form.legalBasis}
-                                           onChange={(e) => setForm({...form, legalBasis: e.target.value})} />
-                                </div>
-                                <div className="col-md-3 d-flex align-items-end gap-2">
-                                    <button type="submit" className="btn btn-primary btn-sm">
-                                        {editingId ? 'Actualizar' : 'Crear política'}
-                                    </button>
-                                    {editingId && (
-                                        <button type="button" className="btn btn-label-secondary btn-sm" onClick={cancel}>Cancelar</button>
-                                    )}
-                                </div>
-                            </div>
-                        </form>
+                        <div className="d-flex justify-content-end mb-3">
+                            <button type="button" className="btn btn-primary btn-sm" onClick={openCreate}>
+                                <i className="ri-add-line me-1"></i> Crear política
+                            </button>
+                        </div>
 
                         <div className="table-responsive">
                             <table className="table table-hover">
@@ -259,8 +228,8 @@ const IndexRetention = () => {
                                                 <div>{p.name}</div>
                                                 <small className="text-muted">{p.description}</small>
                                             </td>
-                                            <td>{p.matchModule || <em className="text-muted">todos</em>}</td>
-                                            <td>{p.matchSeverity || <em className="text-muted">todas</em>}</td>
+                                            <td>{moduleLabel(p.matchModule) || <em className="text-muted">todos</em>}</td>
+                                            <td>{severityLabel(p.matchSeverity) || <em className="text-muted">todas</em>}</td>
                                             <td className="text-end fw-bold">{p.retentionDays}</td>
                                             <td><small>{p.legalBasis}</small></td>
                                             <td>
@@ -334,6 +303,81 @@ const IndexRetention = () => {
                     </div>
                 </div>
             )}
+
+            {/* QA Bloque AU (2026-05-25): modal de alta/edicion de politica de retencion */}
+            <div className="modal fade" ref={modalRef} tabIndex="-1">
+                <div className="modal-dialog modal-lg modal-dialog-centered">
+                    <div className="modal-content">
+                        <form onSubmit={submit}>
+                            <div className="modal-header">
+                                <h5 className="modal-title">
+                                    <i className="ri-flag-line me-2"></i>
+                                    {editingId ? 'Editar política de retención' : 'Crear política de retención'}
+                                </h5>
+                                <button type="button" className="btn-close" data-bs-dismiss="modal"
+                                        onClick={cancel}></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="row g-3">
+                                    <div className="col-md-6">
+                                        <label className="form-label small">Nombre *</label>
+                                        <input type="text" className="form-control form-control-sm" required
+                                               value={form.name}
+                                               onChange={(e) => setForm({...form, name: e.target.value})} />
+                                    </div>
+                                    <div className="col-md-6">
+                                        <label className="form-label small">Descripción</label>
+                                        <input type="text" className="form-control form-control-sm"
+                                               value={form.description}
+                                               onChange={(e) => setForm({...form, description: e.target.value})} />
+                                    </div>
+                                    <div className="col-md-4">
+                                        <label className="form-label small">Match módulo</label>
+                                        <select className="form-select form-select-sm" value={form.matchModule}
+                                                onChange={(e) => setForm({...form, matchModule: e.target.value})}>
+                                            <option value="">(todos)</option>
+                                            {MODULE_OPTIONS.map(o => (
+                                                <option key={o.code} value={o.code}>{o.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="col-md-4">
+                                        <label className="form-label small">Match severidad</label>
+                                        <select className="form-select form-select-sm" value={form.matchSeverity}
+                                                onChange={(e) => setForm({...form, matchSeverity: e.target.value})}>
+                                            <option value="">(todas)</option>
+                                            {SEVERITY_OPTIONS.map(o => (
+                                                <option key={o.code} value={o.code}>{o.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="col-md-4">
+                                        <label className="form-label small">Días retención *</label>
+                                        <input type="number" min="1" className="form-control form-control-sm" required
+                                               value={form.retentionDays}
+                                               onChange={(e) => setForm({...form, retentionDays: e.target.value})} />
+                                    </div>
+                                    <div className="col-md-12">
+                                        <label className="form-label small">Norma legal de respaldo</label>
+                                        <input type="text" className="form-control form-control-sm"
+                                               placeholder="ej: Decreto 2649/1993 Art. 134"
+                                               value={form.legalBasis}
+                                               onChange={(e) => setForm({...form, legalBasis: e.target.value})} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-label-secondary btn-sm" onClick={cancel}>
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="btn btn-primary btn-sm">
+                                    {editingId ? 'Actualizar' : 'Crear política'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

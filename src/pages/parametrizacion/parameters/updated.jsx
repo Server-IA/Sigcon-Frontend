@@ -79,6 +79,24 @@ const UpdatedParameter = ({ modalRef, modalInstance, parameter, setParameter, da
                                 />
                             </div>
                         </div>
+                        {/* QA Nomina (2026-05-25) ERR-NOM-001: el modal de edicion NO tenia
+                            campo "Valor", asi que el admin no podia cambiar el valor de un
+                            parametro (ej. SMLV vigente sigcon.nomina.smlv) desde la UI. Sin
+                            este input, aunque el backend ya persiste el value, el usuario no
+                            tenia como editarlo. Lo agregamos. */}
+                        <div className="row">
+                            <div className="col mb-6 mt-2">
+                                <InputModal
+                                    type="text"
+                                    id="value_updated"
+                                    label="Valor"
+                                    placeholder="Ingrese el valor"
+                                    value={parameter.value ?? ''}
+                                    onChange={(e) => setParameter({ ...parameter, value: e.target.value })}
+                                    error={errors.value}
+                                />
+                            </div>
+                        </div>
                         <div className="row">
                             <div className="col mb-6 mt-2">
                                 <InputSelectModal

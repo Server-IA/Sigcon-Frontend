@@ -4,6 +4,7 @@ import DataTableReference from "../../../components/organism/DataTable";
 import GenericFilterModal from "../../../components/organism/GenericFilterModal";
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
+import { statusBadge } from "../../../utils/statusLabels";
 import CreateExchangeRate from "./create";
 import { useSelector } from "react-redux";
 import UpdateExchangeRate from "./update";
@@ -111,6 +112,7 @@ const ExchangeRateIndex = () => {
             title: 'Estado',
             data: 'status',
             name: 'status',
+            render: (val) => statusBadge(val),
         },
         {title: 'Acciones', width: '100px', data: 'id', render: (id) => `
             <div class="d-flex gap-1">

@@ -3,6 +3,7 @@ import DataTableReference from '../../../components/organism/DataTable';
 
 import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
+import { statusBadge } from '../../../utils/statusLabels';
 
 import CreateParameter from './create';
 import UpdatedParameter from './updated';
@@ -53,7 +54,7 @@ const IndexParameters = () => {
     const [columns, setColumns] = useState([
         { title: 'Id', data: 'id' },
         { title: 'Nombre', data: 'name', name: 'name' },
-        { title: 'Estado', data: 'status', name: 'status' },
+        { title: 'Estado', data: 'status', name: 'status', render: (val) => statusBadge(val) },
         { title: 'Categoría', data: 'category', name: 'category', render: (category, _, row) => category === 'COLOR' ? 'Color' : 'FUENTE' },
         {
             title: 'Acciones', data: 'id', render: (id) => {
@@ -131,6 +132,10 @@ const IndexParameters = () => {
                     setParameter({
                         id: parameterRef.id,
                         name: parameterRef.name == null ? '' : parameterRef.name,
+                        // QA Nomina (2026-05-25) ERR-NOM-001: faltaba copiar `value`
+                        // al estado de edicion, asi el nuevo campo "Valor" salia vacio
+                        // y no mostraba el valor actual (ej. SMLV 1423500).
+                        value: parameterRef.value == null ? '' : parameterRef.value,
                         description: parameterRef.description == null ? '' : parameterRef.description,
                         status: parameterRef.status,
                         category: parameterRef.category == null ? '' : parameterRef.category,

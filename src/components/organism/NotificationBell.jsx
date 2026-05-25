@@ -25,9 +25,16 @@ const NotificationBell = () => {
     const [loading, setLoading] = useState(false);
     const pollRef = useRef(null);
 
+    // QA Nomina (2026-05-25) ERR-NOM-007: el polling de notificaciones (cada 30s)
+    // y la carga del listado usaban el `time` por defecto (1), que dispara el
+    // SweetAlert de carga BLOQUEANTE de fetchHelper. Como la campanita es global
+    // (toda pagina la monta) y reconsulta cada 30s, el spinner "( )" reaparecia
+    // recurrentemente sobre cualquier pantalla (incl. todo el modulo de Nomina),
+    // bloqueando la interaccion. Las llamadas de fondo deben ser SILENCIOSAS
+    // (time=0): el dropdown ya tiene su propio "Cargando..." inline.
     const loadUnread = async () => {
         try {
-            const r = await fetchHelper.get(base_url(['api', 'parametrization', 'notifications', 'unread-count']));
+            const r = await fetchHelper.get(base_url(['api', 'parametrization', 'notifications', 'unread-count']), {}, 0);
             setUnread(r?.unreadCount ?? 0);
         } catch (_) { /* silencio: no-op si no hay sesion */ }
     };
@@ -35,7 +42,7 @@ const NotificationBell = () => {
     const loadList = async () => {
         setLoading(true);
         try {
-            const r = await fetchHelper.get(base_url(['api', 'parametrization', 'notifications', 'my']) + '?size=15');
+            const r = await fetchHelper.get(base_url(['api', 'parametrization', 'notifications', 'my']) + '?size=15', {}, 0);
             setItems(r?.data ?? []);
         } catch (_) {
             setItems([]);
@@ -88,7 +95,7 @@ const NotificationBell = () => {
     const onClickItem = async (n) => {
         try {
             const r = await fetchHelper.post(
-                base_url(['api', 'parametrization', 'notifications', String(n.id), 'click']), {}
+                base_url(['api', 'parametrization', 'notifications', String(n.id), 'click']), {}, {}, 0
             );
             // Marcar leida en UI antes de navegar
             setItems(prev => prev.map(it => it.id === n.id ? { ...it, read: true } : it));
@@ -111,7 +118,7 @@ const NotificationBell = () => {
     const markAllRead = async (e) => {
         e.stopPropagation();
         try {
-            await fetchHelper.patch(base_url(['api', 'parametrization', 'notifications', 'read-all']), {});
+            await fetchHelper.patch(base_url(['api', 'parametrization', 'notifications', 'read-all']), {}, {}, 0);
             setItems(prev => prev.map(it => ({ ...it, read: true })));
             setUnread(0);
         } catch (err) { console.error(err); }

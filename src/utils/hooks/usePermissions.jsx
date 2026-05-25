@@ -287,7 +287,13 @@ export function usePermissions() {
      */
     const refresh = useCallback(async () => {
         try {
-            const resp = await fetchHelper.get(base_url(['auth', 'me', 'effective-permissions']));
+            // QA Nomina (2026-05-25) ERR-NOM-007: este refresh lo dispara
+            // usePermissionAutoRefresh en CADA cambio de ruta, focus, visibility
+            // y cada 30s. Con el `time` por defecto (1) abria el SweetAlert de
+            // carga BLOQUEANTE de fetchHelper en cada navegacion -> spinner "( )"
+            // recurrente sobre toda la app (lo que QA vio en todo el modulo de
+            // Nomina). Es una sincronizacion de fondo: debe ser SILENCIOSA (time=0).
+            const resp = await fetchHelper.get(base_url(['auth', 'me', 'effective-permissions']), {}, 0);
             const list = resp?.data?.effectivePermissions || resp?.effectivePermissions || [];
             dispatch({ type: 'UPDATE_EFFECTIVE_PERMISSIONS', payload: list });
             return list;

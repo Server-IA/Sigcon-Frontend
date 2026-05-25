@@ -20,20 +20,22 @@ const NIVELES_AGRUPACION = [
     { id: 'periodo_anual', name: 'Por periodo (anual)' },
 ];
 
+// QA Activos (2026-05-25) Error 03: los valores deben coincidir con el enum
+// AssetType del backend (TANGIBLE/INTANGIBLE), no categorias inventadas que
+// nunca filtraban nada.
 const TIPOS_ACTIVO = [
-    { id: 'todos', name: '(Todos)' },
-    { id: 'maquinaria', name: 'Maquinaria' },
-    { id: 'equipo_computo', name: 'Equipo de cómputo' },
-    { id: 'vehiculos', name: 'Vehículos' },
-    { id: 'instalaciones', name: 'Instalaciones' },
-    { id: 'muebles', name: 'Muebles y enseres' },
+    { id: '', name: '(Todos)' },
+    { id: 'TANGIBLE', name: 'Tangible' },
+    { id: 'INTANGIBLE', name: 'Intangible' },
 ];
 
+// QA Activos (2026-05-25) Error 03: valores del enum AssetStatus del backend.
 const ESTADOS_ACTIVO = [
-    { id: 'todos', name: '(Todos)' },
-    { id: 'activo', name: 'Activo' },
-    { id: 'baja', name: 'Baja' },
-    { id: 'transferido', name: 'Transferido' },
+    { id: '', name: '(Todos)' },
+    { id: 'ACTIVE', name: 'Activo' },
+    { id: 'IN_REPAIR', name: 'En reparación' },
+    { id: 'DECOMMISSIONED', name: 'Dado de baja' },
+    { id: 'TRANSFERRED', name: 'Transferido' },
 ];
 
 // Regex YYYY-MM-DD
@@ -43,6 +45,17 @@ const isValidDateString = (str) => {
     if (!str || !REGEX_FECHA.test(str)) return false;
     const d = new Date(str);
     return !isNaN(d.getTime());
+};
+
+// Formatea un valor monetario para la previsualizacion.
+const fmtMoney = (v) => {
+    if (v == null || v === '') return '—';
+    const n = Number(v);
+    if (Number.isNaN(n)) return String(v);
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency', currency: 'COP',
+        minimumFractionDigits: 0, maximumFractionDigits: 2,
+    }).format(n);
 };
 
 const AssetReportGeneration = () => {
@@ -55,12 +68,12 @@ const AssetReportGeneration = () => {
         nivelAgrupacion: 'por_activo',
         periodoContableEstado: 'Abierto', // mock: Abierto | Cerrado
         simularVolumen: '200',
-        clasificacionContable: '1516',
-        tipoActivo: 'todos',
-        estado: 'todos',
-        proveedor: '900123456',
-        ubicacion: 'Bodega Central',
-        centroCosto: '1101 Ventas',
+        clasificacionContable: '',
+        tipoActivo: '',
+        estado: '',
+        proveedor: '',
+        ubicacion: '',
+        centroCosto: '',
     });
 
     const [errors, setErrors] = useState({});
@@ -134,10 +147,31 @@ const AssetReportGeneration = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handlePreview = () => {
+    // QA Activos (2026-05-25) Error 03: la previsualizacion ahora consulta el
+    // backend con los filtros reales y muestra los activos que de verdad
+    // coinciden. Antes pintaba una tabla MOCK fija (ACT-1001/ACT-1002) que
+    // ignoraba TODOS los filtros, confundiendo al usuario.
+    const handlePreview = async () => {
         if (!validate()) return;
         setErrorMessage('');
-        setShowPreview(true);
+        setIsGenerating(true);
+        try {
+            const response = await fetchHelper.post(
+                base_url(['api', 'v1', 'assets', 'reports', 'generate']),
+                buildPayload(), {}, 0
+            );
+            const rows = flattenRows(response);
+            setReportData(rows);
+            setShowPreview(true);
+            if (rows.length === 0) {
+                setErrorMessage('No hay activos registrados con los criterios seleccionados');
+            }
+        } catch (error) {
+            console.error(error);
+            setErrorMessage(error?.msg || error?.message || 'Error al previsualizar el informe.');
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     // HU-ACT-04: traduce nivelAgrupacion del form al parametro `groupBy` que
@@ -151,6 +185,31 @@ const AssetReportGeneration = () => {
             case 'por_activo':
             default:                   return 'asset';
         }
+    };
+
+    // QA Activos (2026-05-25) Error 03: construye el payload con TODOS los
+    // filtros que el backend soporta. Antes solo se enviaba fecha + groupBy y
+    // el resto se descartaba (proveedor, clasificacion, estado, tipo).
+    const buildPayload = () => {
+        const payload = {
+            startDate: formData.fechaInicio,
+            endDate:   formData.fechaFin,
+            groupBy:   mapGroupBy(formData.nivelAgrupacion),
+        };
+        if (formData.proveedor) payload.supplierId = Number(formData.proveedor);
+        if (formData.clasificacionContable && formData.clasificacionContable.trim())
+            payload.classificationCode = formData.clasificacionContable.trim();
+        if (formData.estado) payload.status = formData.estado;
+        if (formData.tipoActivo) payload.assetType = formData.tipoActivo;
+        return payload;
+    };
+
+    // Normaliza la respuesta del backend (mapa agrupado o lista) a un array plano.
+    const flattenRows = (response) => {
+        const data = response?.data ?? response ?? [];
+        return Array.isArray(data)
+            ? data
+            : (data && typeof data === 'object' ? Object.values(data).flat() : []);
     };
 
     /**
@@ -236,11 +295,8 @@ const AssetReportGeneration = () => {
         setIsGenerating(true);
         setErrorMessage('');
 
-        const payload = {
-            startDate: formData.fechaInicio,
-            endDate:   formData.fechaFin,
-            groupBy:   mapGroupBy(formData.nivelAgrupacion),
-        };
+        // QA Activos (2026-05-25) Error 03: el payload incluye TODOS los filtros.
+        const payload = buildPayload();
 
         try {
             // HU-ACT-04 E3: SIEMPRE consultar primero el JSON para validar
@@ -250,11 +306,7 @@ const AssetReportGeneration = () => {
                 base_url(['api', 'v1', 'assets', 'reports', 'generate']),
                 payload, {}, 0
             );
-            const data = response?.data ?? response ?? [];
-            const rows = Array.isArray(data) ? data
-                : (data && typeof data === 'object'
-                    ? Object.values(data).flat()
-                    : []);
+            const rows = flattenRows(response);
 
             if (rows.length === 0) {
                 // HU-ACT-04 E3: mensaje EXACTO de la HU.
@@ -317,8 +369,8 @@ const AssetReportGeneration = () => {
             periodoContableEstado: 'Abierto',
             simularVolumen: '200',
             clasificacionContable: '',
-            tipoActivo: 'todos',
-            estado: 'todos',
+            tipoActivo: '',
+            estado: '',
             proveedor: '',
             ubicacion: '',
             centroCosto: '',
@@ -327,6 +379,7 @@ const AssetReportGeneration = () => {
         setReportGenerated(false);
         setShowPreview(false);
         setErrorMessage('');
+        setReportData([]);
     };
 
     const handleBack = () => navigate(-1);
@@ -509,6 +562,17 @@ const AssetReportGeneration = () => {
                             />
                         </div>
 
+                        {/* QA Activos (2026-05-25) Error 03: el activo no almacena
+                            ubicacion ni centro de costo, por eso son informativos
+                            y no se aplican como filtro. Los filtros que SI aplican
+                            son: proveedor, clasificacion contable, estado y tipo. */}
+                        <small className="text-muted d-block mb-2">
+                            <i className="ri-information-line me-1"></i>
+                            Ubicación y centro de costo son informativos: el activo no almacena estos
+                            datos, por lo que no se aplican como filtro. Los filtros aplicados son
+                            proveedor, clasificación contable, estado y tipo.
+                        </small>
+
                         <div className="d-flex gap-2 mt-3">
                             <button type="button" className="btn btn-outline-primary" onClick={handlePreview}>
                                 Previsualizar
@@ -534,64 +598,55 @@ const AssetReportGeneration = () => {
 
                 {(showPreview || reportGenerated) && (
                     <div className="card border">
-                        <div className="card-header">
+                        <div className="card-header d-flex justify-content-between align-items-center">
                             <h6 className="mb-0 fw-bold">Previsualización</h6>
+                            <span className="badge bg-label-primary">
+                                {reportData.length} activo(s)
+                            </span>
                         </div>
                         <div className="card-body overflow-auto">
-                            <table className="table table-bordered table-sm">
-                                <thead className="table-light">
-                                    <tr>
-                                        <th>AssetID</th>
-                                        <th>Código clasificación</th>
-                                        <th>Descripción</th>
-                                        <th>Fecha adquisición</th>
-                                        <th>Valor adquisición</th>
-                                        <th>Deprec. acumulada</th>
-                                        <th>Valor neto</th>
-                                        <th>Movimiento (fecha)</th>
-                                        <th>Tipo mov.</th>
-                                        <th>Cuenta contable</th>
-                                        <th>Monto mov.</th>
-                                        <th>Proveedor</th>
-                                        <th>Ubicación</th>
-                                        <th>Comentarios/docs</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>ACT-1001</td>
-                                        <td>1516</td>
-                                        <td>Equipo de computo</td>
-                                        <td>2025-10-11</td>
-                                        <td>$2&apos;000.000</td>
-                                        <td>$0,00</td>
-                                        <td>$2&apos;000.000</td>
-                                        <td>2025-10-15</td>
-                                        <td>venta</td>
-                                        <td>151605</td>
-                                        <td>$450.000</td>
-                                        <td>9001101 - ABC PROVEEDOR</td>
-                                        <td>SEDE NORTE</td>
-                                        <td>factura.pdf</td>
-                                    </tr>
-                                    <tr>
-                                        <td>ACT-1002</td>
-                                        <td>1516</td>
-                                        <td>Mueble de oficina</td>
-                                        <td>2025-09-01</td>
-                                        <td>$1&apos;500.000</td>
-                                        <td>$125.000</td>
-                                        <td>$1&apos;375.000</td>
-                                        <td>2025-10-20</td>
-                                        <td>depreciacion</td>
-                                        <td>159210</td>
-                                        <td>-$125.000</td>
-                                        <td>9001234 - MUEBLES SA</td>
-                                        <td>BODEGA CENTRAL</td>
-                                        <td>—</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            {/* QA Activos (2026-05-25) Error 03: datos REALES del
+                                backend aplicando los filtros, no una tabla mock fija. */}
+                            {reportData.length === 0 ? (
+                                <p className="text-muted mb-0">
+                                    No hay activos registrados con los criterios seleccionados.
+                                </p>
+                            ) : (
+                                <table className="table table-bordered table-sm">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Nombre</th>
+                                            <th>Descripción</th>
+                                            <th>Clasificación</th>
+                                            <th>Cuenta contable</th>
+                                            <th>Fecha adquisición</th>
+                                            <th className="text-end">Valor adquisición</th>
+                                            <th className="text-end">Valor libros</th>
+                                            <th className="text-end">Depreciación</th>
+                                            <th>Estado</th>
+                                            <th>Proveedor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {reportData.map((r, i) => (
+                                            <tr key={r.assetCode || i}>
+                                                <td>{r.assetCode ?? '—'}</td>
+                                                <td>{r.assetName ?? '—'}</td>
+                                                <td>{r.description ?? '—'}</td>
+                                                <td>{r.classification ?? '—'}</td>
+                                                <td>{r.accountInfo ?? '—'}</td>
+                                                <td>{r.acquisitionDate ?? '—'}</td>
+                                                <td className="text-end">{fmtMoney(r.acquisitionValue)}</td>
+                                                <td className="text-end">{fmtMoney(r.currentBookValue)}</td>
+                                                <td className="text-end">{fmtMoney(r.depreciation)}</td>
+                                                <td>{r.status ?? '—'}</td>
+                                                <td>{r.supplierName ?? '—'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </div>
                 )}

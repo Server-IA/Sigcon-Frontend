@@ -214,6 +214,13 @@ const CreateAssets = (
     if (!assets.depreciationRuleId) clientErrors.depreciationRuleId = "La regla de depreciacion es obligatoria.";
     if (assets.usefulLifeMonths === undefined || assets.usefulLifeMonths === null || assets.usefulLifeMonths === '' || Number(assets.usefulLifeMonths) <= 0) {
       clientErrors.usefulLifeMonths = "La vida util es obligatoria y debe ser mayor a 0 meses.";
+    } else if (!Number.isInteger(Number(assets.usefulLifeMonths))) {
+      // QA Activos (2026-05-25) Error 01: la vida util es en meses enteros.
+      clientErrors.usefulLifeMonths = "La vida util debe ser un numero entero de meses.";
+    } else if (Number(assets.usefulLifeMonths) > 1200) {
+      // QA Activos (2026-05-25) Error 01: tope razonable (100 años). Evita el
+      // error tecnico de overflow al deserializar valores absurdos (ej. 1e+26).
+      clientErrors.usefulLifeMonths = "La vida util no puede superar 1200 meses (100 años).";
     }
     if (!assets.acquisitionValue || Number(assets.acquisitionValue) <= 0) clientErrors.acquisitionValue = "El valor de adquisicion debe ser mayor que cero.";
     // HU-ACT-01 E9: si CONTADO, el origen de pago (caja/banco/cheque) es obligatorio
@@ -787,6 +794,8 @@ const CreateAssets = (
               }}
               error={errors.usefulLifeMonths}
               min="1"
+              max="1200"
+              step="1"
               required
             />
           </div>

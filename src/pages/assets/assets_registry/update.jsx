@@ -263,12 +263,17 @@ const UpdateAssets = ({
                   id="usefulLifeMonths_update"
                   label="Vida útil (meses)"
                   value={assets.usefulLifeMonths}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    // QA Activos (2026-05-25) Error 01: limitar a 1 - 1200 meses.
+                    const n = Number(e.target.value);
                     setAssets({
                       ...assets,
-                      usefulLifeMonths: Number(e.target.value),
-                    })
-                  }
+                      usefulLifeMonths: e.target.value === '' ? '' : (n > 1200 ? 1200 : n),
+                    });
+                  }}
+                  min="1"
+                  max="1200"
+                  step="1"
                   required
                 />
               </div>

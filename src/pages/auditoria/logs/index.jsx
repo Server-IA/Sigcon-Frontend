@@ -4,6 +4,8 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
 import LogDetail from './detail';
+import { actionLabel, severityLabel, moduleLabel, entityLabel,
+         ACTION_OPTIONS } from '../../../utils/auditLabels';
 
 /**
  * HU-AU-05: Pagina principal de logs de auditoria con busqueda avanzada.
@@ -166,7 +168,7 @@ const IndexAuditLogs = () => {
     const severityBadge = (s) => {
         const map = { LOW: 'bg-label-success', MEDIUM: 'bg-label-info',
                       HIGH: 'bg-label-warning', CRITICAL: 'bg-label-danger' };
-        return <span className={`badge ${map[s] || 'bg-label-secondary'}`}>{s}</span>;
+        return <span className={`badge ${map[s] || 'bg-label-secondary'}`}>{severityLabel(s)}</span>;
     };
 
     const actionBadge = (a) => {
@@ -174,7 +176,7 @@ const IndexAuditLogs = () => {
                       DELETE: 'bg-label-danger', LOGIN: 'bg-label-secondary',
                       LOGOUT: 'bg-label-secondary', EXPORT: 'bg-label-primary',
                       VIEW: 'bg-label-secondary' };
-        return <span className={`badge ${map[a] || 'bg-label-secondary'}`}>{a}</span>;
+        return <span className={`badge ${map[a] || 'bg-label-secondary'}`}>{actionLabel(a)}</span>;
     };
 
     return (
@@ -240,7 +242,7 @@ const IndexAuditLogs = () => {
                                         ? 'btn-primary' : 'btn-outline-secondary'}`}
                                     onClick={() => setFilters({...filters,
                                         severities: toggleArrayValue(filters.severities, s)})}>
-                                {s}
+                                {severityLabel(s)}
                             </button>
                         ))}
                     </div>
@@ -252,13 +254,9 @@ const IndexAuditLogs = () => {
                         <select className="form-select" value={filters.action}
                                 onChange={(e) => setFilters({ ...filters, action: e.target.value })}>
                             <option value="">Todas</option>
-                            <option value="CREATE">CREATE</option>
-                            <option value="UPDATE">UPDATE</option>
-                            <option value="DELETE">DELETE</option>
-                            <option value="LOGIN">LOGIN</option>
-                            <option value="LOGOUT">LOGOUT</option>
-                            <option value="EXPORT">EXPORT</option>
-                            <option value="VIEW">VIEW</option>
+                            {ACTION_OPTIONS.map(o => (
+                                <option key={o.code} value={o.code}>{o.label}</option>
+                            ))}
                         </select>
                     </div>
                     {/* HU-AU-05 E1: filtro por usuario (email parcial) */}
@@ -344,8 +342,8 @@ const IndexAuditLogs = () => {
                                     <td><small>{l.timestamp?.replace('T', ' ').substring(0, 19)}</small></td>
                                     <td><small>{l.userEmail}</small></td>
                                     <td>{actionBadge(l.action)}</td>
-                                    <td><small>{l.entityType} {l.entityId && `#${l.entityId}`}</small></td>
-                                    <td><span className="badge bg-label-secondary">{l.module}</span></td>
+                                    <td><small>{entityLabel(l.entityType)} {l.entityId && `#${l.entityId}`}</small></td>
+                                    <td><span className="badge bg-label-secondary">{moduleLabel(l.module)}</span></td>
                                     <td>{severityBadge(l.severity)}</td>
                                     <td><small className="text-muted">{l.ipAddress}</small></td>
                                     <td><small>{l.description}</small></td>

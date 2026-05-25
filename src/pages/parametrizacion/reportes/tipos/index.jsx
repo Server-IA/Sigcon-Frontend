@@ -4,6 +4,7 @@ import DataTableReference from "../../../../components/organism/DataTable";
 
 import { fetchHelper } from "../../../../utils/fetch";
 import { base_url } from "../../../../utils/functions";
+import { statusBadge } from "../../../../utils/statusLabels";
 
 import CreateReportType from "./create";
 import UpdatedReportType from "./updated";
@@ -65,7 +66,7 @@ const IndexReportTypes = () => {
     { title: "Id", data: "id" },
     { title: "Nombre", data: "name", name: "name" },
     { title: "Descripcion", data: "description" },
-    { title: "Estado", data: "status", name: "status" },
+    { title: "Estado", data: "status", name: "status", render: (val) => statusBadge(val) },
     {
       title: "Acciones",
       data: "id",

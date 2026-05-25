@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DataTableReference from '../../components/organism/DataTable';
+import { statusBadge } from '../../utils/statusLabels';
 import { useSelector } from 'react-redux';
 
 const IndexInvoices = () => {
@@ -29,7 +30,7 @@ const IndexInvoices = () => {
         { data: 'client', title: 'Tercero' },
         { data: 'amount', title: 'Monto' },
         { data: 'balance', title: 'Saldo' },
-        { data: 'status', title: 'Estado' },
+        { data: 'status', title: 'Estado', render: (val) => statusBadge(val) },
         { data: 'action', title: 'Acción' },
     ]);
 

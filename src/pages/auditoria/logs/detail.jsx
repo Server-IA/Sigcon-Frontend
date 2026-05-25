@@ -1,3 +1,5 @@
+import { actionLabel, severityLabel, moduleLabel, entityLabel } from '../../../utils/auditLabels';
+
 /**
  * HU-AU-08 / HU-AU-09: Modal de detalle de evento de auditoría.
  * Muestra metadatos completos + valores antes/después + cadena de hash + link a JE.
@@ -8,7 +10,7 @@ const LogDetail = ({ modalRef, modalInstance, log }) => {
             LOW: 'bg-label-success', MEDIUM: 'bg-label-info',
             HIGH: 'bg-label-warning', CRITICAL: 'bg-label-danger'
         };
-        return <span className={`badge ${map[s] || 'bg-label-secondary'}`}>{s}</span>;
+        return <span className={`badge ${map[s] || 'bg-label-secondary'}`}>{severityLabel(s)}</span>;
     };
 
     return (
@@ -31,13 +33,13 @@ const LogDetail = ({ modalRef, modalInstance, log }) => {
                                         <h6 className="text-uppercase text-muted small">General</h6>
                                         <div><strong>Fecha:</strong> {log.timestamp?.replace('T', ' ').substring(0, 19)}</div>
                                         <div><strong>Usuario:</strong> {log.userEmail} (ID {log.userId || '-'})</div>
-                                        <div><strong>Acción:</strong> <span className="badge bg-label-primary">{log.action}</span></div>
-                                        <div><strong>Módulo:</strong> {log.module}</div>
+                                        <div><strong>Acción:</strong> <span className="badge bg-label-primary">{actionLabel(log.action)}</span></div>
+                                        <div><strong>Módulo:</strong> {moduleLabel(log.module)}</div>
                                         <div><strong>Severidad:</strong> {severityBadge(log.severity)}</div>
                                     </div>
                                     <div className="col-md-6">
                                         <h6 className="text-uppercase text-muted small">Entidad afectada</h6>
-                                        <div><strong>Tipo:</strong> {log.entityType || '-'}</div>
+                                        <div><strong>Tipo:</strong> {entityLabel(log.entityType) || '-'}</div>
                                         <div><strong>ID:</strong> {log.entityId || '-'}</div>
                                         {log.journalEntryId && (
                                             <div><strong>Asiento contable:</strong>

@@ -3,6 +3,7 @@ import DataTableReference from "../../../components/organism/DataTable";
 
 import { fetchHelper } from "../../../utils/fetch";
 import { base_url } from "../../../utils/functions";
+import { statusBadge } from "../../../utils/statusLabels";
 
 import CreateModule from "./create";
 import UpdatedModule from "./updated";
@@ -70,7 +71,7 @@ const IndexModules = () => {
       render: (icon) => `<i class="${icon}"></i>`,
     },
     { title: "Descripción", data: "description" },
-    { title: "Estado", data: "status", name: "status" },
+    { title: "Estado", data: "status", name: "status", render: (val) => statusBadge(val) },
     {
       title: "Acciones",
       data: "id",
