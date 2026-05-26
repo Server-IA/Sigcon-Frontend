@@ -39,9 +39,16 @@ const IndexRecibos = () => {
         showModal: false,
         isComplementary: false,
         complementaryParentId: null,
+        complementaryEmployeeId: null,
+        extraConcept: '',
+        extraAmount: '',
     });
     // HU-NOM-03 DEF#2 (2026-04-28): editar/eliminar lineas en DRAFT
     const [lineEdit, setLineEdit] = useState(null);
+    // ERR-NOM-002 Defecto B (2026-05-25): conceptos EARNING para el valor
+    // monetario adicional opcional de la complementaria (bono/ajuste no
+    // proporcional a dias trabajados).
+    const [earningConcepts, setEarningConcepts] = useState([]);
 
     const PERIOD_LABELS = {
         MONTHLY: 'Mensual (30 días)',
@@ -70,10 +77,19 @@ const IndexRecibos = () => {
 
     useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
+    // ERR-NOM-002 Defecto B: cargar conceptos EARNING (devengados) activos para
+    // el dropdown del valor adicional de la complementaria.
+    useEffect(() => {
+        fetchHelper.get(base_url(['api', 'nomina', 'conceptos'], { type: 'EARNING', status: 'ACTIVE' }), {}, 0)
+            .then(d => setEarningConcepts(Array.isArray(d) ? d : []))
+            .catch(() => {});
+    }, []);
+
     const openLiquidateModal = () => {
         setLiqForm({
             periodType: 'MONTHLY', daysWorked: 30,
             showModal: true, isComplementary: false, complementaryParentId: null,
+            complementaryEmployeeId: null, extraConcept: '', extraAmount: '',
         });
     };
 
@@ -85,6 +101,9 @@ const IndexRecibos = () => {
             showModal: true,
             isComplementary: true,
             complementaryParentId: parent.id,
+            complementaryEmployeeId: parent.employeeId,
+            extraConcept: '',
+            extraAmount: '',
             complementaryParentInfo: `${parent.employeeName} - ${parent.periodYear}-${String(parent.periodMonth).padStart(2,'0')}`,
         });
     };
@@ -103,6 +122,18 @@ const IndexRecibos = () => {
             };
             if (liqForm.isComplementary && liqForm.complementaryParentId) {
                 body.complementaryOfReceiptId = liqForm.complementaryParentId;
+            }
+            // ERR-NOM-002 Defecto B: valor monetario adicional opcional (bono/ajuste
+            // no proporcional a dias). Se envia como linea EARNING extra del empleado
+            // del recibo padre. El backend (PayrollService.liquidateEmployee) ya
+            // soporta `extras` y solo las agrega si el concepto es de tipo EARNING.
+            if (liqForm.isComplementary && liqForm.complementaryEmployeeId
+                    && liqForm.extraAmount !== '' && Number(liqForm.extraAmount) > 0) {
+                body.extras = [{
+                    employeeId: liqForm.complementaryEmployeeId,
+                    conceptCode: (liqForm.extraConcept || 'BONIFICACION').toUpperCase().trim(),
+                    amount: Number(liqForm.extraAmount),
+                }];
             }
             const resp = await fetchHelper.post(
                     base_url(['api', 'nomina', 'recibos', 'liquidar']), body, {}, 0);
@@ -282,6 +313,39 @@ const IndexRecibos = () => {
                         </div>
                     )}
 
+                    {/* ERR-NOM-002 Defecto C: tras liquidar/crear complementaria, navegar
+                        directamente al recibo nuevo y al recibo original cerrado, sin
+                        tener que buscarlos manualmente en el listado. */}
+                    {liqResult?.receipts?.length > 0 && (() => {
+                        const parentId = liqResult.receipts.map(r => r.complementaryOfReceiptId).find(Boolean);
+                        return (
+                            <div className="alert alert-success">
+                                <div className="mb-2">
+                                    <i className="ri-checkbox-circle-line me-1"></i>
+                                    {parentId
+                                        ? 'Nómina complementaria creada. Consulte el nuevo recibo o el original cerrado:'
+                                        : `Liquidación creada (${liqResult.receipts.length} recibo(s)). Consulte el detalle:`}
+                                </div>
+                                <div className="d-flex flex-wrap gap-2">
+                                    {liqResult.receipts.map(r => (
+                                        <button key={r.id} type="button" className="btn btn-sm btn-label-primary"
+                                                onClick={() => openDetail({ id: r.id })}>
+                                            <i className="ri-eye-line me-1"></i>
+                                            Recibo #{r.id}{r.employeeName ? ` · ${r.employeeName}` : ''}
+                                        </button>
+                                    ))}
+                                    {parentId && (
+                                        <button type="button" className="btn btn-sm btn-label-secondary"
+                                                onClick={() => openDetail({ id: parentId })}>
+                                            <i className="ri-file-history-line me-1"></i>
+                                            Recibo original #{parentId}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     <div className="table-responsive">
                         <table className="table table-hover">
                             <thead>
@@ -417,6 +481,42 @@ const IndexRecibos = () => {
                                                 onChange={e => setLiqForm({ ...liqForm, daysWorked: e.target.value })} />
                                     </div>
                                 </div>
+
+                                {/* ERR-NOM-002 Defecto B: valor monetario adicional para la
+                                    complementaria (bonos/ajustes no proporcionales a días). */}
+                                {liqForm.isComplementary && (
+                                    <div className="row g-3 mt-1">
+                                        <div className="col-12">
+                                            <hr className="my-1" />
+                                            <label className="form-label mb-1 fw-semibold">
+                                                Valor monetario adicional <span className="text-muted fw-normal">(opcional)</span>
+                                            </label>
+                                            <div className="alert alert-light border py-2 small mb-2">
+                                                <i className="ri-information-line me-1"></i>
+                                                Para bonos, ajustes o correcciones que <b>no</b> son proporcionales a
+                                                días, indique un concepto devengado y su valor. Se agrega como línea
+                                                adicional del recibo complementario.
+                                            </div>
+                                        </div>
+                                        <div className="col-md-7">
+                                            <label className="form-label">Concepto (devengado)</label>
+                                            <select className="form-select" value={liqForm.extraConcept}
+                                                    onChange={e => setLiqForm({ ...liqForm, extraConcept: e.target.value })}>
+                                                <option value="">— Bonificación (genérico) —</option>
+                                                {earningConcepts.map(c => (
+                                                    <option key={c.id} value={c.code}>{c.code} — {c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="col-md-5">
+                                            <label className="form-label">Valor (COP)</label>
+                                            <input type="number" min="0" step="1000" className="form-control"
+                                                    placeholder="Ej. 200000"
+                                                    value={liqForm.extraAmount}
+                                                    onChange={e => setLiqForm({ ...liqForm, extraAmount: e.target.value })} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-label-secondary"

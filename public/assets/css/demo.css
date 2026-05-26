@@ -139,3 +139,18 @@
   color: var(--config-primary);
   line-height: 1;
 }
+
+/* QA Nomina (2026-05-25) ERR-NOM-002 Defecto A: "borde blanco" en los modales.
+   Los modales hand-rolled del modulo (Nomina, y el mismo patron en CG/BNK) se
+   renderizan con `.modal.show.fade.d-block` + backdrop por estilo inline, en vez
+   de instanciar el modal de Bootstrap. Como NO agregan `.modal-open` al body, la
+   barra de scroll del body queda visible: el `.modal` (right:0) no cubre los ~15px
+   del scrollbar y por ahi asoma el fondo claro del body (rgb 247,247,249), que se
+   percibe como un borde/franja blanca en el contorno del modal. Al bloquear el
+   scroll del body mientras hay un modal custom abierto, el backdrop oscuro cubre
+   todo el viewport y la franja desaparece. Nota: los modales nativos de Bootstrap
+   reciben `display:block` por estilo inline (no la clase `.d-block`), por lo que
+   este selector NO los afecta (ellos ya bloquean el scroll via `.modal-open`). */
+body:has(.modal.d-block) {
+  overflow: hidden !important;
+}

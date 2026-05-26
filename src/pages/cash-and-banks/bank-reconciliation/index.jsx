@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 import AlertPage from '@/components/molecules/AlertPage';
 import { base_url, formatPrice } from '@/utils/functions';
@@ -82,6 +83,15 @@ const BankReconciliation = () => {
     const { bankAccountId } = useParams();
     const id = Number(bankAccountId);
     const navigate = useNavigate();
+    // QA Conciliación (2026-05-25) Bug 3: datos del usuario logueado para el formulario
+    // de firma (nombre completo + cargo/rol, mostrados como solo lectura).
+    const currentUser = useSelector((state) => state.user.user);
+    const currentUserName = `${currentUser?.name ?? ''} ${currentUser?.last_name ?? currentUser?.lastname ?? ''}`.trim() || (currentUser?.username ?? '—');
+    const currentUserRole = (() => {
+        const roles = currentUser?.roles;
+        if (!Array.isArray(roles) || !roles.length) return currentUser?.platformRole || 'Responsable';
+        return roles.map((r) => (typeof r === 'string' ? r : (r?.name || r?.nombre || ''))).filter(Boolean).join(', ') || 'Responsable';
+    })();
 
     const tableRef = useRef(null);
     const dataTableRef = useRef(null);
@@ -203,26 +213,29 @@ const BankReconciliation = () => {
         }
     }, []);
 
-    // F3: emparejamientos de la cuenta (Paso 5) + workspace de movimientos libres (Paso 6).
-    const loadEmparejamientos = useCallback(async () => {
-        if (!id || Number.isNaN(id)) return;
+    // QA Conciliación (2026-05-25) Bug 1/4: emparejamientos (Paso 5) y workspace de
+    // movimientos libres (Paso 6) ACOTADOS a la sesión seleccionada. Antes consultaban
+    // por cuenta (bankAccountId), por lo que al cambiar de sesión seguían mostrando los
+    // datos de la sesión anterior / del ámbito global de la cuenta.
+    const loadEmparejamientos = useCallback(async (sid) => {
+        if (!sid) { setEmparejamientos([]); return; }
         try {
             const res = await fetchHelper.get(
-                base_url(['api', 'v1', 'banks', 'emparejamientos', 'cuenta', id]), {}, 1, false, true);
+                base_url(['api', 'v1', 'banks', 'emparejamientos', 'sesion', sid]), {}, 1, false, true);
             setEmparejamientos(Array.isArray(res) ? res : (res?.data ?? []));
         } catch (e) { setEmparejamientos([]); }
-    }, [id]);
+    }, []);
 
-    const loadWorkspace = useCallback(async () => {
-        if (!id || Number.isNaN(id)) return;
+    const loadWorkspace = useCallback(async (sid) => {
+        if (!sid) { setWsExtracto([]); setWsLibros([]); return; }
         try {
             const res = await fetchHelper.get(
-                base_url(['api', 'v1', 'banks', 'emparejamientos', 'workspace', id]), {}, 1, false, true);
+                base_url(['api', 'v1', 'banks', 'emparejamientos', 'workspace-sesion', sid]), {}, 1, false, true);
             const w = res?.data ?? res ?? {};
             setWsExtracto(Array.isArray(w.extracto) ? w.extracto : []);
             setWsLibros(Array.isArray(w.libros) ? w.libros : []);
         } catch (e) { setWsExtracto([]); setWsLibros([]); }
-    }, [id]);
+    }, []);
 
     // F4: definidos ANTES de los effects que los referencian en sus deps (evita TDZ).
     const sUrl = (...p) => base_url(['api', 'v1', 'banks', 'sesiones-conciliacion', ...p]);
@@ -257,11 +270,17 @@ const BankReconciliation = () => {
     }, [id, unmatchedOnly]);
 
     useEffect(() => {
+        // QA Conciliación (2026-05-25) Bug 1/4: al cambiar de sesión, limpiar de
+        // inmediato el estado de la sesión previa (emparejamientos, workspace y
+        // selecciones manuales) ANTES de cargar la nueva, para que no quede ningún
+        // residuo visible durante la carga asíncrona.
+        setEmparejamientos([]); setWsExtracto([]); setWsLibros([]);
+        setSelExt([]); setSelLib([]); setManualMotivo('');
         if (selectedSessionId) {
             loadLibros(selectedSessionId); loadExtracto(selectedSessionId);
-            loadEmparejamientos(); loadWorkspace(); loadCierre(selectedSessionId);
+            loadEmparejamientos(selectedSessionId); loadWorkspace(selectedSessionId); loadCierre(selectedSessionId);
         } else {
-            setLibros([]); setExtracto([]); setEmparejamientos([]); setWsExtracto([]); setWsLibros([]); setCierre(null);
+            setLibros([]); setExtracto([]); setCierre(null);
         }
     }, [selectedSessionId, loadLibros, loadExtracto, loadEmparejamientos, loadWorkspace, loadCierre]);
 
@@ -278,7 +297,7 @@ const BankReconciliation = () => {
     // Recarga conjunta tras una acción de matching/emparejamiento.
     const reloadConciliacion = useCallback(() => {
         if (!selectedSessionId) return;
-        loadEmparejamientos(); loadWorkspace();
+        loadEmparejamientos(selectedSessionId); loadWorkspace(selectedSessionId);
         loadLibros(selectedSessionId); loadExtracto(selectedSessionId);
         refreshMovements();
     }, [selectedSessionId, loadEmparejamientos, loadWorkspace, loadLibros, loadExtracto, refreshMovements]);
@@ -292,18 +311,44 @@ const BankReconciliation = () => {
             setSessions(Array.isArray(res) ? res : (res?.data ?? []));
         } catch { /* ignore */ }
         await loadCierre(selectedSessionId);
-        loadEmparejamientos(); loadWorkspace();
+        loadEmparejamientos(selectedSessionId); loadWorkspace(selectedSessionId);
         loadLibros(selectedSessionId); loadExtracto(selectedSessionId);
     }, [id, selectedSessionId, loadCierre, loadEmparejamientos, loadWorkspace, loadLibros, loadExtracto]);
 
     // HU-066 E2/E3: firma en 2 pasos (OTP stand-in) — reusa el flujo del módulo de firma.
+    // QA Conciliación (2026-05-25) Bug 3: el formulario incluye nombre completo + cargo/rol
+    // (solo lectura, auto-llenados del usuario logueado), fecha/hora (auto, solo lectura),
+    // documento + tarjeta profesional, y una confirmación explícita de aprobación obligatoria.
     const firmarSesion = async (sid, rol) => {
+        const rolLabel = rol === 'REVISOR' ? 'revisor' : (rol === 'ELABORADOR' ? 'elaborador' : 'responsable');
+        const ahora = new Date().toLocaleString('es-CO');
+        const esc = (s) => String(s ?? '').replace(/"/g, '&quot;');
         const { value: datos } = await window.Swal.fire({
-            title: `Firmar como ${rol === 'REVISOR' ? 'revisor' : 'elaborador'} — sesión #${sid}`,
-            html: `<input id="sw-doc" class="swal2-input" placeholder="Documento de identidad">`
-                + `<input id="sw-tp" class="swal2-input" placeholder="Tarjeta profesional (T.P.)">`,
+            title: `Firmar como ${rolLabel} — sesión #${sid}`,
+            html:
+                `<div class="text-start">`
+                + `<label class="form-label mb-1 small fw-semibold">Nombre completo del responsable</label>`
+                + `<input class="swal2-input mt-0" value="${esc(currentUserName)}" readonly>`
+                + `<label class="form-label mb-1 mt-2 small fw-semibold">Cargo o rol</label>`
+                + `<input class="swal2-input mt-0" value="${esc(currentUserRole)}" readonly>`
+                + `<label class="form-label mb-1 mt-2 small fw-semibold">Fecha y hora de la firma</label>`
+                + `<input class="swal2-input mt-0" value="${esc(ahora)}" readonly>`
+                + `<label class="form-label mb-1 mt-2 small fw-semibold">Documento de identidad</label>`
+                + `<input id="sw-doc" class="swal2-input mt-0" placeholder="Documento de identidad">`
+                + `<label class="form-label mb-1 mt-2 small fw-semibold">Tarjeta profesional (T.P.)</label>`
+                + `<input id="sw-tp" class="swal2-input mt-0" placeholder="Tarjeta profesional (T.P.)">`
+                + `<div class="form-check mt-3 ms-1"><input type="checkbox" id="sw-confirm" class="form-check-input">`
+                + `<label class="form-check-label small" for="sw-confirm">Confirmo la aprobación de esta conciliación bancaria.</label></div>`
+                + `</div>`,
             focusConfirm: false, showCancelButton: true, confirmButtonText: 'Solicitar código', cancelButtonText: 'Cancelar',
-            preConfirm: () => ({ documento: document.getElementById('sw-doc').value, tarjetaProfesional: document.getElementById('sw-tp').value }),
+            preConfirm: () => {
+                const documento = document.getElementById('sw-doc').value;
+                const tarjetaProfesional = document.getElementById('sw-tp').value;
+                const confirmado = document.getElementById('sw-confirm').checked;
+                if (!documento || !documento.trim()) { window.Swal.showValidationMessage('Ingrese el documento de identidad'); return false; }
+                if (!confirmado) { window.Swal.showValidationMessage('Debe marcar la confirmación de aprobación'); return false; }
+                return { documento, tarjetaProfesional };
+            },
         });
         if (!datos) return;
         let res;
@@ -504,10 +549,22 @@ const BankReconciliation = () => {
     const submitMatch = async (selectedId, type = 'voucher') => {
         const targetId = selectedId || matchModal.voucherId;
         if (!targetId) { notify('Indique un comprobante válido', 'warning'); return; }
+        // QA Conciliación (2026-05-25) Bug 7: pedir motivo obligatorio (>=10 caracteres)
+        // ANTES de emparejar con un comprobante/asiento, igual que en el emparejamiento
+        // manual del Paso 6. El motivo se envía al backend y queda en auditoría.
+        const { value: motivo } = await window.Swal.fire({
+            title: 'Motivo del emparejamiento',
+            input: 'textarea',
+            inputLabel: 'Explique por qué este movimiento corresponde a este comprobante/asiento (mínimo 10 caracteres)',
+            inputPlaceholder: 'Motivo de la conciliación…',
+            showCancelButton: true, confirmButtonText: 'Emparejar', cancelButtonText: 'Cancelar',
+            inputValidator: (v) => (!v || v.trim().length < 10) ? 'El motivo debe tener al menos 10 caracteres' : undefined,
+        });
+        if (!motivo) return;
         try {
             const endpoint = type === 'journalEntry' ? 'match-journal-entry' : 'match-voucher';
             const url = base_url(['api', 'v1', 'bank-accounts', id, 'financial-movements', matchModal.movement.id, endpoint]);
-            await fetchHelper.put(url, { voucherId: Number(targetId), bankAccountId: id }, {}, 1000);
+            await fetchHelper.put(url, { voucherId: Number(targetId), bankAccountId: id, motivo: motivo.trim() }, {}, 1000);
             notify('Movimiento conciliado con el asiento contable');
             closeMatchModal();
             // CONC-3b: refrescar el workspace de la sesión para que el movimiento
@@ -602,7 +659,10 @@ const BankReconciliation = () => {
             return;
         }
         try {
-            const body = { bankAccountId: id, extractoIds: selExt, librosIds: selLib, motivo: manualMotivo.trim() };
+            // Bug 1: etiquetar el emparejamiento manual con la sesión para que el Paso 5
+            // lo liste solo dentro de ella.
+            const body = { bankAccountId: id, extractoIds: selExt, librosIds: selLib, motivo: manualMotivo.trim(),
+                reconciliationSessionId: selectedSessionId ? Number(selectedSessionId) : null };
             await fetchHelper.post(base_url(['api', 'v1', 'banks', 'emparejamientos']), body, {}, 1000);
             notify('Emparejamiento manual creado');
             setSelExt([]); setSelLib([]); setManualMotivo('');
@@ -1131,45 +1191,29 @@ const BankReconciliation = () => {
                                         ))}
                                     </div>
 
-                                    {/* flujo de firma/cierre por estado */}
+                                    {/* QA Conciliación (2026-05-25) Bug 2/5: flujo de firma ÚNICA de
+                                        responsable. Sin segregación (la misma persona firma y cierra),
+                                        sin estados intermedios EN_REVISION/APROBADA. */}
                                     <div className="border rounded p-3">
                                         <div className="d-flex align-items-center flex-wrap gap-2 mb-3">
                                             <span className="text-muted small">Estado:</span>
                                             <span className={`badge ${estadoBadge(selectedSession.estado).cls}`}>{estadoBadge(selectedSession.estado).label}</span>
-                                            <span className="text-muted small ms-2">Firmas:</span>
-                                            <span className={`badge ${selectedSession.firmaElaboradorId ? 'bg-label-success' : 'bg-label-secondary'}`}>Elaborador {selectedSession.firmaElaboradorId ? '✓' : '—'}</span>
-                                            <span className={`badge ${selectedSession.firmaRevisorId ? 'bg-label-success' : 'bg-label-secondary'}`}>Revisor {selectedSession.firmaRevisorId ? '✓' : '—'}</span>
+                                            <span className="text-muted small ms-2">Firma:</span>
+                                            <span className={`badge ${selectedSession.firmaElaboradorId ? 'bg-label-success' : 'bg-label-secondary'}`}>Responsable {selectedSession.firmaElaboradorId ? '✓' : '—'}</span>
                                         </div>
 
-                                        {(selectedSession.estado === 'BORRADOR' || selectedSession.estado === 'REABIERTA') && (
+                                        {selectedSession.estado !== 'CERRADA' && (
                                             <div className="d-flex flex-wrap gap-2">
-                                                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => firmarSesion(selectedSession.id, 'ELABORADOR')}>
-                                                    <i className="ri-quill-pen-line me-1" />Firmar como elaborador
+                                                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => firmarSesion(selectedSession.id, 'RESPONSABLE')}>
+                                                    <i className="ri-quill-pen-line me-1" />Firmar como responsable
                                                 </button>
-                                                <button type="button" className="btn btn-sm btn-primary"
+                                                <button type="button" className="btn btn-sm btn-success"
                                                     disabled={!cierre?.enCero || !selectedSession.firmaElaboradorId}
-                                                    title={!cierre?.enCero ? 'La conciliación debe estar en cero' : (!selectedSession.firmaElaboradorId ? 'Firme primero como elaborador' : '')}
-                                                    onClick={() => accionSesion(selectedSession.id, 'enviar-revision', 'Enviada a revisión')}>
-                                                    <i className="ri-send-plane-line me-1" />Enviar a revisión
+                                                    title={!cierre?.enCero ? 'La conciliación debe estar en cero' : (!selectedSession.firmaElaboradorId ? 'Firme primero como responsable' : '')}
+                                                    onClick={() => accionSesion(selectedSession.id, 'cerrar-responsable', 'Conciliación cerrada')}>
+                                                    <i className="ri-lock-2-line me-1" />Cerrar y generar informe
                                                 </button>
                                             </div>
-                                        )}
-                                        {selectedSession.estado === 'EN_REVISION' && (
-                                            <div className="d-flex flex-wrap gap-2">
-                                                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => firmarSesion(selectedSession.id, 'REVISOR')}>
-                                                    <i className="ri-quill-pen-line me-1" />Firmar como revisor
-                                                </button>
-                                                <button type="button" className="btn btn-sm btn-success" disabled={!selectedSession.firmaRevisorId}
-                                                    title={!selectedSession.firmaRevisorId ? 'Firme primero como revisor' : ''}
-                                                    onClick={() => accionSesion(selectedSession.id, 'aprobar', 'Conciliación aprobada')}>
-                                                    <i className="ri-check-double-line me-1" />Aprobar
-                                                </button>
-                                            </div>
-                                        )}
-                                        {selectedSession.estado === 'APROBADA' && (
-                                            <button type="button" className="btn btn-sm btn-success" onClick={() => accionSesion(selectedSession.id, 'cerrar', 'Conciliación cerrada')}>
-                                                <i className="ri-lock-2-line me-1" />Cerrar y generar informe PDF
-                                            </button>
                                         )}
                                         {selectedSession.estado === 'CERRADA' && (
                                             <div className="d-flex flex-wrap gap-2">
@@ -1181,7 +1225,7 @@ const BankReconciliation = () => {
                                             </div>
                                         )}
                                         <div className="mt-3 small text-muted">
-                                            <i className="ri-information-line me-1" />Segregación: el elaborador firma y envía; un revisor distinto firma, aprueba y cierra. El cierre genera el informe PDF firmado y exige conciliación en cero.
+                                            <i className="ri-information-line me-1" />El responsable firma y cierra la conciliación en un solo paso. El cierre genera el informe PDF firmado y exige conciliación en cero.
                                         </div>
                                     </div>
                                 </div>
