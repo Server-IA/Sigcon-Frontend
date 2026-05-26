@@ -3,6 +3,9 @@ import AlertPage from '../../../components/molecules/AlertPage';
 import DataTableReference from '../../../components/organism/DataTable';
 import { formatPrice } from '../../../utils/functions';
 import BajasTransferencias from '../bajas_transferencias';
+// QA (2026-05-26): traducir el estado del movimiento a espanol (badge) en lugar
+// de mostrar el valor crudo del enum/BD en la columna.
+import { statusBadge } from '../../../utils/statusLabels';
 
 const MOVEMENT_STATUS_LABELS = {
   EN_PROCESO: 'En proceso',
@@ -80,7 +83,7 @@ const KardexAssets = () => {
       title: 'Estado',
       data: 'status',
       name: 'status',
-      render: (value) => value ?? '-',
+      render: (value) => statusBadge(value),
     },
     {
       title: 'Acciones',

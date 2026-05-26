@@ -10,6 +10,7 @@ import { fetchHelper } from '../../../utils/fetch';
 import CreateApAdvance from './create';
 import ApplyApAdvance from './apply';
 
+import { statusBadge, traducir } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Anticipos a Proveedores (Cuentas por Pagar).
  * Muestra un listado paginado y permite registrar y aplicar anticipos.
@@ -81,9 +82,7 @@ const IndexApAdvances = () => {
             data: 'status',
             name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {
@@ -174,7 +173,7 @@ const IndexApAdvances = () => {
                             <p><strong>Proveedor:</strong> ${selected.thirdPartyName || '-'}</p>
                             <p><strong>Monto:</strong> ${formatCurrency(selected.amount)}</p>
                             <p><strong>Fecha:</strong> ${selected.advanceDate || '-'}</p>
-                            <p><strong>Estado:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
+                            <p><strong>Estado:</strong> ${traducir(selected.status)}</p>
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
                         </div>`,
                     width: 500,

@@ -7,6 +7,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 import CreateProjection from './create';
 import UpdatedProjection from './updated';
 
+import { statusBadge } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Proyecciones de Flujo de Caja.
  * Permite listar, crear, editar y eliminar proyecciones (BNK-RF-29 a BNK-RF-32).
@@ -112,9 +113,7 @@ const IndexProjections = () => {
         {
             title: 'Estado', data: 'status', name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {

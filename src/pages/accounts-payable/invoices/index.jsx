@@ -12,6 +12,7 @@ import UpdatedApInvoice from './updated';
 // HU-AP-13 (2026-04-28): documentos soporte de factura de compra.
 import ApAttachmentsModal from './attachments';
 
+import { statusBadge, traducir } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Facturas de Compra (Cuentas por Pagar).
  * Muestra un listado paginado con DataTable y permite registrar, editar y eliminar facturas.
@@ -112,9 +113,7 @@ const IndexApInvoices = () => {
             data: 'status',
             name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {
@@ -262,7 +261,7 @@ const IndexApInvoices = () => {
                             <p><strong>Fecha:</strong> ${selected.invoiceDate || '-'}</p>
                             <p><strong>Total:</strong> ${formatCurrency(selected.totalPayment)}</p>
                             <p><strong>Saldo:</strong> ${formatCurrency(selected.balanceDue)}</p>
-                            <p><strong>Estado:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
+                            <p><strong>Estado:</strong> ${traducir(selected.status)}</p>
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
                         </div>`,
                     width: 500,

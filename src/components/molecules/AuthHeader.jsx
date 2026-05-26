@@ -1,13 +1,12 @@
 import LogoBrand from './LogoBrand';
-import Icon from '../atoms/Icon';
 
+// QA (2026-05-26): se elimino el boton de modo oscuro (luna) del header de login.
+// Era un boton sin handler (no hacia nada) y el profesor pidio quitarlo porque
+// el login se maneja con colores diurnos.
 const AuthHeader = () => {
   return (
     <div className="auth-header-content">
       <LogoBrand />
-      <button className="auth-darkmode-btn" aria-label="Cambiar tema">
-        <Icon name="ri-moon-line" />
-      </button>
     </div>
   );
 };

@@ -415,25 +415,29 @@ const BankReconciliation = () => {
         } catch { /* */ }
     };
 
+    // QA reeval Q3: reapertura en UN SOLO PASO, sin segregación (no requiere 2 personas).
+    // Antes el flujo era solicitar -> aprobar (otra persona), y daba "BNK-CON-025: el
+    // solicitante no puede ser quien la autoriza". Ahora el mismo usuario reabre indicando
+    // el motivo; el backend crea la nueva versión REABIERTA directamente.
     const solicitarReapertura = async (sid) => {
         const { value: f } = await window.Swal.fire({
-            title: `Solicitar reapertura — sesión #${sid}`,
-            html: `<textarea id="sw-mot" class="swal2-textarea" placeholder="Motivo detallado (mínimo 100 caracteres)"></textarea>`
-                + `<input id="sw-tc" class="swal2-input" placeholder="Tipo de cambio esperado (opcional)">`
-                + `<input id="sw-ev" class="swal2-input" placeholder="Nombre del archivo de evidencia">`,
-            focusConfirm: false, showCancelButton: true, confirmButtonText: 'Solicitar', cancelButtonText: 'Cancelar',
+            title: `Reabrir conciliación — sesión #${sid}`,
+            html: `<div class="alert alert-info small text-start mb-2">Se creará una nueva versión <b>REABIERTA</b> conservando la versión anterior intacta. Indique el motivo de la reapertura.</div>`
+                + `<textarea id="sw-mot" class="swal2-textarea" placeholder="Motivo de la reapertura (mínimo 20 caracteres)"></textarea>`
+                + `<input id="sw-ev" class="swal2-input" placeholder="Nombre del archivo de evidencia (opcional)">`,
+            focusConfirm: false, showCancelButton: true, confirmButtonText: 'Reabrir', cancelButtonText: 'Cancelar',
             preConfirm: () => {
                 const motivo = document.getElementById('sw-mot').value;
-                const evidenciaFileName = document.getElementById('sw-ev').value;
-                if (!motivo || motivo.trim().length < 100) { window.Swal.showValidationMessage('El motivo debe tener al menos 100 caracteres'); return false; }
-                if (!evidenciaFileName) { window.Swal.showValidationMessage('Indique el nombre del archivo de evidencia'); return false; }
-                return { motivo, tipoCambioEsperado: document.getElementById('sw-tc').value, evidenciaFileName };
+                if (!motivo || motivo.trim().length < 20) { window.Swal.showValidationMessage('El motivo debe tener al menos 20 caracteres'); return false; }
+                return { motivo, evidenciaFileName: document.getElementById('sw-ev').value };
             },
         });
         if (!f) return;
         try {
-            await fetchHelper.post(sUrl(sid, 'reapertura', 'solicitar'), f, {}, 0, true);
-            window.Swal.fire({ icon: 'success', title: 'Solicitud de reapertura enviada', timer: 1500, showConfirmButton: false });
+            const r = await fetchHelper.post(sUrl(sid, 'reabrir'), f, {}, 0, true);
+            await refreshSesionState(); loadCerradas(); await loadSessions();
+            window.Swal.fire({ icon: 'success', title: 'Conciliación reabierta',
+                html: `Nueva versión: <b>v${r?.version}</b> (sesión #${r?.nuevaSesionId})` });
         } catch { /* */ }
     };
 
@@ -726,6 +730,27 @@ const BankReconciliation = () => {
         }
     };
 
+    // QA reeval Q3: eliminar una sesión en BORRADOR para reajustar fechas cuando
+    // se solapa con el rango que el usuario quiere conciliar. Solo BORRADOR.
+    const eliminarBorrador = async () => {
+        if (!selectedSession || selectedSession.estado !== 'BORRADOR') return;
+        const c = await window.Swal.fire({
+            title: 'Eliminar borrador',
+            html: `¿Eliminar la sesión en borrador <b>#${selectedSession.id}</b> `
+                + `(${selectedSession.periodStart} → ${selectedSession.periodEnd})?`
+                + `<br/><span class="small text-muted">Podrá volver a crear la conciliación con las fechas ajustadas.</span>`,
+            icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar', confirmButtonColor: '#d33',
+        });
+        if (!c.isConfirmed) return;
+        try {
+            await fetchHelper.delete(sUrl(selectedSession.id), {}, {}, 0, true);
+            notify('Borrador eliminado. Puede crear la conciliación con las fechas ajustadas.');
+            setSelectedSessionId('');
+            await loadSessions();
+        } catch (e) { notify(e?.msg || 'No se pudo eliminar el borrador', 'danger'); }
+    };
+
     // ===== importar extracto CSV (preservado; F2 lo filtra por período) =====
     const importCsv = async (e) => {
         const file = e.target.files?.[0];
@@ -820,6 +845,11 @@ const BankReconciliation = () => {
                                 />
                             </div>
                             <div className="col-md-5 text-md-end">
+                                {selectedSession?.estado === 'BORRADOR' && (
+                                    <button type="button" className="btn btn-outline-danger btn-sm me-2" onClick={eliminarBorrador}>
+                                        <i className="ri-delete-bin-line me-1" /> Eliminar borrador
+                                    </button>
+                                )}
                                 <button type="button" className="btn btn-primary btn-sm" onClick={() => setShowNewSession((v) => !v)}>
                                     <i className="ri-add-line me-1" /> Nueva sesión
                                 </button>
@@ -1219,7 +1249,7 @@ const BankReconciliation = () => {
                                             <div className="d-flex flex-wrap gap-2">
                                                 <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => descargarPdf(selectedSession.id)}><i className="ri-download-line me-1" />Descargar informe PDF</button>
                                                 <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verificarFirmas(selectedSession.id)}><i className="ri-shield-check-line me-1" />Verificar firmas</button>
-                                                <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => solicitarReapertura(selectedSession.id)}><i className="ri-folder-open-line me-1" />Solicitar reapertura</button>
+                                                <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => solicitarReapertura(selectedSession.id)}><i className="ri-folder-open-line me-1" />Reabrir conciliación</button>
                                                 <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verSolicitudes(selectedSession.id)}><i className="ri-list-check-2 me-1" />Solicitudes</button>
                                                 <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verHistorial(selectedSession.id)}><i className="ri-history-line me-1" />Historial</button>
                                             </div>
@@ -1262,8 +1292,7 @@ const BankReconciliation = () => {
                                                 <td className="text-end text-nowrap">
                                                     <button type="button" className="btn btn-sm btn-icon btn-text-secondary" title="Descargar informe PDF" onClick={() => descargarPdf(s.id)}><i className="ri-download-line" /></button>
                                                     <button type="button" className="btn btn-sm btn-icon btn-text-secondary" title="Verificar firmas" onClick={() => verificarFirmas(s.id)}><i className="ri-shield-check-line" /></button>
-                                                    <button type="button" className="btn btn-sm btn-icon btn-text-warning" title="Solicitar reapertura" onClick={() => solicitarReapertura(s.id)}><i className="ri-folder-open-line" /></button>
-                                                    <button type="button" className="btn btn-sm btn-icon btn-text-secondary" title="Solicitudes de reapertura" onClick={() => verSolicitudes(s.id)}><i className="ri-list-check-2" /></button>
+                                                    <button type="button" className="btn btn-sm btn-icon btn-text-warning" title="Reabrir conciliación" onClick={() => solicitarReapertura(s.id)}><i className="ri-folder-open-line" /></button>
                                                     <button type="button" className="btn btn-sm btn-icon btn-text-secondary" title="Historial de versiones" onClick={() => verHistorial(s.id)}><i className="ri-history-line" /></button>
                                                     <button type="button" className="btn btn-sm btn-icon btn-text-danger" title={s.archivable ? 'Archivar (cerrada hace +1 año)' : 'Archivable tras 1 año del cierre'} disabled={!s.archivable} onClick={() => archivarSesion(s.id)}><i className="ri-archive-line" /></button>
                                                 </td>
@@ -1326,7 +1355,7 @@ const BankReconciliation = () => {
                                         <div className="d-flex flex-wrap gap-2">
                                             <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => descargarPdf(selectedSession.id)}><i className="ri-download-line me-1" />Informe PDF</button>
                                             <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verificarFirmas(selectedSession.id)}><i className="ri-shield-check-line me-1" />Verificar firmas</button>
-                                            <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => solicitarReapertura(selectedSession.id)}><i className="ri-folder-open-line me-1" />Solicitar reapertura</button>
+                                            <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => solicitarReapertura(selectedSession.id)}><i className="ri-folder-open-line me-1" />Reabrir conciliación</button>
                                             <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verSolicitudes(selectedSession.id)}><i className="ri-list-check-2 me-1" />Solicitudes</button>
                                             <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verHistorial(selectedSession.id)}><i className="ri-history-line me-1" />Historial de versiones</button>
                                         </div>

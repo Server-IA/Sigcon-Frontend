@@ -6,6 +6,9 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+// QA (2026-05-26): helper compartido para traducir estados a espanol y evitar
+// que se muestren valores crudos del enum/BD (ej. "COMPLETED" -> "Completado").
+import { statusBadge } from '../../../utils/statusLabels';
 
 import CreateApPayment from './create';
 
@@ -84,11 +87,10 @@ const IndexApPayments = () => {
             title: 'Estado',
             data: 'status',
             name: 'status',
-            render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
-            },
+            // QA (2026-05-26): usa el helper compartido (cubre COMPLETED, APPLIED,
+            // PENDING, REVERSED, etc. + fallback title-case). Antes el mapa local
+            // no incluia COMPLETED y se mostraba el enum crudo.
+            render: (val) => statusBadge(val),
         },
         {
             title: 'Acciones',

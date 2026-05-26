@@ -8,6 +8,7 @@ import CreateComprobante from './create';
 import UpdateComprobante from './updated';
 import SupportsModal from './supports';
 
+import { statusBadge, traducir } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Comprobantes Contables (CG).
  * Muestra un listado paginado con DataTable y permite crear, contabilizar,
@@ -103,9 +104,7 @@ const IndexCgComprobantes = () => {
         {
             title: 'Estado', data: 'status', name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {
@@ -300,7 +299,7 @@ const IndexCgComprobantes = () => {
                         <p class="mb-1"><strong>Fecha:</strong> ${d.entryDate || '-'}</p>
                         <p class="mb-1"><strong>Descripcion:</strong> ${d.description || '-'}</p>
                         <p class="mb-1"><strong>Modulo Origen:</strong> ${SOURCE_LABEL[d.sourceModule] || d.sourceModule || '-'}</p>
-                        <p class="mb-1"><strong>Estado:</strong> ${STATUS_LABEL[d.status] || d.status}</p>
+                        <p class="mb-1"><strong>Estado:</strong> ${traducir(d.status)}</p>
                         <p class="mb-1"><strong>Total Debito:</strong> ${formatCurrency(d.totalDebit)}</p>
                         <p class="mb-1"><strong>Total Credito:</strong> ${formatCurrency(d.totalCredit)}</p>
                         ${avisoInactivoHtml}${linesHtml}</div>`,
@@ -451,7 +450,7 @@ const IndexCgComprobantes = () => {
                                     <select id="cmp-a" class="form-select form-select-sm">${optsHtml}</select></div>
                                   <div><label class="form-label small mb-0">Versión B</label>
                                     <select id="cmp-b" class="form-select form-select-sm">${optsHtml}</select></div>
-                                  <button id="cmp-btn" class="btn btn-sm btn-primary"><i class="ri-git-compare-line me-1"></i>Comparar</button>
+                                  <button id="cmp-btn" type="button" class="btn btn-sm btn-primary"><i class="ri-git-compare-line me-1"></i>Comparar</button>
                                 </div>
                                 <div id="cmp-result" class="mt-2"></div>
                               </div>`,
@@ -462,7 +461,13 @@ const IndexCgComprobantes = () => {
                                 // preseleccionar A=primera, B=segunda
                                 const selB = document.getElementById('cmp-b');
                                 if (selB && selB.options.length > 1) selB.selectedIndex = 1;
-                                document.getElementById('cmp-btn')?.addEventListener('click', async () => {
+                                document.getElementById('cmp-btn')?.addEventListener('click', async (ev) => {
+                                    // HU-CG-07C E3 (QA reeval Q3): el boton estaba sin type
+                                    // (=submit), lo que hacia que SweetAlert lo tratara como
+                                    // confirmacion y CERRARA el modal al comparar. type=button
+                                    // + preventDefault evita el cierre y deja ver el diff.
+                                    ev.preventDefault();
+                                    ev.stopPropagation();
                                     const idA = document.getElementById('cmp-a')?.value;
                                     const idB = document.getElementById('cmp-b')?.value;
                                     const box = document.getElementById('cmp-result');
@@ -596,7 +601,7 @@ const IndexCgComprobantes = () => {
                                     <p class="mb-1"><strong>Fecha:</strong> ${row.entryDate || '-'}</p>
                                     <p class="mb-1"><strong>Descripcion:</strong> ${row.description || '-'}</p>
                                     <p class="mb-1"><strong>Modulo Origen:</strong> ${SOURCE_LABEL[row.sourceModule] || row.sourceModule || '-'}</p>
-                                    <p class="mb-1"><strong>Estado:</strong> ${STATUS_LABEL[row.status] || row.status}</p>
+                                    <p class="mb-1"><strong>Estado:</strong> ${traducir(row.status)}</p>
                                     <p class="mb-1"><strong>Total Debito:</strong> ${formatCurrency(row.totalDebit)}</p>
                                     <p class="mb-1"><strong>Total Credito:</strong> ${formatCurrency(row.totalCredit)}</p>
                                     ${avisoInactivoHtml}
@@ -615,7 +620,7 @@ const IndexCgComprobantes = () => {
                             html: `<div class="text-start">
                                     <p><strong>Fecha:</strong> ${row.entryDate || '-'}</p>
                                     <p><strong>Descripcion:</strong> ${row.description || '-'}</p>
-                                    <p><strong>Estado:</strong> ${STATUS_LABEL[row.status] || row.status}</p>
+                                    <p><strong>Estado:</strong> ${traducir(row.status)}</p>
                                   </div>`,
                             confirmButtonText: 'Cerrar',
                         });
@@ -656,19 +661,25 @@ const IndexCgComprobantes = () => {
                     // comprobante REV-XXXXX (asientos espejo) y, si se marca la
                     // casilla, ademas un nuevo BORRADOR correctivo vinculado por
                     // correction_of para re-capturar el asiento corregido.
+                    // HU-CG-07B E1 (QA reeval Q3): el borrador correctivo YA NO es opcional.
+                    // Antes habia un checkbox; si el contador no lo marcaba, no obtenia un
+                    // comprobante editable y terminaba recapturando el asiento con el mismo
+                    // error. Ahora SIEMPRE se genera el REV (espejo) + un BORRADOR correctivo
+                    // editable (createCorrectionDraft forzado a true; el backend tambien lo
+                    // fuerza en el endpoint, ver JournalEntryController.reverse).
                     window.Swal.fire({
                         title: 'Reversar comprobante',
                         html: `
-                            <p class="mb-2">Reversar comprobante <strong>#${row.entryNumber || row.id}</strong>.
-                            Se creará un comprobante de reversión <strong>REV-XXXXX</strong> con asientos espejo.</p>
+                            <p class="mb-2">Reversar comprobante <strong>#${row.entryNumber || row.id}</strong>.</p>
+                            <div class="alert alert-info text-start py-2 small mb-2">
+                                <i class="ri-information-line me-1"></i>El sistema generará automáticamente:
+                                <ul class="mb-0 mt-1">
+                                  <li>Un comprobante de reversión <strong>REV-XXXXX</strong> (asientos espejo) que anula el original.</li>
+                                  <li>Un <strong>BORRADOR correctivo</strong> (copia del original) para corregir el error y re-contabilizar.</li>
+                                </ul>
+                            </div>
                             <textarea id="rev-motivo" class="form-control" rows="2"
-                                placeholder="Motivo de la reversión (mínimo 10 caracteres)" maxlength="500"></textarea>
-                            <div class="form-check mt-3 text-start">
-                                <input class="form-check-input" type="checkbox" id="rev-draft">
-                                <label class="form-check-label" for="rev-draft">
-                                    Crear además un <strong>BORRADOR correctivo</strong> (copia del original para corregir y re-contabilizar)
-                                </label>
-                            </div>`,
+                                placeholder="Motivo de la reversión (mínimo 10 caracteres)" maxlength="500"></textarea>`,
                         showCancelButton: true,
                         confirmButtonText: 'Sí, reversar',
                         cancelButtonText: 'Cancelar',
@@ -676,24 +687,21 @@ const IndexCgComprobantes = () => {
                         icon: 'warning',
                         preConfirm: () => {
                             const motivo = (document.getElementById('rev-motivo')?.value || '').trim();
-                            const draft = document.getElementById('rev-draft')?.checked || false;
                             if (!motivo) { window.Swal.showValidationMessage('El motivo es obligatorio.'); return false; }
                             if (motivo.length < 10) { window.Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres.'); return false; }
-                            return { motivo, draft };
+                            return { motivo };
                         },
                     }).then(async (result) => {
                         if (!result.isConfirmed) return;
                         try {
                             await fetchHelper.post(
                                 base_url(['api', 'v1', 'journal-entries', row.id, 'reverse']),
-                                { description: result.value.motivo, createCorrectionDraft: result.value.draft },
+                                { description: result.value.motivo, createCorrectionDraft: true },
                                 {}, 1000, true
                             );
                             dataTableRef?.current?.ajax?.reload?.();
                             setMessage({ type: 'success', show: true,
-                                message: result.value.draft
-                                    ? 'Comprobante reversado (REV) y borrador correctivo generado.'
-                                    : 'Comprobante reversado exitosamente (REV creado).' });
+                                message: 'Comprobante reversado (REV creado) y borrador correctivo generado para corregir y re-contabilizar.' });
                         } catch (error) {
                             setMessage({
                                 type: 'danger', show: true,
@@ -772,6 +780,7 @@ const IndexCgComprobantes = () => {
                         method="POST"
                         buttons={buttons}
                         title="Comprobantes Contables"
+                        hideDefaultExport
                         setData={setData}
                         search={search}
                         setSearch={setSearch}

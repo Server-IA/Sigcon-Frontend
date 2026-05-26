@@ -17,6 +17,7 @@ import AlertPage from '../../../components/molecules/AlertPage';
 import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
+import { traducir } from '../../../utils/statusLabels';
 const STATUS_BADGE = {
     ACTIVE: 'bg-label-success',
     REVOKED: 'bg-label-danger',
@@ -399,7 +400,7 @@ const IndexTemporaryPermissions = () => {
                                     <td>{t.endDate?.slice(0, 16)?.replace('T', ' ')}</td>
                                     <td>
                                         <span className={`badge ${STATUS_BADGE[t.status] || 'bg-label-secondary'}`}>
-                                            {STATUS_LABEL[t.status] || t.status}
+                                            {traducir(t.status)}
                                         </span>
                                         {t.scheduled && <span className="badge bg-label-info ms-1">Programado</span>}
                                         {t.daysRemaining != null && t.status === 'ACTIVE' && (

@@ -7,12 +7,22 @@ import { useDispatch } from 'react-redux';
 import { base_redirect_path } from '../../utils/functions';
 
 
+// QA (2026-05-26): "Recuérdame" recuerda el usuario (username/email) entre
+// sesiones. La contraseña NUNCA se guarda por seguridad. La clave sobrevive al
+// LOGOUT (que solo limpia token/user/brand), por lo que el campo Usuario queda
+// pre-rellenado en el siguiente ingreso si el usuario marco la casilla.
+const REMEMBER_KEY = 'sigcon_remember_user';
+const readRememberedUser = () => {
+  try { return localStorage.getItem(REMEMBER_KEY) || ''; } catch { return ''; }
+};
+
 const LoginPage = () => {
   const dispatch = useDispatch();
+  const rememberedUser = readRememberedUser();
   const [formData, setFormData] = useState({
-    usernameOrEmail: 'superadmin@gmail.com',
+    usernameOrEmail: rememberedUser || 'superadmin@gmail.com',
     password: '123456',
-    rememberMe: false
+    rememberMe: !!rememberedUser
   });
 
   const [error, setError] = useState('');
@@ -51,7 +61,18 @@ const LoginPage = () => {
       setError('Por favor completa todos los campos');
       return;
     }
-    
+
+    // QA (2026-05-26): "Recuérdame" funcional. Si esta marcado, se guarda el
+    // usuario para pre-rellenarlo en el proximo ingreso; si no, se borra. Nunca
+    // se guarda la contraseña.
+    try {
+      if (formData.rememberMe) {
+        localStorage.setItem(REMEMBER_KEY, formData.usernameOrEmail);
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+      }
+    } catch { /* localStorage no disponible: ignorar */ }
+
     setIsLoading(true);
     const url = base_url(['auth', 'login'])
     

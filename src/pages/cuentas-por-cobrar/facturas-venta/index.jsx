@@ -11,6 +11,7 @@ import CreateSalesInvoice from './create';
 import UpdatedSalesInvoice from './updated';
 import AttachmentsModal from './attachments';
 
+import { statusBadge, traducir } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Facturas de Venta (Cuentas por Cobrar).
  * Muestra listado paginado con DataTable y permite crear/editar/eliminar facturas FV.
@@ -115,9 +116,7 @@ const IndexSalesInvoices = () => {
             data: 'status',
             name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {
@@ -373,7 +372,7 @@ const IndexSalesInvoices = () => {
                         <p><strong>Retencion:</strong> ${formatCurrency(selected.totalWithholding)} ${fxBlock(selected.totalWithholding)}</p>
                         <p><strong>Total:</strong> ${formatCurrency(selected.totalAmount)} ${fxBlock(selected.totalAmount)}</p>
                         <p><strong>Saldo:</strong> ${formatCurrency(selected.balanceDue)} ${fxBlock(selected.balanceDue)}</p>
-                        <p><strong>Estado factura:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
+                        <p><strong>Estado factura:</strong> ${traducir(selected.status)}</p>
                         <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
                         <hr/>
                         <h6 class="text-primary mb-2"><i class="ri-file-list-line me-1"></i>Estado contable</h6>
@@ -521,6 +520,7 @@ const IndexSalesInvoices = () => {
                         method="POST"
                         buttons={buttons}
                         title="Facturas de Venta"
+                        hideDefaultExport
                         setData={setData}
                         search={search}
                         setSearch={setSearch}

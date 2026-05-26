@@ -6,6 +6,7 @@ import AlertPage from '../../../components/molecules/AlertPage';
 import GenericFilterModal from '../../../components/organism/GenericFilterModal';
 import CreateCashAudit from './create';
 
+import { statusBadge } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Arqueos de Caja (BNK-RF-17 a BNK-RF-20).
  * Permite listar, crear, aprobar y cerrar arqueos de caja.
@@ -86,9 +87,7 @@ const IndexCashAudits = () => {
         {
             title: 'Estado', data: 'status', name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {

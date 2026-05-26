@@ -10,6 +10,7 @@ import { fetchHelper } from '../../../utils/fetch';
 import CreateDianResolution from './create';
 import UpdatedDianResolution from './updated';
 
+import { statusBadge } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Resoluciones DIAN.
  * Permite administrar las resoluciones de numeracion para facturacion electronica
@@ -59,7 +60,7 @@ const IndexDianResolutions = () => {
         {
             title: 'Estado',
             data: 'status',
-            render: (v) => `<span class="badge ${STATUS_BADGE[v] || 'bg-label-secondary'}">${STATUS_LABEL[v] || v}</span>`,
+            render: (v) => statusBadge(v),
         },
         {
             title: 'Acciones',

@@ -4,6 +4,7 @@ import { base_url } from '../../../utils/functions';
 import AlertPage from '../../../components/molecules/AlertPage';
 import CreatePeriodo from './create';
 
+import { traducir } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Periodos Contables (CG).
  * Usa GET /api/v1/accounting-periods para listar todos los periodos
@@ -194,7 +195,7 @@ const IndexCgPeriodos = () => {
                                             <td>{MONTH_NAMES[p.month] || p.month}</td>
                                             <td>
                                                 <span className={`badge ${STATUS_BADGE[p.status] || 'bg-label-secondary'}`}>
-                                                    {STATUS_LABEL[p.status] || p.status}
+                                                    {traducir(p.status)}
                                                 </span>
                                             </td>
                                             <td>{p.closedAt || p.lockedAt || '-'}</td>

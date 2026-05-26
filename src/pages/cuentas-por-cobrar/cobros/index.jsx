@@ -6,6 +6,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 
 import CreateArPayment from './create';
 
+import { statusBadge } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Cobros (Cuentas por Cobrar).
  * Cubre HUs AR-02 y AR-08.
@@ -101,9 +102,7 @@ const IndexArPayments = () => {
             data: 'status',
             name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {

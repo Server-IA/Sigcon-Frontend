@@ -7,6 +7,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 
+import { statusBadge, traducir } from '../../../utils/statusLabels';
 /**
  * HU-AP-22 (2026-04-28): Submodulo de Devoluciones de Mercancia.
  *
@@ -59,9 +60,7 @@ const IndexGoodsReturns = () => {
             data: 'status',
             name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         { title: 'Factura asociada', data: 'invoiceId', name: 'invoiceId',
@@ -123,7 +122,7 @@ const IndexGoodsReturns = () => {
                         <div class="text-start">
                             <p><strong>Orden de Compra:</strong> ${selected.purchaseOrderId || '-'}</p>
                             <p><strong>Fecha:</strong> ${selected.receiptDate || '-'}</p>
-                            <p><strong>Estado:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
+                            <p><strong>Estado:</strong> ${traducir(selected.status)}</p>
                             <p><strong>Factura asociada:</strong> ${selected.invoiceId || '-'}</p>
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
                             ${selected.rejectionReason ? `<hr/><p><strong>Motivo devolucion:</strong> ${selected.rejectionReason}</p>` : ''}

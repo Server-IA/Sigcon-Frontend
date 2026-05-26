@@ -3,6 +3,9 @@ import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
 import LoteDetail from './detail';
+// QA (2026-05-26): traducir estados crudos del lote (RECEIVED, PROCESSING,
+// ACK_SENT, etc.) a espanol en vez de mostrar el enum del backend.
+import { traducir } from '../../../utils/statusLabels';
 
 /**
  * HU-INT-RF-14 y HU-INT-RF-15: Monitoreo de lotes AAEF recibidos desde AgroFusion.
@@ -111,7 +114,7 @@ const IndexLotes = () => {
             ACK_SENT: 'bg-label-success',
             ACK_FAILED: 'bg-label-danger'
         };
-        return <span className={`badge ${map[s] || 'bg-label-secondary'}`}>{s}</span>;
+        return <span className={`badge ${map[s] || 'bg-label-secondary'}`}>{traducir(s)}</span>;
     };
 
     return (
@@ -135,14 +138,9 @@ const IndexLotes = () => {
                         <select className="form-select" value={filters.status}
                                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
                             <option value="">Todos</option>
-                            <option value="RECEIVED">RECEIVED</option>
-                            <option value="PROCESSING">PROCESSING</option>
-                            <option value="PROCESSED">PROCESSED</option>
-                            <option value="PARTIAL">PARTIAL</option>
-                            <option value="FAILED">FAILED</option>
-                            <option value="ACK_PENDING">ACK_PENDING</option>
-                            <option value="ACK_SENT">ACK_SENT</option>
-                            <option value="ACK_FAILED">ACK_FAILED</option>
+                            {['RECEIVED','PROCESSING','PROCESSED','PARTIAL','FAILED','ACK_PENDING','ACK_SENT','ACK_FAILED'].map(s => (
+                                <option key={s} value={s}>{traducir(s)}</option>
+                            ))}
                         </select>
                     </div>
                     <div className="col-md-2">

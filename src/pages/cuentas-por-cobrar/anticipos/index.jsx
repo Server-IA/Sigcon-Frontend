@@ -7,6 +7,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 import CreateArAdvance from './create';
 import ApplyArAdvance from './apply';
 
+import { statusBadge } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Anticipos de Clientes (Cuentas por Cobrar).
  * Cubre HU AR-09. Permite registrar y aplicar anticipos a facturas de venta.
@@ -67,9 +68,7 @@ const IndexArAdvances = () => {
             data: 'status',
             name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {

@@ -30,8 +30,17 @@ const DataTableReference = ({
   data = [],
   lengthMenu = [10, 25, 50, 75, 100],
   filterColumns = [],
+  // QA (2026-05-26): permite ocultar los botones de exportacion nativos
+  // (Excel/CSV/PDF client-side) en las paginas que YA tienen exportacion
+  // server-side curada (con encabezado empresa + totales). Evita botones
+  // de exportacion duplicados reportados por el profesor.
+  hideDefaultExport = false,
 }) => {
   const token = useSelector((state) => state.user.token);
+  // QA (2026-05-26): datos del usuario logueado para el encabezado estandar de
+  // las exportaciones (empresa / generado por / fecha). Lo exige el profesor en
+  // TODOS los formatos de exportacion del sistema.
+  const sessionUser = useSelector((state) => state.user.user);
 
   // QA Bloque AU+ (2026-05-07) Bug 2: filterColumns se capturaba como closure
   // en config.ajax al INICIO. Cualquier cambio posterior del prop quedaba
@@ -43,6 +52,14 @@ const DataTableReference = ({
   useEffect(() => {
     if (!tableRef?.current || !dataTableRef) return;
     
+    // Metadata del encabezado estandar de exportacion (empresa / generado por).
+    const reportMeta = {
+      empresa: sessionUser?.companyName || '',
+      nit: sessionUser?.companyNit || '',
+      usuario: sessionUser?.email || sessionUser?.fullName || '',
+      roles: Array.isArray(sessionUser?.roles) ? sessionUser.roles.join(', ') : '',
+    };
+
     let api_back = url_api;
     let url_buttons = url_api;
     if(url_api !== null){
@@ -87,7 +104,9 @@ const DataTableReference = ({
         // en TODOS los modulos (cambio en este organism compartido). El motor
         // de exportacion se conserva (trae todos los datos del backend y arma
         // el archivo con seleccion de columnas).
-        ...default_buttons(url_buttons, title, { method: exportMethod, params: exportParams }),
+        ...(hideDefaultExport
+            ? []
+            : default_buttons(url_buttons, title, { method: exportMethod, params: exportParams }, reportMeta)),
 
         ...buttons,
       ],

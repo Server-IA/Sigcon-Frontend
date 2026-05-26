@@ -11,6 +11,7 @@ import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 import AlertPage from '../../../components/molecules/AlertPage';
 
+import { traducir } from '../../../utils/statusLabels';
 const STATUS_BADGE = {
     ACTIVE: 'bg-label-success',
     INACTIVE: 'bg-label-secondary',
@@ -286,7 +287,7 @@ const VoucherSeriesAdmin = () => {
                                             </td>
                                             <td>
                                                 <span className={`badge ${STATUS_BADGE[s.status] || 'bg-label-secondary'}`}>
-                                                    {STATUS_LABEL[s.status] || s.status}
+                                                    {traducir(s.status)}
                                                 </span>
                                             </td>
                                             <td><small>{s.description || '-'}</small></td>

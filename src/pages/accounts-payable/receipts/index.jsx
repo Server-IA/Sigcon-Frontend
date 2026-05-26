@@ -9,6 +9,7 @@ import { fetchHelper } from '../../../utils/fetch';
 
 import CreateApReceipt from './create';
 
+import { statusBadge, traducir } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Recepciones de Bienes (Cuentas por Pagar).
  * Muestra un listado paginado de recepciones asociadas a ordenes de compra.
@@ -62,9 +63,7 @@ const IndexApReceipts = () => {
             data: 'status',
             name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {
@@ -144,7 +143,7 @@ const IndexApReceipts = () => {
                         <div class="text-start">
                             <p><strong>Orden de Compra:</strong> ${selected.purchaseOrderId || '-'}</p>
                             <p><strong>Fecha:</strong> ${selected.receiptDate || '-'}</p>
-                            <p><strong>Estado:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
+                            <p><strong>Estado:</strong> ${traducir(selected.status)}</p>
                             <p><strong>Factura Asociada:</strong> ${selected.invoiceId || '-'}</p>
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
                         </div>`,

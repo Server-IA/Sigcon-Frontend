@@ -44,8 +44,9 @@ export const LABELS = {
     // --- Conciliacion bancaria ---
     NO_CONCILIADO: 'No conciliado', CONCILIADO: 'Conciliado',
     EN_REVISION: 'En revision', PARCIAL: 'Parcial', PARTIAL: 'Parcial',
-    // --- Motor de matching ---
-    PROPUESTO: 'Propuesto', CONFIRMADO: 'Confirmado', AMBIGUO: 'Ambiguo',
+    // --- Motor de matching / pagos ---
+    PROPUESTO: 'Propuesto', CONFIRMADO: 'Confirmado', CONFIRMED: 'Confirmado',
+    APPLIED: 'Aplicado', AMBIGUO: 'Ambiguo',
     AUTOMATICO: 'Automatico', MANUAL: 'Manual',
     AUTOMATICO_EXACTO: 'Automatico exacto', AUTOMATICO_ALTO: 'Automatico alto',
     AUTOMATICO_MEDIO: 'Automatico medio',
@@ -85,10 +86,19 @@ export const LABELS = {
     INDEFINIDO: 'Indefinido',
     // --- Origen / fuente ---
     AAEF: 'AAEF', SISTEMA: 'Sistema',
+    // --- Lotes de integracion AAEF (estado de procesamiento/ACK) ---
+    PROCESSING: 'Procesando', PROCESSED: 'Procesado', FAILED: 'Fallido',
+    ACK_PENDING: 'ACK pendiente', ACK_SENT: 'ACK enviado', ACK_FAILED: 'ACK fallido',
+    // --- Kardex / movimientos de inventario ---
+    EN_PROCESO: 'En proceso', FINALIZADO: 'Finalizado',
     // --- Tipo de cambio ---
     OFICIAL: 'Oficial', PREFERENCIAL: 'Preferencial',
     // --- Periodo de nomina ---
     MONTHLY: 'Mensual', BIWEEKLY: 'Quincenal', WEEKLY: 'Semanal',
+    // --- Otros estados del backend (evitan fallback en ingles) ---
+    EXHAUSTED: 'Agotada', REVOKED: 'Revocado', SUSPENDED: 'Suspendido',
+    VOID: 'Anulado', RETRYING: 'Reintentando', SENT: 'Enviado',
+    ACCEPTED: 'Aceptado', RETURNED: 'Devuelto', DECLINED: 'Rechazado',
 };
 
 // Mapa token -> clase de badge (semaforo). Verde = ok/terminal positivo,
@@ -98,7 +108,8 @@ const BADGE = {
     ACTIVE: 'bg-label-success', ACTIVA: 'bg-label-success', ACTIVO: 'bg-label-success',
     APPROVED: 'bg-label-success', APROBADO: 'bg-label-success', APROBADA: 'bg-label-success',
     PAID: 'bg-label-success', POSTED: 'bg-label-success', COMPLETED: 'bg-label-success',
-    CONFIRMADO: 'bg-label-success', CONCILIADO: 'bg-label-success', RECEIVED: 'bg-label-success',
+    CONFIRMADO: 'bg-label-success', CONFIRMED: 'bg-label-success', APPLIED: 'bg-label-success',
+    CONCILIADO: 'bg-label-success', RECEIVED: 'bg-label-success',
     COBRADO: 'bg-label-success', ISSUED: 'bg-label-success', EMITIDA: 'bg-label-success',
     EMITIDO: 'bg-label-success', EJECUTADA: 'bg-label-success', ENABLED: 'bg-label-success',
     OPEN: 'bg-label-success', DISPONIBLE: 'bg-label-success', AUTOMATICO_EXACTO: 'bg-label-success',
@@ -120,6 +131,13 @@ const BADGE = {
     // gris / neutro
     SETTLED: 'bg-label-secondary', TRANSFERRED: 'bg-label-secondary', MANUAL: 'bg-label-secondary',
     SYSTEM: 'bg-label-secondary', CUSTOM: 'bg-label-secondary',
+    // --- Lotes de integracion AAEF + kardex ---
+    PROCESSED: 'bg-label-success', PROCESSING: 'bg-label-warning', FAILED: 'bg-label-danger',
+    ACK_PENDING: 'bg-label-info', ACK_SENT: 'bg-label-success', ACK_FAILED: 'bg-label-danger',
+    EN_PROCESO: 'bg-label-warning', FINALIZADO: 'bg-label-success',
+    EXHAUSTED: 'bg-label-danger', REVOKED: 'bg-label-danger', SUSPENDED: 'bg-label-danger',
+    VOID: 'bg-label-danger', DECLINED: 'bg-label-danger', RETURNED: 'bg-label-secondary',
+    RETRYING: 'bg-label-warning', SENT: 'bg-label-info', ACCEPTED: 'bg-label-success',
 };
 
 /** Convierte un token desconocido en title-case legible: NO_CONCILIADO -> "No Conciliado". */

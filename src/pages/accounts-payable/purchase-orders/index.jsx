@@ -10,6 +10,7 @@ import { fetchHelper } from '../../../utils/fetch';
 import CreateApPurchaseOrder from './create';
 import UpdateApPurchaseOrder from './updated';
 
+import { statusBadge, traducir } from '../../../utils/statusLabels';
 /**
  * Pagina principal de Ordenes de Compra (Cuentas por Pagar).
  * Muestra un listado paginado y permite crear, aprobar y rechazar ordenes.
@@ -85,9 +86,7 @@ const IndexApPurchaseOrders = () => {
             data: 'status',
             name: 'status',
             render: (val) => {
-                const badge = STATUS_BADGE[val] || 'bg-label-secondary';
-                const label = STATUS_LABEL[val] || val || '-';
-                return `<span class="badge ${badge}">${label}</span>`;
+                return statusBadge(val);
             },
         },
         {
@@ -277,7 +276,7 @@ const IndexApPurchaseOrders = () => {
                             <p><strong>Fecha:</strong> ${selected.orderDate || '-'}</p>
                             <p><strong>Entrega:</strong> ${selected.deliveryDate || '-'}</p>
                             <p><strong>Total:</strong> ${formatCurrency(selected.totalAmount)}</p>
-                            <p><strong>Estado:</strong> ${STATUS_LABEL[selected.status] || selected.status}</p>
+                            <p><strong>Estado:</strong> ${traducir(selected.status)}</p>
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
                         </div>`,
                     width: 500,

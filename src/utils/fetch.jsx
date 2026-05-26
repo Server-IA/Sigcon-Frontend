@@ -155,7 +155,11 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
         if (status === 204) {
             stopLoader();
             return new Promise(resolve => {
-                window.Swal.close();
+                // HU-CG-07C E3 (QA reeval Q3): solo cerrar el loader si fetchHelper
+                // lo abrio (loaderShown). Antes cerraba SIEMPRE, lo que tumbaba
+                // cualquier Swal que el caller tuviera abierto (ej. el modal de
+                // historial de versiones al pulsar "Comparar" -> se cerraba solo).
+                if (loaderShown) window.Swal.close();
                 resolve({ success: true, status });
             });
         }
@@ -174,13 +178,16 @@ export const request = async (url, data = {}, method = 'POST', time = 500, heade
         }
         stopLoader();
         return new Promise(resolve => {
-            window.Swal.close();
+            // HU-CG-07C E3 (QA reeval Q3): cerrar SOLO el loader propio de fetchHelper.
+            // Antes era incondicional y cerraba Swals ajenos del caller (rompia el
+            // modal de comparacion de versiones al hacer un fetch interno con time=0).
+            if (loaderShown) window.Swal.close();
             resolve(responseData);
         });
     }).catch(async error => {
         clearTimeout(timeoutId);
         stopLoader();
-        window.Swal.close();
+        if (loaderShown) window.Swal.close();
         // Errores de red (fetch fail por backend caido, CORS, abort) usan
         // console.debug para no llenar la consola en escenarios esperados
         // (ej. NotificationBell polling durante reload del backend).

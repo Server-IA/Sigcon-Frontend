@@ -74,8 +74,29 @@ export const exportConfig = {
     }
 };
         
-export const default_buttons = (url_api, title, exportOptions = {}) => {
+/**
+ * QA (2026-05-26): el profesor exige que TODA exportacion (Excel/CSV/PDF) muestre
+ * en su encabezado, como minimo: la empresa, quien la genero y la fecha de
+ * generacion (y el total cuando aplica, lo aporta el backend en las exportaciones
+ * server-side). Este helper arma ese bloque a partir del usuario logueado
+ * (reportMeta lo inyecta el organism DataTable desde Redux). Se entrega como
+ * funcion para que la fecha sea la del momento de exportar.
+ */
+const buildReportMessage = (reportMeta = {}) => () => {
+    const { empresa, nit, usuario, roles } = reportMeta || {};
+    const fecha = new Date().toLocaleString('es-CO', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const empresaTxt = (empresa || '(empresa no configurada)') + (nit ? ` (NIT ${nit})` : '');
+    const usuarioTxt = (usuario || '(sistema)') + (roles ? ` [${roles}]` : '');
+    return `Empresa: ${empresaTxt}\nGenerado por: ${usuarioTxt}\nFecha de generacion: ${fecha}`;
+};
+
+export const default_buttons = (url_api, title, exportOptions = {}, reportMeta = {}) => {
     const { method = 'POST', params = {} } = exportOptions;
+    // Bloque de encabezado estandar (empresa / generado por / fecha) para los 3 formatos.
+    const messageTop = buildReportMessage(reportMeta);
     const buttons = [
         {
             extend: 'excel',
@@ -83,6 +104,7 @@ export const default_buttons = (url_api, title, exportOptions = {}) => {
             className: `btn rounded-pill btn-label-success waves-effect mx-1 my-2`,
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,
+            messageTop: messageTop,
             action: async function (e, dt, button, config) {
         
                 // 🔹 Traer columnas visibles
@@ -127,12 +149,24 @@ export const default_buttons = (url_api, title, exportOptions = {}) => {
             className: 'btn rounded-pill btn-label-info waves-effect mx-1 my-2',
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,
+            messageTop: messageTop,
+            // QA (2026-05-26): el export CSV de DataTables NO honra messageTop
+            // (solo Excel/PDF lo hacen). Prepend manual del encabezado estandar
+            // (empresa / generado por / fecha) como filas iniciales del CSV.
+            customize: function (csv) {
+                const meta = messageTop();
+                const head = ('Reporte de ' + title + '\n' + meta)
+                    .split('\n')
+                    .map(l => '"' + String(l).replace(/"/g, '""') + '"')
+                    .join('\n');
+                return head + '\n\n' + csv;
+            },
             action: async function (e, dt, button, config) {
                 // 🔹 Traer columnas visibles
                 const visibleColumns = dt.columns(':visible').indexes().toArray();
-            
+
                 const selected = await sweetAlertExport(visibleColumns, dt)
-        
+
                 // Si no selecciona nada o cancela
                 if (!selected || selected.length === 0) {
                     return;
@@ -159,7 +193,7 @@ export const default_buttons = (url_api, title, exportOptions = {}) => {
                 dt.clear();
                 dt.rows.add(dataExport);
                 dt.draw();
-            
+
                 $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
             }
         },
@@ -169,6 +203,7 @@ export const default_buttons = (url_api, title, exportOptions = {}) => {
             className: 'btn rounded-pill btn-label-danger waves-effect mx-1 my-2',
             filename: `Reporte_${title.replace(/\s+/g, "_").toLowerCase()}`,
             title: `Reporte de ${title}`,
+            messageTop: messageTop,
             // HU-ACT-07 (QA 2026-05-05): orientacion horizontal + tamaño A3 para
             // tablas con muchas columnas (Activos = 11 columnas). Antes el PDF
             // salia cortado a la derecha.
