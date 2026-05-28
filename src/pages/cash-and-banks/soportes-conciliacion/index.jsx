@@ -91,7 +91,11 @@ const SoportesConciliacion = ({ embeddedAccountId } = {}) => {
         <div className="card">
             <h5 className="card-header d-flex justify-content-between align-items-center">
                 <span>Soportes de conciliación (extractos conservados)</span>
-                <button className="btn btn-sm btn-label-info" onClick={reporteRetencion}><i className="ri-archive-line me-1"></i>Reporte de retención</button>
+                {/* QA 2026-05-28: boton "Reporte de retencion" ocultado a peticion del usuario.
+                    La logica `reporteRetencion` y el endpoint backend
+                    `/api/v1/banks/archivos-soporte/retention-report` siguen intactos;
+                    para reactivar el boton, descomentar la siguiente linea. */}
+                {/* <button className="btn btn-sm btn-label-info" onClick={reporteRetencion}><i className="ri-archive-line me-1"></i>Reporte de retención</button> */}
             </h5>
             <div className="card-body">
                 {!embeddedAccountId && (

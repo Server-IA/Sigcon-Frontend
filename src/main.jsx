@@ -146,6 +146,26 @@ import { store } from './utils/reducers/store.jsx'
     } catch (_) { /* ignore */ }
 })();
 
+// QA Bloque post-AAEF (2026-05-28): SweetAlert mostraba un boton "No" extra
+// (.swal2-deny) en TODOS los modales del proyecto aunque cada uno tuviera
+// `inline style="display: none"`. El computed final daba `display: flex` por
+// alguna regla del bundle de Swat o de Bootstrap que sobreescribia el inline.
+// Como workaround se habia parcheado a mano `showDenyButton: false` en ~10
+// archivos, dejando el resto vulnerable. Esta IIFE inyecta una regla con
+// !important que respeta el inline `display: none` del propio Swal, eliminando
+// el "No" fantasma en TODOS los Swal sin tocar caller por caller. Los Swal que
+// activan explicitamente `showDenyButton: true` (ej. reapertura con Aprobar /
+// Rechazar) NO se ven afectados: su inline no es `display: none`.
+(function fixSwalDenyButtonGhost() {
+    try {
+        const style = document.createElement('style');
+        style.setAttribute('data-source', 'sigcon-swal-deny-fix');
+        style.textContent =
+            '.swal2-deny[style*="display: none"]{display:none !important;}';
+        document.head.appendChild(style);
+    } catch (_) { /* fail-safe */ }
+})();
+
 import App from './App.jsx'
 
 

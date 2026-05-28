@@ -228,33 +228,51 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                                     de operacion como dos inputs type=time
                                     (reloj nativo del navegador). El estado
                                     se concatena como "HH:MM-HH:MM" para que
-                                    el backend lo persista en operationSchedule. */}
+                                    el backend lo persista en operationSchedule.
+
+                                    QA 2026-05-28: los 2 time inputs usan ahora
+                                    `form-floating form-floating-outline` (mismo
+                                    wrapper que <InputModal> de la columna
+                                    izquierda). Antes los inputs eran
+                                    `form-control` simple con un label externo,
+                                    lo que daba una altura visual distinta y los
+                                    dejaba "corridos hacia abajo" frente al
+                                    campo "Ubicación Física" del lado izquierdo. */}
                                 <div className="col-md-6 mb-3">
-                                    <label className="form-label">Horario de Operación</label>
                                     <div className="d-flex align-items-center">
-                                        <input
-                                            type="time"
-                                            className="form-control me-2"
-                                            value={(caja.horarioOperacion || '').split('-')[0] || ''}
-                                            onChange={e => {
-                                                const start = e.target.value;
-                                                const end = (caja.horarioOperacion || '').split('-')[1] || '';
-                                                set('horarioOperacion', start || end ? `${start}-${end}` : '');
-                                            }}
-                                            aria-label="Hora de inicio"
-                                        />
+                                        <div className="form-floating form-floating-outline flex-fill me-2">
+                                            <input
+                                                type="time"
+                                                id="cc_horario_inicio"
+                                                className="form-control"
+                                                placeholder=" "
+                                                value={(caja.horarioOperacion || '').split('-')[0] || ''}
+                                                onChange={e => {
+                                                    const start = e.target.value;
+                                                    const end = (caja.horarioOperacion || '').split('-')[1] || '';
+                                                    set('horarioOperacion', start || end ? `${start}-${end}` : '');
+                                                }}
+                                                aria-label="Hora de inicio"
+                                            />
+                                            <label htmlFor="cc_horario_inicio">Horario operación (inicio)</label>
+                                        </div>
                                         <span className="mx-1">a</span>
-                                        <input
-                                            type="time"
-                                            className="form-control"
-                                            value={(caja.horarioOperacion || '').split('-')[1] || ''}
-                                            onChange={e => {
-                                                const start = (caja.horarioOperacion || '').split('-')[0] || '';
-                                                const end = e.target.value;
-                                                set('horarioOperacion', start || end ? `${start}-${end}` : '');
-                                            }}
-                                            aria-label="Hora de cierre"
-                                        />
+                                        <div className="form-floating form-floating-outline flex-fill">
+                                            <input
+                                                type="time"
+                                                id="cc_horario_cierre"
+                                                className="form-control"
+                                                placeholder=" "
+                                                value={(caja.horarioOperacion || '').split('-')[1] || ''}
+                                                onChange={e => {
+                                                    const start = (caja.horarioOperacion || '').split('-')[0] || '';
+                                                    const end = e.target.value;
+                                                    set('horarioOperacion', start || end ? `${start}-${end}` : '');
+                                                }}
+                                                aria-label="Hora de cierre"
+                                            />
+                                            <label htmlFor="cc_horario_cierre">Cierre</label>
+                                        </div>
                                     </div>
                                     {errors.horarioOperacion && (
                                         <div className="text-danger small">{errors.horarioOperacion}</div>

@@ -326,19 +326,36 @@ const BankReconciliation = () => {
         const { value: datos } = await window.Swal.fire({
             title: `Firmar como ${rolLabel} — sesión #${sid}`,
             html:
+                // QA 2026-05-28: cada par label+input se envuelve en un <div block>.
+                // Antes label e input venian sueltos en el flujo del .text-start;
+                // como ambos quedan como inline-block (form-label de Bootstrap y
+                // swal2-input de Swat), si el ancho del Swal sobraba, el label
+                // de la siguiente fila se "subia" a la derecha del input anterior
+                // (ej. "Cargo o rol" aparecia al lado de "Admin QA4" en vez de
+                // encima de su propio input). Cada wrapper rompe la linea.
                 `<div class="text-start">`
-                + `<label class="form-label mb-1 small fw-semibold">Nombre completo del responsable</label>`
-                + `<input class="swal2-input mt-0" value="${esc(currentUserName)}" readonly>`
-                + `<label class="form-label mb-1 mt-2 small fw-semibold">Cargo o rol</label>`
-                + `<input class="swal2-input mt-0" value="${esc(currentUserRole)}" readonly>`
-                + `<label class="form-label mb-1 mt-2 small fw-semibold">Fecha y hora de la firma</label>`
-                + `<input class="swal2-input mt-0" value="${esc(ahora)}" readonly>`
-                + `<label class="form-label mb-1 mt-2 small fw-semibold">Documento de identidad</label>`
-                + `<input id="sw-doc" class="swal2-input mt-0" placeholder="Documento de identidad">`
-                + `<label class="form-label mb-1 mt-2 small fw-semibold">Tarjeta profesional (T.P.)</label>`
-                + `<input id="sw-tp" class="swal2-input mt-0" placeholder="Tarjeta profesional (T.P.)">`
+                + `<div class="mb-2">`
+                +   `<label class="form-label mb-1 small fw-semibold d-block">Nombre completo del responsable</label>`
+                +   `<input class="swal2-input mt-0" value="${esc(currentUserName)}" readonly>`
+                + `</div>`
+                + `<div class="mb-2">`
+                +   `<label class="form-label mb-1 small fw-semibold d-block">Cargo o rol</label>`
+                +   `<input class="swal2-input mt-0" value="${esc(currentUserRole)}" readonly>`
+                + `</div>`
+                + `<div class="mb-2">`
+                +   `<label class="form-label mb-1 small fw-semibold d-block">Fecha y hora de la firma</label>`
+                +   `<input class="swal2-input mt-0" value="${esc(ahora)}" readonly>`
+                + `</div>`
+                + `<div class="mb-2">`
+                +   `<label class="form-label mb-1 small fw-semibold d-block">Documento de identidad</label>`
+                +   `<input id="sw-doc" class="swal2-input mt-0" placeholder="Documento de identidad">`
+                + `</div>`
+                + `<div class="mb-2">`
+                +   `<label class="form-label mb-1 small fw-semibold d-block">Tarjeta profesional (T.P.)</label>`
+                +   `<input id="sw-tp" class="swal2-input mt-0" placeholder="Tarjeta profesional (T.P.)">`
+                + `</div>`
                 + `<div class="form-check mt-3 ms-1"><input type="checkbox" id="sw-confirm" class="form-check-input">`
-                + `<label class="form-check-label small" for="sw-confirm">Confirmo la aprobación de esta conciliación bancaria.</label></div>`
+                +   `<label class="form-check-label small" for="sw-confirm">Confirmo la aprobación de esta conciliación bancaria.</label></div>`
                 + `</div>`,
             focusConfirm: false, showCancelButton: true, confirmButtonText: 'Solicitar código', cancelButtonText: 'Cancelar',
             preConfirm: () => {
@@ -357,7 +374,7 @@ const BankReconciliation = () => {
         if (res?.otpRequired) {
             const { value: otp } = await window.Swal.fire({
                 title: 'Código de firma (OTP)',
-                html: `<div class="alert alert-info small mb-2">Entorno sin correo: el código se muestra aquí. En producción llega al correo del firmante.</div>`
+                html: `<div class="alert alert-info small mb-2">Ingrese el número para confirmar.</div>`
                     + `<div class="mb-2">Código: <b>${res.devOtp}</b></div>`
                     + `<input id="sw-otp" class="swal2-input" placeholder="Ingrese el código">`,
                 focusConfirm: false, showCancelButton: true, confirmButtonText: 'Firmar', cancelButtonText: 'Cancelar',
@@ -1250,7 +1267,10 @@ const BankReconciliation = () => {
                                                 <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => descargarPdf(selectedSession.id)}><i className="ri-download-line me-1" />Descargar informe PDF</button>
                                                 <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verificarFirmas(selectedSession.id)}><i className="ri-shield-check-line me-1" />Verificar firmas</button>
                                                 <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => solicitarReapertura(selectedSession.id)}><i className="ri-folder-open-line me-1" />Reabrir conciliación</button>
-                                                <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verSolicitudes(selectedSession.id)}><i className="ri-list-check-2 me-1" />Solicitudes</button>
+                                                {/* QA 2026-05-28: boton "Solicitudes" ocultado a peticion del usuario.
+                                                    La logica `verSolicitudes` y el endpoint backend `/sesiones/{sid}/solicitudes`
+                                                    siguen intactos; para reactivar el boton, descomentar la siguiente linea. */}
+                                                {/* <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verSolicitudes(selectedSession.id)}><i className="ri-list-check-2 me-1" />Solicitudes</button> */}
                                                 <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verHistorial(selectedSession.id)}><i className="ri-history-line me-1" />Historial</button>
                                             </div>
                                         )}
@@ -1356,7 +1376,9 @@ const BankReconciliation = () => {
                                             <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => descargarPdf(selectedSession.id)}><i className="ri-download-line me-1" />Informe PDF</button>
                                             <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verificarFirmas(selectedSession.id)}><i className="ri-shield-check-line me-1" />Verificar firmas</button>
                                             <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => solicitarReapertura(selectedSession.id)}><i className="ri-folder-open-line me-1" />Reabrir conciliación</button>
-                                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verSolicitudes(selectedSession.id)}><i className="ri-list-check-2 me-1" />Solicitudes</button>
+                                            {/* QA 2026-05-28: boton "Solicitudes" ocultado a peticion del usuario (ambas instancias del archivo).
+                                                Para reactivar, descomentar la siguiente linea. */}
+                                            {/* <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verSolicitudes(selectedSession.id)}><i className="ri-list-check-2 me-1" />Solicitudes</button> */}
                                             <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verHistorial(selectedSession.id)}><i className="ri-history-line me-1" />Historial de versiones</button>
                                         </div>
                                     </>

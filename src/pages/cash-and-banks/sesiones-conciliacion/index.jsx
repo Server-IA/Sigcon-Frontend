@@ -72,7 +72,7 @@ const SesionesConciliacion = () => {
         if (res?.otpRequired) {
             const { value: otp } = await window.Swal.fire({
                 title: 'Código de firma (OTP)',
-                html: `<div class="alert alert-info small">Entorno sin correo: el código se muestra aquí. En producción llega al correo del firmante.</div>`
+                html: `<div class="alert alert-info small">Ingrese el número para confirmar.</div>`
                     + `<div class="mb-2">Código: <b>${res.devOtp}</b></div>`
                     + `<input id="sw-otp" class="swal2-input" placeholder="Ingrese el código">`,
                 focusConfirm: false, showCancelButton: true, confirmButtonText: 'Firmar',
