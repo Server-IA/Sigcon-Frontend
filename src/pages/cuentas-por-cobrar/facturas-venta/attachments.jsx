@@ -4,6 +4,39 @@ import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 
 /**
+ * Formatea un ISO timestamp a "YYYY-MM-DD HH:mm" legible.
+ * El backend devuelve algo como "2026-05-28T15:59:57.354523"; mostrar el ISO
+ * crudo ensancha la columna CARGADO (no tiene punto de quiebre) y desborda
+ * la tabla fuera del modal.
+ */
+const fmtDate = (iso) => {
+    if (!iso) return '-';
+    try {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return iso;
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} `
+            + `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch (_) {
+        return iso;
+    }
+};
+
+/**
+ * Convierte el MIME crudo (ej. "application/pdf") en una etiqueta corta
+ * (PDF / JPG / PNG). El MIME crudo, al contener "/", tampoco tiene punto de
+ * quiebre wrappable y contribuye al desborde de la tabla.
+ */
+const fmtMime = (mime) => {
+    if (!mime) return '-';
+    const m = String(mime).toLowerCase();
+    if (m.includes('pdf')) return 'PDF';
+    if (m.includes('jpeg') || m.includes('jpg')) return 'JPG';
+    if (m.includes('png')) return 'PNG';
+    return mime;
+};
+
+/**
  * Modal de Comprobantes Adjuntos para una factura de venta.
  * Cubre HU AR-03: permite cargar, listar, descargar y eliminar
  * comprobantes (PDF/JPG/PNG, max 5MB) asociados a una factura.
@@ -154,48 +187,57 @@ const AttachmentsModal = ({ modalRef, modalInstance, invoiceId, invoiceNumber })
                             </div>
                         </div>
 
-                        <table className="table table-sm table-striped">
-                            <thead className="table-dark">
-                                <tr>
-                                    <th>Archivo</th>
-                                    <th>Tipo</th>
-                                    <th>Tamaño</th>
-                                    <th>Cargado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {list.length === 0 && (
-                                    <tr><td colSpan="5" className="text-center">Sin comprobantes</td></tr>
-                                )}
-                                {list.map((a) => (
-                                    <tr key={a.id}>
-                                        <td>{a.fileName}</td>
-                                        <td>{a.mimeType}</td>
-                                        <td>{(a.fileSize / 1024).toFixed(1)} KB</td>
-                                        <td>{a.uploadedAt}</td>
-                                        <td>
-                                            <button
-                                                type="button"
-                                                className="btn btn-sm btn-info me-1"
-                                                onClick={() => handleDownload(a.id, a.fileName)}
-                                                title="Descargar"
-                                            >
-                                                <i className="ri-download-line" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn btn-sm btn-danger"
-                                                onClick={() => handleDelete(a.id)}
-                                                title="Eliminar"
-                                            >
-                                                <i className="ri-delete-bin-line" />
-                                            </button>
-                                        </td>
+                        {/*
+                         * `table-responsive` garantiza que la tabla quede
+                         * contenida dentro del modal (scroll horizontal si
+                         * algun contenido excede el ancho). Sin este wrapper,
+                         * MIME crudo (application/pdf) + ISO timestamp largo
+                         * desbordaban el header y los botones por la derecha.
+                         */}
+                        <div className="table-responsive">
+                            <table className="table table-sm table-striped mb-0">
+                                <thead className="table-dark">
+                                    <tr>
+                                        <th>Archivo</th>
+                                        <th>Tipo</th>
+                                        <th>Tamaño</th>
+                                        <th>Cargado</th>
+                                        <th>Acciones</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {list.length === 0 && (
+                                        <tr><td colSpan="5" className="text-center">Sin comprobantes</td></tr>
+                                    )}
+                                    {list.map((a) => (
+                                        <tr key={a.id}>
+                                            <td style={{ wordBreak: 'break-word' }}>{a.fileName}</td>
+                                            <td>{fmtMime(a.mimeType)}</td>
+                                            <td>{(a.fileSize / 1024).toFixed(1)} KB</td>
+                                            <td>{fmtDate(a.uploadedAt)}</td>
+                                            <td className="text-nowrap">
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-info me-1"
+                                                    onClick={() => handleDownload(a.id, a.fileName)}
+                                                    title="Descargar"
+                                                >
+                                                    <i className="ri-download-line" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-danger"
+                                                    onClick={() => handleDelete(a.id)}
+                                                    title="Eliminar"
+                                                >
+                                                    <i className="ri-delete-bin-line" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div className="modal-footer">
                         <button
