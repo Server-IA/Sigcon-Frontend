@@ -95,7 +95,21 @@ const IndexCgComprobantes = () => {
         { title: 'Fecha', data: 'entryDate', name: 'entryDate' },
         {
             title: 'Descripcion', data: 'description', name: 'description',
-            render: (val) => val || '-',
+            // QA reeval Q4 (2026-05-27): etiqueta el rol contable del comprobante en
+            // el listado. El asiento de reversion (storno) tiene lineas con debito/
+            // credito invertidos; sin esta marca un revisor lo lee como "duplicado"
+            // porque los totales coinciden con el original. Cubre tambien las filas
+            // REV/COR ya existentes (creadas antes del prefijo en backend).
+            render: (val, _type, row) => {
+                const txt = val || '-';
+                if (row?.reversalOfId) {
+                    return `<span class="badge bg-label-warning me-1" title="Asiento inverso: débitos y créditos invertidos para neutralizar el original">Asiento inverso</span>${txt}`;
+                }
+                if (row?.correctionOfId) {
+                    return `<span class="badge bg-label-info me-1" title="Borrador correctivo de un asiento reversado">Borrador correctivo</span>${txt}`;
+                }
+                return txt;
+            },
         },
         {
             title: 'Modulo Origen', data: 'sourceModule', name: 'sourceModule',
@@ -594,10 +608,34 @@ const IndexCgComprobantes = () => {
                             : '<p class="text-muted small fst-italic mt-2">Sin lineas en el detalle.</p>';
 
                         const codeShown = row.voucherCode || `#${row.entryNumber || row.id}`;
+                        // QA reeval Q4 (2026-05-27): banner que aclara la naturaleza del
+                        // comprobante cuando es un asiento de reversion (storno) o un
+                        // borrador correctivo. Evita que se lea el REV como "duplicado":
+                        // sus lineas tienen debito/credito INVERTIDOS para neutralizar el
+                        // original (el neto del mayor queda en 0).
+                        const origRev = row.reversalOfVoucherCode || (row.reversalOfNumber ? ('JE-' + (row.fiscalYear || '') + '-' + row.reversalOfNumber) : '');
+                        const naturalezaBannerHtml = row.reversalOfId
+                            ? `<div class="alert alert-info py-2 mb-2">
+                                 <i class="ri-arrow-go-back-line me-1"></i>
+                                 <strong>Asiento de reversión (storno)</strong> del comprobante
+                                 <code>${origRev || 'original'}</code>. Sus líneas tienen los
+                                 <strong>débitos y créditos invertidos</strong> para neutralizar el
+                                 asiento original — <u>no es un duplicado</u>. El neto en el libro
+                                 mayor (original + reversión) queda en cero.
+                               </div>`
+                            : (row.correctionOfId
+                                ? `<div class="alert alert-secondary py-2 mb-2">
+                                     <i class="ri-draft-line me-1"></i>
+                                     <strong>Borrador correctivo</strong> generado tras la reversión.
+                                     Edítelo con los valores correctos y contabilícelo para reemplazar
+                                     el asiento reversado.
+                                   </div>`
+                                : '');
                         window.Swal.fire({
                             title: `Comprobante ${codeShown}`,
                             html: `
                                 <div class="text-start">
+                                    ${naturalezaBannerHtml}
                                     <p class="mb-1"><strong>Fecha:</strong> ${row.entryDate || '-'}</p>
                                     <p class="mb-1"><strong>Descripcion:</strong> ${row.description || '-'}</p>
                                     <p class="mb-1"><strong>Modulo Origen:</strong> ${SOURCE_LABEL[row.sourceModule] || row.sourceModule || '-'}</p>

@@ -60,6 +60,8 @@ import PageMaintenance from "../pages/errors/page_maintenance";
 // NIIF
 import NiifVerificationIndex from "../pages/assets/niif_verification/index";
 import NiifCorrectionIndex from "../pages/assets/niif_correction/index";
+// HU-ACT-08: revisión anual de vida útil y valor residual (cambio de estimación NIC 16 §51 / NIC 8)
+import RevisionAnualIndex from "../pages/assets/revision-anual/index";
 
 import IndexSegmentation from "../pages/third-party/segmentation/index"
 import IndexCommercialData from "../pages/third-party/commercial-data/index"
@@ -362,6 +364,7 @@ export const COMPONENT_MAP = [
   { id: "CREATE_ASSETS", name: "Crear Activo", component: CreateAssets },
   { id: "NIIF_VERIFICATION", name: "Verificación NIIF", component: NiifVerificationIndex },
   { id: "NIIF_CORRECTION", name: "Corrección NIIF", component: NiifCorrectionIndex },
+  { id: "ACT_REVISION_ANUAL", name: "Revisión Anual de Activos", component: RevisionAnualIndex },
   { id: "ACT_CALCULO_DEPRECIACION", name: "Cálculo de Depreciación", component: AssetDepreciationCalculation },
   { id: "ACT_BAJAS_TRANSFERENCIAS", name: "Control de Bajas y Transferencias", component: BajasTransferencias },
   { id: "ACT_KARDEX", name: "Kardex", component: KardexAssets },
