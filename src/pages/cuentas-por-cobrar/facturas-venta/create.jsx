@@ -32,6 +32,24 @@ const emptyLine = {
 };
 
 /**
+ * QA CxC Bug 1 (2026-06-01): sanitiza la entrada de los campos numericos
+ * (tasa de cambio, cantidad, precio unitario, descuento) para que NO se
+ * puedan escribir letras ni simbolos. Conserva solo digitos y un unico punto
+ * decimal. Cubre tanto el tecleo como el pegado (onChange dispara en ambos),
+ * por lo que no hace falta un mensaje "solo se aceptan numeros".
+ */
+const sanitizeDecimal = (raw) => {
+    if (raw === null || raw === undefined) return '';
+    let s = String(raw).replace(/[^0-9.]/g, '');
+    const firstDot = s.indexOf('.');
+    if (firstDot !== -1) {
+        // conservar el primer punto, eliminar puntos adicionales
+        s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+    }
+    return s;
+};
+
+/**
  * HU-AR-01B DEF#3: traduccion de nombres de campos a etiquetas legibles para
  * mostrar en mensajes de validacion. Si un campo no esta en el mapa, se usa
  * el nombre crudo. Cubre los campos de SalesInvoice + lineas anidadas.
@@ -407,11 +425,15 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                         onChange={(val) => setRecord({ ...record, currencyId: val })} />
                                 </div>
                                 <div className="col-md-4">
-                                    <InputModal label="Tasa de cambio" name="exchangeRate" type="number"
+                                    {/* QA CxC Bug 1: type="text" + inputMode="decimal" + sanitizeDecimal
+                                        garantiza que el campo NUNCA muestre letras en ningun navegador
+                                        (con type="number" Firefox las muestra aunque el value quede vacio). */}
+                                    <InputModal label="Tasa de cambio" name="exchangeRate" type="text"
                                         value={record.exchangeRate}
                                         error={fieldErrors.exchangeRate}
+                                        inputMode="decimal"
                                         required
-                                        onChange={(e) => setRecord({ ...record, exchangeRate: e.target.value })} />
+                                        onChange={(e) => setRecord({ ...record, exchangeRate: sanitizeDecimal(e.target.value) })} />
                                 </div>
                                 <div className="col-md-4">
                                     <InputSelectModal label="Forma de pago" name="paymentFormId"
@@ -481,23 +503,26 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                                     onChange={(e) => updateLine(idx, 'description', e.target.value)} />
                                             </div>
                                             <div className="col-md-2">
-                                                <InputModal label="Cantidad" name={`qty_${idx}`} type="number"
+                                                <InputModal label="Cantidad" name={`qty_${idx}`} type="text"
                                                     value={line.quantity}
                                                     required
+                                                    inputMode="decimal"
                                                     error={(!line.quantity || Number(line.quantity) <= 0) && fieldErrors[`lines[${idx}]`] ? 'Cantidad > 0' : ''}
-                                                    onChange={(e) => updateLine(idx, 'quantity', e.target.value)} />
+                                                    onChange={(e) => updateLine(idx, 'quantity', sanitizeDecimal(e.target.value))} />
                                             </div>
                                             <div className="col-md-3">
-                                                <InputModal label="Precio unitario" name={`price_${idx}`} type="number"
+                                                <InputModal label="Precio unitario" name={`price_${idx}`} type="text"
                                                     value={line.unitPrice}
                                                     required
+                                                    inputMode="decimal"
                                                     error={(!line.unitPrice || Number(line.unitPrice) <= 0) && fieldErrors[`lines[${idx}]`] ? 'Precio > 0' : ''}
-                                                    onChange={(e) => updateLine(idx, 'unitPrice', e.target.value)} />
+                                                    onChange={(e) => updateLine(idx, 'unitPrice', sanitizeDecimal(e.target.value))} />
                                             </div>
                                             <div className="col-md-2">
-                                                <InputModal label="Descuento" name={`disc_${idx}`} type="number"
+                                                <InputModal label="Descuento" name={`disc_${idx}`} type="text"
                                                     value={line.discount}
-                                                    onChange={(e) => updateLine(idx, 'discount', e.target.value)} />
+                                                    inputMode="decimal"
+                                                    onChange={(e) => updateLine(idx, 'discount', sanitizeDecimal(e.target.value))} />
                                             </div>
 
                                             <div className="col-12">

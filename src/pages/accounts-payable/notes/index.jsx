@@ -6,6 +6,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 
 import CreateApNote from './create';
 
@@ -81,7 +82,14 @@ const IndexApNotes = () => {
             title: 'Motivo',
             data: 'reason',
             name: 'reason',
-            render: (val) => val || '-',
+            // RF-29 (Notas Tecnicas CXP): truncar el motivo a 50 chars con
+            // tooltip que muestra el texto completo, para no romper la tabla.
+            render: (val) => {
+                if (!val) return '-';
+                const safe = String(val).replace(/"/g, '&quot;');
+                const short = val.length > 50 ? `${val.slice(0, 50)}...` : val;
+                return `<span title="${safe}">${short}</span>`;
+            },
         },
         {
             title: 'Acciones',
@@ -104,6 +112,11 @@ const IndexApNotes = () => {
         modalCreateInstance.current.show();
     };
 
+    // QA CXP item 5 (2026-06-02): gating de permisos (backend ya bloquea via
+    // @PreAuthorize; ocultamos el boton de crear si el rol no tiene el permiso).
+    const { has } = usePermissions();
+    const canCreate = has('AP.NOTAS.CREAR');
+
     const buttons = [
         {
             text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
@@ -113,11 +126,11 @@ const IndexApNotes = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(canCreate ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Crear Nota</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: () => openModalCreate(),
-        },
+        }] : []),
     ];
 
     const rows = useMemo(() => {

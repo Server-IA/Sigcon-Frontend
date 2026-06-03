@@ -35,6 +35,11 @@ const DataTableReference = ({
   // server-side curada (con encabezado empresa + totales). Evita botones
   // de exportacion duplicados reportados por el profesor.
   hideDefaultExport = false,
+  // PA-RF-03 v3.0 (Control de Cambios PA, 2026-05-29): opt-in para consumir el
+  // listado via GET (query string) en lugar de POST (body). Solo lo usa la
+  // pagina de Roles (GET /api/roles). Default false -> POST como siempre, sin
+  // regresion para el resto de tablas del sistema.
+  serverGet = false,
 }) => {
   const token = useSelector((state) => state.user.token);
   // QA (2026-05-26): datos del usuario logueado para el encabezado estandar de
@@ -120,12 +125,41 @@ const DataTableReference = ({
           // QA Bloque AU+ (2026-05-07) Bug 2: leer filterColumns desde ref
           // (no del closure) para que cada reload tome los filtros actuales.
           const liveFilters = filterColumnsRef.current || [];
-          const response = await fetchHelper.post(
-            api_back,
-            { ...data, columns: [...(data.columns || []), ...liveFilters] },
-            {},
-            0,
-          );
+          let response;
+          if (serverGet) {
+            // PA-RF-03 v3.0: serializar los parametros DataTables (paginacion +
+            // busqueda global + filtros de columna) a query string y consumir el
+            // listado via GET. El backend reconstruye el DataTableRequest.
+            const qs = new URLSearchParams();
+            qs.set("draw", data?.draw ?? 1);
+            qs.set("start", data?.start ?? 0);
+            qs.set("length", data?.length ?? 10);
+            qs.set("search", data?.search?.value ?? "");
+            qs.set("searchRegex", String(!!data?.search?.regex));
+            (data?.columns || []).forEach((col) => {
+              const cname = col?.name;
+              const cval = col?.search?.value;
+              if (cname && cval !== undefined && cval !== null && String(cval).length > 0) {
+                qs.set("col_" + cname, cval);
+                qs.set("colrx_" + cname, String(!!col?.search?.regex));
+              }
+            });
+            liveFilters.forEach((f) => {
+              const cname = (f?.column || "").split(":")[0];
+              if (cname && f?.value) {
+                qs.set("col_" + cname, f.value);
+                qs.set("colrx_" + cname, String(!!f?.regex));
+              }
+            });
+            response = await fetchHelper.get(api_back + "?" + qs.toString(), {}, 0);
+          } else {
+            response = await fetchHelper.post(
+              api_back,
+              { ...data, columns: [...(data.columns || []), ...liveFilters] },
+              {},
+              0,
+            );
+          }
           callback(response);
         } catch (error) {
           console.log("Error en DataTable: ", error);

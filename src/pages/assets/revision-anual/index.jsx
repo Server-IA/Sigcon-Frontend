@@ -37,6 +37,19 @@ const RevisionAnualIndex = () => {
 
     /** GET activos elegibles para revisión del año fiscal. */
     const loadAssets = async () => {
+        // QA Activos (2026-06-02): la revisión anual NIC 16 §51 aplica al año en
+        // curso o a años anteriores (cierre fiscal). No tiene sentido revisar un
+        // año futuro porque la depreciación de ese periodo aún no ha ocurrido. El
+        // backend ya devuelve lista vacía para años futuros; aquí lo explicamos
+        // de forma explícita para que el contador no crea que "no filtra".
+        if (Number(fiscalYear) > currentYear) {
+            setAssets([]);
+            setLoaded(true);
+            showMsg('warning',
+                `No se puede revisar un año fiscal futuro (${Number(fiscalYear)}). `
+                + `La revisión anual aplica al año en curso (${currentYear}) o a años anteriores.`);
+            return;
+        }
         setLoading(true);
         setMessage({ type: '', text: '', show: false });
         try {
@@ -176,7 +189,7 @@ const RevisionAnualIndex = () => {
                         <div className="col-auto">
                             <label className="form-label mb-1" style={{ fontSize: '0.82rem' }}>Año fiscal</label>
                             <input type="number" className="form-control" style={{ maxWidth: 140 }}
-                                value={fiscalYear} min="2000" max="2100"
+                                value={fiscalYear} min="2000" max={currentYear}
                                 onChange={(e) => setFiscalYear(e.target.value)} />
                         </div>
                         <div className="col-auto">
@@ -205,7 +218,7 @@ const RevisionAnualIndex = () => {
                             <tbody>
                                 {assets.length === 0 && (
                                     <tr><td colSpan="8" className="text-center text-muted py-3">
-                                        {loaded ? 'No hay activos registrados para revisión en este año fiscal.' : 'Cargue los activos del año fiscal.'}
+                                        {loaded ? 'No existen activos registrados en este año fiscal.' : 'Cargue los activos del año fiscal.'}
                                     </td></tr>
                                 )}
                                 {assets.map((a) => (

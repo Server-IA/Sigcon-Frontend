@@ -291,6 +291,9 @@ import PermissionRoute from "../components/organism/PermissionRoute";
 // Plataforma (HU-PLAT-01/02/05/06)
 import IndexEmpresas from "../pages/platform/empresas/index";
 import PlatformDashboard from "../pages/platform/dashboard/index";
+import IndexPlatformAdmins from "../pages/platform/administradores/index";
+// PA-RF-28 (Pendientes PA): gestion de API Keys AAEF (PLATFORM_ADMIN).
+import IndexApiKeys from "../pages/platform/api-keys/index";
 
 /** Helper: envuelve un componente con AdminRoute para crear una pagina solo-admin. */
 const adminOnly = (Component) => () => (
@@ -463,4 +466,8 @@ export const COMPONENT_MAP = [
   // Bloque F - Plataforma (solo PLATFORM_ADMIN cross-empresa)
   { id: "PLATFORM_EMPRESAS", name: "Empresas (plataforma)", component: platformOnly(IndexEmpresas) },
   { id: "PLATFORM_DASHBOARD", name: "Dashboard (plataforma)", component: platformOnly(PlatformDashboard) },
+  // PA-RF-PLAT-07 v3.0 (Control de Cambios PA, 2026-05-29): ciclo de vida PLATFORM_ADMIN.
+  { id: "PLATFORM_ADMINS", name: "Administradores (plataforma)", component: platformOnly(IndexPlatformAdmins) },
+  // PA-RF-28 (Pendientes PA): ciclo de vida de API Keys AAEF.
+  { id: "PLATFORM_API_KEYS", name: "API Keys (plataforma)", component: platformOnly(IndexApiKeys) },
 ];

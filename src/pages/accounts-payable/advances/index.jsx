@@ -6,6 +6,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 
 import CreateApAdvance from './create';
 import ApplyApAdvance from './apply';
@@ -61,6 +62,11 @@ const IndexApAdvances = () => {
 
     const url = ['api', 'v1', 'ap', 'advances'];
 
+    // QA CXP item 5 (2026-06-02): gating de permisos (backend ya bloquea via
+    // @PreAuthorize). Crear y aplicar anticipo requieren AP.ANTICIPOS.CREAR.
+    const { has } = usePermissions();
+    const canCreate = has('AP.ANTICIPOS.CREAR');
+
     const columns = [
         { title: 'Id', data: 'id', name: 'id' },
         {
@@ -98,18 +104,10 @@ const IndexApAdvances = () => {
             render: (id, _type, row) => {
                 // QA-BLOQUE-AO (2026-04-29): status real del backend es PENDING (no AVAILABLE).
                 const canApply = row?.status === 'PENDING';
-                return `
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-label-info action-btn"
-                        data-action="view" data-id="${id}" title="Ver">
-                        <i class="ri-eye-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-success action-btn"
-                        data-action="apply" data-id="${id}" title="Aplicar a Factura"
-                        ${!canApply ? 'disabled' : ''}>
-                        <i class="ri-links-line"></i>
-                    </button>
-                </div>`;
+                // QA CXP item 5: "Aplicar a Factura" solo si el rol puede crear anticipos.
+                const btns = [`<button class="btn btn-sm btn-label-info action-btn" data-action="view" data-id="${id}" title="Ver"><i class="ri-eye-line"></i></button>`];
+                if (canCreate) btns.push(`<button class="btn btn-sm btn-label-success action-btn" data-action="apply" data-id="${id}" title="Aplicar a Factura" ${!canApply ? 'disabled' : ''}><i class="ri-links-line"></i></button>`);
+                return `<div class="d-flex gap-1">${btns.join('')}</div>`;
             },
         },
     ];
@@ -130,11 +128,11 @@ const IndexApAdvances = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(canCreate ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Anticipo</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: () => openModalCreate(),
-        },
+        }] : []),
     ];
 
     const rows = useMemo(() => {

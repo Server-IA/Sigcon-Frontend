@@ -223,6 +223,7 @@ export function usePermissions() {
             'AP.PAGOS.VER': ['READ_AP_PAYMENT'],
             'AP.PAGOS.CREAR': ['CREATE_AP_PAYMENT'],
             'AP.PAGOS.CONCILIAR': ['RECONCILE_AP_PAYMENT'],
+            'AP.PAGOS.REVERSAR': ['REVERSE_PAYMENT', 'REVERSE_AP_PAYMENT'],
             'AP.ANTICIPOS.VER': ['READ_AP_ADVANCE'],
             'AP.ANTICIPOS.CREAR': ['CREATE_AP_ADVANCE'],
             'AP.NOTAS.VER': ['READ_AP_NOTE'],

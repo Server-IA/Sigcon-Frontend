@@ -10,10 +10,14 @@ const FilterBankAccount = ({ filterRef, filterInstance, dataTableRef, banks = []
 
     const getTable = () => dataTableRef?.current?.table();
 
+    // QA BNK (2026-06-02) #1: los ids deben coincidir con el enum BankAccountType
+    // del backend (CORRIENTE/AHORROS/TARJETA_CREDITO, en español). Antes usaban ids
+    // en ingles (SAVINGS/CHECKING/INVESTMENT) que NUNCA coinciden con el valor
+    // almacenado en BD, por eso al filtrar por "tipo de cuenta" no devolvia nada.
     const ACCOUNT_TYPES = [
-        { id: 'SAVINGS', name: 'Ahorros' },
-        { id: 'CHECKING', name: 'Corriente' },
-        { id: 'INVESTMENT', name: 'Inversión' },
+        { id: 'CORRIENTE', name: 'Corriente' },
+        { id: 'AHORROS', name: 'Ahorros' },
+        { id: 'TARJETA_CREDITO', name: 'Tarjeta de Crédito' },
     ];
 
     const STATUSES = [

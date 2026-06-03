@@ -169,7 +169,10 @@ const IndexMenus = () => {
     {
       title: "Módulo",
       data: "module.name",
-      name: "module",
+      // QA barrido filtros (2026-06-02): `name` debe apuntar al path JPA escalar
+      // (module.name). Antes 'module' resolvia a la relacion ModuleEntity y el
+      // filtro por modulo se descartaba en silencio (mostraba todos).
+      name: "module.name",
       render: (module) => {
         return module ?? "-";
       },
@@ -177,7 +180,9 @@ const IndexMenus = () => {
     {
       title: "Padre",
       data: "parent.label",
-      name: "parent",
+      // QA barrido filtros (2026-06-02): `name` = parent.label (escalar). Antes
+      // 'parent' resolvia a la relacion MenuEntity y el filtro no aplicaba.
+      name: "parent.label",
       render: (parent) => {
         return parent ?? "-";
       },

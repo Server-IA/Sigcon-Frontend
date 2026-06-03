@@ -47,6 +47,8 @@ const TABS = [
 const API_BANK_ACCOUNTS_SEARCH = ['api', 'v1', 'bank-accounts', 'search'];
 const API_TPBA = (thirdPartyId) => ['api', 'v1', 'third-parties', thirdPartyId, 'bank-accounts'];
 const API_TPBA_DELETE = (thirdPartyId, linkId) => ['api', 'v1', 'third-parties', thirdPartyId, 'bank-accounts', linkId];
+// PT-02 (TER-RF-05): marcar una vinculacion existente como principal.
+const API_TPBA_PRIMARY = (thirdPartyId, linkId) => ['api', 'v1', 'third-parties', thirdPartyId, 'bank-accounts', linkId, 'primary'];
 
 const emptyContact = { position: '', phone: '', email: '', contactPerson: '' };
 
@@ -100,6 +102,7 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
     const [pendingBankLinks,   setPendingBankLinks]   = useState([]);   // [{tempId, bankAccountId, label}]
     const [pendingBankUnlinks, setPendingBankUnlinks] = useState([]);   // [linkIds existentes a borrar]
     const [selectedBankAccountId, setSelectedBankAccountId] = useState('');
+    const [linkAsPrimary, setLinkAsPrimary] = useState(false);   // PT-02: marcar como principal al vincular
     const [bankAccountsLoading, setBankAccountsLoading]     = useState(false);
 
     // Catalogos FK para tipos de organizacion, regimen y retenciones
@@ -262,9 +265,27 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
             tempId: `tmp_${Date.now()}_${id}`,
             bankAccountId: id,
             label: meta.label,
+            isPrimary: linkAsPrimary, // PT-02
         }]);
         setSelectedBankAccountId('');
+        setLinkAsPrimary(false);
         setErrorMessage('');
+    };
+
+    /**
+     * PT-02 (TER-RF-05): marca una cuenta YA vinculada (persistida) como
+     * principal. Llama al endpoint PATCH inmediatamente y recarga el listado.
+     * El backend desmarca automaticamente la principal anterior.
+     */
+    const handleSetPrimaryLink = async (linkId) => {
+        try {
+            await fetchHelper.patch(base_url(API_TPBA_PRIMARY(thirdPartyUpdated.id, linkId)), {}, {}, 1000);
+            const res = await fetchHelper.get(base_url(API_TPBA(thirdPartyUpdated.id)), {}, 0, false);
+            setBankAccountsLinked(res?.data ?? []);
+            setErrorMessage('');
+        } catch (e) {
+            setErrorMessage(e?.msg || 'No se pudo marcar la cuenta como principal.');
+        }
     };
 
     /**
@@ -295,11 +316,11 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                 null, {}, 1000
             );
         }
-        // 2. Links nuevos
+        // 2. Links nuevos (PT-02: respetar la marca de principal elegida)
         for (const pl of pendingBankLinks) {
             await fetchHelper.post(
                 base_url(API_TPBA(tpId)),
-                { bankAccountId: pl.bankAccountId, isPrimary: false },
+                { bankAccountId: pl.bankAccountId, isPrimary: !!pl.isPrimary },
                 {}, 1000
             );
         }
@@ -332,6 +353,27 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
     };
 
     const handleUpdate = async () => {
+        // PT-07/PT-08 (TER-RF-03): validaciones de UI antes de enviar.
+        const clientErrors = {};
+        const bn = (thirdPartyUpdated.businessName || '').trim();
+        if (bn.length < 3 || bn.length > 255) {
+            clientErrors.businessName = 'La razon social debe tener entre 3 y 255 caracteres';
+        }
+        for (const c of (thirdPartyUpdated.contacts ?? [])) {
+            const phone = (c.phone || '').trim();
+            if (phone && !/^\d{7,12}$/.test(phone)) {
+                clientErrors.contacts = 'El telefono de contacto solo puede contener digitos y debe tener entre 7 y 12 caracteres';
+            }
+            const email = (c.email || '').trim();
+            if (email && (email.length > 255 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
+                clientErrors.contacts = 'El correo electronico del contacto no tiene un formato valido';
+            }
+        }
+        if (Object.keys(clientErrors).length > 0) {
+            setErrors(clientErrors);
+            setErrorMessage(clientErrors.contacts || 'Corrija los campos marcados antes de guardar.');
+            return;
+        }
         try {
             // ── 1. Actualizar información general del tercero ──────────────────
             const url = base_url(API_UPDATE(thirdPartyUpdated.id));
@@ -501,6 +543,11 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                             error={errors.businessName} placeholder="Ej. EMPRESA EJEMPLO S.A.S."
                                             required={!readOnly} disabled={readOnly} readOnly={readOnly}
                                         />
+                                        {!readOnly && (
+                                            <small className={`d-block mt-1 ${(thirdPartyUpdated.businessName || '').trim().length > 0 && ((thirdPartyUpdated.businessName || '').trim().length < 3 || (thirdPartyUpdated.businessName || '').trim().length > 255) ? 'text-danger' : 'text-muted'}`}>
+                                                Debe contener entre 3 y 255 caracteres ({(thirdPartyUpdated.businessName || '').trim().length}/255)
+                                            </small>
+                                        )}
                                     </div>
                                 </div>
                                 {thirdPartyUpdated.status === 'BLOCKED' && (
@@ -743,6 +790,21 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                                 <i className="ri-link me-1"></i> Vincular
                                             </button>
                                         </div>
+                                        {/* PT-02 (TER-RF-05): marcar como principal al vincular. */}
+                                        <div className="col-md-12 mt-2">
+                                            <div className="form-check">
+                                                <input
+                                                    type="checkbox"
+                                                    className="form-check-input"
+                                                    id="tp_link_primary"
+                                                    checked={linkAsPrimary}
+                                                    onChange={(e) => setLinkAsPrimary(e.target.checked)}
+                                                />
+                                                <label className="form-check-label" htmlFor="tp_link_primary">
+                                                    Marcar como cuenta principal
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 
@@ -764,7 +826,9 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                 {(() => {
                                     // Vista combinada: BD - pendingUnlinks + pendingLinks
                                     const visibleLinked = bankAccountsLinked.filter(l =>
-                                        !pendingBankUnlinks.includes(l.id));
+                                        !pendingBankUnlinks.includes(l.id))
+                                        // PT-02: la cuenta principal se muestra primero.
+                                        .slice().sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
                                     const totalRows = visibleLinked.length + pendingBankLinks.length;
                                     if (bankAccountsLoading) return null;
                                     if (totalRows === 0) {
@@ -800,7 +864,17 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                                             </td>
                                                             <td><span className="badge bg-label-success">Guardada</span></td>
                                                             {!readOnly && (
-                                                                <td>
+                                                                <td className="d-flex gap-1">
+                                                                    {!link.isPrimary && (
+                                                                        <button
+                                                                            type="button"
+                                                                            className="btn btn-sm btn-outline-primary"
+                                                                            title="Marcar como cuenta principal"
+                                                                            onClick={() => handleSetPrimaryLink(link.id)}
+                                                                        >
+                                                                            <i className="ri-star-line"></i>
+                                                                        </button>
+                                                                    )}
                                                                     <button
                                                                         type="button"
                                                                         className="btn btn-sm btn-outline-danger"

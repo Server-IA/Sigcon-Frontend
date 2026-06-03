@@ -64,6 +64,7 @@ export const ENTITY_LABELS = {
     IntegrationBatch: 'Lote de integracion', IntegrationTransfer: 'Transferencia de integracion',
     AuditLog: 'Log de auditoria', AuditRiskRule: 'Regla de riesgo',
     AuditRetentionPolicy: 'Politica de retencion', AuditPurgeRecord: 'Registro de purga',
+    AuditFinding: 'Hallazgo de auditoria',
     AccessDenied: 'Acceso denegado',
     FinancialStatement: 'Estado financiero',
 };

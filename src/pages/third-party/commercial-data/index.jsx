@@ -192,31 +192,37 @@ const IndexCommercialData = () => {
     /**
      * Elimina los datos comerciales del tercero seleccionado con confirmacion.
      */
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!selectedThirdPartyId) return;
-        window.Swal.fire({
+        // PT-10 (TER-RF-12): justificacion obligatoria (minimo 30 caracteres),
+        // bloqueante hasta cumplirla.
+        const { value: justification } = await window.Swal.fire({
             title: 'Eliminar datos comerciales',
-            text: 'Esta accion eliminara los datos comerciales del tercero seleccionado. Esta seguro?',
+            text: 'Ingrese la justificacion de la eliminacion (minimo 30 caracteres).',
+            input: 'textarea',
+            inputPlaceholder: 'Motivo de la eliminacion de las condiciones comerciales...',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Si, eliminar',
             cancelButtonText: 'Cancelar',
-        }).then(async (result) => {
-            if (!result.isConfirmed) return;
-            try {
-                await fetchHelper.delete(
-                    base_url(API_COMMERCIAL_DELETE(selectedThirdPartyId)), {}, {}, 500, false
-                );
-                setMessage({ message: 'Datos comerciales eliminados exitosamente.', type: 'success', show: true });
-                loadCommercialData();
-            } catch (error) {
-                setMessage({
-                    message: error?.msg || 'Error al eliminar los datos comerciales.',
-                    type: 'danger',
-                    show: true,
-                });
-            }
+            inputValidator: (v) => (!v || v.trim().length < 30)
+                ? 'La justificacion debe tener al menos 30 caracteres'
+                : undefined,
         });
+        if (!justification) return;
+        try {
+            const url = base_url(API_COMMERCIAL_DELETE(selectedThirdPartyId))
+                + '?justification=' + encodeURIComponent(justification.trim());
+            await fetchHelper.delete(url, {}, {}, 500, false);
+            setMessage({ message: 'Datos comerciales eliminados exitosamente.', type: 'success', show: true });
+            loadCommercialData();
+        } catch (error) {
+            setMessage({
+                message: error?.msg || 'Error al eliminar los datos comerciales.',
+                type: 'danger',
+                show: true,
+            });
+        }
     };
 
     /**
@@ -421,6 +427,7 @@ const IndexCommercialData = () => {
                                                 <th>Valor Anterior</th>
                                                 <th>Valor Nuevo</th>
                                                 <th>Usuario</th>
+                                                <th>Motivo</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -435,6 +442,7 @@ const IndexCommercialData = () => {
                                                         <td>{formatHistoryValue(entry.fieldName, entry.oldValue)}</td>
                                                         <td>{formatHistoryValue(entry.fieldName, entry.newValue)}</td>
                                                         <td>{entry.changedBy ?? '-'}</td>
+                                                        <td>{entry.changeReason ?? '-'}</td>
                                                     </tr>
                                                 );
                                             })}

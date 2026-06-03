@@ -6,6 +6,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 
 import CreateApInvoice from './create';
 import UpdatedApInvoice from './updated';
@@ -68,6 +69,17 @@ const IndexApInvoices = () => {
 
     /** Endpoint de busqueda paginada de facturas. */
     const url = ['api', 'v1', 'invoices', 'search'];
+
+    // QA CXP item 5 (2026-06-02): gating de permisos en la UI. El backend YA
+    // bloquea con @PreAuthorize (un auditor recibe 403 al crear/editar/eliminar),
+    // pero la pantalla mostraba TODOS los botones a cualquier rol -> el usuario
+    // los veia y clickeaba y percibia que "podia hacer de todo". Ocultamos los
+    // botones de mutacion segun el permiso efectivo del usuario (admin lo ve todo).
+    const { has } = usePermissions();
+    const canCreate = has('AP.FACTURAS_COMPRA.CREAR');
+    const canEdit   = has('AP.FACTURAS_COMPRA.EDITAR');
+    const canVoid   = has('AP.FACTURAS_COMPRA.ANULAR');
+    const canSettle = has('AP.FACTURAS_COMPRA.LIQUIDAR');
 
     /** Columnas del DataTable. */
     const columns = [
@@ -141,40 +153,18 @@ const IndexApInvoices = () => {
                 // AgroFusion (antes el boton salia deshabilitado, sin explicacion).
                 const isVoidable    = (row?.status === 'PENDING'
                                        || row?.status === 'PARTIALLY_PAID');
-                return `
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-label-info action-btn"
-                        data-action="view" data-id="${id}" title="Ver">
-                        <i class="ri-eye-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-primary action-btn"
-                        data-action="edit" data-id="${id}" title="Editar"
-                        ${!isEditable ? 'disabled' : ''}>
-                        <i class="ri-edit-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-success action-btn"
-                        data-action="settle" data-id="${id}"
-                        title="Liquidar factura (HU-AP-03)"
-                        ${!isSettleable ? 'disabled' : ''}>
-                        <i class="ri-check-double-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-info action-btn"
-                        data-action="attachments" data-id="${id}"
-                        title="Documentos soporte (HU-AP-13)">
-                        <i class="ri-attachment-2"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-warning action-btn"
-                        data-action="void" data-id="${id}"
-                        title="Anular factura (HU-AP-25)"
-                        ${!isVoidable ? 'disabled' : ''}>
-                        <i class="ri-close-circle-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-danger action-btn"
-                        data-action="delete" data-id="${id}" title="Eliminar"
-                        ${!isDeletable ? 'disabled' : ''}>
-                        <i class="ri-delete-bin-5-line"></i>
-                    </button>
-                </div>`;
+                // QA CXP item 5: los botones de mutacion (editar/liquidar/anular/
+                // eliminar) solo se renderizan si el usuario tiene el permiso.
+                // Ver y Documentos soporte requieren VER (que ya tiene para ver
+                // la pagina). El disabled por estado sigue aplicando ademas.
+                const btns = [];
+                btns.push(`<button class="btn btn-sm btn-label-info action-btn" data-action="view" data-id="${id}" title="Ver"><i class="ri-eye-line"></i></button>`);
+                if (canEdit) btns.push(`<button class="btn btn-sm btn-label-primary action-btn" data-action="edit" data-id="${id}" title="Editar" ${!isEditable ? 'disabled' : ''}><i class="ri-edit-line"></i></button>`);
+                if (canSettle) btns.push(`<button class="btn btn-sm btn-label-success action-btn" data-action="settle" data-id="${id}" title="Liquidar factura (HU-AP-03)" ${!isSettleable ? 'disabled' : ''}><i class="ri-check-double-line"></i></button>`);
+                btns.push(`<button class="btn btn-sm btn-label-info action-btn" data-action="attachments" data-id="${id}" title="Documentos soporte (HU-AP-13)"><i class="ri-attachment-2"></i></button>`);
+                if (canVoid) btns.push(`<button class="btn btn-sm btn-label-warning action-btn" data-action="void" data-id="${id}" title="Anular factura (HU-AP-25)" ${!isVoidable ? 'disabled' : ''}><i class="ri-close-circle-line"></i></button>`);
+                if (canVoid) btns.push(`<button class="btn btn-sm btn-label-danger action-btn" data-action="delete" data-id="${id}" title="Eliminar" ${!isDeletable ? 'disabled' : ''}><i class="ri-delete-bin-5-line"></i></button>`);
+                return `<div class="d-flex gap-1">${btns.join('')}</div>`;
             },
         },
     ];
@@ -225,11 +215,11 @@ const IndexApInvoices = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(canCreate ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Factura</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: () => openModalCreate(),
-        },
+        }] : []),
     ];
 
     /** Rows normalizadas para el listener de acciones. */
@@ -307,7 +297,7 @@ const IndexApInvoices = () => {
 
             if (action === 'attachments') {
                 // HU-AP-13 (2026-04-28): abrir modal de documentos soporte.
-                setAttachInvoice({ id: selected.id, invoiceNumber: selected.supplierInvoiceNumber });
+                setAttachInvoice({ id: selected.id, invoiceNumber: selected.supplierInvoiceNumber, status: selected.status });
                 if (!modalAttachInstance.current) {
                     modalAttachInstance.current = new window.bootstrap.Modal(modalAttachRef.current);
                 }
@@ -462,6 +452,7 @@ const IndexApInvoices = () => {
                 modalInstance={modalAttachInstance}
                 invoiceId={attachInvoice?.id}
                 invoiceNumber={attachInvoice?.invoiceNumber}
+                invoiceStatus={attachInvoice?.status}
             />
 
             <GenericFilterModal

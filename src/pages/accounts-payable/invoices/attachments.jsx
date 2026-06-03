@@ -15,12 +15,18 @@ const AP_ATTACH_TYPES = [
     { id: 'OTHER', label: 'Otro' },
 ];
 
-const ApAttachmentsModal = ({ modalRef, modalInstance, invoiceId, invoiceNumber }) => {
+const ApAttachmentsModal = ({ modalRef, modalInstance, invoiceId, invoiceNumber, invoiceStatus }) => {
     const [list, setList] = useState([]);
     const [file, setFile] = useState(null);
     const [docType, setDocType] = useState('OTHER');
     const [message, setMessage] = useState({ type: '', text: '' });
     const [loading, setLoading] = useState(false);
+
+    // RF-12 (Notas Tecnicas CXP): facturas anuladas (VOIDED) conservan la
+    // trazabilidad documental pero NO permiten adjuntar/reemplazar/eliminar.
+    // El backend ya lo bloquea; aqui ocultamos los controles para no mostrar
+    // botones que solo devolverian un error.
+    const isVoided = invoiceStatus === 'VOIDED';
 
     const loadList = async () => {
         if (!invoiceId) return;
@@ -183,41 +189,49 @@ const ApAttachmentsModal = ({ modalRef, modalInstance, invoiceId, invoiceNumber 
                         {message.text && (
                             <div className={`alert alert-${message.type}`}>{message.text}</div>
                         )}
-                        <div className="row g-2 mb-3">
-                            <div className="col-md-4">
-                                <label className="form-label small">Tipo de documento</label>
-                                <select
-                                    className="form-select form-select-sm"
-                                    value={docType}
-                                    onChange={(e) => setDocType(e.target.value)}
-                                >
-                                    {AP_ATTACH_TYPES.map(t => (
-                                        <option key={t.id} value={t.id}>{t.label}</option>
-                                    ))}
-                                </select>
+                        {isVoided ? (
+                            <div className="alert alert-secondary py-2">
+                                <i className="ri-information-line me-1" />
+                                La factura esta anulada. Se conserva la trazabilidad documental:
+                                los adjuntos solo pueden descargarse, no gestionarse.
                             </div>
-                            <div className="col-md-5">
-                                <label className="form-label small">Archivo</label>
-                                <input
-                                    type="file"
-                                    accept="application/pdf,application/xml,text/xml,image/jpeg,image/png"
-                                    className="form-control form-control-sm"
-                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                                />
-                                <small className="text-muted">Max 5MB. PDF/XML/JPG/PNG.</small>
+                        ) : (
+                            <div className="row g-2 mb-3">
+                                <div className="col-md-4">
+                                    <label className="form-label small">Tipo de documento</label>
+                                    <select
+                                        className="form-select form-select-sm"
+                                        value={docType}
+                                        onChange={(e) => setDocType(e.target.value)}
+                                    >
+                                        {AP_ATTACH_TYPES.map(t => (
+                                            <option key={t.id} value={t.id}>{t.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="col-md-5">
+                                    <label className="form-label small">Archivo</label>
+                                    <input
+                                        type="file"
+                                        accept="application/pdf,application/xml,text/xml,image/jpeg,image/png"
+                                        className="form-control form-control-sm"
+                                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                    />
+                                    <small className="text-muted">Max 5MB. PDF/XML/JPG/PNG.</small>
+                                </div>
+                                <div className="col-md-3 d-flex align-items-end">
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary w-100"
+                                        onClick={handleUpload}
+                                        disabled={loading || !file}
+                                    >
+                                        <i className="ri-upload-line me-1" />
+                                        {loading ? 'Cargando...' : 'Adjuntar'}
+                                    </button>
+                                </div>
                             </div>
-                            <div className="col-md-3 d-flex align-items-end">
-                                <button
-                                    type="button"
-                                    className="btn btn-primary w-100"
-                                    onClick={handleUpload}
-                                    disabled={loading || !file}
-                                >
-                                    <i className="ri-upload-line me-1" />
-                                    {loading ? 'Cargando...' : 'Adjuntar'}
-                                </button>
-                            </div>
-                        </div>
+                        )}
 
                         <table className="table table-sm table-striped">
                             <thead className="table-dark">
@@ -245,16 +259,20 @@ const ApAttachmentsModal = ({ modalRef, modalInstance, invoiceId, invoiceNumber 
                                                 title="Descargar">
                                                 <i className="ri-download-line" />
                                             </button>
-                                            <button type="button" className="btn btn-sm btn-warning me-1"
-                                                onClick={() => handleReplace(a.id)}
-                                                title="Reemplazar por nueva version (HU-AP-12 E4)">
-                                                <i className="ri-refresh-line" />
-                                            </button>
-                                            <button type="button" className="btn btn-sm btn-danger"
-                                                onClick={() => handleDelete(a.id)}
-                                                title="Eliminar">
-                                                <i className="ri-delete-bin-line" />
-                                            </button>
+                                            {!isVoided && (
+                                                <>
+                                                    <button type="button" className="btn btn-sm btn-warning me-1"
+                                                        onClick={() => handleReplace(a.id)}
+                                                        title="Reemplazar por nueva version (HU-AP-12 E4)">
+                                                        <i className="ri-refresh-line" />
+                                                    </button>
+                                                    <button type="button" className="btn btn-sm btn-danger"
+                                                        onClick={() => handleDelete(a.id)}
+                                                        title="Eliminar">
+                                                        <i className="ri-delete-bin-line" />
+                                                    </button>
+                                                </>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

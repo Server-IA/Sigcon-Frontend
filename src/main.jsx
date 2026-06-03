@@ -160,8 +160,15 @@ import { store } from './utils/reducers/store.jsx'
     try {
         const style = document.createElement('style');
         style.setAttribute('data-source', 'sigcon-swal-deny-fix');
+        // QA Bloque BNK (2026-06-03) Bug 7: el MISMO fantasma afectaba a
+        // `.swal2-cancel` (boton "Cancel" rojo). SweetAlert le pone inline
+        // `display: none` cuando showCancelButton es false, pero una regla del
+        // bundle lo sobreescribia a `display: flex`. Se extiende el fix a cancel
+        // (y confirm por consistencia) para respetar el inline en TODOS los Swal.
         style.textContent =
-            '.swal2-deny[style*="display: none"]{display:none !important;}';
+            '.swal2-deny[style*="display: none"],' +
+            '.swal2-cancel[style*="display: none"],' +
+            '.swal2-confirm[style*="display: none"]{display:none !important;}';
         document.head.appendChild(style);
     } catch (_) { /* fail-safe */ }
 })();

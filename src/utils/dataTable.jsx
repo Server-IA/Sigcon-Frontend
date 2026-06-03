@@ -42,6 +42,16 @@ export const sweetAlertExport = async (visibleColumns, dt) => {
     return selected;
 }
 
+/**
+ * QA CXP (2026-06-02): el formato de moneda es-CO (`toLocaleString` /
+ * `Intl.NumberFormat`) inserta un ESPACIO DURO (NBSP U+00A0, y a veces el
+ * NARROW NBSP U+202F) entre el simbolo y el numero ("$ 288.000,00").
+ * Al exportar a CSV/Excel ese NBSP se ve como "$Â " cuando Excel ES abre el
+ * archivo (lo interpreta como Windows-1252). Normalizar a espacio regular en
+ * TODA exportacion del DataTable (CSV y Excel comparten exportConfig).
+ */
+const stripNbsp = (s) => String(s == null ? '' : s).replace(/[  ]/g, ' ');
+
 export const exportConfig = {
     format: {
         body: function (inner, coldex, rowdex) {
@@ -53,12 +63,12 @@ export const exportConfig = {
             // descarta la celda silenciosamente. Convertir a String primero.
             if (inner === null || inner === undefined) return '';
             if (typeof inner === 'number' || typeof inner === 'boolean') {
-                return String(inner);
+                return stripNbsp(inner);
             }
             const innerStr = String(inner);
-            if (innerStr.length <= 0) return innerStr;
+            if (innerStr.length <= 0) return stripNbsp(innerStr);
             var el = $.parseHTML(innerStr);
-            if (!el || el.length === 0) return innerStr;
+            if (!el || el.length === 0) return stripNbsp(innerStr);
             var result = '';
             $.each(el, function (index, item) {
                 if (item.classList !== undefined && item.classList.contains('user-name')) {
@@ -69,7 +79,7 @@ export const exportConfig = {
                     result += item.innerText;
                 }
             });
-            return result;
+            return stripNbsp(result);
         }
     }
 };
@@ -153,13 +163,17 @@ export const default_buttons = (url_api, title, exportOptions = {}, reportMeta =
             // QA (2026-05-26): el export CSV de DataTables NO honra messageTop
             // (solo Excel/PDF lo hacen). Prepend manual del encabezado estandar
             // (empresa / generado por / fecha) como filas iniciales del CSV.
+            // QA CXP (2026-06-02): el boton csvHtml5 NO agrega BOM por defecto,
+            // asi que Excel ES abre el archivo como Windows-1252 y las tildes
+            // salen rotas ("PapelerÃ­a"). Prepend del BOM UTF-8 (﻿) para que
+            // Excel detecte UTF-8 y muestre acentos correctamente.
             customize: function (csv) {
                 const meta = messageTop();
                 const head = ('Reporte de ' + title + '\n' + meta)
                     .split('\n')
                     .map(l => '"' + String(l).replace(/"/g, '""') + '"')
                     .join('\n');
-                return head + '\n\n' + csv;
+                return '﻿' + head + '\n\n' + csv;
             },
             action: async function (e, dt, button, config) {
                 // 🔹 Traer columnas visibles

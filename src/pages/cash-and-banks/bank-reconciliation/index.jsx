@@ -670,6 +670,28 @@ const BankReconciliation = () => {
         } catch (e) { notify(e?.msg || 'No se pudo rechazar', 'danger'); }
     };
 
+    // BNK-RF-36 (QA Bloque BNK 2026-06-03): deshacer el cruce movimiento-comprobante de un
+    // emparejamiento CONFIRMADO. Pide motivo (10-500). El backend bloquea si la sesión está
+    // cerrada o si hay un cheque asociado, y deja los movimientos en NO_CONCILIADO.
+    const desvincularEmp = async (empId) => {
+        const { value: motivo } = await window.Swal.fire({
+            title: 'Deshacer cruce',
+            input: 'textarea',
+            inputLabel: 'Motivo del desemparejamiento (mínimo 10 caracteres)',
+            inputPlaceholder: 'Explique por qué desvincula este cruce…',
+            inputAttributes: { maxlength: 500 },
+            showCancelButton: true, confirmButtonText: 'Desvincular', cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc3545',
+            inputValidator: (v) => (!v || v.trim().length < 10) ? 'El motivo debe tener al menos 10 caracteres' : undefined,
+        });
+        if (!motivo) return;
+        try {
+            await fetchHelper.delete(base_url(['api', 'v1', 'banks', 'emparejamientos', empId]), { motivo: motivo.trim() }, {}, 1000);
+            notify('Cruce deshecho. Los movimientos vuelven a estar disponibles para conciliar.');
+            reloadConciliacion();
+        } catch (e) { notify(e?.msg || 'No se pudo deshacer el cruce', 'danger'); }
+    };
+
     const toggleSel = (arr, setArr, value) => setArr(arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value]);
 
     const manualMatch = async () => {
@@ -851,7 +873,11 @@ const BankReconciliation = () => {
                                     id="selectedSessionId"
                                     label="Sesión de conciliación"
                                     placeholder="Seleccione o cree una sesión"
-                                    options={sessions.map((s) => ({
+                                    /* QA Bloque BNK (2026-06-03) Bug 3: el desplegable solo debe
+                                       ofrecer sesiones en borrador o en proceso (no CERRADA), para no
+                                       volver a registrar movimientos/extractos en una conciliación
+                                       cerrada. Las CERRADA viven en la pestaña "Conciliaciones Cerradas". */
+                                    options={sessions.filter((s) => s.estado !== 'CERRADA').map((s) => ({
                                         id: s.id,
                                         label: `#${s.id} · ${s.periodStart} → ${s.periodEnd} · ${estadoBadge(s.estado).label} (v${s.version})`,
                                     }))}
@@ -1129,6 +1155,11 @@ const BankReconciliation = () => {
                                                                         <button type="button" className="btn btn-sm btn-success me-1" onClick={() => acceptEmp(e.id)}>Aceptar</button>
                                                                         <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => rejectEmp(e.id)}>Rechazar</button>
                                                                     </>
+                                                                ) : e.estado === 'CONFIRMADO' ? (
+                                                                    /* BNK-RF-36: deshacer el cruce de un emparejamiento ya confirmado. */
+                                                                    <button type="button" className="btn btn-sm btn-outline-danger" title="Deshacer cruce" onClick={() => desvincularEmp(e.id)}>
+                                                                        <i className="ri-link-unlink me-1"></i> Desvincular
+                                                                    </button>
                                                                 ) : <span className="text-muted small">—</span>}
                                                             </td>
                                                         </tr>

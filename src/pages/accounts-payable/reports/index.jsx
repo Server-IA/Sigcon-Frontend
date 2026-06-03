@@ -5,6 +5,8 @@ import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { useSelector } from 'react-redux';
+import { buildRealXlsx } from '../../../utils/xlsxBuilder';
 
 /**
  * Pagina de Reportes de Cuentas por Pagar.
@@ -27,6 +29,23 @@ const IndexApReports = () => {
     const [loading, setLoading] = useState(false);
     const [supplierId, setSupplierId] = useState('');
     const [suppliers, setSuppliers] = useState([]);
+
+    // QA CXP (2026-06-02): usuario logueado para el encabezado estandar de las
+    // exportaciones (empresa / generado por / fecha), igual al de los DataTables.
+    const sessionUser = useSelector((state) => state.user.user);
+    const exportMetaSection = () => {
+        const empresa = sessionUser?.companyName || '(empresa no configurada)';
+        const nit = sessionUser?.companyNit || '';
+        const usuario = sessionUser?.email || sessionUser?.fullName || '(sistema)';
+        const roles = Array.isArray(sessionUser?.roles) ? sessionUser.roles.join(', ') : '';
+        return {
+            rows: [
+                ['Empresa', empresa + (nit ? ` (NIT ${nit})` : '')],
+                ['Generado por', usuario + (roles ? ` [${roles}]` : '')],
+                ['Fecha de generacion', new Date().toLocaleString('es-CO')],
+            ],
+        };
+    };
 
     // Cargar catalogo de terceros activos para el dropdown.
     // NOTE (QA fix 2026-05-05): antes filtraba unicamente por rol PROVEEDOR.
@@ -99,41 +118,36 @@ const IndexApReports = () => {
         URL.revokeObjectURL(url);
     };
 
-    const exportAgingPdf = () => {
-        // Usa el dialogo de impresion del navegador (Save as PDF). Cumple
-        // criterio HU sin agregar dependencia de pdfmake.
-        const popup = window.open('', '_blank');
-        if (!popup) {
-            setMessage({ type: 'warning', show: true,
-                message: 'Habilite ventanas emergentes para exportar PDF.' });
-            return;
+    // RF-11 (Notas Tecnicas CXP, 2026-06-02): los PDF de reportes AP se generan
+    // ahora en el BACKEND con iText7 (antes window.print del navegador, que se
+    // bloqueaba por pop-ups). Helper de descarga via fetch + blob con Bearer.
+    const downloadPdf = async (url, filename) => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+            const blob = await resp.blob();
+            if (!resp.ok || (blob.type && blob.type.indexOf('application/pdf') === -1)) {
+                setMessage({ type: 'danger', show: true, message: 'No se pudo generar el PDF.' });
+                return;
+            }
+            triggerDownload(blob, filename);
+        } catch (e) {
+            setMessage({ type: 'danger', show: true, message: 'No se pudo generar el PDF.' });
+        } finally {
+            setLoading(false);
         }
-        const buckets = (agingData?.buckets || []).map(b =>
-            `<tr><td>${b.range}</td><td>${b.count}</td><td style="text-align:right">${b.amount}</td></tr>`).join('');
-        const invoices = (agingData?.invoices || []).map(r =>
-            `<tr><td>${r.invoiceNumber || '-'}</td><td>${r.supplierName || '-'}</td>` +
-            `<td style="text-align:right">${r.balanceDue}</td><td>${r.daysOverdue}</td><td>${r.range}</td></tr>`).join('');
-        popup.document.write(`
-            <html><head><title>Aging CxP - ${new Date().toLocaleDateString()}</title>
-            <style>
-                body{font-family:Arial,sans-serif;padding:20px}
-                h1{font-size:18px} h2{font-size:14px;margin-top:24px}
-                table{width:100%;border-collapse:collapse;margin-top:8px}
-                th,td{border:1px solid #999;padding:6px 8px;font-size:12px}
-                th{background:#f0f0f0;text-align:left}
-                .total{font-weight:bold;background:#fafafa}
-            </style></head><body onload="window.print()">
-            <h1>Reporte Aging - Cuentas por Pagar</h1>
-            <p>Generado: ${new Date().toLocaleString()}</p>
-            <h2>Resumen por rango</h2>
-            <table><thead><tr><th>Rango</th><th>Cantidad</th><th>Saldo</th></tr></thead>
-            <tbody>${buckets}<tr class="total"><td colspan="2">TOTAL PENDIENTE</td>
-            <td style="text-align:right">${agingData?.totalPending || 0}</td></tr></tbody></table>
-            <h2>Detalle por factura</h2>
-            <table><thead><tr><th># Factura</th><th>Proveedor</th><th>Saldo</th><th>Dias vencidos</th><th>Rango</th></tr></thead>
-            <tbody>${invoices || '<tr><td colspan="5">Sin facturas</td></tr>'}</tbody></table>
-            </body></html>`);
-        popup.document.close();
+    };
+
+    const exportAgingPdf = () => {
+        if (!agingData) return;
+        downloadPdf(
+            base_url(['api', 'v1', 'ap', 'reports', 'aging', 'pdf']),
+            `aging_cxp_${new Date().toISOString().slice(0, 10)}.pdf`
+        );
     };
 
     /** Genera reporte de Aging. */
@@ -200,39 +214,10 @@ const IndexApReports = () => {
         URL.revokeObjectURL(url);
     };
 
-    /** Helper: HTML table-as-Excel (MIME application/vnd.ms-excel). */
-    const buildXlsHtml = (title, sections) => {
-        // sections = [{ heading, headers:[], rows:[[]] }, ...]
-        const today = new Date().toLocaleString();
-        const tables = sections.map(sec => {
-            const head = `<tr>${sec.headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
-            const body = (sec.rows || []).map(r =>
-                `<tr>${r.map(c => `<td>${c == null ? '' : c}</td>`).join('')}</tr>`).join('');
-            return `<h3>${sec.heading}</h3><table border="1" cellspacing="0" cellpadding="4">`
-                + `<thead>${head}</thead><tbody>${body}</tbody></table>`;
-        }).join('<br/>');
-        return `<html><head><meta charset="UTF-8"><title>${title}</title></head>`
-            + `<body><h2>${title}</h2><p>Generado: ${today}</p>${tables}</body></html>`;
-    };
-
-    /** Helper: PDF via dialogo de impresion del navegador. */
-    const printPdf = (title, htmlBody) => {
-        const popup = window.open('', '_blank');
-        if (!popup) {
-            setMessage({ type: 'warning', show: true,
-                message: 'Habilite ventanas emergentes para exportar PDF.' });
-            return;
-        }
-        popup.document.write(`<html><head><title>${title}</title>
-            <style>body{font-family:Arial,sans-serif;padding:20px}
-            h1{font-size:18px} h2{font-size:14px;margin-top:24px}
-            table{width:100%;border-collapse:collapse;margin-top:8px}
-            th,td{border:1px solid #999;padding:6px 8px;font-size:12px}
-            th{background:#f0f0f0;text-align:left}
-            .total{font-weight:bold;background:#fafafa}</style>
-            </head><body onload="window.print()">${htmlBody}</body></html>`);
-        popup.document.close();
-    };
+    // QA CXP (2026-06-02): el viejo `buildXlsHtml` (HTML-table-as-Excel con
+    // extension .xls) se eliminó porque Excel lo detecta como HTML y muestra el
+    // aviso "el formato y la extension no coinciden". Ahora se usa
+    // `buildRealXlsx` (OOXML real) que Excel abre sin aviso.
 
     /** Exporta el reporte de OCs a CSV. */
     const exportPoCsv = () => {
@@ -253,8 +238,8 @@ const IndexApReports = () => {
         triggerDownload(blob, `reporte_ocs_${new Date().toISOString().slice(0,10)}.csv`);
     };
 
-    /** Exporta el reporte de OCs a XLSX (HTML table-as-Excel). */
-    const exportPoXlsx = () => {
+    /** Exporta el reporte de OCs a XLSX REAL (OOXML, sin aviso de Excel). */
+    const exportPoXlsx = async () => {
         if (!poData) return;
         const summary = (poData.summaryByStatus || []).map(s => [s.status, s.count, s.amount]);
         summary.push(['TOTAL', poData.totalCount || '', poData.totalAmount]);
@@ -262,50 +247,43 @@ const IndexApReports = () => {
             r.orderNumber || '', r.orderDate || '', r.thirdPartyName || '',
             r.thirdPartyNit || '', r.status || '', r.totalAmount
         ]);
-        const html = buildXlsHtml('Reporte Ordenes de Compra', [
+        const blob = await buildRealXlsx('Reporte OCs', [
+            { heading: 'Reporte de Ordenes de Compra' },
+            exportMetaSection(),
             { heading: 'Resumen por estado', headers: ['Estado', 'Cantidad', 'Monto'], rows: summary },
             { heading: 'Detalle', headers: ['# Orden', 'Fecha', 'Proveedor', 'NIT', 'Estado', 'Total'], rows: detail },
         ]);
-        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-        triggerDownload(blob, `reporte_ocs_${new Date().toISOString().slice(0,10)}.xls`);
+        triggerDownload(blob, `reporte_ocs_${new Date().toISOString().slice(0,10)}.xlsx`);
     };
 
-    /** Exporta el reporte de OCs a PDF. */
+    /** RF-11: Exporta el reporte de OCs a PDF (backend iText7). */
     const exportPoPdf = () => {
         if (!poData) return;
-        const summary = (poData.summaryByStatus || []).map(s =>
-            `<tr><td>${s.status}</td><td>${s.count}</td><td style="text-align:right">${s.amount}</td></tr>`).join('');
-        const orders = (poData.orders || []).map(r =>
-            `<tr><td>${r.orderNumber || '-'}</td><td>${r.orderDate || '-'}</td>` +
-            `<td>${r.thirdPartyName || '-'}</td><td>${r.thirdPartyNit || '-'}</td>` +
-            `<td>${r.status}</td><td style="text-align:right">${r.totalAmount}</td></tr>`).join('');
-        const body = `
-            <h1>Reporte Ordenes de Compra</h1>
-            <p>Generado: ${new Date().toLocaleString()}</p>
-            <h2>Resumen por estado</h2>
-            <table><thead><tr><th>Estado</th><th>Cantidad</th><th>Monto</th></tr></thead>
-            <tbody>${summary}<tr class="total"><td colspan="2">TOTAL</td>
-            <td style="text-align:right">${poData.totalAmount || 0}</td></tr></tbody></table>
-            <h2>Detalle</h2>
-            <table><thead><tr><th># Orden</th><th>Fecha</th><th>Proveedor</th><th>NIT</th><th>Estado</th><th>Total</th></tr></thead>
-            <tbody>${orders || '<tr><td colspan="6">No se encontraron registros con los criterios seleccionados.</td></tr>'}</tbody></table>`;
-        printPdf('Reporte OCs', body);
+        const qs = new URLSearchParams();
+        if (poFilters.thirdPartyId) qs.append('thirdPartyId', poFilters.thirdPartyId);
+        if (poFilters.status) qs.append('status', poFilters.status);
+        if (poFilters.dateFrom) qs.append('dateFrom', poFilters.dateFrom);
+        if (poFilters.dateTo) qs.append('dateTo', poFilters.dateTo);
+        const url = base_url(['api', 'v1', 'ap', 'reports', 'purchase-orders', 'pdf'])
+            + (qs.toString() ? `?${qs.toString()}` : '');
+        downloadPdf(url, `reporte_ocs_${new Date().toISOString().slice(0, 10)}.pdf`);
     };
 
-    /** Exporta el aging a XLSX. */
-    const exportAgingXlsx = () => {
+    /** Exporta el aging a XLSX REAL (OOXML, sin aviso de Excel). */
+    const exportAgingXlsx = async () => {
         if (!agingData) return;
         const buckets = (agingData.buckets || []).map(b => [b.range, b.count, b.amount]);
         buckets.push(['TOTAL', '', agingData.totalPending]);
         const invoices = (agingData.invoices || []).map(r => [
             r.invoiceNumber || '', r.supplierName || '', r.balanceDue, r.daysOverdue, r.range
         ]);
-        const html = buildXlsHtml('Aging Cuentas por Pagar', [
+        const blob = await buildRealXlsx('Aging CxP', [
+            { heading: 'Aging Cuentas por Pagar' },
+            exportMetaSection(),
             { heading: 'Resumen por rango', headers: ['Rango', 'Cantidad facturas', 'Saldo total'], rows: buckets },
             { heading: 'Detalle por factura', headers: ['# Factura', 'Proveedor', 'Saldo', 'Dias vencidos', 'Rango'], rows: invoices },
         ]);
-        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-        triggerDownload(blob, `aging_cxp_${new Date().toISOString().slice(0,10)}.xls`);
+        triggerDownload(blob, `aging_cxp_${new Date().toISOString().slice(0,10)}.xlsx`);
     };
 
     /** Exporta el estado de cuenta proveedor a CSV. */
@@ -325,8 +303,8 @@ const IndexApReports = () => {
         triggerDownload(blob, `estado_cuenta_proveedor_${new Date().toISOString().slice(0,10)}.csv`);
     };
 
-    /** Exporta el estado de cuenta proveedor a XLSX. */
-    const exportSupplierXlsx = () => {
+    /** Exporta el estado de cuenta proveedor a XLSX REAL (OOXML, sin aviso de Excel). */
+    const exportSupplierXlsx = async () => {
         if (!supplierData) return;
         const head = [
             ['Proveedor', supplierData.supplierName || '', supplierData.supplierNit ? 'NIT ' + supplierData.supplierNit : ''],
@@ -337,35 +315,22 @@ const IndexApReports = () => {
         const detail = (supplierData.lines || []).map(r => [
             r.type || '', r.documentNumber || '', r.date || '', r.amount, r.balance == null ? '' : r.balance
         ]);
-        const html = buildXlsHtml('Estado de Cuenta Proveedor', [
+        const blob = await buildRealXlsx('Estado Cuenta Proveedor', [
+            { heading: 'Estado de Cuenta Proveedor' },
+            exportMetaSection(),
             { heading: 'Resumen', headers: ['Concepto', '', 'Valor'], rows: head },
             { heading: 'Movimientos', headers: ['Tipo', 'Documento', 'Fecha', 'Monto', 'Saldo'], rows: detail },
         ]);
-        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-        triggerDownload(blob, `estado_cuenta_proveedor_${new Date().toISOString().slice(0,10)}.xls`);
+        triggerDownload(blob, `estado_cuenta_proveedor_${new Date().toISOString().slice(0,10)}.xlsx`);
     };
 
-    /** Exporta el estado de cuenta proveedor a PDF. */
+    /** RF-11: Exporta el estado de cuenta proveedor a PDF (backend iText7). */
     const exportSupplierPdf = () => {
-        if (!supplierData) return;
-        const lines = (supplierData.lines || []).map(r =>
-            `<tr><td>${r.type || '-'}</td><td>${r.documentNumber || '-'}</td>` +
-            `<td>${r.date || '-'}</td><td style="text-align:right">${r.amount}</td>` +
-            `<td style="text-align:right">${r.balance == null ? '-' : r.balance}</td></tr>`).join('');
-        const body = `
-            <h1>Estado de Cuenta Proveedor</h1>
-            <p>Generado: ${new Date().toLocaleString()}</p>
-            <p><strong>Proveedor:</strong> ${supplierData.supplierName || '-'}
-            ${supplierData.supplierNit ? '(NIT ' + supplierData.supplierNit + ')' : ''}</p>
-            <table><tbody>
-            <tr><th>Total Facturado</th><td style="text-align:right">${supplierData.totalInvoiced || 0}</td></tr>
-            <tr><th>Total Pagado</th><td style="text-align:right">${supplierData.totalPaid || 0}</td></tr>
-            <tr><th>Saldo Pendiente</th><td style="text-align:right">${supplierData.totalBalance || 0}</td></tr>
-            </tbody></table>
-            <h2>Movimientos</h2>
-            <table><thead><tr><th>Tipo</th><th>Documento</th><th>Fecha</th><th>Monto</th><th>Saldo</th></tr></thead>
-            <tbody>${lines || '<tr><td colspan="5">Sin movimientos</td></tr>'}</tbody></table>`;
-        printPdf('Estado Cuenta Proveedor', body);
+        if (!supplierData || !supplierId) return;
+        downloadPdf(
+            base_url(['api', 'v1', 'ap', 'reports', 'supplier', supplierId, 'pdf']),
+            `estado_cuenta_proveedor_${new Date().toISOString().slice(0, 10)}.pdf`
+        );
     };
 
     /** Genera estado de cuenta por proveedor. */

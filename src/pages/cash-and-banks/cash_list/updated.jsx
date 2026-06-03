@@ -338,7 +338,7 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                 <div className="col-md-6 mb-3">
                                     <InputSelectModal id="cu_resp_p" label="Responsable Principal" value={cajaUpdated.idResponsablePrincipal}
                                         onChange={v => set('idResponsablePrincipal', v)} error={errors.idResponsablePrincipal}
-                                        options={users} placeholder="Seleccione responsable principal" required={true} />
+                                        options={users} placeholder="Seleccione responsable principal" required={true} disabled={readOnly} />
                                     {/* <InputModal id="cu_resp_p" label="ID Responsable Principal" type="number"
                                         value={cajaUpdated.idResponsablePrincipal}
                                         onChange={e => set('idResponsablePrincipal', e.target.value)}
@@ -347,7 +347,7 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                 <div className="col-md-6 mb-3">
                                     <InputSelectModal id="cu_resp_s" label="Responsable Suplente" value={cajaUpdated.idResponsableSuplente}
                                         onChange={v => set('idResponsableSuplente', v)} error={errors.idResponsableSuplente}
-                                        options={users} placeholder="Seleccione responsable suplente" placeholder="Opcional" />
+                                        options={users} placeholder="Seleccione responsable suplente" disabled={readOnly} />
                                     {/* <InputModal id="cu_resp_s" label="ID Responsable Suplente" type="number"
                                         value={cajaUpdated.idResponsableSuplente}
                                         onChange={e => set('idResponsableSuplente', e.target.value)}
@@ -455,7 +455,7 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                                 id: aa.id,
                                                 label: aa.pucAccount.code + ' - ' + aa.customName
                                             }
-                                        })} placeholder="Seleccione cuenta contable" required={true} />
+                                        })} placeholder="Seleccione cuenta contable" required={true} disabled={readOnly} />
                                     {/* <InputModal id="cu_cuenta" label="ID Cuenta Contable" type="number"
                                         value={cajaUpdated.idCuentaContable}
                                         onChange={e => set('idCuentaContable', e.target.value)} error={errors.idCuentaContable}
@@ -464,7 +464,7 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                 <div className="col-md-4 mb-3">
                                     <InputSelectModal id="cu_centro" label="Centro de Costo" value={cajaUpdated.centroCosto}
                                         onChange={v => set('centroCosto', v)} error={errors.centroCosto}
-                                        options={costCenters} placeholder="Seleccione centro de costo" placeholder="Opcional" />
+                                        options={costCenters} placeholder="Seleccione centro de costo" disabled={readOnly} />
                                     {/* <InputModal id="cu_centro" label="ID Centro de Costo" type="number" value={cajaUpdated.centroCosto}
                                         onChange={e => set('centroCosto', e.target.value)} error={errors.centroCosto}
                                         placeholder="Opcional" disabled={readOnly} /> */}

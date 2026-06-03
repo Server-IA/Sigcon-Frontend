@@ -11,6 +11,9 @@ import AlertPage from '../../../components/molecules/AlertPage';
 const API_LIST = ['api', 'v1', 'third-parties', 'search'];
 const API_GET = (id) => ['api', 'v1', 'third-parties', id];
 const API_DELETE = (id) => ['api', 'v1', 'third-parties', id];
+// PT-04 (TER-RF-10): listado de terceros dados de baja + reactivacion.
+const API_DELETED = ['api', 'v1', 'third-parties', 'deleted'];
+const API_REACTIVATE = (id) => ['api', 'v1', 'third-parties', id, 'reactivate'];
 
 const ROLE_LABELS = {
     CLIENT: 'Cliente',
@@ -111,7 +114,10 @@ const IndexThirdPartyList = () => {
             render: (val, _, row) => val != null ? `${val}/${row?.dv ?? '-'}` : '-'
         },
         { title: 'Razón Social', data: 'businessName', name: 'businessName', render: (val) => val ?? '-' },
-        { title: 'Tipo', data: 'typeOrganization.code', name: 'typeOrganization', render: (v) => v === 'PERSONA_NATURAL' ? 'Natural' : v === 'PERSONA_JURIDICA' ? 'Jurídica' : v ?? '-' },
+        // QA barrido filtros (2026-06-02): `name` = typeOrganization.code (escalar).
+        // Antes 'typeOrganization' resolvia a la relacion y el filtro Tipo de persona
+        // se descartaba en silencio.
+        { title: 'Tipo', data: 'typeOrganization.code', name: 'typeOrganization.code', render: (v) => v === 'PERSONA_NATURAL' ? 'Natural' : v === 'PERSONA_JURIDICA' ? 'Jurídica' : v ?? '-' },
         {
             title: 'Rol', data: 'roles', name: 'roles',
             render: (roles) => {
@@ -126,7 +132,10 @@ const IndexThirdPartyList = () => {
             }
         },
         {
-            title: 'Estado', data: 'status.name', name: 'status',
+            // QA barrido filtros (2026-06-02): `name` = status.name (escalar del
+            // catalogo). Antes 'status' resolvia a la relacion ThirdPartyStatusCatalog
+            // y el filtro Estado se descartaba en silencio.
+            title: 'Estado', data: 'status.name', name: 'status.name',
             render: (status) => {
                 if (status === 'ACTIVE') return '<span class="badge bg-label-success"><i class="ri-circle-fill me-1" style="font-size:0.5rem"></i>Activo</span>';
                 if (status === 'INACTIVE') return '<span class="badge bg-label-danger"><i class="ri-circle-fill me-1" style="font-size:0.5rem"></i>Inactivo</span>';
@@ -218,7 +227,50 @@ const IndexThirdPartyList = () => {
         modalBulkUploadInstance.current.show();
     };
 
+    // PT-04 (TER-RF-10): abrir listado de terceros dados de baja y reactivar.
+    const openDeletedThirdParties = async () => {
+        let deleted = [];
+        try {
+            const res = await fetchHelper.get(base_url(API_DELETED), {}, 0, false);
+            deleted = res?.data ?? [];
+        } catch (e) { /* ignore */ }
+        if (!deleted.length) {
+            window.Swal.fire({ icon: 'info', title: 'Terceros dados de baja',
+                text: 'No hay terceros dados de baja para reactivar.' });
+            return;
+        }
+        const options = {};
+        deleted.forEach(d => {
+            options[d.id] = `${d.nit}${d.dv ? '-' + d.dv : ''} · ${d.businessName} (${d.thirdPartyCode})`;
+        });
+        const { value: selectedId } = await window.Swal.fire({
+            title: 'Reactivar tercero dado de baja',
+            input: 'select',
+            inputOptions: options,
+            inputPlaceholder: 'Seleccione un tercero',
+            showCancelButton: true,
+            confirmButtonText: 'Reactivar',
+            cancelButtonText: 'Cerrar',
+            inputValidator: (v) => (!v ? 'Seleccione un tercero' : undefined),
+        });
+        if (!selectedId) return;
+        try {
+            await fetchHelper.post(base_url(API_REACTIVATE(selectedId)), {}, {}, 1000);
+            window.Swal.fire({ icon: 'success', title: 'Tercero reactivado',
+                text: 'El tercero fue reactivado exitosamente.' });
+            dataTableRef?.current?.ajax?.reload?.();
+        } catch (e) {
+            window.Swal.fire({ icon: 'error', title: 'No se pudo reactivar',
+                text: e?.msg || 'Error al reactivar el tercero.' });
+        }
+    };
+
     const buttons = [
+        {
+            text: '<i class="ri-inbox-unarchive-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Dados de baja</span>',
+            className: 'btn rounded-pill btn-outline-secondary waves-effect mx-2 my-2',
+            action: openDeletedThirdParties,
+        },
         {
             text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
             className: 'btn rounded-pill btn-secondary waves-effect mx-2 my-2',
@@ -336,7 +388,7 @@ const IndexThirdPartyList = () => {
                     setThirdPartyBulk(true);
                     dataTableRef?.current?.ajax?.reload?.();
                 }}
-                templateColumns={['nit','dv','razon_social','municipio','rol','estado','email','direccion']}
+                templateColumns={['nit','dv','razon_social','rol','estado','pais','municipio','tipo_organizacion','tipo_regimen']}
                 templateFileName="plantilla_terceros.csv"
             />
 

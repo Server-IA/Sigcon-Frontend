@@ -4,6 +4,7 @@ import { fetchHelper } from '../../../utils/fetch';
 import AlertPage from '../../../components/molecules/AlertPage';
 import { severityLabel, moduleLabel,
          MODULE_OPTIONS, SEVERITY_OPTIONS } from '../../../utils/auditLabels';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 
 /**
  * HU-AU-10: Gestión de políticas de retención + legal hold + purga manual.
@@ -28,6 +29,14 @@ const IndexRetention = () => {
     };
     const [form, setForm] = useState(empty);
     const [editingId, setEditingId] = useState(null);
+
+    // QA Auditoria (2026-06-02): retencion legal MASIVA (por modulo / severidad /
+    // periodo contable). HU-AU-08: "todos los registros de un periodo o de un modulo".
+    const { hasAny } = usePermissions();
+    const canLegalHold = hasAny(['AU.RETENCION.LEGAL_HOLD', 'LEGAL_HOLD']);
+    const emptyBulk = { module: '', severity: '', dateFrom: '', dateTo: '', reason: '' };
+    const [bulk, setBulk] = useState(emptyBulk);
+    const [bulkBusy, setBulkBusy] = useState(false);
 
     // QA Bloque AU (2026-05-25): el alta/edicion de politicas se hace en un modal
     // desplegable (como el resto de modulos), no en un form inline poco intuitivo.
@@ -123,16 +132,102 @@ const IndexRetention = () => {
         if (!window.confirm('¿Ejecutar purga manual? Esta acción marca como archivados todos los logs con retención vencida.')) return;
         try {
             const result = await fetchHelper.post(base_url(['api', 'v1', 'audit', 'retention', 'purge', 'run']), {}, {}, 0);
-            setAlert({
-                show: true, type: 'success',
-                message: result.recordsPurged
-                    ? `Purga ejecutada: ${result.recordsPurged} logs archivados (batch_hash: ${result.batchHash?.substring(0, 16)}...)`
-                    : 'Purga ejecutada: sin candidatos en este momento'
-            });
+            // HU-AU-08: purgados = result.purged; los excluidos por retención legal
+            // activa vienen en result.legalHoldMessage (mensaje específico de la HU).
+            const purged = result.purged ?? result.recordsPurged ?? 0;
+            let msg = purged
+                ? `Purga ejecutada: ${purged} log(s) archivado(s)` +
+                  (result.batchHash ? ` (batch_hash: ${result.batchHash.substring(0, 16)}...)` : '')
+                : 'Purga ejecutada: sin candidatos en este momento';
+            if (result.legalHoldMessage) {
+                msg += ` — ${result.legalHoldMessage}`;
+            }
+            setAlert({ show: true, type: result.legalHoldMessage ? 'warning' : 'success', message: msg });
             loadAll();
         } catch (err) {
             setAlert({ show: true, type: 'danger', message: err?.msg || 'Error en purga' });
         }
+    };
+
+    /**
+     * HU-AU-10 E6: descarga el PDF de evidencia de un lote de purga. El endpoint
+     * existe (GET /retention/purge/records/{id}/pdf) pero el historial no lo
+     * invocaba. Usa fetch directo (con token) porque fetchHelper no maneja blobs.
+     */
+    const downloadPurgePdf = async (id) => {
+        try {
+            const url = base_url(['api', 'v1', 'audit', 'retention', 'purge', 'records', id, 'pdf']);
+            const token = localStorage.getItem('token');
+            const resp = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+            if (!resp.ok) {
+                const t = await resp.text();
+                let m; try { m = JSON.parse(t)?.message; } catch { m = t; }
+                setAlert({ show: true, type: 'danger', message: m || 'No se pudo generar el PDF de la purga' });
+                return;
+            }
+            const blob = await resp.blob();
+            const dl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = dl;
+            a.download = `evidencia-purga-${id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(dl);
+            setAlert({ show: true, type: 'success', message: 'PDF de evidencia descargado' });
+        } catch (err) {
+            console.error(err);
+            setAlert({ show: true, type: 'danger', message: 'No se pudo generar el PDF de la purga' });
+        }
+    };
+
+    // QA Auditoria (2026-06-02): legal hold masivo por criterios.
+    const buildBulkBody = () => {
+        const b = {};
+        if (bulk.module) b.module = bulk.module;
+        if (bulk.severity) b.severity = bulk.severity;
+        if (bulk.dateFrom) b.dateFrom = bulk.dateFrom + 'T00:00:00';
+        if (bulk.dateTo) b.dateTo = bulk.dateTo + 'T23:59:59';
+        return b;
+    };
+    const hasBulkCriteria = () => bulk.module || bulk.severity || bulk.dateFrom || bulk.dateTo;
+
+    const applyBulkLegalHold = async () => {
+        if (!bulk.reason || !bulk.reason.trim()) {
+            setAlert({ show: true, type: 'danger', message: 'Debe indicar el motivo de la retención legal masiva.' });
+            return;
+        }
+        if (!hasBulkCriteria()) {
+            setAlert({ show: true, type: 'danger', message: 'Especifique al menos un criterio (módulo, severidad o rango de fechas).' });
+            return;
+        }
+        setBulkBusy(true);
+        try {
+            const body = { ...buildBulkBody(), reason: bulk.reason.trim() };
+            const r = await fetchHelper.post(base_url(['api', 'v1', 'audit', 'retention', 'legal-hold', 'bulk']), body, {}, 0);
+            setAlert({ show: true, type: 'success',
+                message: `Retención legal aplicada a ${r.affected ?? 0} de ${r.matched ?? 0} registros que coinciden.` });
+            loadAll();
+        } catch (err) {
+            setAlert({ show: true, type: 'danger', message: err?.msg || err?.message || 'No se pudo aplicar la retención legal masiva.' });
+        } finally { setBulkBusy(false); }
+    };
+
+    const releaseBulkLegalHold = async () => {
+        if (!hasBulkCriteria()) {
+            setAlert({ show: true, type: 'danger', message: 'Especifique al menos un criterio para liberar.' });
+            return;
+        }
+        if (!window.confirm('¿Liberar la retención legal de todos los registros que coinciden con los criterios?')) return;
+        setBulkBusy(true);
+        try {
+            const r = await fetchHelper.post(base_url(['api', 'v1', 'audit', 'retention', 'legal-hold', 'bulk', 'release']), buildBulkBody(), {}, 0);
+            setAlert({ show: true, type: 'success',
+                message: `Retención legal liberada en ${r.affected ?? 0} de ${r.matched ?? 0} registros.` });
+            loadAll();
+        } catch (err) {
+            setAlert({ show: true, type: 'danger', message: err?.msg || err?.message || 'No se pudo liberar la retención legal.' });
+        } finally { setBulkBusy(false); }
     };
 
     return (
@@ -196,6 +291,14 @@ const IndexRetention = () => {
                         <i className="ri-delete-bin-line me-1"></i> Purga manual + historial
                     </button>
                 </li>
+                {canLegalHold && (
+                    <li className="nav-item">
+                        <button className={`nav-link ${tab === 'legalhold' ? 'active' : ''}`}
+                                onClick={() => setTab('legalhold')}>
+                            <i className="ri-scales-3-line me-1"></i> Retención legal masiva
+                        </button>
+                    </li>
+                )}
             </ul>
 
             {tab === 'policies' && (
@@ -261,8 +364,8 @@ const IndexRetention = () => {
                             <div>
                                 <h6 className="mb-1">Purga manual</h6>
                                 <small className="text-muted">
-                                    Marca como archivados los logs con retención vencida + sin legal hold.
-                                    Genera evidencia con hash SHA-256 del lote (HU-AU-10 E5/E6).
+                                    Marca como archivados los logs con retención vencida + sin retención legal activa.
+                                    Genera evidencia con hash SHA-256 del lote, descargable en PDF desde el historial.
                                 </small>
                             </div>
                             <button className="btn btn-warning" onClick={runPurge}>
@@ -281,10 +384,11 @@ const IndexRetention = () => {
                                         <th>Rango temporal</th>
                                         <th>Batch hash</th>
                                         <th>Ejecutado por</th>
+                                        <th className="text-center">PDF</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {purgeRecords.length === 0 && <tr><td colSpan="6" className="text-center text-muted">Sin purgas registradas</td></tr>}
+                                    {purgeRecords.length === 0 && <tr><td colSpan="7" className="text-center text-muted">Sin purgas registradas</td></tr>}
                                     {purgeRecords.map(p => (
                                         <tr key={p.id}>
                                             <td>#{p.id}</td>
@@ -295,10 +399,83 @@ const IndexRetention = () => {
                                             </small></td>
                                             <td><code className="small">{p.batchHash?.substring(0, 16)}...</code></td>
                                             <td><small>{p.executedBy}</small></td>
+                                            <td className="text-center">
+                                                <button className="btn btn-sm btn-label-danger"
+                                                        onClick={() => downloadPurgePdf(p.id)}
+                                                        title="Descargar PDF de evidencia">
+                                                    <i className="ri-file-pdf-line"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {tab === 'legalhold' && canLegalHold && (
+                <div className="card">
+                    <div className="card-body">
+                        <h6 className="mb-1"><i className="ri-scales-3-line me-1"></i> Retención legal masiva</h6>
+                        <p className="text-muted small">
+                            Aplica (o libera) retención legal a <strong>todos los registros que coinciden</strong> con
+                            los criterios: por módulo, severidad y/o rango de fechas (= período contable). Los registros
+                            con retención legal activa quedan protegidos de la purga. Requiere motivo.
+                        </p>
+                        <div className="row g-3">
+                            <div className="col-md-3">
+                                <label className="form-label small">Módulo</label>
+                                <select className="form-select form-select-sm" value={bulk.module}
+                                        onChange={(e) => setBulk({ ...bulk, module: e.target.value })}>
+                                    <option value="">(todos)</option>
+                                    {MODULE_OPTIONS.map(o => (
+                                        <option key={o.code} value={o.code}>{o.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="col-md-3">
+                                <label className="form-label small">Severidad</label>
+                                <select className="form-select form-select-sm" value={bulk.severity}
+                                        onChange={(e) => setBulk({ ...bulk, severity: e.target.value })}>
+                                    <option value="">(todas)</option>
+                                    {SEVERITY_OPTIONS.map(o => (
+                                        <option key={o.code} value={o.code}>{o.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="col-md-3">
+                                <label className="form-label small">Desde</label>
+                                <input type="date" className="form-control form-control-sm" value={bulk.dateFrom}
+                                       onChange={(e) => setBulk({ ...bulk, dateFrom: e.target.value })} />
+                            </div>
+                            <div className="col-md-3">
+                                <label className="form-label small">Hasta</label>
+                                <input type="date" className="form-control form-control-sm" value={bulk.dateTo}
+                                       onChange={(e) => setBulk({ ...bulk, dateTo: e.target.value })} />
+                            </div>
+                            <div className="col-md-12">
+                                <label className="form-label small">Motivo (obligatorio para aplicar)</label>
+                                <input type="text" className="form-control form-control-sm"
+                                       placeholder="ej: Proceso judicial 1234 / requerimiento DIAN"
+                                       value={bulk.reason}
+                                       onChange={(e) => setBulk({ ...bulk, reason: e.target.value })} />
+                            </div>
+                        </div>
+                        <div className="d-flex gap-2 mt-3">
+                            <button className="btn btn-warning btn-sm" disabled={bulkBusy} onClick={applyBulkLegalHold}>
+                                {bulkBusy
+                                    ? <span className="spinner-border spinner-border-sm me-1"></span>
+                                    : <i className="ri-lock-line me-1"></i>}
+                                Aplicar retención legal
+                            </button>
+                            <button className="btn btn-outline-secondary btn-sm" disabled={bulkBusy} onClick={releaseBulkLegalHold}>
+                                <i className="ri-lock-unlock-line me-1"></i> Liberar retención legal
+                            </button>
+                            <button className="btn btn-link btn-sm" disabled={bulkBusy} onClick={() => setBulk(emptyBulk)}>
+                                Limpiar
+                            </button>
                         </div>
                     </div>
                 </div>

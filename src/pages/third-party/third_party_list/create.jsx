@@ -152,6 +152,27 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
     };
 
     const handleCreate = async () => {
+        // PT-07/PT-08 (TER-RF-02): validaciones de UI antes de enviar.
+        const clientErrors = {};
+        const bn = (thirdParty.businessName || '').trim();
+        if (bn.length < 3 || bn.length > 255) {
+            clientErrors.businessName = 'La razon social debe tener entre 3 y 255 caracteres';
+        }
+        for (const c of (thirdParty.contacts ?? [])) {
+            const phone = (c.phone || '').trim();
+            if (phone && !/^\d{7,12}$/.test(phone)) {
+                clientErrors.contacts = 'El telefono de contacto solo puede contener digitos y debe tener entre 7 y 12 caracteres';
+            }
+            const email = (c.email || '').trim();
+            if (email && (email.length > 255 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
+                clientErrors.contacts = 'El correo electronico del contacto no tiene un formato valido';
+            }
+        }
+        if (Object.keys(clientErrors).length > 0) {
+            setErrors(clientErrors);
+            setErrorMessage(clientErrors.contacts || 'Corrija los campos marcados antes de guardar.');
+            return;
+        }
         try {
             const url = base_url(API_STORE);
             const payload = {
@@ -291,6 +312,10 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                             placeholder="Ej. EMPRESA EJEMPLO S.A.S."
                                             required={true}
                                         />
+                                        {/* PT-08 (TER-RF-02): ayuda de longitud de razon social. */}
+                                        <small className={`d-block mt-1 ${(thirdParty.businessName || '').trim().length > 0 && ((thirdParty.businessName || '').trim().length < 3 || (thirdParty.businessName || '').trim().length > 255) ? 'text-danger' : 'text-muted'}`}>
+                                            Debe contener entre 3 y 255 caracteres ({(thirdParty.businessName || '').trim().length}/255)
+                                        </small>
                                     </div>
                                 </div>
                             </div>

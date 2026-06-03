@@ -241,6 +241,13 @@ const CreateAssets = (
         clientErrors.invoiceDueDay = "El dia de vencimiento debe estar entre 1 y 31.";
       }
     }
+    // HU-ACT-01 (QA 2026-06-02): por decision del lider, el numero de factura del
+    // activo debe seguir el formato PREFIJO-CONSECUTIVO (ej: FE-0001, FAC-2026-00125).
+    if (assets.resolutionInvoice && String(assets.resolutionInvoice).trim()
+        && !clientErrors.resolutionInvoice
+        && !/^[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*-[0-9]+$/.test(String(assets.resolutionInvoice).trim())) {
+      clientErrors.resolutionInvoice = "El numero de factura debe tener el formato PREFIJO-CONSECUTIVO (ej: FE-0001, FAC-2026-00125).";
+    }
     if (Object.keys(clientErrors).length > 0) {
       setErrors(clientErrors);
       // QA-2026-05-05: mensaje general que LISTA los campos faltantes para que
@@ -610,8 +617,9 @@ const CreateAssets = (
               onChange={(e) =>
                 setAssets({ ...assets, resolutionInvoice: e.target.value })
               }
+              error={errors.resolutionInvoice}
               required
-              placeholder="Ej: 1234567890"
+              placeholder="Formato PREFIJO-CONSECUTIVO (ej: FE-0001, FAC-2026-00125)"
             />
           </div>
         </div>

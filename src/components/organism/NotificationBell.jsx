@@ -68,10 +68,26 @@ const NotificationBell = () => {
                 // HU-PA-21 push: el browser EventSource NO permite headers custom.
                 // El token va en query y SseTokenAuthFilter lo procesa.
                 es = new EventSource(url + '?token=' + encodeURIComponent(token), { withCredentials: false });
-                es.addEventListener('notification', () => {
+                es.addEventListener('notification', (ev) => {
                     // Una nueva notif llego: refrescar contador y, si esta abierto, lista.
                     loadUnread();
                     if (open) loadList();
+                    // BUG permisos FE (Pendientes PA 2026-05-30): si el evento cambia
+                    // roles o permisos del usuario, forzar refresh INMEDIATO de los
+                    // permisos efectivos para que botones/menus reflejen el cambio sin
+                    // esperar al polling de 30s ni re-login. El payload SSE es el
+                    // NotificationDTO (incluye eventKey).
+                    try {
+                        const data = ev && ev.data ? JSON.parse(ev.data) : null;
+                        const ek = data && (data.eventKey || data.event_key);
+                        const PERM_EVENTS = [
+                            'USER_ROLE_ADDED', 'USER_ROLE_REMOVED', 'ROLE_PERMISSIONS_CHANGED',
+                            'TEMP_PERMISSION_ASSIGNED', 'TEMP_PERMISSION_REVOKED', 'TEMP_PERMISSION_EXPIRED',
+                        ];
+                        if (ek && PERM_EVENTS.includes(ek)) {
+                            window.dispatchEvent(new CustomEvent('sigcon:refresh-permissions', { detail: { eventKey: ek } }));
+                        }
+                    } catch (_) { /* event.data no-JSON: ignorar */ }
                 });
                 es.onerror = () => {
                     // No hacemos nada explicito: si falla, polling cada 30s sigue funcionando.

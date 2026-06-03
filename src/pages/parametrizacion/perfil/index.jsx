@@ -8,7 +8,6 @@ import NotificationBar from '../../../components/molecules/NotificationBar';
 import { base_url, base_redirect_path } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
 import '../../../styles/profile.css';
-import ThemeSelector from '../../../components/organism/ThemeSelector';
 
 /** Campo enviado al backend para la imagen de perfil en base64: "avatar" (string, solo la parte base64 sin prefijo data:image/...) */
 const AVATAR_FIELD_NAME = 'avatar';
@@ -175,9 +174,7 @@ const PerfilPage = () => {
 
   return (
     <div className="profile-page">
-      <div className="profile-page-grid">
-        <div className="profile-column-left">
-          <div className="profile-card">
+      <div className="profile-card">
             <h2 className="profile-header">Perfil / Mis datos</h2>
             <div className="profile-body">
               {/* Foto de perfil */}
@@ -292,12 +289,6 @@ const PerfilPage = () => {
                 <Button type="button" variant="danger" onClick={() => setDeleteModalVisible(true)}>Eliminar cuenta</Button>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="profile-column-right">
-          <ThemeSelector />
-        </div>
       </div>
 
       {/* Modal confirmar eliminar cuenta */}

@@ -403,6 +403,9 @@ const NiifResultsTable = ({ results, columns, tableRef, dataTableRef, search, se
             setSearch={setSearch}
             filtered={false}
             data={results}
+            /* ACT-RF-09 (QA 2026-06-01): la verificacion NIIF NO debe exponer botones
+               Excel/CSV/PDF (no estan en los requerimientos y no exportan nada). */
+            hideDefaultExport={true}
         />
     );
 };

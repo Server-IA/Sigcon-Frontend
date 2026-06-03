@@ -279,6 +279,16 @@ const EditAssets = (
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // HU-ACT-01 (QA 2026-06-02): el numero de factura del activo debe seguir el
+    // formato PREFIJO-CONSECUTIVO (ej: FE-0001, FAC-2026-00125) por decision del lider.
+    if (assets.resolutionInvoice && String(assets.resolutionInvoice).trim()
+        && !/^[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*-[0-9]+$/.test(String(assets.resolutionInvoice).trim())) {
+      setErrors({ resolutionInvoice: "El numero de factura debe tener el formato PREFIJO-CONSECUTIVO (ej: FE-0001, FAC-2026-00125)." });
+      setError({ message: "El numero de factura debe tener el formato PREFIJO-CONSECUTIVO (ej: FE-0001, FAC-2026-00125).", type: "danger", show: true });
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {}
+      return;
+    }
+
     try {
       const url = base_url(["api", "v1", "assets", id]);
 
@@ -577,8 +587,9 @@ const EditAssets = (
               onChange={(e) =>
                 setAssets({ ...assets, resolutionInvoice: e.target.value })
               }
+              error={errors.resolutionInvoice}
               required
-              placeholder="Ej: 1234567890"
+              placeholder="Formato PREFIJO-CONSECUTIVO (ej: FE-0001, FAC-2026-00125)"
             />
           </div>
         </div>

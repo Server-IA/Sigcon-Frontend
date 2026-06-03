@@ -60,12 +60,15 @@ const IndexDepreciationRules = () => {
 
     const url = ['api', 'v1', 'depreciation-rules', 'search'];
 
+    // QA Listas Contables (2026-06-02): los enum reales del backend son
+    // DECREASING y MINIMUN_USEFUL_LIFE (no DECLINING_BALANCE / MINIMUM_*). Antes
+    // el render caia al valor crudo para esos dos tipos.
     const DEPRECIATION_TYPE_LABELS = {
         LINEAR: 'Lineal',
-        DECLINING_BALANCE: 'Decreciente',
+        DECREASING: 'Decreciente',
         ACCELERATED: 'Acelerada',
         PRODUCTION_UNITS: 'Unidades de producción',
-        MINIMUM_USEFUL_LIFE: 'Vida útil mínima',
+        MINIMUN_USEFUL_LIFE: 'Vida útil mínima',
     };
 
     const actions = [
@@ -77,10 +80,16 @@ const IndexDepreciationRules = () => {
         { title: 'ID', data: 'id', searchable: false },
         { title: 'Nombre', data: 'name', name: 'name' },
         {
-            title: 'Tipo de depreciación', data: 'depretationType', name: 'depreciationType',
+            // QA Listas Contables (2026-06-02): `name` = depretationType (atributo
+            // real de la entidad, con el typo historico). Antes 'depreciationType'
+            // no resolvia y el filtro por tipo se descartaba en silencio.
+            title: 'Tipo de depreciación', data: 'depretationType', name: 'depretationType',
             render: (val) => DEPRECIATION_TYPE_LABELS[val] ?? val ?? '-'
         },
-        { title: 'Cuenta contable', data: 'accountingAccountDTO.customName', name: 'accountName', render: (val) => val ?? '-' },
+        // QA Listas Contables (2026-06-02): filtrar por id de la cuenta (relacion
+        // accountingAccount.id). Antes 'accountName' no existia en la entidad y
+        // el filtro se ignoraba. `data` queda en el path del DTO para el render.
+        { title: 'Cuenta contable', data: 'accountingAccountDTO.customName', name: 'accountingAccount.id', render: (val) => val ?? '-' },
         {
             title: 'Tasa (%)', data: 'depretationRate', name: 'depreciationRate',
             render: (val) => val != null ? `${Number(val).toFixed(2)}%` : '-'

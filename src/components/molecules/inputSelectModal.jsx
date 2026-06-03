@@ -91,7 +91,12 @@ const InputSelectModal = ({
                 $select.select2('destroy');
             }
         };
-    }, [options, error]);
+        // QA Bloque BNK (2026-06-03) Bug A: `disabled` debe re-inicializar Select2.
+        // Select2 NO observa el atributo `disabled` del <select> nativo: al reusar
+        // el mismo modal montado para "Ver" (readOnly) y "Editar" el widget quedaba
+        // con el estado previo (editable en "Ver Caja"). Re-inicializar cuando
+        // cambia `disabled` hace que Select2 lea el atributo del DOM ya renderizado.
+    }, [options, error, disabled]);
 
     // Sincronizar value desde React
     useEffect(() => {

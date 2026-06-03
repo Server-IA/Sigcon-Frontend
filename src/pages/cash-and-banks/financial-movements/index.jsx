@@ -63,7 +63,10 @@ const IndexFinancialMovements = () => {
         },
         { title: 'Descripcion', data: 'description', name: 'description' },
         {
-            title: 'Tipo', data: 'sourceType',
+            // QA BNK (2026-06-02) #3: sin `name` el selector del filtro
+            // (`sourceType:name`) no encontraba la columna y el filtro por Tipo
+            // no hacia nada. `sourceType` es el atributo JPA real de la entidad.
+            title: 'Tipo', data: 'sourceType', name: 'sourceType',
             render: (val) => {
                 const badge = SOURCE_BADGE[val] || 'bg-label-secondary';
                 const label = SOURCE_LABEL[val] || val || '-';

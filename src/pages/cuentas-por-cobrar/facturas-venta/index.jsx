@@ -136,7 +136,11 @@ const IndexSalesInvoices = () => {
             searchable: false,
             render: (id, _type, row) => {
                 const canEdit = ['DRAFT', 'ISSUED'].includes(row?.status);
-                const canDelete = ['DRAFT', 'ISSUED'].includes(row?.status);
+                // QA CxC Bug 3: solo se eliminan facturas en BORRADOR (no emitidas).
+                const canDelete = row?.status === 'DRAFT';
+                // HU-AR-01A E1: la factura en borrador se EMITE (confirma) para
+                // pasar a Emitida; a partir de ahi ya no se puede eliminar.
+                const canIssue = row?.status === 'DRAFT';
                 const canDian = row?.status !== 'VOIDED' && row?.status !== 'DRAFT';
                 const alreadySent = row?.xmlSent === true;
                 // HU-AR-08 (2026-04-27): atajo "Registrar cobro" para que el contador
@@ -155,6 +159,10 @@ const IndexSalesInvoices = () => {
                         ${!canEdit ? 'disabled' : ''}>
                         <i class="ri-edit-line"></i>
                     </button>
+                    ${canIssue ? `<button class="btn btn-sm btn-label-success action-btn"
+                        data-action="issue" data-id="${id}" title="Emitir factura (Borrador -&gt; Emitida)">
+                        <i class="ri-checkbox-circle-line"></i>
+                    </button>` : ''}
                     <button class="btn btn-sm btn-label-success action-btn"
                         data-action="register-payment" data-id="${id}" title="Registrar cobro / abono parcial (HU-AR-08)"
                         ${!canPay ? 'disabled' : ''}>
@@ -350,66 +358,112 @@ const IndexSalesInvoices = () => {
             if (!selected) return;
 
             if (action === 'view') {
-                // HU-AR-01B E4: el detalle debe mostrar el estado contable
-                // (si fue contabilizada, en que comprobante y con que estado).
-                const jeId = selected.journalEntryId;
-                // HU-AR-11 E2 (2026-04-27): cuando la factura esta en moneda
-                // extranjera, mostrar tambien la conversion a COP usando la
-                // tasa de cambio guardada al emitir.
-                const isForeign = selected.currencyIso && selected.currencyIso !== 'COP';
-                const exRate = Number(selected.exchangeRate) || 1;
-                const fxBlock = isForeign ? (val) => `
-                    <span class="text-muted small">(≈ ${formatCurrency((Number(val)||0) * exRate)} COP)</span>
-                ` : () => '';
-                const baseHtml = (jeBlock) => `
+                // HU-AR-01B: el detalle debe mostrar cliente, LINEAS, subtotal,
+                // IVA, retenciones, total y saldo. El listado (DataTable) no trae
+                // las lineas, por eso se carga la factura completa via getById.
+                // HU-AR-01B E4: ademas el estado contable (comprobante + estado).
+                const fxOf = (inv) => {
+                    const isForeign = inv.currencyIso && inv.currencyIso !== 'COP';
+                    const exRate = Number(inv.exchangeRate) || 1;
+                    return isForeign
+                        ? (val) => `<span class="text-muted small">(≈ ${formatCurrency((Number(val)||0) * exRate)} COP)</span>`
+                        : () => '';
+                };
+                const linesHtml = (inv) => {
+                    const ls = Array.isArray(inv.lines) ? inv.lines : [];
+                    if (ls.length === 0) {
+                        return `<p class="text-muted mb-0"><em>Sin lineas registradas.</em></p>`;
+                    }
+                    const body = ls.map((l) => `
+                        <tr>
+                            <td>${l.description || l.itemName || '-'}</td>
+                            <td class="text-end">${l.quantity ?? '-'}</td>
+                            <td class="text-end">${formatCurrency(l.unitPrice)}</td>
+                            <td class="text-end">${formatCurrency(l.discount)}</td>
+                            <td class="text-end">${formatCurrency(l.subtotal)}</td>
+                            <td class="text-end">${formatCurrency(l.taxAmount)}</td>
+                            <td class="text-end">${formatCurrency(l.withholdingAmount)}</td>
+                            <td class="text-end fw-semibold">${formatCurrency(l.total)}</td>
+                        </tr>`).join('');
+                    return `
+                        <div class="table-responsive">
+                          <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.78rem">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Descripcion</th><th class="text-end">Cant.</th>
+                                <th class="text-end">P. Unit.</th><th class="text-end">Desc.</th>
+                                <th class="text-end">Subtotal</th><th class="text-end">IVA</th>
+                                <th class="text-end">Retencion</th><th class="text-end">Total</th>
+                              </tr>
+                            </thead>
+                            <tbody>${body}</tbody>
+                          </table>
+                        </div>`;
+                };
+                const baseHtml = (inv, jeBlock) => {
+                    const fxBlock = fxOf(inv);
+                    return `
                     <div class="text-start">
-                        <p><strong>Cliente:</strong> ${selected.thirdPartyName || '-'}</p>
-                        <p><strong>Fecha:</strong> ${selected.invoiceDate || '-'}</p>
-                        <p><strong>Vencimiento:</strong> ${selected.dueDate || '-'}</p>
-                        <p><strong>Moneda:</strong> ${selected.currencyIso || 'COP'} (tasa ${selected.exchangeRate || 1})</p>
-                        <p><strong>Subtotal:</strong> ${formatCurrency(selected.subtotal)} ${fxBlock(selected.subtotal)}</p>
-                        <p><strong>IVA:</strong> ${formatCurrency(selected.totalTax)} ${fxBlock(selected.totalTax)}</p>
-                        <p><strong>Retencion:</strong> ${formatCurrency(selected.totalWithholding)} ${fxBlock(selected.totalWithholding)}</p>
-                        <p><strong>Total:</strong> ${formatCurrency(selected.totalAmount)} ${fxBlock(selected.totalAmount)}</p>
-                        <p><strong>Saldo:</strong> ${formatCurrency(selected.balanceDue)} ${fxBlock(selected.balanceDue)}</p>
-                        <p><strong>Estado factura:</strong> ${traducir(selected.status)}</p>
-                        <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
+                        <p class="mb-1"><strong>Cliente:</strong> ${inv.thirdPartyName || '-'}</p>
+                        <p class="mb-1"><strong>Fecha:</strong> ${inv.invoiceDate || '-'}</p>
+                        <p class="mb-1"><strong>Vencimiento:</strong> ${inv.dueDate || '-'}</p>
+                        <p class="mb-1"><strong>Moneda:</strong> ${inv.currencyIso || 'COP'} (tasa ${inv.exchangeRate || 1})</p>
+                        <hr class="my-2"/>
+                        <h6 class="text-primary mb-2"><i class="ri-list-check me-1"></i>Lineas de la factura</h6>
+                        ${linesHtml(inv)}
+                        <hr class="my-2"/>
+                        <p class="mb-1"><strong>Subtotal:</strong> ${formatCurrency(inv.subtotal)} ${fxBlock(inv.subtotal)}</p>
+                        <p class="mb-1"><strong>IVA:</strong> ${formatCurrency(inv.totalTax)} ${fxBlock(inv.totalTax)}</p>
+                        <p class="mb-1"><strong>Retencion:</strong> ${formatCurrency(inv.totalWithholding)} ${fxBlock(inv.totalWithholding)}</p>
+                        <p class="mb-1"><strong>Total:</strong> ${formatCurrency(inv.totalAmount)} ${fxBlock(inv.totalAmount)}</p>
+                        <p class="mb-1"><strong>Saldo:</strong> ${formatCurrency(inv.balanceDue)} ${fxBlock(inv.balanceDue)}</p>
+                        <p class="mb-1"><strong>Estado factura:</strong> ${traducir(inv.status)}</p>
+                        <p><strong>Notas:</strong> ${inv.notes || '-'}</p>
                         <hr/>
                         <h6 class="text-primary mb-2"><i class="ri-file-list-line me-1"></i>Estado contable</h6>
                         ${jeBlock}
                     </div>`;
-                const renderModal = (jeBlock) => window.Swal.fire({
-                    title: `Factura ${selected.invoiceNumber || selected.id}`,
-                    html: baseHtml(jeBlock),
-                    width: 560,
+                };
+                const renderModal = (inv, jeBlock) => window.Swal.fire({
+                    title: `Factura ${inv.invoiceNumber || inv.id}`,
+                    html: baseHtml(inv, jeBlock),
+                    width: 760,
                     showCancelButton: false,
                     showDenyButton: false,
                     confirmButtonText: 'Cerrar',
                 });
 
-                if (!jeId) {
-                    renderModal(`<p class="text-muted"><em>Sin asiento contable generado.</em></p>`);
-                    return;
-                }
-                // Carga sincrona del JE para mostrar comprobante + estado.
-                fetchHelper.get(base_url(['api', 'v1', 'journal-entries', jeId]), {}, 1000, true)
+                // 1) Cargar la factura completa (con lineas) via getById.
+                fetchHelper.get(base_url(['api', 'v1', 'sales-invoices', selected.id]), {}, 1000, true)
                     .then((resp) => {
-                        const je = resp?.data || resp;
-                        const status = je?.status || '-';
-                        const statusLabel = {
-                            DRAFT: '<span class="badge bg-label-secondary">Borrador</span>',
-                            POSTED: '<span class="badge bg-label-success">Contabilizado</span>',
-                            REVERSED: '<span class="badge bg-label-danger">Reversado</span>',
-                        }[status] || `<span class="badge bg-label-secondary">${status}</span>`;
-                        const block = `
-                            <p><strong>Comprobante:</strong> ${je?.voucherCode || `JE-${jeId}`}</p>
-                            <p><strong>Fecha:</strong> ${je?.entryDate || '-'}</p>
-                            <p><strong>Estado:</strong> ${statusLabel}</p>
-                            <p><strong>Total D / C:</strong> ${formatCurrency(je?.totalDebit)} / ${formatCurrency(je?.totalCredit)}</p>`;
-                        renderModal(block);
+                        const inv = resp?.data || resp || selected;
+                        const jeId = inv.journalEntryId;
+                        if (!jeId) {
+                            renderModal(inv, `<p class="text-muted mb-0"><em>Sin asiento contable generado (la factura aun esta en borrador).</em></p>`);
+                            return;
+                        }
+                        // 2) Cargar el comprobante contable.
+                        fetchHelper.get(base_url(['api', 'v1', 'journal-entries', jeId]), {}, 1000, true)
+                            .then((jr) => {
+                                const je = jr?.data || jr;
+                                const status = je?.status || '-';
+                                const statusLabel = {
+                                    DRAFT: '<span class="badge bg-label-secondary">Borrador</span>',
+                                    POSTED: '<span class="badge bg-label-success">Contabilizado</span>',
+                                    REVERSED: '<span class="badge bg-label-danger">Reversado</span>',
+                                }[status] || `<span class="badge bg-label-secondary">${status}</span>`;
+                                const block = `
+                                    <p class="mb-1"><strong>Comprobante:</strong> ${je?.voucherCode || `JE-${jeId}`}</p>
+                                    <p class="mb-1"><strong>Fecha:</strong> ${je?.entryDate || '-'}</p>
+                                    <p class="mb-1"><strong>Estado:</strong> ${statusLabel}</p>
+                                    <p class="mb-0"><strong>Total D / C:</strong> ${formatCurrency(je?.totalDebit)} / ${formatCurrency(je?.totalCredit)}</p>`;
+                                renderModal(inv, block);
+                            })
+                            .catch(() => renderModal(inv, `<p class="text-warning mb-0"><em>No se pudo cargar el comprobante #${jeId}.</em></p>`));
                     })
                     .catch(() => {
-                        renderModal(`<p class="text-warning"><em>No se pudo cargar el comprobante #${jeId}.</em></p>`);
+                        // Fallback: usar el row del listado (sin lineas) si getById falla.
+                        renderModal(selected, `<p class="text-muted mb-0"><em>No se pudo cargar el detalle completo.</em></p>`);
                     });
                 return;
             }
@@ -427,12 +481,40 @@ const IndexSalesInvoices = () => {
                 return;
             }
 
+            if (action === 'issue') {
+                // HU-AR-01A E1: emitir (confirmar) una factura en borrador.
+                window.Swal.fire({
+                    title: 'Emitir factura?',
+                    html: `Se emitira la factura <strong>${selected.invoiceNumber || selected.id}</strong>.<br/>`
+                        + `Una vez emitida <u>ya no podra eliminarse</u> (se conserva el consecutivo fiscal); `
+                        + `para revertirla debera anularla. Ademas se generara su comprobante contable.`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Emitir',
+                    cancelButtonText: 'Cancelar',
+                }).then((res) => {
+                    if (!res.isConfirmed) return;
+                    fetchHelper
+                        .post(base_url(['api', 'v1', 'sales-invoices', selected.id, 'issue']), {}, {}, 1000)
+                        .then(() => {
+                            setMessage({ type: 'success', show: true, message: 'Factura emitida correctamente.' });
+                            dataTableRef?.current?.ajax.reload();
+                        })
+                        .catch((err) =>
+                            setMessage({ type: 'danger', show: true, message: err?.msg || err?.message || 'No se pudo emitir la factura.' })
+                        );
+                });
+                return;
+            }
+
             if (action === 'delete') {
-                if (!['DRAFT', 'ISSUED'].includes(selected.status)) {
+                // QA CxC Bug 3: solo se eliminan facturas en BORRADOR.
+                if (selected.status !== 'DRAFT') {
                     setMessage({
                         type: 'warning',
                         show: true,
-                        message: 'No se puede eliminar una factura con pagos o liquidada.',
+                        message: 'Solo se pueden eliminar facturas en estado Borrador. '
+                            + 'Use la opcion de Anular para revertir una factura ya emitida.',
                     });
                     return;
                 }

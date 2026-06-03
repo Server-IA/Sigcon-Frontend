@@ -100,6 +100,9 @@ const IndexCashAudits = () => {
                 const isDraftOrRejected = estado === 'BORRADOR' || estado === 'ABIERTO' || estado === 'RECHAZADO';
                 if (isDraftOrRejected) {
                     btns += `
+                        <button class="btn btn-sm btn-label-warning action-btn" data-action="edit" data-id="${id}" title="Editar arqueo (BNK-HU-030)">
+                            <i class="ri-edit-line"></i>
+                        </button>
                         <button class="btn btn-sm btn-label-info action-btn" data-action="submit-review" data-id="${id}" title="Enviar a revision (HU-042)">
                             <i class="ri-send-plane-line"></i>
                         </button>
@@ -169,6 +172,60 @@ const IndexCashAudits = () => {
             if (!row) return;
 
             switch (action) {
+                case 'edit': {
+                    // BNK-HU-030: modificar un arqueo en BORRADOR/RECHAZADO. Solo
+                    // se editan fecha, saldo fisico y notas; el saldo del sistema y
+                    // la diferencia los recalcula el backend.
+                    const fecha = row.auditDate || '';
+                    const fisico = row.physicalBalance ?? '';
+                    const notas = row.notes || '';
+                    window.Swal.fire({
+                        title: `Editar arqueo #${row.id}`,
+                        html: `
+                            <div class="text-start">
+                              <p class="mb-2" style="font-size:0.85rem">
+                                Caja: <strong>${row.cashName || '-'}</strong><br/>
+                                <span class="text-muted">Saldo del sistema actual: ${formatCurrency(row.systemBalance)}.
+                                El saldo del sistema y la diferencia se recalculan al guardar.</span>
+                              </p>
+                              <label class="form-label mb-1" style="font-size:0.82rem">Fecha del arqueo *</label>
+                              <input id="swal-ca-fecha" type="date" class="form-control mb-2" value="${fecha}" />
+                              <label class="form-label mb-1" style="font-size:0.82rem">Saldo fisico contado *</label>
+                              <input id="swal-ca-fisico" type="number" step="any" min="0" class="form-control mb-2" value="${fisico}" />
+                              <label class="form-label mb-1" style="font-size:0.82rem">Notas</label>
+                              <textarea id="swal-ca-notas" rows="2" class="form-control" placeholder="Observaciones o justificacion (opcional)">${notas}</textarea>
+                            </div>`,
+                        width: 560,
+                        showCancelButton: true,
+                        confirmButtonText: 'Guardar cambios',
+                        cancelButtonText: 'Cancelar',
+                        focusConfirm: false,
+                        preConfirm: () => {
+                            const f = document.getElementById('swal-ca-fecha').value;
+                            const fis = document.getElementById('swal-ca-fisico').value;
+                            const n = document.getElementById('swal-ca-notas').value;
+                            if (!f) { window.Swal.showValidationMessage('La fecha del arqueo es obligatoria.'); return false; }
+                            if (fis === '' || isNaN(Number(fis)) || Number(fis) < 0) {
+                                window.Swal.showValidationMessage('El saldo fisico debe ser un numero mayor o igual a 0.'); return false;
+                            }
+                            return { auditDate: f, physicalBalance: Number(fis), notes: n || null };
+                        },
+                    }).then(async (result) => {
+                        if (!result.isConfirmed) return;
+                        try {
+                            await fetchHelper.put(
+                                base_url(['api', 'v1', 'cash-audits', row.id]),
+                                result.value, {}, 1000, true
+                            );
+                            dataTableRef?.current?.ajax?.reload?.();
+                            setItemCreate(true);
+                        } catch (error) {
+                            window.Swal.fire({ icon: 'error', title: 'No se pudo actualizar el arqueo',
+                                text: error?.msg || error?.message || 'Error desconocido' });
+                        }
+                    });
+                    break;
+                }
                 case 'submit-review': {
                     // QA HU-042: cajero envia arqueo BORRADOR a supervisor.
                     window.Swal.fire({

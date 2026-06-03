@@ -105,6 +105,26 @@ export function usePermissionAutoRefresh(intervalMs = 30000) {
         const t = setTimeout(() => refreshThrottled('route:' + location.pathname), 200);
         return () => clearTimeout(t);
     }, [location.pathname, user?.email]);
+
+    // Trigger 5 (Pendientes PA 2026-05-30, BUG permisos FE): evento explicito
+    // 'sigcon:refresh-permissions' que emite NotificationBell al recibir por SSE
+    // una notif de cambio de rol/permiso (USER_ROLE_ADDED/REMOVED,
+    // ROLE_PERMISSIONS_CHANGED, TEMP_PERMISSION_*). Refresh INMEDIATO sin throttle:
+    // el admin acaba de cambiar permisos y el usuario debe ver el efecto al instante.
+    useEffect(() => {
+        if (!user || !user.email) return undefined;
+        const onForce = async () => {
+            lastRefreshRef.current = Date.now(); // marca para no duplicar con otros triggers
+            try {
+                await refresh();
+            } catch (err) {
+                console.warn('usePermissionAutoRefresh: refresh forzado (rol/permiso) fallo', err);
+            }
+        };
+        window.addEventListener('sigcon:refresh-permissions', onForce);
+        return () => window.removeEventListener('sigcon:refresh-permissions', onForce);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.email]);
 }
 
 export default usePermissionAutoRefresh;

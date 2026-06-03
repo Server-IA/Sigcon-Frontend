@@ -152,23 +152,34 @@ const IndexUsers = () => {
     };
 
     const handleDelete = async (id, userName) => {
+        // PA-RF-30 (Pendientes PA 2026-05-30): exigir motivo de desactivacion
+        // (minimo 30 caracteres) antes de confirmar la baja del usuario.
         const result = await window.Swal.fire({
             title: '¿Estás seguro?',
-            text: `Se eliminará el usuario "${userName}"`,
+            html: `Se desactivará el usuario "<strong>${userName}</strong>".<br/>Ingrese el motivo de la desactivación (mínimo 30 caracteres):`,
             icon: 'warning',
+            input: 'textarea',
+            inputPlaceholder: 'Motivo de la desactivación (mínimo 30 caracteres)...',
+            inputAttributes: { 'aria-label': 'Motivo de la desactivación' },
             showCancelButton: true,
-            confirmButtonText: 'Sí, eliminar',
+            confirmButtonText: 'Sí, desactivar',
             cancelButtonText: 'Cancelar',
             customClass: {
                 confirmButton: 'btn btn-danger',
                 cancelButton: 'btn btn-secondary'
+            },
+            inputValidator: (value) => {
+                const v = (value || '').trim();
+                if (!v) return 'El motivo de la desactivación es obligatorio.';
+                if (v.length < 30) return `El motivo debe tener al menos 30 caracteres (actual: ${v.length}).`;
+                return undefined;
             }
         });
 
         if (result.isConfirmed) {
             try {
                 const deleteUrl = base_url(['users', 'deleteUser', id]);
-                await fetchHelper.post(deleteUrl, {}, {}, 1000);
+                await fetchHelper.post(deleteUrl, { reason: (result.value || '').trim() }, {}, 1000);
                 // window.Swal.fire({
                 //     icon: 'success',
                 //     title: 'Eliminado',

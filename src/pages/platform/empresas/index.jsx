@@ -79,30 +79,45 @@ const EmpresasIndex = () => {
             if (!result.isConfirmed) return;
             reason = result.value.trim();
         } else {
+            // PA-RF-PLAT-03 v3.0 (Control de Cambios PA, 2026-05-29): activar
+            // tambien exige motivo (30-500 caracteres) para auditoria.
             const result = await window.Swal.fire({
                 title: `Activar empresa`,
-                text: `¿Reactivar la empresa "${empresa.businessName}"?`,
-                icon: 'question',
+                html: `<p>Vas a reactivar <b>${empresa.businessName}</b>.</p>
+                       <p class="text-muted small mb-0">Ingresa el motivo (minimo 30 caracteres) para auditoria:</p>`,
+                input: 'textarea',
+                inputAttributes: { rows: 3, maxlength: 500 },
+                inputPlaceholder: 'Motivo de la activacion (min. 30 caracteres)...',
                 showCancelButton: true,
                 confirmButtonText: 'Activar',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#28a745',
+                inputValidator: (value) => {
+                    if (!value || value.trim().length < 30) {
+                        return 'El motivo debe tener al menos 30 caracteres.';
+                    }
+                    return null;
+                }
             });
             if (!result.isConfirmed) return;
+            reason = result.value.trim();
         }
 
         try {
+            let invalidated = null;
             if (isActive) {
-                await fetchHelper.delete(
+                const resp = await fetchHelper.delete(
                     base_url(['api', 'platform', 'companies', empresa.id]),
                     { reason },
                     {},
                     1000,
                 );
+                // PA-RF-PLAT-03 punto 7: el backend devuelve invalidatedSessions.
+                invalidated = resp?.invalidatedSessions ?? resp?.data?.invalidatedSessions ?? null;
             } else {
                 await fetchHelper.post(
                     base_url(['api', 'platform', 'companies', empresa.id, 'activate']),
-                    {},
+                    { reason },
                     {},
                     1000,
                 );
@@ -110,7 +125,8 @@ const EmpresasIndex = () => {
             // QA Bloque PA Bug 1 (2026-05-09): conjugar correctamente.
             // Antes generaba "desactivarda"/"activarda" por concatenar `${action}+da`.
             const conjugado = isActive ? 'desactivada' : 'activada';
-            setOkMsg(`Empresa ${conjugado} correctamente.`);
+            setOkMsg(`Empresa ${conjugado} correctamente.`
+                + (invalidated != null ? ` (${invalidated} sesion(es) invalidada(s))` : ''));
             load();
         } catch (e) {
             setErr(e?.msg || `Error al ${action} la empresa`);

@@ -14,6 +14,10 @@ const ViewBankAccount = ({
     const [detail, setDetail] = useState(null);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState('');
+    // BNK-RF-42 (QA Bloque BNK 2026-06-03): terceros vinculados a la cuenta, en modo
+    // solo lectura. Antes solo se veían al EDITAR; el requerimiento pide verlos también
+    // al consultar el detalle de la cuenta.
+    const [terceros, setTerceros] = useState([]);
 
     // Cargar detalle completo al abrir el modal
     useEffect(() => {
@@ -25,12 +29,19 @@ const ViewBankAccount = ({
             setLoading(true);
             setFetchError('');
             setDetail(null);
+            setTerceros([]);
             try {
                 const res = await fetchHelper.get(
                     base_url(['api', 'v1', 'bank-accounts', record.id]),
                     {}, 1
                 );
                 setDetail(res.data || res);
+                // Lookup inverso: terceros que tienen esta cuenta vinculada.
+                try {
+                    const t = await fetchHelper.get(
+                        base_url(['api', 'v1', 'bank-accounts', record.id, 'third-parties']), {}, 0);
+                    setTerceros(Array.isArray(t) ? t : (t?.data ?? []));
+                } catch { setTerceros([]); }
             } catch (err) {
                 setFetchError(err?.msg || 'No se pudo cargar el detalle de la cuenta.');
             } finally {
@@ -172,6 +183,33 @@ const ViewBankAccount = ({
                                     {d.notifyLowBalance && <Row label="Saldo mínimo" value={d.minimumBalance} />}
                                     <BoolRow label="Maneja chequera"       value={d.handlesCheckbook} />
                                 </div>
+
+                                {/* ── Terceros vinculados (BNK-RF-42, solo lectura) ── */}
+                                <p className="text-muted fw-semibold mb-3 border-bottom pb-1">
+                                    <i className="ri-user-shared-line me-1"></i>Terceros vinculados
+                                </p>
+                                {terceros.length === 0 ? (
+                                    <p className="text-muted mb-3">Esta cuenta no tiene terceros vinculados.</p>
+                                ) : (
+                                    <div className="table-responsive mb-3">
+                                        <table className="table table-sm table-bordered">
+                                            <thead className="table-light">
+                                                <tr><th>NIT</th><th>Razón Social</th><th>Principal</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                {terceros.map((t) => (
+                                                    <tr key={`tp_${t.id}`}>
+                                                        <td>{t.thirdPartyNit ?? '—'}</td>
+                                                        <td>{t.thirdPartyBusinessName ?? '—'}</td>
+                                                        <td>{t.isPrimary
+                                                            ? <span className="badge bg-label-primary">Sí</span>
+                                                            : <span className="badge bg-label-secondary">No</span>}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
 
                                 {/* ── Auditoría ──────────────────────────── */}
                                 <p className="text-muted fw-semibold mb-3 border-bottom pb-1">

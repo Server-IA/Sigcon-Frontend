@@ -214,7 +214,9 @@ const RulesTaxIndex = () => {
     const [actions, setActions] = useState([
         ...(userPermissions.some(p => p.code === 'UPDATE_RULER_TAX' && p.type === 'UPDATE') || isAdmin ? [{ key: 'edit', icon: 'ri-edit-line', class: 'btn-label-primary', title: 'Editar' }] : []),
         ...(userPermissions.some(p => p.code === 'DELETE_RULER_TAX' && p.type === 'DELETE') || isAdmin ? [{ key: 'delete', icon: 'ri-delete-bin-5-line', class: 'btn-label-danger', title: 'Eliminar' }] : []),
-        ...(userPermissions.some(p => p.code === 'ASSIGN_ACCOUNTING_ACCOUNT_TO_RULER_TAX' && p.type === 'ASSIGN') || isAdmin ? [{ key: 'assign', icon: 'ri-add-line', class: 'btn-label-primary', title: 'Asignar cuenta contable' }] : []),
+        // QA CFG (2026-06-02): se retira el boton "+" (Asignar cuenta contable) de
+        // la barra de acciones por redundante/confuso. La cuenta contable se define
+        // al crear la regla; para usar otra cuenta o tarifa, se crea otra regla.
     ]); // Info para los botones del datatable
 
     const [buttons, setButtons] = useState([

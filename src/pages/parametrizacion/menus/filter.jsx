@@ -27,12 +27,12 @@ const FilterMenu = ({ filterRef, filterInstance, dataTableRef, modules, parents,
         {
             regex: true,
             value: '',
-            column: 'module:name',
+            column: 'module.name:name',
         },
         {
             regex: true,
             value: '',
-            column: 'parent:name',
+            column: 'parent.label:name',
         }
     ]);
     
@@ -177,14 +177,14 @@ const FilterMenu = ({ filterRef, filterInstance, dataTableRef, modules, parents,
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={filters.find(filter => filter.column === 'module:name')?.regex || false}
+                                                checked={filters.find(filter => filter.column === 'module.name:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Busqueda por coincidencia"
                                                 type="checkbox"
                                                 onChange={(e) => {
-                                                    setFilters(prev => prev.map(filter => filter.column === 'module:name' ? {
+                                                    setFilters(prev => prev.map(filter => filter.column === 'module.name:name' ? {
                                                         ...filter,
                                                         regex: e.target.checked,
                                                     } : filter));
@@ -200,9 +200,9 @@ const FilterMenu = ({ filterRef, filterInstance, dataTableRef, modules, parents,
                                                 name: module.name,
                                                 id: module.name,
                                             }))}
-                                            value={filters.find(filter => filter.column === 'module:name')?.value === '' ? [] : filters.find(filter => filter.column === 'module:name')?.value.split(',')}
+                                            value={filters.find(filter => filter.column === 'module.name:name')?.value === '' ? [] : filters.find(filter => filter.column === 'module.name:name')?.value.split(',')}
                                             onChange={(value) => {
-                                                setFilters(prev => prev.map(filter => filter.column === 'module:name' ? {
+                                                setFilters(prev => prev.map(filter => filter.column === 'module.name:name' ? {
                                                     ...filter,
                                                     value: value.join(','),
                                                 } : filter));
@@ -219,14 +219,14 @@ const FilterMenu = ({ filterRef, filterInstance, dataTableRef, modules, parents,
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={filters.find(filter => filter.column === 'parent:name')?.regex || false}
+                                                checked={filters.find(filter => filter.column === 'parent.label:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Busqueda por coincidencia"
                                                 type="checkbox"
                                                 onChange={(e) => {
-                                                    setFilters(prev => prev.map(filter => filter.column === 'parent:name' ? {
+                                                    setFilters(prev => prev.map(filter => filter.column === 'parent.label:name' ? {
                                                         ...filter,
                                                         regex: e.target.checked,
                                                     } : filter));
@@ -242,9 +242,9 @@ const FilterMenu = ({ filterRef, filterInstance, dataTableRef, modules, parents,
                                                 name: parent.name,
                                                 id: parent.name,
                                             }))}
-                                            value={filters.find(filter => filter.column === 'parent:name')?.value === '' ? [] : filters.find(filter => filter.column === 'parent:name')?.value.split(',')}
+                                            value={filters.find(filter => filter.column === 'parent.label:name')?.value === '' ? [] : filters.find(filter => filter.column === 'parent.label:name')?.value.split(',')}
                                             onChange={(value) => {
-                                                setFilters(prev => prev.map(filter => filter.column === 'parent:name' ? {
+                                                setFilters(prev => prev.map(filter => filter.column === 'parent.label:name' ? {
                                                     ...filter,
                                                     value: value.join(','),
                                                 } : filter));

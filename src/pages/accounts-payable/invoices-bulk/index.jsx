@@ -3,6 +3,7 @@ import { useState } from 'react';
 import AlertPage from '../../../components/molecules/AlertPage';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 
 /**
  * HU-AP-23 (2026-04-28): Carga masiva de Facturas de Compra.
@@ -11,11 +12,18 @@ import { fetchHelper } from '../../../utils/fetch';
  * POST /api/v1/invoices/bulk/store. El backend procesa fila por
  * fila y devuelve un resumen con totales y errores individuales.
  *
- * Formato CSV requerido (sin encabezado de columnas, separado por coma):
- *   thirdPartyId,paymentFormId,resolutionInvoice,invoiceDate,invoiceDueDay,supplierInvoiceNumber?,notes?
+ * RF-22 (Notas Tecnicas CXP, 2026-06-02): la carga masiva ahora soporta
+ * LINEAS DE DETALLE. Cada fila es una linea; las filas con la misma
+ * (thirdPartyId, resolutionInvoice, invoiceDate) se agrupan en una sola
+ * factura con N lineas. El backend calcula impuestos, retenciones UVT,
+ * balanceDue y genera el asiento contable.
  *
- * Ejemplo:
- *   1,1,RES-100,2026-04-15,30,FAC-PROV-001,Compra mensual papeleria
+ * Formato CSV (con encabezado, separado por coma):
+ *   thirdPartyId,paymentFormId,resolutionInvoice,invoiceDate,invoiceDueDay,
+ *   supplierInvoiceNumber,notes,lineAccountId,lineDescription,lineQuantity,
+ *   lineUnitPrice,lineTaxRuleIds
+ *
+ * lineTaxRuleIds: IDs de reglas tributarias separados por '|' (ej. "1|2"). Opcional.
  */
 
 const TEMPLATE_HEADERS = [
@@ -26,9 +34,18 @@ const TEMPLATE_HEADERS = [
     'invoiceDueDay',
     'supplierInvoiceNumber',
     'notes',
+    'lineAccountId',
+    'lineDescription',
+    'lineQuantity',
+    'lineUnitPrice',
+    'lineTaxRuleIds',
 ];
 
-const SAMPLE_ROW = '1,1,RES-100,2026-04-15,30,FAC-PROV-001,Compra mensual papeleria';
+// Dos filas con la MISMA factura (RES-100) = una factura con 2 lineas.
+const SAMPLE_ROWS = [
+    '1,1,RES-100,2026-04-15,30,FAC-PROV-001,Compra papeleria,19,Resma de papel,10,15000,1',
+    '1,1,RES-100,2026-04-15,30,FAC-PROV-001,Compra papeleria,19,Toner,2,120000,1|2',
+];
 
 const IndexInvoicesBulk = () => {
     const [file, setFile] = useState(null);
@@ -37,9 +54,14 @@ const IndexInvoicesBulk = () => {
     const [result, setResult] = useState(null);
     const [message, setMessage] = useState({ message: '', type: '', show: false });
 
+    // QA CXP item 5 (2026-06-02): gating de permisos (backend ya bloquea via
+    // @PreAuthorize). La carga masiva requiere AP.FACTURAS_COMPRA.CARGA_MASIVA.
+    const { has } = usePermissions();
+    const canBulk = has('AP.FACTURAS_COMPRA.CARGA_MASIVA');
+
     /** Descarga plantilla CSV vacia con header + ejemplo. */
     const downloadTemplate = () => {
-        const content = '﻿' + TEMPLATE_HEADERS.join(',') + '\n' + SAMPLE_ROW + '\n';
+        const content = '﻿' + TEMPLATE_HEADERS.join(',') + '\n' + SAMPLE_ROWS.join('\n') + '\n';
         const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -71,6 +93,11 @@ const IndexInvoicesBulk = () => {
 
     /** Lee el archivo, lo encodea a base64 y lo envia al backend. */
     const handleUpload = async () => {
+        if (!canBulk) {
+            setMessage({ type: 'danger', show: true,
+                message: 'No tiene permiso para realizar la carga masiva de facturas.' });
+            return;
+        }
         if (!file) {
             setMessage({ type: 'warning', show: true, message: 'Seleccione un archivo CSV.' });
             return;
@@ -147,14 +174,20 @@ const IndexInvoicesBulk = () => {
                     </h6>
                     <ol className="mb-2 small">
                         <li>Descargue la plantilla CSV haciendo clic en <strong>Descargar plantilla</strong>.</li>
-                        <li>Edite el archivo en Excel u otra herramienta. Cada fila representa una factura.</li>
-                        <li>Columnas obligatorias: <code>thirdPartyId</code> (id proveedor),
+                        <li>Cada fila es <strong>una linea</strong> de factura. Las filas con la
+                            misma <code>thirdPartyId</code> + <code>resolutionInvoice</code> + <code>invoiceDate</code>
+                            se agrupan en <strong>una sola factura con varias lineas</strong>.</li>
+                        <li>Columnas de cabecera obligatorias: <code>thirdPartyId</code> (id proveedor),
                             <code> paymentFormId</code> (id forma pago),
                             <code> resolutionInvoice</code>, <code>invoiceDate</code> (yyyy-mm-dd),
                             <code> invoiceDueDay</code> (dia mes 1-31).</li>
-                        <li>Columnas opcionales: <code>supplierInvoiceNumber</code>, <code>notes</code>.</li>
-                        <li>Formato de fecha: <code>yyyy-MM-dd</code> (ej. 2026-04-15).</li>
-                        <li>Las filas con error <strong>no detienen el proceso</strong>; se reportan al final.</li>
+                        <li>Columnas de linea obligatorias: <code>lineAccountId</code> (id cuenta contable),
+                            <code> lineQuantity</code> (&gt; 0), <code>lineUnitPrice</code> (&gt; 0).
+                            Opcionales: <code>lineDescription</code>, <code>lineTaxRuleIds</code>
+                            (IDs de reglas tributarias separados por <code>|</code>, ej. <code>1|2</code>).</li>
+                        <li>Columnas opcionales de cabecera: <code>supplierInvoiceNumber</code>, <code>notes</code>.</li>
+                        <li>El backend calcula impuestos, retenciones (tope UVT), saldo y genera el asiento contable.</li>
+                        <li>Las facturas con error <strong>no detienen el proceso</strong>; se reportan al final.</li>
                     </ol>
                     <button className="btn btn-sm btn-outline-primary" onClick={downloadTemplate}>
                         <i className="ri-download-2-line me-1" />Descargar plantilla
@@ -193,9 +226,15 @@ const IndexInvoicesBulk = () => {
                     <div className="col-md-3">
                         <button className="btn btn-primary w-100"
                             onClick={handleUpload}
-                            disabled={loading || !file}>
+                            disabled={loading || !file || !canBulk}
+                            title={!canBulk ? 'No tiene permiso para carga masiva de facturas' : ''}>
                             {loading ? 'Procesando...' : 'Importar'}
                         </button>
+                        {!canBulk && (
+                            <small className="text-danger d-block mt-1">
+                                No tiene permiso para carga masiva.
+                            </small>
+                        )}
                     </div>
                 </div>
 

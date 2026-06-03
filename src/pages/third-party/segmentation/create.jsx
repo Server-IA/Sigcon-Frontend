@@ -108,6 +108,9 @@ const CreateSegmentation = ({
                 lastCalculationDate: record.lastCalculationDate,
                 autoSegment:         record.autoSegment,
                 daysPastDue:         Number(record.daysPastDue),
+                // PT-01 (TER-RF-08): el backend autoriza el recalculo sobre un
+                // ajuste manual vigente solo si es cierre mensual.
+                isMonthlyClose:      !!record.isMonthlyClose,
             };
 
             await fetchHelper.post(url, payload, {}, 1000);
@@ -218,6 +221,25 @@ const CreateSegmentation = ({
                                     error={errors.daysPastDue}
                                     required
                                 />
+                            </div>
+
+                            {/* PT-01 (TER-RF-08): selector de cierre mensual */}
+                            <div className="col-md-12 mt-2">
+                                <div className="form-check form-switch">
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input"
+                                        id="seg_create_monthlyClose"
+                                        checked={!!record.isMonthlyClose}
+                                        onChange={(e) => setRecord(prev => ({ ...prev, isMonthlyClose: e.target.checked }))}
+                                    />
+                                    <label className="form-check-label" htmlFor="seg_create_monthlyClose">
+                                        Cálculo de cierre mensual
+                                    </label>
+                                    <small className="d-block text-muted">
+                                        Si está activo, el sistema puede recalcular el segmento aunque exista un ajuste manual vigente.
+                                    </small>
+                                </div>
                             </div>
 
                         </div>

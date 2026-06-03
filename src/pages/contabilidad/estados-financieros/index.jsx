@@ -216,6 +216,21 @@ const CgEstadosFinancieros = () => {
                     </div>
                 </div>
             </div>
+            {/* HU-CG-09 E1: aviso cuando el Resultado del Ejercicio se incorporo al
+                patrimonio porque aun no existe asiento de cierre (NIC 1). */}
+            {d.resultadoEjercicio != null && Number(d.resultadoEjercicio) !== 0 && (
+                <div className="alert alert-info d-flex align-items-start">
+                    <i className="ri-information-line me-2 mt-1" />
+                    <div className="small">
+                        El <strong>Resultado del Ejercicio</strong> ({formatCurrency(d.resultadoEjercicio)})
+                        se incorporo automaticamente al patrimonio porque el periodo aun no tiene
+                        asiento de cierre contable. De esta forma la ecuacion contable
+                        (Activos = Pasivos + Patrimonio) queda balanceada conforme a la NIC 1.
+                        Al ejecutar el cierre, este valor pasa a la cuenta de patrimonio (3605)
+                        y este ajuste vuelve a cero.
+                    </div>
+                </div>
+            )}
             {renderClassDetails(d.details)}
         </>
     );
@@ -239,6 +254,43 @@ const CgEstadosFinancieros = () => {
                     </div>
                 </div>
             </div>
+
+            {/* HU-CG-10: presentacion financiera NIC 1 con clasificacion granular
+                (ingresos operacionales/financieros/otros; gastos administracion/ventas/
+                financieros/otros; impuesto de renta) derivada del subgrupo PUC. */}
+            {d.ingresosOperacionales !== undefined && (
+                <div className="card border-0 shadow-sm mb-4">
+                    <div className="card-header bg-label-primary">
+                        <h6 className="mb-0 fw-bold">
+                            <i className="ri-bar-chart-grouped-line me-1" />
+                            Estado de Resultados por funcion (NIC 1)
+                        </h6>
+                    </div>
+                    <div className="table-responsive">
+                        <table className="table table-sm mb-0 nic1-table">
+                            <tbody>
+                                <tr><td>Ingresos operacionales</td><td className="text-end">{formatCurrency(d.ingresosOperacionales)}</td></tr>
+                                <tr><td className="text-muted">(-) Costo de ventas / produccion</td><td className="text-end text-muted">({formatCurrency(d.totalCostos)})</td></tr>
+                                <tr className="table-light fw-bold"><td>= Utilidad bruta</td><td className="text-end">{formatCurrency(d.utilidadBrutaOperacional)}</td></tr>
+                                <tr><td className="text-muted">(-) Gastos de administracion</td><td className="text-end text-muted">({formatCurrency(d.gastosAdministracion)})</td></tr>
+                                <tr><td className="text-muted">(-) Gastos de ventas</td><td className="text-end text-muted">({formatCurrency(d.gastosVentas)})</td></tr>
+                                <tr className="table-light fw-bold"><td>= Utilidad operacional</td><td className="text-end">{formatCurrency(d.utilidadOperacional)}</td></tr>
+                                <tr><td className="text-success">(+) Ingresos financieros</td><td className="text-end text-success">{formatCurrency(d.ingresosFinancieros)}</td></tr>
+                                <tr><td className="text-success">(+) Otros ingresos</td><td className="text-end text-success">{formatCurrency(d.otrosIngresos)}</td></tr>
+                                <tr><td className="text-muted">(-) Gastos financieros</td><td className="text-end text-muted">({formatCurrency(d.gastosFinancieros)})</td></tr>
+                                <tr><td className="text-muted">(-) Otros gastos</td><td className="text-end text-muted">({formatCurrency(d.otrosGastos)})</td></tr>
+                                <tr className="table-light fw-bold"><td>= Utilidad antes de impuestos</td><td className="text-end">{formatCurrency(d.utilidadAntesImpuestos)}</td></tr>
+                                <tr><td className="text-muted">(-) Impuesto de renta</td><td className="text-end text-muted">({formatCurrency(d.impuestoRenta)})</td></tr>
+                                <tr className={`fw-bold ${Number(d.utilidadNeta) >= 0 ? 'table-success' : 'table-danger'}`}>
+                                    <td>= Utilidad neta del periodo</td>
+                                    <td className="text-end">{formatCurrency(d.utilidadNeta)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             {renderClassDetails(d.details)}
         </>
     );

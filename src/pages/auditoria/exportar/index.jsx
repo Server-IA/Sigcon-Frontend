@@ -17,9 +17,24 @@ const IndexAuditExport = () => {
             const resp = await fetch(url, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            // HU-AU-08 E7: cuando no hay registros el backend responde 200 con JSON
-            // {success:false, message}. No hay que descargar un archivo basura.
+            // QA Auditoria (2026-06-02): rate limit (429) -> mostrar el mensaje
+            // del backend, no un error generico. El tope nunca es silencioso.
+            if (resp.status === 429) {
+                const j = await resp.json().catch(() => ({}));
+                setAlert({ show: true, type: 'warning',
+                    message: j.message || 'Ha alcanzado el limite de exportaciones. Espere unos segundos.' });
+                return;
+            }
+            if (!resp.ok) {
+                const text = await resp.text();
+                let msg; try { msg = JSON.parse(text)?.message; } catch { msg = text; }
+                setAlert({ show: true, type: 'danger',
+                    message: msg || 'No se pudo generar el reporte' });
+                return;
+            }
+            // HU-AU-08 E7 / tope N (2026-06-02): el backend responde 200 con JSON
+            // {success:false, message} cuando no hay registros o se supera el tope.
+            // No hay que descargar un archivo basura: mostrar el mensaje.
             const ctype = resp.headers.get('content-type') || '';
             if (ctype.includes('application/json')) {
                 const j = await resp.json().catch(() => ({}));
@@ -59,8 +74,7 @@ const IndexAuditExport = () => {
 
                 <p className="text-muted">
                     Genera reportes con los últimos 1000 logs de auditoría en distintos formatos.
-                    El evento de exportación queda registrado automáticamente en el log de auditoría
-                    (HU-AU-06 E6).
+                    El evento de exportación queda registrado automáticamente en el log de auditoría.
                 </p>
 
                 <div className="row g-3 mt-3">

@@ -43,6 +43,17 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
     const submit = async (e) => {
         e.preventDefault();
         setErr(null);
+        // Pendientes PA 2026-05-30 (PA-RF-PLAT-01): razon social <=200 chars y
+        // caracteres permitidos = letras, numeros, espacios y los simbolos & . ( ) /.
+        const razon = (form.company.businessName || '').trim();
+        if (razon.length > 200) {
+            setErr('La razón social no puede superar 200 caracteres.');
+            return;
+        }
+        if (razon && !/^[\p{L}\p{N} &.()/]+$/u.test(razon)) {
+            setErr('La razón social solo admite letras, números, espacios y los símbolos & . ( ) /');
+            return;
+        }
         setSubmitting(true);
         try {
             await fetchHelper.post(
@@ -85,7 +96,7 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
                                 </div>
                                 <div className="col-md-6">
                                     <label className="form-label">Razón social *</label>
-                                    <input type="text" className="form-control" required
+                                    <input type="text" className="form-control" required maxLength={200}
                                            value={form.company.businessName} onChange={setCompanyField('businessName')} />
                                 </div>
                                 <div className="col-md-6">
@@ -94,18 +105,18 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
                                            value={form.company.legalRepresentative} onChange={setCompanyField('legalRepresentative')} />
                                 </div>
                                 <div className="col-md-6">
-                                    <label className="form-label">Email de contacto</label>
-                                    <input type="email" className="form-control"
+                                    <label className="form-label">Correo corporativo *</label>
+                                    <input type="email" className="form-control" required
                                            value={form.company.email} onChange={setCompanyField('email')} />
                                 </div>
                                 <div className="col-md-6">
-                                    <label className="form-label">Teléfono</label>
-                                    <input type="text" className="form-control"
+                                    <label className="form-label">Teléfono principal *</label>
+                                    <input type="text" className="form-control" required
                                            value={form.company.phone} onChange={setCompanyField('phone')} />
                                 </div>
                                 <div className="col-md-6">
-                                    <label className="form-label">Dirección</label>
-                                    <input type="text" className="form-control"
+                                    <label className="form-label">Dirección principal *</label>
+                                    <input type="text" className="form-control" required
                                            value={form.company.address} onChange={setCompanyField('address')} />
                                 </div>
                             </div>
@@ -134,10 +145,11 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
                                 </div>
                                 <div className="col-md-12">
                                     <label className="form-label">Password *</label>
-                                    <input type="password" className="form-control" required minLength={6}
+                                    <input type="password" className="form-control" required minLength={8}
                                            value={form.adminPassword} onChange={setAdminField('adminPassword')} />
                                     <small className="text-muted">
-                                        Mínimo 6 caracteres. El admin podrá cambiarla tras el primer login.
+                                        Mínimo 8 caracteres, con al menos una mayúscula, un número y un símbolo
+                                        (PA-RF-01). El admin podrá cambiarla tras el primer login.
                                     </small>
                                 </div>
                             </div>

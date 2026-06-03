@@ -72,6 +72,59 @@ const DetailCheque = ({ modalRef, record }) => {
 
     const d = detail;
 
+    // QA Bloque BNK (2026-06-03) Bug B: el documento del cheque virtual NO es un
+    // archivo estatico servido por el frontend. `supportDocumentPath` es solo una
+    // ruta logica; usarla como href hacia el origen del front devolvia index.html
+    // (SPA fallback) -> "Descargar" bajaba HTML y "Ver PDF" abria otra pagina.
+    // El backend genera el PDF real en GET /api/v1/banks/checks/{id}/support/download
+    // (iText7, application/pdf). Aqui lo pedimos como blob con el token y lo
+    // mostramos (window.open) o descargamos. Mismo patron que el listado (index.jsx).
+    const fetchCheckPdfBlob = async () => {
+        const id = record?.id ?? d?.id;
+        if (!id) throw new Error('Cheque no disponible');
+        const url = base_url(['api', 'v1', 'banks', 'checks', id, 'support', 'download']);
+        const tok = localStorage.getItem('token');
+        const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + tok } });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.msg || `HTTP ${resp.status}`);
+        }
+        const blob = await resp.blob();
+        const cd = resp.headers.get('Content-Disposition') || '';
+        const m = cd.match(/filename="?([^";]+)"?/i);
+        const fileName = (m && m[1]) || `cheque-${d?.numberCheck ?? id}.pdf`;
+        return { blob, fileName };
+    };
+
+    const handleVerPdf = async () => {
+        try {
+            const { blob } = await fetchCheckPdfBlob();
+            const blobUrl = URL.createObjectURL(blob);
+            // Abrir el blob en nueva pestania: el navegador renderiza el PDF inline
+            // en su visor nativo (ignora el Content-Disposition del backend).
+            window.open(blobUrl, '_blank', 'noopener,noreferrer');
+            // No revocar de inmediato; el visor necesita la URL. Liberar tras 1 min.
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        } catch (e) {
+            setErrorMessage(e?.message || 'No se pudo abrir el PDF del cheque.');
+        }
+    };
+
+    const handleDescargarPdf = async () => {
+        try {
+            const { blob, fileName } = await fetchCheckPdfBlob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            URL.revokeObjectURL(a.href);
+            a.remove();
+        } catch (e) {
+            setErrorMessage(e?.message || 'No se pudo descargar el PDF del cheque.');
+        }
+    };
+
     return (
         <div className="modal fade" ref={modalRef} id="modalDetailCheque" tabIndex={-1} aria-hidden="true">
             <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
@@ -371,21 +424,20 @@ const DetailCheque = ({ modalRef, record }) => {
                                             </label>
                                             <div className="d-flex align-items-center gap-2 flex-wrap">
                                                 <i className="ri-file-pdf-line text-danger fs-4" />
-                                                <a
-                                                    href={d.supportDocumentPath}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                <button
+                                                    type="button"
+                                                    onClick={handleVerPdf}
                                                     className="btn btn-sm btn-label-danger"
                                                 >
                                                     <i className="ri-eye-line me-1" />Ver PDF
-                                                </a>
-                                                <a
-                                                    href={d.supportDocumentPath}
-                                                    download
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleDescargarPdf}
                                                     className="btn btn-sm btn-label-primary"
                                                 >
                                                     <i className="ri-download-line me-1" />Descargar
-                                                </a>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>

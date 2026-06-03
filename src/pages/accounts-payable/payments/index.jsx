@@ -6,6 +6,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 // QA (2026-05-26): helper compartido para traducir estados a espanol y evitar
 // que se muestren valores crudos del enum/BD (ej. "COMPLETED" -> "Completado").
 import { statusBadge } from '../../../utils/statusLabels';
@@ -96,13 +97,17 @@ const IndexApPayments = () => {
             title: 'Acciones',
             data: 'id',
             searchable: false,
-            render: (id) => `
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-label-info action-btn"
-                        data-action="view" data-id="${id}" title="Ver">
-                        <i class="ri-eye-line"></i>
-                    </button>
-                </div>`,
+            render: (id, _type, row) => {
+                // RF-34 (Notas Tecnicas CXP): reversar pago. Habilitado solo si el
+                // pago NO esta ya reversado y el rol tiene el permiso. El backend
+                // valida ademas que la factura no este liquidada y el periodo abierto.
+                const reversible = row?.status !== 'REVERSED';
+                const btns = [`<button class="btn btn-sm btn-label-info action-btn" data-action="view" data-id="${id}" title="Ver"><i class="ri-eye-line"></i></button>`];
+                if (canReverse) {
+                    btns.push(`<button class="btn btn-sm btn-label-warning action-btn" data-action="reverse" data-id="${id}" title="${reversible ? 'Reversar pago (RF-34)' : 'El pago ya esta reversado'}" ${!reversible ? 'disabled' : ''}><i class="ri-arrow-go-back-line"></i></button>`);
+                }
+                return `<div class="d-flex gap-1">${btns.join('')}</div>`;
+            },
         },
     ];
 
@@ -115,6 +120,13 @@ const IndexApPayments = () => {
     };
 
     /** Botones de cabecera. */
+    // QA CXP item 5 (2026-06-02): gating de permisos (el backend ya bloquea via
+    // @PreAuthorize; ocultamos el boton de crear si el rol no tiene el permiso).
+    const { has } = usePermissions();
+    const canCreate = has('AP.PAGOS.CREAR');
+    // RF-34 (Notas Tecnicas CXP): permiso para reversar pagos.
+    const canReverse = has('AP.PAGOS.REVERSAR');
+
     const buttons = [
         {
             text: '<i class="ri-filter-line ri-16px me-sm-2"></i> <span class="d-none d-sm-inline-block">Filtrar</span>',
@@ -124,11 +136,11 @@ const IndexApPayments = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(canCreate ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Pago</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: () => openModalCreate(),
-        },
+        }] : []),
     ];
 
     /** Rows normalizadas. */
@@ -163,6 +175,55 @@ const IndexApPayments = () => {
                         </div>`,
                     width: 500,
                     confirmButtonText: 'Cerrar',
+                });
+            }
+
+            if (action === 'reverse') {
+                // RF-34 (Notas Tecnicas CXP): reversar pago con motivo obligatorio
+                // (minimo 10 caracteres). El backend deshace el asiento, compensa el
+                // movimiento BNK y restaura el saldo de la factura.
+                if (selected.status === 'REVERSED') {
+                    setMessage({ type: 'warning', show: true, message: 'Este pago ya fue reversado.' });
+                    return;
+                }
+                window.Swal.fire({
+                    title: `Reversar pago #${selected.id}`,
+                    html: `
+                        <div class="text-start">
+                            <p class="mb-2">Se reversara el pago de <strong>${formatCurrency(selected.amount)}</strong>
+                            sobre la factura <strong>${selected.invoiceId || '-'}</strong>. El saldo de la
+                            factura se restaura y el asiento contable se deshace.</p>
+                            <label class="form-label small fw-semibold">Motivo (minimo 10 caracteres)</label>
+                            <textarea id="rev_reason" class="form-control" rows="3" maxlength="500"></textarea>
+                        </div>`,
+                    width: 560,
+                    showCancelButton: true,
+                    confirmButtonText: 'Reversar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#ff9f43',
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        const reason = (document.getElementById('rev_reason')?.value || '').trim();
+                        if (reason.length < 10) {
+                            window.Swal.showValidationMessage('El motivo debe tener al menos 10 caracteres');
+                            return false;
+                        }
+                        return { reason };
+                    },
+                }).then(async ({ isConfirmed, value }) => {
+                    if (!isConfirmed) return;
+                    try {
+                        const resp = await fetchHelper.post(
+                            base_url(['api', 'v1', 'ap', 'payments', selected.id, 'reverse']),
+                            { reason: value.reason }, {}, 1000
+                        );
+                        setMessage({ type: 'success', show: true,
+                            message: resp?.message || 'Pago revertido correctamente.' });
+                        dataTableRef?.current?.ajax.reload();
+                    } catch (error) {
+                        setMessage({ type: 'danger', show: true,
+                            message: error?.msg || error?.message || 'No se pudo reversar el pago.' });
+                    }
                 });
             }
         };

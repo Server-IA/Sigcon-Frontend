@@ -65,6 +65,13 @@ const IndexRiskRules = () => {
 
     const submit = async (e) => {
         e.preventDefault();
+        // AU-RF-03: la prioridad es un entero entre 1 y 1000.
+        const prio = Number(form.priority);
+        if (!Number.isInteger(prio) || prio < 1 || prio > 1000) {
+            setAlert({ show: true, type: 'danger',
+                message: 'La prioridad debe ser un entero entre 1 y 1000.' });
+            return;
+        }
         try {
             const payload = {
                 name: form.name,
@@ -138,9 +145,15 @@ const IndexRiskRules = () => {
                 <AlertPage message={alert.message} type={alert.type} show={alert.show}
                            onChange={() => setAlert({ show: false, type: '', message: '' })} />
 
-                <p className="text-muted small">
+                <p className="text-muted small mb-1">
                     Las reglas activas se evalúan en orden de <strong>prioridad descendente</strong> y la primera
-                    que matchea sobrescribe la severidad por defecto. Dejar un campo Match en blanco = comodín (cualquier valor).
+                    que matchea sobrescribe la severidad por defecto. A igual prioridad gana la regla más reciente.
+                    Dejar un campo Match en blanco = comodín (cualquier valor).
+                </p>
+                <p className="text-muted small">
+                    <strong>Prioridad (1–1000):</strong> 1–99 reglas de fondo · 100–199 generales (por defecto) ·
+                    200–499 específicas · 500–999 críticas/regulatorias. Use múltiplos de 10 para dejar espacio
+                    a reglas intermedias futuras.
                 </p>
 
                 <form onSubmit={submit} className="bg-light p-3 mb-4 rounded">
@@ -167,8 +180,9 @@ const IndexRiskRules = () => {
                             </select>
                         </div>
                         <div className="col-md-2">
-                            <label className="form-label small">Prioridad</label>
-                            <input type="number" min="0" className="form-control form-control-sm"
+                            <label className="form-label small">Prioridad (1–1000)</label>
+                            <input type="number" min="1" max="1000" step="10"
+                                   className="form-control form-control-sm"
                                    value={form.priority}
                                    onChange={(e) => setForm({...form, priority: e.target.value})} />
                         </div>

@@ -12,6 +12,9 @@ const RISK_LEVELS = [
     { id: 'HIGH',   label: 'Alto' },
 ];
 
+// PT-03 (TER-RF-11): % de provision ECL (NIIF 9) por nivel de riesgo.
+const PROVISION_PCT = { LOW: 1, MEDIUM: 5, HIGH: 20 };
+
 /**
  * Modal para registrar datos comerciales de un tercero.
  * @param {Object} props
@@ -135,6 +138,11 @@ const CreateCommercialData = ({
                                     options={RISK_LEVELS}
                                     placeholder="Seleccione nivel de riesgo"
                                 />
+                                {commercialData.riskLevel && PROVISION_PCT[commercialData.riskLevel] != null && (
+                                    <small className="d-block mt-1 text-info">
+                                        % Provisión ECL: {PROVISION_PCT[commercialData.riskLevel]}%
+                                    </small>
+                                )}
                             </div>
                         </div>
 

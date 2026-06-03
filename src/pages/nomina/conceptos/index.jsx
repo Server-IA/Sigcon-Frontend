@@ -72,9 +72,11 @@ const IndexConceptos = () => {
     const toggleStatus = async (item) => {
         try {
             const newStatus = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-            await fetchHelper.put(base_url(['api', 'nomina', 'conceptos', item.id]), {
-                ...item, status: newStatus,
-            }, {}, 0);
+            // HAL-03: usar el endpoint dedicado de estado para NO exigir cuentas PUC
+            // al activar/inactivar (los conceptos legales precargados pueden no tenerlas).
+            await fetchHelper.patch(
+                    base_url(['api', 'nomina', 'conceptos', item.id, 'status'], { status: newStatus }),
+                    {}, {}, 0);
             setAlert({ show: true, type: 'success', message: `Concepto ${newStatus === 'ACTIVE' ? 'activado' : 'inactivado'}.` });
             load();
         } catch (err) {
@@ -87,6 +89,25 @@ const IndexConceptos = () => {
     };
 
     const saveEdit = async () => {
+        // HAL-03: cuentas PUC débito y crédito obligatorias.
+        if (!editing.accountingAccountDebitId || !editing.accountingAccountCreditId) {
+            setAlert({ show: true, type: 'danger',
+                message: 'Debe asignar las cuentas PUC débito y crédito (activas) al concepto antes de guardar.' });
+            return;
+        }
+        // HAL-02: coherencia tipo de cálculo.
+        const base = editing.baseCalculation || '';
+        const pct = editing.percentage;
+        if (base === 'FIXED' && pct != null && Number(pct) !== 0) {
+            setAlert({ show: true, type: 'danger',
+                message: 'Un concepto de valor fijo no admite porcentaje. El salario base se define por empleado.' });
+            return;
+        }
+        if ((base === 'IBC' || base === 'SALARY') && (pct == null || Number(pct) <= 0)) {
+            setAlert({ show: true, type: 'danger',
+                message: 'Un concepto porcentual (IBC/Salario) requiere un porcentaje válido entre 0 y 100.' });
+            return;
+        }
         try {
             await fetchHelper.put(base_url(['api', 'nomina', 'conceptos', editing.id]), editing, {}, 0);
             setAlert({ show: true, type: 'success', message: 'Concepto actualizado.' });
@@ -120,7 +141,14 @@ const IndexConceptos = () => {
     const canSubmitCreate = creating
         && (creating.code || '').match(/^[A-Z][A-Z0-9_]{1,49}$/)
         && (creating.name || '').trim()
-        && (creating.conceptType || '').trim();
+        && (creating.conceptType || '').trim()
+        // HAL-03: cuentas PUC débito + crédito obligatorias
+        && creating.accountingAccountDebitId && creating.accountingAccountCreditId
+        // HAL-02: porcentaje requerido en conceptos porcentuales; ausente en valor fijo
+        && (creating.baseCalculation === 'FIXED'
+            ? !(creating.percentage && Number(creating.percentage) !== 0)
+            : !(creating.baseCalculation === 'IBC' || creating.baseCalculation === 'SALARY')
+                || (creating.percentage && Number(creating.percentage) > 0));
 
     return (
         <div className="card">
@@ -198,20 +226,24 @@ const IndexConceptos = () => {
                                     </td>
                                     <td><small>{c.legalReference || '-'}</small></td>
                                     <td>
+                                        {/* HAL-05: estado en español */}
                                         <span className={`badge ${c.status === 'ACTIVE' ? 'bg-label-success' : 'bg-label-secondary'}`}>
-                                            {c.status}
+                                            {c.status === 'ACTIVE' ? 'Activo' : 'Inactivo'}
                                         </span>
                                     </td>
-                                    <td className="text-center">
-                                        <button className="btn btn-sm btn-label-primary me-1"
-                                                onClick={() => startEdit(c)} title="Editar">
-                                            <i className="ri-edit-line"></i>
-                                        </button>
-                                        <button className={`btn btn-sm ${c.status === 'ACTIVE' ? 'btn-label-warning' : 'btn-label-success'}`}
-                                                onClick={() => toggleStatus(c)}
-                                                title={c.status === 'ACTIVE' ? 'Inactivar' : 'Activar'}>
-                                            <i className={c.status === 'ACTIVE' ? 'ri-forbid-line' : 'ri-check-line'}></i>
-                                        </button>
+                                    <td>
+                                        {/* HAL-06: botones de acción en fila horizontal (display:flex + gap) */}
+                                        <div className="d-flex justify-content-center gap-1">
+                                            <button className="btn btn-sm btn-label-primary"
+                                                    onClick={() => startEdit(c)} title="Editar">
+                                                <i className="ri-edit-line"></i>
+                                            </button>
+                                            <button className={`btn btn-sm ${c.status === 'ACTIVE' ? 'btn-label-warning' : 'btn-label-success'}`}
+                                                    onClick={() => toggleStatus(c)}
+                                                    title={c.status === 'ACTIVE' ? 'Inactivar' : 'Activar'}>
+                                                <i className={c.status === 'ACTIVE' ? 'ri-forbid-line' : 'ri-check-line'}></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -272,28 +304,40 @@ const IndexConceptos = () => {
                                                 <option value="CUSTOM">Fórmula custom</option>
                                             </select>
                                         </div>
-                                        <div className="col-md-4">
-                                            <label className="form-label">Porcentaje (%)</label>
-                                            <input type="number" step="0.01" className="form-control"
-                                                    value={creating.percentage}
-                                                    onChange={e => setCreating({ ...creating, percentage: e.target.value })}
-                                                    placeholder="4.00" />
-                                        </div>
+                                        {/* HAL-02: FIXED => monto fijo; porcentual => porcentaje */}
+                                        {creating.baseCalculation === 'FIXED' ? (
+                                            <div className="col-md-4">
+                                                <label className="form-label">Monto fijo</label>
+                                                <input type="number" step="0.01" className="form-control"
+                                                        value={creating.fixedAmount}
+                                                        onChange={e => setCreating({ ...creating, fixedAmount: e.target.value, percentage: '' })}
+                                                        placeholder="Opcional" />
+                                                <small className="text-muted">Sin porcentaje (valor absoluto).</small>
+                                            </div>
+                                        ) : (
+                                            <div className="col-md-4">
+                                                <label className="form-label">Porcentaje (%)</label>
+                                                <input type="number" step="0.01" className="form-control"
+                                                        value={creating.percentage}
+                                                        onChange={e => setCreating({ ...creating, percentage: e.target.value, fixedAmount: '' })}
+                                                        placeholder="4.00" />
+                                            </div>
+                                        )}
                                         <div className="col-md-6">
-                                            <label className="form-label">Cuenta PUC débito</label>
+                                            <label className="form-label">Cuenta PUC débito <span className="text-danger">*</span></label>
                                             <select className="form-select" value={creating.accountingAccountDebitId || ''}
                                                     onChange={e => setCreating({ ...creating, accountingAccountDebitId: e.target.value ? Number(e.target.value) : null })}>
-                                                <option value="">— Sin asignar —</option>
+                                                <option value="">— Seleccione una cuenta activa —</option>
                                                 {accounts.map(a => (
                                                     <option key={a.id} value={a.id}>{a.label}</option>
                                                 ))}
                                             </select>
                                         </div>
                                         <div className="col-md-6">
-                                            <label className="form-label">Cuenta PUC crédito</label>
+                                            <label className="form-label">Cuenta PUC crédito <span className="text-danger">*</span></label>
                                             <select className="form-select" value={creating.accountingAccountCreditId || ''}
                                                     onChange={e => setCreating({ ...creating, accountingAccountCreditId: e.target.value ? Number(e.target.value) : null })}>
-                                                <option value="">— Sin asignar —</option>
+                                                <option value="">— Seleccione una cuenta activa —</option>
                                                 {accounts.map(a => (
                                                     <option key={a.id} value={a.id}>{a.label}</option>
                                                 ))}
@@ -337,23 +381,56 @@ const IndexConceptos = () => {
                                         <input type="text" className="form-control" value={editing.name}
                                                 onChange={e => setEditing({ ...editing, name: e.target.value })} />
                                     </div>
+                                    {/* HAL-02: base de cálculo define si es porcentaje o valor fijo */}
                                     <div className="mb-2">
-                                        <label className="form-label">Porcentaje (%)</label>
-                                        <input type="number" step="0.01" className="form-control"
-                                                value={editing.percentage || ''}
-                                                onChange={e => setEditing({ ...editing, percentage: e.target.value ? Number(e.target.value) : null })} />
+                                        <label className="form-label">Base de cálculo</label>
+                                        <select className="form-select" value={editing.baseCalculation || ''}
+                                                onChange={e => setEditing({ ...editing, baseCalculation: e.target.value })}>
+                                            <option value="SALARY">Salario base (porcentual)</option>
+                                            <option value="IBC">IBC (porcentual)</option>
+                                            <option value="FIXED">Valor fijo / absoluto</option>
+                                            <option value="CUSTOM">Fórmula custom</option>
+                                        </select>
+                                    </div>
+                                    {/* HAL-02: FIXED no admite porcentaje; muestra monto fijo */}
+                                    {editing.baseCalculation === 'FIXED' ? (
+                                        <div className="mb-2">
+                                            <label className="form-label">Monto fijo</label>
+                                            <input type="number" step="0.01" className="form-control"
+                                                    value={editing.fixedAmount ?? ''}
+                                                    onChange={e => setEditing({ ...editing, fixedAmount: e.target.value ? Number(e.target.value) : null, percentage: null })}
+                                                    placeholder="Opcional. El salario base se define por empleado." />
+                                            <small className="text-muted">Los conceptos de valor fijo no usan porcentaje.</small>
+                                        </div>
+                                    ) : (
+                                        <div className="mb-2">
+                                            <label className="form-label">Porcentaje (%)</label>
+                                            <input type="number" step="0.01" className="form-control"
+                                                    value={editing.percentage ?? ''}
+                                                    onChange={e => setEditing({ ...editing, percentage: e.target.value ? Number(e.target.value) : null, fixedAmount: null })} />
+                                        </div>
+                                    )}
+                                    {/* HAL-03: cuentas PUC como dropdowns (no IDs crudos) y obligatorias */}
+                                    <div className="mb-2">
+                                        <label className="form-label">Cuenta PUC débito <span className="text-danger">*</span></label>
+                                        <select className="form-select" value={editing.accountingAccountDebitId || ''}
+                                                onChange={e => setEditing({ ...editing, accountingAccountDebitId: e.target.value ? Number(e.target.value) : null })}>
+                                            <option value="">— Seleccione una cuenta activa —</option>
+                                            {accounts.map(a => (<option key={a.id} value={a.id}>{a.label}</option>))}
+                                        </select>
                                     </div>
                                     <div className="mb-2">
-                                        <label className="form-label">Cuenta PUC débito (ID)</label>
-                                        <input type="number" className="form-control"
-                                                value={editing.accountingAccountDebitId || ''}
-                                                onChange={e => setEditing({ ...editing, accountingAccountDebitId: e.target.value ? Number(e.target.value) : null })} />
-                                    </div>
-                                    <div className="mb-2">
-                                        <label className="form-label">Cuenta PUC crédito (ID)</label>
-                                        <input type="number" className="form-control"
-                                                value={editing.accountingAccountCreditId || ''}
-                                                onChange={e => setEditing({ ...editing, accountingAccountCreditId: e.target.value ? Number(e.target.value) : null })} />
+                                        <label className="form-label">Cuenta PUC crédito <span className="text-danger">*</span></label>
+                                        <select className="form-select" value={editing.accountingAccountCreditId || ''}
+                                                onChange={e => setEditing({ ...editing, accountingAccountCreditId: e.target.value ? Number(e.target.value) : null })}>
+                                            <option value="">— Seleccione una cuenta activa —</option>
+                                            {accounts.map(a => (<option key={a.id} value={a.id}>{a.label}</option>))}
+                                        </select>
+                                        {(!editing.accountingAccountDebitId || !editing.accountingAccountCreditId) && (
+                                            <small className="text-danger d-block mt-1">
+                                                Todo concepto debe tener cuentas PUC débito y crédito activas asignadas.
+                                            </small>
+                                        )}
                                     </div>
                                     <div className="mb-2">
                                         <label className="form-label">Referencia legal</label>

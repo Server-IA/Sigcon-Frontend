@@ -245,17 +245,16 @@ const CreateCheque = ({
             setSupportFileBase64(null);
 
             if (tipoCheque === 'VIRTUAL' && pdfPath) {
+                // QA Bloque BNK (2026-06-03) Bug 7: se elimina el enlace "Ver PDF del cheque"
+                // (el documento ya es accesible desde el listado de cheques) y se deja un solo
+                // botón de cierre (showCancelButton:false evita el "Cancel" duplicado).
                 window.Swal.fire({
                     icon: 'success',
                     title: `Cheque Virtual emitido — N° ${numeroCheque}`,
-                    html: `
-                        <p class="mb-3">El cheque virtual fue emitido exitosamente y su documento digital ha sido generado.</p>
-                        <a href="${pdfPath}" target="_blank" rel="noopener noreferrer"
-                            class="btn btn-primary">
-                            <i class="ri-file-pdf-line me-1"></i> Ver PDF del cheque
-                        </a>`,
+                    text: 'El cheque virtual fue emitido exitosamente y su documento digital ha sido generado. Puede consultarlo desde el listado de cheques.',
                     confirmButtonText: 'Cerrar',
                     showConfirmButton: true,
+                    showCancelButton: false,
                 });
             } else {
                 setMessage({

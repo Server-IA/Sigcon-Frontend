@@ -85,7 +85,24 @@ const IndexRoles = () => {
         console.log("Modulos", modules);
     }, [modules]);
 
-    const url = ['roles/getRoles'];
+    // PA-RF-03 v3.0 punto 2 (Control de Cambios PA, 2026-05-29): debounce de 400ms
+    // en la busqueda. En vez de recargar el servidor en cada tecla, esperamos a que
+    // el usuario deje de escribir 400ms y recien ahi aplicamos la busqueda + reload.
+    const didMountSearchRef = useRef(false);
+    useEffect(() => {
+        if (!didMountSearchRef.current) { didMountSearchRef.current = true; return; }
+        const t = setTimeout(() => {
+            const dt = dataTableRef?.current;
+            if (dt) dt.table().search(search.value, search.checked, true).ajax.reload();
+        }, 400);
+        return () => clearTimeout(t);
+    }, [search.value, search.checked]);
+
+    // PA-RF-03 v3.0 (Control de Cambios PA, 2026-05-29): el listado consume el
+    // endpoint REST GET /api/roles (antes POST /roles/getRoles). El backend
+    // reconstruye el DataTableRequest desde los query params y reutiliza la
+    // logica legacy (filtros name/status/type + tenant + soft-delete + tipo).
+    const url = ['api', 'roles'];
 
     const actions = [
         { key: 'view', icon: 'ri-eye-line', class: 'btn-label-info', title: 'Ver' },
@@ -364,7 +381,8 @@ const IndexRoles = () => {
                     columns={columns}
                     tableRef={tableRef}
                     dataTableRef={dataTableRef}
-                    method='POST'
+                    method='GET'
+                    serverGet={true}
                     buttons={buttons}
                     title='Roles'
                     setData={setData}

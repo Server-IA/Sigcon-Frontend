@@ -102,12 +102,21 @@ const IndexPUC = () => {
             }
         },
         {
-            title: 'Nivel', data: 'level', name: 'level', render: (val) => {
+            // QA Listas Contables (2026-06-02): el `name` debe ser el atributo
+            // REAL de la entidad (accountLevel), no el campo plano del DTO
+            // (level). El DataTableSpecificationBuilder resuelve el filtro por
+            // este `name`; con `level` lanzaba IllegalArgumentException y el
+            // filtro se descartaba en silencio (mostraba todo). `data` queda
+            // en 'level' para el render.
+            title: 'Nivel', data: 'level', name: 'accountLevel', render: (val) => {
                 return LEVELS.find(l => l.id === val)?.name ?? '-';
             }
         },
         {
-            title: 'Naturaleza', data: 'nature', name: 'nature', render: (val) => {
+            // QA Listas Contables (2026-06-02): `name` = accountNature (atributo
+            // real). Antes 'nature' no resolvia y el filtro por Naturaleza se
+            // ignoraba (mostraba cuentas de todo tipo).
+            title: 'Naturaleza', data: 'nature', name: 'accountNature', render: (val) => {
                 return ACCOUNT_NATURES.find(n => n.id === val)?.name ?? '-';
             }
         },

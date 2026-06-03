@@ -10,8 +10,11 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, le
         { regex: true, value: '', column: 'code:name' },
         { regex: true, value: '', column: 'name:name' },
         { regex: true, value: '', column: 'accountClass:name' },
-        { regex: true, value: '', column: 'level:name' },
-        { regex: true, value: '', column: 'nature:name' },
+        // QA Listas Contables (2026-06-02): el selector usa el atributo REAL de
+        // la entidad (accountLevel / accountNature). Antes 'level'/'nature' no
+        // matcheaba ningun campo de la entidad -> filtro descartado en silencio.
+        { regex: true, value: '', column: 'accountLevel:name' },
+        { regex: true, value: '', column: 'accountNature:name' },
         { regex: true, value: '', column: 'status:name' },
     ]);
 
@@ -140,13 +143,13 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, le
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={getFilter('level:name')?.regex || false}
+                                                checked={getFilter('accountLevel:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 type="checkbox"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Búsqueda por coincidencia"
-                                                onChange={(e) => updateFilter('level:name', 'regex', e.target.checked)}
+                                                onChange={(e) => updateFilter('accountLevel:name', 'regex', e.target.checked)}
                                                 disabled={!dataTableRef?.current}
                                                 aria-label="Buscar"
                                             />
@@ -155,8 +158,8 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, le
                                             id="puc_filter_hierarchyLevel"
                                             label="Nivel jerárquico"
                                             options={levels}
-                                            value={selectValue('level:name')}
-                                            onChange={(value) => updateFilter('level:name', 'value', value.join(','))}
+                                            value={selectValue('accountLevel:name')}
+                                            onChange={(value) => updateFilter('accountLevel:name', 'value', value.join(','))}
                                             multiple={true}
                                         />
                                     </div>
@@ -166,13 +169,13 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, le
                                     <div className="input-group">
                                         <div className="input-group-text form-check mb-0">
                                             <input
-                                                checked={getFilter('nature:name')?.regex || false}
+                                                checked={getFilter('accountNature:name')?.regex || false}
                                                 className="form-check-input m-auto"
                                                 type="checkbox"
                                                 data-bs-toggle="tooltip"
                                                 data-bs-placement="top"
                                                 data-bs-original-title="Búsqueda por coincidencia"
-                                                onChange={(e) => updateFilter('nature:name', 'regex', e.target.checked)}
+                                                onChange={(e) => updateFilter('accountNature:name', 'regex', e.target.checked)}
                                                 disabled={!dataTableRef?.current}
                                                 aria-label="Buscar"
                                             />
@@ -181,8 +184,8 @@ const FilterPUC = ({ filterRef, filterInstance, dataTableRef, accountClasses, le
                                             id="puc_filter_nature"
                                             label="Naturaleza"
                                             options={accountNatures}
-                                            value={selectValue('nature:name')}
-                                            onChange={(value) => updateFilter('nature:name', 'value', value.join(','))}
+                                            value={selectValue('accountNature:name')}
+                                            onChange={(value) => updateFilter('accountNature:name', 'value', value.join(','))}
                                             multiple={true}
                                         />
                                     </div>

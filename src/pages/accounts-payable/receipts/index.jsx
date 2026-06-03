@@ -6,6 +6,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 
 import CreateApReceipt from './create';
 
@@ -67,10 +68,18 @@ const IndexApReceipts = () => {
             },
         },
         {
+            // RF-19 (Notas Tecnicas CXP, 2026-06-02): muestra "Multiple" cuando la
+            // recepcion tiene mas de una factura asociada (enlaces N:M), en vez de
+            // mostrar solo la primera factura.
             title: 'Factura Asociada',
-            data: 'invoiceId',
+            data: 'invoiceLabel',
             name: 'invoiceId',
-            render: (val) => val || '-',
+            render: (val, _type, row) => {
+                const count = row?.linkedInvoiceCount ?? (row?.invoiceId ? 1 : 0);
+                if (count > 1) return '<span class="badge bg-label-primary">Múltiple</span>';
+                if (count === 1) return val || (row?.invoiceId ? `#${row.invoiceId}` : '-');
+                return '-';
+            },
         },
         {
             title: 'Acciones',
@@ -78,24 +87,23 @@ const IndexApReceipts = () => {
             searchable: false,
             render: (id, _type, row) => {
                 // HU-AP-20 (2026-04-28): permitir vincular la recepcion con
-                // una factura del mismo proveedor.
-                const canLink = !row?.invoiceId;
-                return `
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-label-info action-btn"
-                        data-action="view" data-id="${id}" title="Ver">
-                        <i class="ri-eye-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-success action-btn"
-                        data-action="link-invoice" data-id="${id}"
-                        title="Vincular factura del proveedor (3-way match)"
-                        ${!canLink ? 'disabled' : ''}>
-                        <i class="ri-link"></i>
-                    </button>
-                </div>`;
+                // una factura del mismo proveedor. RF-19: deshabilitado si ya tiene
+                // al menos una factura asociada (legacy o enlaces N:M).
+                const linked = row?.linkedInvoiceCount != null
+                    ? row.linkedInvoiceCount > 0
+                    : !!row?.invoiceId;
+                const canLink = !linked;
+                // QA CXP item 5: vincular factura (3-way match) requiere AP.RECEPCIONES.CREAR.
+                const btns = [`<button class="btn btn-sm btn-label-info action-btn" data-action="view" data-id="${id}" title="Ver"><i class="ri-eye-line"></i></button>`];
+                if (canCreate) btns.push(`<button class="btn btn-sm btn-label-success action-btn" data-action="link-invoice" data-id="${id}" title="Vincular factura del proveedor (3-way match)" ${!canLink ? 'disabled' : ''}><i class="ri-link"></i></button>`);
+                return `<div class="d-flex gap-1">${btns.join('')}</div>`;
             },
         },
     ];
+
+    // QA CXP item 5 (2026-06-02): gating de permisos (backend ya bloquea via @PreAuthorize).
+    const { has } = usePermissions();
+    const canCreate = has('AP.RECEPCIONES.CREAR');
 
     const openModalCreate = () => {
         if (!modalCreateInstance.current) {
@@ -113,11 +121,11 @@ const IndexApReceipts = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(canCreate ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Registrar Recepcion</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: () => openModalCreate(),
-        },
+        }] : []),
     ];
 
     const rows = useMemo(() => {
@@ -144,7 +152,9 @@ const IndexApReceipts = () => {
                             <p><strong>Orden de Compra:</strong> ${selected.purchaseOrderId || '-'}</p>
                             <p><strong>Fecha:</strong> ${selected.receiptDate || '-'}</p>
                             <p><strong>Estado:</strong> ${traducir(selected.status)}</p>
-                            <p><strong>Factura Asociada:</strong> ${selected.invoiceId || '-'}</p>
+                            <p><strong>Factura Asociada:</strong> ${(selected.linkedInvoiceCount > 1)
+                                ? 'Múltiple (' + selected.linkedInvoiceCount + ' facturas)'
+                                : (selected.invoiceLabel || selected.invoiceId || '-')}</p>
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
                         </div>`,
                     width: 500,

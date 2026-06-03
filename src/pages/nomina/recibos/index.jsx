@@ -45,6 +45,9 @@ const IndexRecibos = () => {
     });
     // HU-NOM-03 DEF#2 (2026-04-28): editar/eliminar lineas en DRAFT
     const [lineEdit, setLineEdit] = useState(null);
+    // HAL-07 + HAL-01: añadir concepto activo a un recibo en BORRADOR
+    const [allConcepts, setAllConcepts] = useState([]);
+    const [addForm, setAddForm] = useState({ conceptCode: '', amount: '' });
     // ERR-NOM-002 Defecto B (2026-05-25): conceptos EARNING para el valor
     // monetario adicional opcional de la complementaria (bono/ajuste no
     // proporcional a dias trabajados).
@@ -84,6 +87,38 @@ const IndexRecibos = () => {
             .then(d => setEarningConcepts(Array.isArray(d) ? d : []))
             .catch(() => {});
     }, []);
+
+    // HAL-07 + HAL-01: TODOS los conceptos activos (cualquier tipo) para "añadir concepto"
+    useEffect(() => {
+        fetchHelper.get(base_url(['api', 'nomina', 'conceptos'], { status: 'ACTIVE' }), {}, 0)
+            .then(d => setAllConcepts(Array.isArray(d) ? d : []))
+            .catch(() => {});
+    }, []);
+
+    // HAL-07 + HAL-01: añade un concepto activo como línea al recibo en BORRADOR.
+    const addConceptLine = async () => {
+        if (!detail || detail.status !== 'DRAFT') return;
+        if (!addForm.conceptCode) {
+            setAlert({ show: true, type: 'danger', message: 'Seleccione un concepto.' });
+            return;
+        }
+        if (addForm.amount === '' || Number(addForm.amount) <= 0) {
+            setAlert({ show: true, type: 'danger', message: 'El monto debe ser mayor a cero.' });
+            return;
+        }
+        try {
+            await fetchHelper.post(
+                    base_url(['api', 'nomina', 'recibos', detail.id, 'lineas']),
+                    { conceptCode: addForm.conceptCode, amount: Number(addForm.amount) }, {}, 0);
+            const fresh = await fetchHelper.get(base_url(['api', 'nomina', 'recibos', detail.id]), {}, 0);
+            setDetail(fresh);
+            setAddForm({ conceptCode: '', amount: '' });
+            setAlert({ show: true, type: 'success', message: 'Concepto agregado al recibo.' });
+            load();
+        } catch (err) {
+            setAlert({ show: true, type: 'danger', message: err?.msg || err?.message || 'No se pudo agregar el concepto.' });
+        }
+    };
 
     const openLiquidateModal = () => {
         setLiqForm({
@@ -400,6 +435,12 @@ const IndexRecibos = () => {
                                                 <i className="ri-eye-line"></i>
                                             </button>
                                             {r.status === 'DRAFT' && (
+                                                <button className="btn btn-sm btn-label-primary me-1"
+                                                        onClick={() => openDetail(r)} title="Editar (líneas y conceptos)">
+                                                    <i className="ri-edit-line"></i>
+                                                </button>
+                                            )}
+                                            {r.status === 'DRAFT' && (
                                                 <button className="btn btn-sm btn-label-success me-1"
                                                         onClick={() => approve(r)} title="Aprobar (HU-NOM-04 E1)">
                                                     <i className="ri-check-line"></i>
@@ -617,8 +658,48 @@ const IndexRecibos = () => {
                                 {detail.status === 'DRAFT' && (
                                     <div className="alert alert-info py-2 small">
                                         <i className="ri-information-line me-1"></i>
-                                        El recibo está en <b>BORRADOR</b>. Puede editar/eliminar líneas para
-                                        sanear los conceptos antes de aprobar (HU-NOM-03 DEF#2).
+                                        El recibo está en <b>BORRADOR</b>. Puede editar/eliminar líneas y
+                                        añadir conceptos para sanear el recibo antes de aprobar (HU-NOM-03 E2).
+                                    </div>
+                                )}
+
+                                {/* HAL-07 + HAL-01: añadir cualquier concepto activo como línea (solo BORRADOR) */}
+                                {detail.status === 'DRAFT' && (
+                                    <div className="card bg-light border-0 mb-3">
+                                        <div className="card-body py-2">
+                                            <label className="form-label small fw-semibold mb-1">
+                                                <i className="ri-add-circle-line me-1"></i>Añadir concepto
+                                            </label>
+                                            <div className="row g-2 align-items-end">
+                                                <div className="col-md-6">
+                                                    <select className="form-select form-select-sm"
+                                                            value={addForm.conceptCode}
+                                                            onChange={e => setAddForm({ ...addForm, conceptCode: e.target.value })}>
+                                                        <option value="">— Seleccione un concepto activo —</option>
+                                                        {allConcepts
+                                                            .filter(c => !(detail.lines || []).some(l => l.conceptCode === c.code))
+                                                            .map(c => (
+                                                                <option key={c.id} value={c.code}>
+                                                                    {c.code} — {c.name} ({c.conceptType === 'EARNING' ? 'Devengado' : c.conceptType === 'DEDUCTION' ? 'Deducción' : 'Aporte'})
+                                                                </option>
+                                                            ))}
+                                                    </select>
+                                                </div>
+                                                <div className="col-md-4">
+                                                    <input type="number" step="0.01" min="0"
+                                                            className="form-control form-control-sm"
+                                                            placeholder="Monto"
+                                                            value={addForm.amount}
+                                                            onChange={e => setAddForm({ ...addForm, amount: e.target.value })} />
+                                                </div>
+                                                <div className="col-md-2">
+                                                    <button className="btn btn-sm btn-primary w-100"
+                                                            onClick={addConceptLine}>
+                                                        <i className="ri-add-line"></i> Agregar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 

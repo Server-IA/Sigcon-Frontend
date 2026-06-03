@@ -6,6 +6,7 @@ import GenericFilterModal from '../../../components/organism/GenericFilterModal'
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 
 import CreateApPurchaseOrder from './create';
 import UpdateApPurchaseOrder from './updated';
@@ -60,6 +61,13 @@ const IndexApPurchaseOrders = () => {
 
     const url = ['api', 'v1', 'ap', 'purchase-orders'];
 
+    // QA CXP item 5 (2026-06-02): gating de permisos (backend ya bloquea via @PreAuthorize).
+    const { has } = usePermissions();
+    const canCreate  = has('AP.OC.CREAR');
+    const canEdit    = has('AP.OC.EDITAR');
+    const canApprove = has('AP.OC.APROBAR');
+    const canReject  = has('AP.OC.RECHAZAR');
+
     const columns = [
         { title: 'Id', data: 'id', name: 'id' },
         {
@@ -99,34 +107,15 @@ const IndexApPurchaseOrders = () => {
                 const isRejected = row?.status === 'REJECTED';
                 // HU-AP-17 E2 (Bloque AT): rechazada se puede editar y re-enviar.
                 const isEditable = isDraft || isRejected;
-                return `
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-label-info action-btn"
-                        data-action="view" data-id="${id}" title="Ver">
-                        <i class="ri-eye-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-warning action-btn"
-                        data-action="edit" data-id="${id}"
-                        title="${isRejected ? 'Editar y re-enviar a aprobacion (HU-AP-17 E2)' : 'Editar (solo borrador)'}"
-                        ${!isEditable ? 'disabled' : ''}>
-                        <i class="ri-edit-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-primary action-btn"
-                        data-action="submit" data-id="${id}" title="Enviar a aprobacion"
-                        ${!isEditable ? 'disabled' : ''}>
-                        <i class="ri-send-plane-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-success action-btn"
-                        data-action="approve" data-id="${id}" title="Aprobar"
-                        ${!isPending ? 'disabled' : ''}>
-                        <i class="ri-check-line"></i>
-                    </button>
-                    <button class="btn btn-sm btn-label-danger action-btn"
-                        data-action="reject" data-id="${id}" title="Rechazar"
-                        ${!isPending ? 'disabled' : ''}>
-                        <i class="ri-close-line"></i>
-                    </button>
-                </div>`;
+                // QA CXP item 5: editar/enviar requieren AP.OC.EDITAR; aprobar
+                // AP.OC.APROBAR; rechazar AP.OC.RECHAZAR. El disabled por estado
+                // sigue aplicando ademas del permiso.
+                const btns = [`<button class="btn btn-sm btn-label-info action-btn" data-action="view" data-id="${id}" title="Ver"><i class="ri-eye-line"></i></button>`];
+                if (canEdit) btns.push(`<button class="btn btn-sm btn-label-warning action-btn" data-action="edit" data-id="${id}" title="${isRejected ? 'Editar y re-enviar a aprobacion (HU-AP-17 E2)' : 'Editar (solo borrador)'}" ${!isEditable ? 'disabled' : ''}><i class="ri-edit-line"></i></button>`);
+                if (canEdit) btns.push(`<button class="btn btn-sm btn-label-primary action-btn" data-action="submit" data-id="${id}" title="Enviar a aprobacion" ${!isEditable ? 'disabled' : ''}><i class="ri-send-plane-line"></i></button>`);
+                if (canApprove) btns.push(`<button class="btn btn-sm btn-label-success action-btn" data-action="approve" data-id="${id}" title="Aprobar" ${!isPending ? 'disabled' : ''}><i class="ri-check-line"></i></button>`);
+                if (canReject) btns.push(`<button class="btn btn-sm btn-label-danger action-btn" data-action="reject" data-id="${id}" title="Rechazar" ${!isPending ? 'disabled' : ''}><i class="ri-close-line"></i></button>`);
+                return `<div class="d-flex gap-1">${btns.join('')}</div>`;
             },
         },
     ];
@@ -147,11 +136,11 @@ const IndexApPurchaseOrders = () => {
                 filterInstance.current.show();
             }
         },
-        {
+        ...(canCreate ? [{
             text: '<i class="ri-add-line ri-16px me-sm-2"></i><span class="d-none d-sm-inline-block">Nueva Orden</span>',
             className: 'btn rounded-pill btn-primary waves-effect mx-2 my-2',
             action: () => openModalCreate(),
-        },
+        }] : []),
     ];
 
     const rows = useMemo(() => {

@@ -6,6 +6,7 @@ import AlertPage from '../../../components/molecules/AlertPage';
 import LogDetail from './detail';
 import { actionLabel, severityLabel, moduleLabel, entityLabel,
          ACTION_OPTIONS } from '../../../utils/auditLabels';
+import { usePermissions } from '../../../utils/hooks/usePermissions';
 
 /**
  * HU-AU-05: Pagina principal de logs de auditoria con busqueda avanzada.
@@ -33,6 +34,11 @@ const MODULES = [
 
 const IndexAuditLogs = () => {
     const token = useSelector((state) => state.user.token);
+    // HU-AU-08 (QA 2026-06-02): los permisos PERM_LEGAL_HOLD controlan si se puede
+    // activar/liberar retencion legal. Si no los tiene, el detalle muestra el estado
+    // pero sin botones (solo lectura).
+    const { hasAny } = usePermissions();
+    const canLegalHold = hasAny(['AU.RETENCION.LEGAL_HOLD', 'LEGAL_HOLD']);
     const [logs, setLogs] = useState({ content: [], totalElements: 0, totalPages: 0, page: 0 });
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(null); // null | 'csv' | 'xlsx' | 'pdf'
@@ -320,6 +326,7 @@ const IndexAuditLogs = () => {
                                 <th>Entidad</th>
                                 <th>Modulo</th>
                                 <th>Severidad</th>
+                                <th className="text-center" title="Retención legal">R. legal</th>
                                 <th>IP</th>
                                 <th>Descripcion</th>
                                 <th className="text-center">Detalle</th>
@@ -327,12 +334,12 @@ const IndexAuditLogs = () => {
                         </thead>
                         <tbody>
                             {loading && (
-                                <tr><td colSpan="10" className="text-center py-4">
+                                <tr><td colSpan="11" className="text-center py-4">
                                     <div className="spinner-border text-primary"></div>
                                 </td></tr>
                             )}
                             {!loading && logs.content.length === 0 && (
-                                <tr><td colSpan="10" className="text-center text-muted py-4">
+                                <tr><td colSpan="11" className="text-center text-muted py-4">
                                     No se encontraron registros para los parametros seleccionados
                                 </td></tr>
                             )}
@@ -345,6 +352,13 @@ const IndexAuditLogs = () => {
                                     <td><small>{entityLabel(l.entityType)} {l.entityId && `#${l.entityId}`}</small></td>
                                     <td><span className="badge bg-label-secondary">{moduleLabel(l.module)}</span></td>
                                     <td>{severityBadge(l.severity)}</td>
+                                    <td className="text-center">
+                                        {l.legalHold
+                                            ? <span className="badge bg-label-warning" title={l.legalHoldReason || 'Retención legal activa'}>
+                                                <i className="ri-lock-2-line"></i>
+                                              </span>
+                                            : <span className="text-muted">—</span>}
+                                    </td>
                                     <td><small className="text-muted">{l.ipAddress}</small></td>
                                     <td><small>{l.description}</small></td>
                                     <td className="text-center">
@@ -379,7 +393,8 @@ const IndexAuditLogs = () => {
                 </div>
             </div>
 
-            <LogDetail modalRef={detailRef} modalInstance={detailInstance} log={detailLog} />
+            <LogDetail modalRef={detailRef} modalInstance={detailInstance} log={detailLog}
+                       canManage={canLegalHold} onChanged={() => load()} />
         </div>
     );
 };
