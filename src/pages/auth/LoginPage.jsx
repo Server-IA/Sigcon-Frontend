@@ -7,22 +7,32 @@ import { useDispatch } from 'react-redux';
 import { base_redirect_path } from '../../utils/functions';
 
 
-// QA (2026-05-26): "Recuérdame" recuerda el usuario (username/email) entre
-// sesiones. La contraseña NUNCA se guarda por seguridad. La clave sobrevive al
-// LOGOUT (que solo limpia token/user/brand), por lo que el campo Usuario queda
-// pre-rellenado en el siguiente ingreso si el usuario marco la casilla.
-const REMEMBER_KEY = 'sigcon_remember_user';
-const readRememberedUser = () => {
-  try { return localStorage.getItem(REMEMBER_KEY) || ''; } catch { return ''; }
+// BUG-Login (doc QA v2, 2026-06-03 / Imagen 2): "Recuérdame".
+// - ANTES: el formulario nacia con credenciales HARDCODEADAS
+//   (usernameOrEmail='superadmin@gmail.com', password='123456'), por lo que los
+//   campos aparecian precargados incluso sin marcar "Recuérdame".
+// - AHORA: los campos arrancan VACIOS salvo que exista una marca de "Recuérdame"
+//   guardada. Si el usuario marca la casilla e inicia sesion, se persisten
+//   usuario y contrasena (la contrasena en base64 — "cifrado basico" segun el
+//   doc, para no dejarla en texto plano) y se precargan en el siguiente ingreso.
+//   Al desmarcar la casilla o cerrar sesion explicitamente, se eliminan.
+const REMEMBER_KEY = 'sigcon_remember';
+const readRemembered = () => {
+  try {
+    const raw = localStorage.getItem(REMEMBER_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    return { user: obj.u || '', pwd: obj.p ? atob(obj.p) : '' };
+  } catch { return null; }
 };
 
 const LoginPage = () => {
   const dispatch = useDispatch();
-  const rememberedUser = readRememberedUser();
+  const remembered = readRemembered();
   const [formData, setFormData] = useState({
-    usernameOrEmail: rememberedUser || 'superadmin@gmail.com',
-    password: '123456',
-    rememberMe: !!rememberedUser
+    usernameOrEmail: remembered?.user || '',
+    password: remembered?.pwd || '',
+    rememberMe: !!remembered
   });
 
   const [error, setError] = useState('');
@@ -62,12 +72,15 @@ const LoginPage = () => {
       return;
     }
 
-    // QA (2026-05-26): "Recuérdame" funcional. Si esta marcado, se guarda el
-    // usuario para pre-rellenarlo en el proximo ingreso; si no, se borra. Nunca
-    // se guarda la contraseña.
+    // BUG-Login (doc QA v2, 2026-06-03): "Recuérdame" funcional. Si esta
+    // marcado, se guardan usuario y contrasena (la contrasena en base64) para
+    // precargarlos en el proximo ingreso; si no, se borra la marca.
     try {
       if (formData.rememberMe) {
-        localStorage.setItem(REMEMBER_KEY, formData.usernameOrEmail);
+        localStorage.setItem(REMEMBER_KEY, JSON.stringify({
+          u: formData.usernameOrEmail,
+          p: btoa(formData.password || ''),
+        }));
       } else {
         localStorage.removeItem(REMEMBER_KEY);
       }

@@ -3,6 +3,7 @@ import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText, validateNumber, validateDateNotFuture } from '../../../utils/fieldValidations';
 
 /**
  * Modal para registrar un nuevo arqueo de caja.
@@ -52,6 +53,16 @@ const CreateCashAudit = ({ modalRef, modalInstance, dataTableRef, setItemCreate 
     const handleSubmit = async () => {
         setErrors({});
         setErrorMessage('');
+
+        // QA BNK (2026-06-03) BNK-RF-29: fecha no futura, saldo fisico >= 0
+        // hasta 2 decimales (max 999.999.999,99), notas 0/500 (clase description).
+        const next = {};
+        if (!audit.cashId) next.cashId = 'Seleccione una caja';
+        next.auditDate = validateDateNotFuture(audit.auditDate, { required: true, label: 'La fecha del arqueo' });
+        next.physicalBalance = validateNumber(audit.physicalBalance, { required: true, min: 0, max: 999999999.99, decimals: 2, label: 'El saldo físico contado' });
+        next.notes = validateText(audit.notes, { required: false, min: 0, max: 500, patternKey: 'descriptionSemicolon', label: 'Las notas' });
+        Object.keys(next).forEach(k => { if (next[k] == null) delete next[k]; });
+        if (Object.keys(next).length > 0) { setErrors(next); return; }
 
         const payload = {
             cashId:          audit.cashId ? Number(audit.cashId) : null,

@@ -260,8 +260,12 @@ const IndexCashAudits = () => {
                         icon: 'warning',
                         input: 'textarea',
                         inputAttributes: { minlength: 10, maxlength: 500 },
+                        // QA BNK (2026-06-03) BNK-RF-30: motivo de rechazo min 10 / max 500 + clase.
                         inputValidator: (v) => {
-                            if (!v || v.trim().length < 10) return 'El motivo debe tener al menos 10 caracteres';
+                            const t = (v || '').trim();
+                            if (t.length < 10) return 'El motivo debe tener al menos 10 caracteres';
+                            if (t.length > 500) return 'El motivo no puede superar los 500 caracteres';
+                            if (!/^[\p{L}0-9 .,_-]+$/u.test(t)) return 'El motivo contiene caracteres no validos';
                             return null;
                         },
                         showCancelButton: true,
@@ -317,9 +321,12 @@ const IndexCashAudits = () => {
                         icon: 'warning',
                         input: 'textarea',
                         inputAttributes: { 'aria-label': 'Motivo de eliminacion', minlength: 10, maxlength: 500 },
+                        // QA BNK (2026-06-03) BNK-RF-29/31: motivo de eliminacion min 10 / max 500 + clase.
                         inputValidator: (v) => {
-                            if (!v || v.trim().length < 10) return 'El motivo debe tener al menos 10 caracteres';
-                            if (v.length > 500) return 'Maximo 500 caracteres';
+                            const t = (v || '').trim();
+                            if (t.length < 10) return 'El motivo debe tener al menos 10 caracteres';
+                            if (t.length > 500) return 'El motivo no puede superar los 500 caracteres';
+                            if (!/^[\p{L}0-9 .,_-]+$/u.test(t)) return 'El motivo contiene caracteres no validos';
                             return null;
                         },
                         showCancelButton: true,
@@ -350,10 +357,13 @@ const IndexCashAudits = () => {
                         html: `Va a anular logicamente el arqueo <strong>#${row.id}</strong>. El historial se conserva.<br/><br/>Ingrese el motivo (minimo 50 caracteres):`,
                         icon: 'warning',
                         input: 'textarea',
-                        inputAttributes: { 'aria-label': 'Motivo de anulacion', minlength: 50, maxlength: 1000 },
+                        inputAttributes: { 'aria-label': 'Motivo de anulacion', minlength: 50, maxlength: 500 },
+                        // QA BNK (2026-06-03) BNK-RF-29/31: motivo de anulacion min 50 / max 500 + clase.
                         inputValidator: (v) => {
-                            if (!v || v.trim().length < 50) return 'El motivo debe tener al menos 50 caracteres';
-                            if (v.length > 1000) return 'Maximo 1000 caracteres';
+                            const t = (v || '').trim();
+                            if (t.length < 50) return 'El motivo debe tener al menos 50 caracteres';
+                            if (t.length > 500) return 'El motivo no puede superar los 500 caracteres';
+                            if (!/^[\p{L}0-9 .,_-]+$/u.test(t)) return 'El motivo contiene caracteres no validos';
                             return null;
                         },
                         showCancelButton: true,

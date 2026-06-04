@@ -40,6 +40,13 @@ const FilterCheque = ({ filterRef, filterInstance, dataTableRef, estados, tipos 
     const handleFilter = () => {
         const table = getTable();
         if (!table) return;
+        // QA BNK (2026-06-03) BNK-RF-18: el valor "desde" del rango debe ser
+        // numerico >= 0.
+        const desde = getFilter('value:name')?.value;
+        if (desde !== '' && desde != null && (Number.isNaN(Number(desde)) || Number(desde) < 0)) {
+            window.Swal?.fire?.({ icon: 'warning', title: 'Rango inválido', text: 'El valor "desde" debe ser un número mayor o igual a cero.' });
+            return;
+        }
         table.draw();
         filterInstance?.current?.hide();
     };

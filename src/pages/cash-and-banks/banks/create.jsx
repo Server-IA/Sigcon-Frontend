@@ -28,6 +28,7 @@ import {
   sanitizeSimpleText,
   sanitizeSwift,
 } from "../../../utils/bankUtils";
+import { validateText, validateNumber } from "../../../utils/fieldValidations";
 
 
 
@@ -92,19 +93,25 @@ const buildBankPayload = (bank) => ({
   countryId: bank.PAIS_ID ? Number(bank.PAIS_ID) : null,
 });
 
+// QA BNK (2026-06-03) BNK-RF-05: longitud + clase de caracteres por campo
+// segun "VALIDACIONES CAMPOS BNK Y CAJAS".
 const validateBankForm = ({ bank }) => {
   const nextErrors = {};
 
-  if (!bank.CODIGO_BANCO) nextErrors.CODIGO_BANCO = "Codigo requerido";
-  if (!bank.NIT_BANCO) nextErrors.NIT_BANCO = "NIT requerido";
-  if (!bank.NOMBRE_BANCO) nextErrors.NOMBRE_BANCO = "Nombre requerido";
-  if (!bank.NOMBRE_CORTO) nextErrors.NOMBRE_CORTO = "Nombre corto requerido";
+  nextErrors.CODIGO_BANCO = validateText(bank.CODIGO_BANCO, { required: true, min: 3, max: 45, patternKey: "bankCode", label: "El código del banco" });
+  nextErrors.NIT_BANCO = validateText(bank.NIT_BANCO, { required: true, min: 5, max: 45, patternKey: "nit", label: "El NIT" });
+  nextErrors.NOMBRE_BANCO = validateText(bank.NOMBRE_BANCO, { required: true, min: 5, max: 100, patternKey: "bankFullName", label: "El nombre del banco" });
+  nextErrors.NOMBRE_CORTO = validateText(bank.NOMBRE_CORTO, { required: true, min: 2, max: 45, patternKey: "bankShortName", label: "El nombre corto" });
   if (!bank.TIPO_BANCO) nextErrors.TIPO_BANCO = "Tipo de banco requerido";
   if (!bank.PAIS_ID) nextErrors.PAIS_ID = "Pais requerido";
-  if (!bank.CODIGO_SWIFT) nextErrors.CODIGO_SWIFT = "Codigo SWIFT requerido";
+  nextErrors.CODIGO_SWIFT = validateText(bank.CODIGO_SWIFT, { required: true, min: 8, max: 30, patternKey: "swift", label: "El código SWIFT" });
+  nextErrors.CODIGO_ACH = validateText(bank.CODIGO_ACH, { required: true, min: 0, max: 45, patternKey: "ach", label: "El código ACH" });
+  nextErrors.DIAS_CONCILIACION = validateNumber(bank.DIAS_CONCILIACION, { required: false, min: 1, max: 31, integer: true, label: "Los días de conciliación" });
   if (bank.FORMATO_EXTRACTO === "API" && !bank.URL_WEBSERVICE) {
     nextErrors.URL_WEBSERVICE = "URL webservice requerida";
   }
+
+  Object.keys(nextErrors).forEach((k) => { if (nextErrors[k] == null) delete nextErrors[k]; });
 
   return {
     isValid: Object.keys(nextErrors).length === 0,
@@ -227,6 +234,7 @@ const CreateCashAndBanks = ({
                   }}
                   error={errors.CODIGO_BANCO}
                   placeholder="Ej: BAN001"
+                  maxLength={45}
                   required
                 />
               </div>
@@ -242,6 +250,7 @@ const CreateCashAndBanks = ({
                   }}
                   error={errors.NIT_BANCO}
                   placeholder="Ej: 900123456-7"
+                  maxLength={45}
                   required
                 />
               </div>
@@ -260,6 +269,7 @@ const CreateCashAndBanks = ({
                   }}
                   error={errors.NOMBRE_BANCO}
                   placeholder="Nombre oficial del banco"
+                  maxLength={100}
                   required
                 />
               </div>
@@ -270,11 +280,12 @@ const CreateCashAndBanks = ({
                   label="Nombre corto"
                   value={bank.NOMBRE_CORTO}
                   onChange={(e) => {
-                    setBank({ ...bank, NOMBRE_CORTO: sanitizeSimpleText(e.target.value, 50) });
+                    setBank({ ...bank, NOMBRE_CORTO: sanitizeSimpleText(e.target.value, 45) });
                     setErrors({ ...errors, NOMBRE_CORTO: "" });
                   }}
                   error={errors.NOMBRE_CORTO}
                   placeholder="Nombre abreviado"
+                  maxLength={45}
                   required
                 />
               </div>
@@ -321,6 +332,7 @@ const CreateCashAndBanks = ({
                   }}
                   error={errors.CODIGO_SWIFT}
                   placeholder="Ej: BCOLOCOXXXX"
+                  maxLength={30}
                   required
                 />
               </div>
@@ -334,11 +346,13 @@ const CreateCashAndBanks = ({
                   label="Codigo ACH"
                   value={bank.CODIGO_ACH}
                   onChange={(e) => {
-                    setBank({ ...bank, CODIGO_ACH: sanitizeUpperAlphaNum(e.target.value) });
+                    // BNK-RF-05: ACH admite alfanumericos y guiones (no solo A-Z0-9).
+                    setBank({ ...bank, CODIGO_ACH: e.target.value.replace(/[^A-Za-z0-9-]/g, "") });
                     setErrors({ ...errors, CODIGO_ACH: "" });
                   }}
                   error={errors.CODIGO_ACH}
                   placeholder="Código ACH"
+                  maxLength={45}
                   required={true}
                 />
               </div>
@@ -354,7 +368,9 @@ const CreateCashAndBanks = ({
                     setErrors({ ...errors, DIAS_CONCILIACION: "" });
                   }}
                   error={errors.DIAS_CONCILIACION}
-                  placeholder="Opcional"
+                  placeholder="Entre 1 y 31 (opcional)"
+                  min={1}
+                  max={31}
                 />
               </div>
               {/* <div className="col-lg-4 col-md-12 col-sm-12 mb-3">

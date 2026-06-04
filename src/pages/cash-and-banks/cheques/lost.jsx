@@ -8,6 +8,7 @@ import TextareaModal    from '../../../components/molecules/TextareaModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText } from '../../../utils/fieldValidations';
 
 const EXTRAVIADO_URL = (id) => ['api', 'v1', 'banks', 'checks', id, 'report-lost'];
 
@@ -60,14 +61,12 @@ const LostCheque = ({
             setErrorMessage('Seleccione el tipo de incidente');
             return;
         }
-        if (!form.detalleIncidente || form.detalleIncidente.trim() === '') {
-            setErrorMessage('Debe proporcionar un detalle del incidente');
-            return;
-        }
-        if (!form.accionesTomadas || form.accionesTomadas.trim() === '') {
-            setErrorMessage('Debe proporcionar las acciones tomadas');
-            return;
-        }
+        // QA BNK (2026-06-03) BNK-RF-20: detalle min 10 / max 1000, acciones
+        // min 10 / max 500 (se permiten saltos de linea, sin patron estricto).
+        const detErr = validateText(form.detalleIncidente, { required: true, min: 10, max: 1000, label: 'El detalle del incidente' });
+        if (detErr) { setErrorMessage(detErr); return; }
+        const accErr = validateText(form.accionesTomadas, { required: true, min: 10, max: 500, label: 'Las acciones tomadas' });
+        if (accErr) { setErrorMessage(accErr); return; }
 
         try {
             setLoading(true);
@@ -182,10 +181,12 @@ const LostCheque = ({
                             <TextareaModal
                                 id="lost_detalle"
                                 label="Detalle del incidente"
-                                placeholder="Describa en detalle lo ocurrido con el cheque"
+                                placeholder="Describa en detalle lo ocurrido con el cheque (entre 10 y 1000 caracteres)"
                                 value={form.detalleIncidente}
                                 onChange={(e) => setForm(prev => ({ ...prev, detalleIncidente: e.target.value }))}
                                 error=""
+                                maxLength={1000}
+                                rows={4}
                                 required
                             />
                         </div>
@@ -195,10 +196,12 @@ const LostCheque = ({
                             <TextareaModal
                                 id="lost_acciones"
                                 label="Acciones tomadas"
-                                placeholder="Ej. Notificación al banco, denuncia ante autoridades, etc."
+                                placeholder="Ej. Notificación al banco, denuncia ante autoridades, etc. (entre 10 y 500 caracteres)"
                                 value={form.accionesTomadas}
                                 onChange={(e) => setForm(prev => ({ ...prev, accionesTomadas: e.target.value }))}
                                 error=""
+                                maxLength={500}
+                                rows={3}
                                 required
                             />
                         </div>

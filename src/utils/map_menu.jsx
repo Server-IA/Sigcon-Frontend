@@ -347,8 +347,15 @@ export const COMPONENT_MAP = [
   // para que un usuario sin PAR.PERMISOS_TEMPORALES.VER no acceda via URL.
   { id: "TEMPORARY_PERMISSIONS", name: "Permisos Temporales", component: requirePerm(IndexTemporaryPermissions, "PAR.PERMISOS_TEMPORALES.VER") },
   { id: "ROLES", name: "Roles", component: requirePerm(IndexRoles, "PAR.ROLES.VER") },
-  // Parametros del sistema: solo PLATFORM_ADMIN (config global FONT/COLOR/etc.).
-  { id: "PARAMETROS", name: "Parámetros", component: platformOnly(IndexParameters) },
+  // BUG-PA (doc QA v2, 2026-06-03 / Imagen 1): el criterio exige que un usuario
+  // DENTRO de una empresa pueda crear parametros desde la UI. Antes el menu era
+  // platformOnly -> solo el PLATFORM_ADMIN lo veia (y al no tener empresa recibia
+  // el mensaje funcional), y el ADMIN_EMPRESA no lo veia.
+  // OJO: NO usar adminOnly (AdminRoute) -> AdminRoute mira isAdmin, que solo es
+  // true para rol ADMIN/SUPERADMIN; el ADMIN_EMPRESA daria 403. Se usa requirePerm
+  // con PAR.PARAMETROS.VER (mismo patron que ROLES/USUARIOS): PermissionRoute hace
+  // bypass para PLATFORM_ADMIN y ADMIN_EMPRESA y exige el permiso al resto.
+  { id: "PARAMETROS", name: "Parámetros", component: requirePerm(IndexParameters, "PAR.PARAMETROS.VER") },
   { id: "CENTROS_COSTO", name: "Centros de Costo", component: IndexCentrosCosto },
   { id: "MENUSPERMISSIONS", name: "Permisos de Menú", component: platformOnly(MenuPermissionIndex) },
   { id: "CUENTAS_CONTABLES", name: "Cuentas Contables", component: IndexCuentasContables },

@@ -284,16 +284,23 @@ const IndexCheckbooks = () => {
         if (!confirm.isConfirmed) return;
 
         // Solicita motivo obligatorio antes del DELETE.
+        // QA BNK (2026-06-03 / doc validaciones BNK-RF-15): cuadro mas grande (textarea) +
+        // motivo min 10 / max 500 + clase de caracteres (letras, numeros, espacios,
+        // puntos, comas, guiones, guion bajo).
         const reasonPrompt = await window.Swal.fire({
             title: 'Motivo de eliminacion',
-            input: 'text',
-            inputLabel: 'Ingrese el motivo (requerido)',
-            inputPlaceholder: 'Motivo',
+            input: 'textarea',
+            inputLabel: 'Ingrese el motivo (requerido, entre 10 y 500 caracteres)',
+            inputPlaceholder: 'Describa el motivo de la eliminacion de la chequera',
+            inputAttributes: { maxlength: 500, rows: 5 },
             showCancelButton: true,
-            confirmButtonText: 'Eliminar',
+            confirmButtonText: 'Siguiente',
             cancelButtonText: 'Cancelar',
             inputValidator: (value) => {
-                if (!value || value.trim() === '') return 'El motivo es obligatorio';
+                const v = (value || '').trim();
+                if (v.length < 10) return 'El motivo es obligatorio y debe tener al menos 10 caracteres';
+                if (v.length > 500) return 'El motivo no puede superar los 500 caracteres';
+                if (!/^[\p{L}0-9 .,_-]+$/u.test(value)) return 'El motivo contiene caracteres no válidos';
             },
         });
         if (!reasonPrompt.isConfirmed) return;

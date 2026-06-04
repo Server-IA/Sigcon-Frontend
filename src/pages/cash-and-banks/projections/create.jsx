@@ -3,6 +3,7 @@ import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText, validateNumber } from '../../../utils/fieldValidations';
 
 /**
  * Modal para crear una nueva Proyeccion de Flujo de Caja.
@@ -54,6 +55,23 @@ const CreateProjection = ({ modalRef, modalInstance, projection, setProjection, 
         setErrors({});
         setErrorMessage('');
 
+        // QA BNK (2026-06-03) BNK-RF-39: nombre min 3 / max 255, descripcion 0/500,
+        // saldo y flujo hasta 2 decimales (max 999.999.999,99), fin > inicio.
+        const next = {};
+        next.name = validateText(projection.name, { required: true, min: 3, max: 255, patternKey: 'name', label: 'El nombre' });
+        next.description = validateText(projection.description, { required: false, min: 0, max: 500, patternKey: 'description', label: 'La descripción' });
+        if (!projection.startDate) next.startDate = 'La fecha de inicio es obligatoria';
+        if (!projection.endDate) next.endDate = 'La fecha de fin es obligatoria';
+        if (projection.startDate && projection.endDate && new Date(projection.endDate) <= new Date(projection.startDate)) {
+            next.endDate = 'La fecha fin debe ser posterior a la fecha de inicio';
+        }
+        if (!projection.periodicity) next.periodicity = 'Seleccione la periodicidad';
+        if (!projection.projectionType) next.projectionType = 'Seleccione el tipo';
+        next.initialBalance = validateNumber(projection.initialBalance, { required: true, min: 0, max: 999999999.99, decimals: 2, label: 'El saldo inicial' });
+        next.netFlow = validateNumber(projection.netFlow, { required: true, min: 0, max: 999999999.99, decimals: 2, label: 'El flujo por período' });
+        Object.keys(next).forEach(k => { if (next[k] == null) delete next[k]; });
+        if (Object.keys(next).length > 0) { setErrors(next); return; }
+
         const payload = {
             name:           projection.name,
             description:    projection.description || null,
@@ -99,7 +117,7 @@ const CreateProjection = ({ modalRef, modalInstance, projection, setProjection, 
                                 <InputModal
                                     id="proj_name" label="Nombre" value={projection.name}
                                     onChange={e => set('name', e.target.value)}
-                                    error={errors.name} required={true}
+                                    error={errors.name} required={true} maxLength={255}
                                 />
                             </div>
                             <div className="col-md-6 mb-3">
@@ -115,7 +133,7 @@ const CreateProjection = ({ modalRef, modalInstance, projection, setProjection, 
                                 <InputModal
                                     id="proj_desc" label="Descripcion" value={projection.description}
                                     onChange={e => set('description', e.target.value)}
-                                    error={errors.description}
+                                    error={errors.description} maxLength={500}
                                 />
                             </div>
                             <div className="col-md-6 mb-3">

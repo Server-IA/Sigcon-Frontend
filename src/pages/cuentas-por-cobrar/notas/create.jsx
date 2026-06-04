@@ -6,6 +6,7 @@ import AlertPage from '../../../components/molecules/AlertPage';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { sanitizeDecimal } from '../../../utils/inputSanitize';
 
 /**
  * Modal para crear una Nota Credito o Debito sobre una factura de venta.
@@ -194,15 +195,17 @@ const CreateArNote = ({ modalRef, modalInstance, dataTableRef, setMessage }) => 
 
                         <div className="row">
                             <div className="col-md-6 mb-4 mt-2">
+                                {/* QA CXC Bug 4 (2026-06-03 / IEEE AR-RF-07): el monto solo admite
+                                    numeros (cross-browser via text + sanitizeDecimal). */}
                                 <InputModal
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
                                     id="ar_note_amount"
                                     label="Monto"
                                     value={record.amount}
-                                    onChange={(e) => setRecord((prev) => ({ ...prev, amount: e.target.value }))}
+                                    onChange={(e) => setRecord((prev) => ({ ...prev, amount: sanitizeDecimal(e.target.value) }))}
                                     error={errors.amount}
                                     placeholder="0.00"
-                                    min={0}
                                     required
                                 />
                             </div>
@@ -221,11 +224,13 @@ const CreateArNote = ({ modalRef, modalInstance, dataTableRef, setMessage }) => 
 
                         <div className="row">
                             <div className="col-12 mb-4 mt-2">
+                                {/* QA CXC Bug 4 (2026-06-03 / IEEE AR-RF-07): razon/justificacion max 500. */}
                                 <InputModal
                                     type="text"
                                     id="ar_note_reason"
                                     label="Razon / Justificacion"
                                     value={record.reason}
+                                    maxLength={500}
                                     onChange={(e) => setRecord((prev) => ({ ...prev, reason: e.target.value }))}
                                     error={errors.reason}
                                     placeholder="Motivo de la nota"

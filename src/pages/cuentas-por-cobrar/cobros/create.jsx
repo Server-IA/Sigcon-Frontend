@@ -7,6 +7,7 @@ import InputDate from '../../../components/molecules/InputDate';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { sanitizeDecimal } from '../../../utils/inputSanitize';
 
 /**
  * Modal para registrar un nuevo Cobro sobre una factura de venta.
@@ -207,15 +208,19 @@ const CreateArPayment = ({ modalRef, modalInstance, dataTableRef, setMessage, pr
                                 />
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
+                                {/* QA CXC Bug 2 (2026-06-03 / IEEE AR-RF-02): el monto solo admite
+                                    numeros. type="text" + inputMode="decimal" + sanitizeDecimal evita
+                                    que se vean letras en cualquier navegador (Firefox las mostraba
+                                    con type="number"). */}
                                 <InputModal
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
                                     id="ar_payment_amount"
                                     label="Monto"
                                     value={record.amount}
-                                    onChange={(e) => setRecord((prev) => ({ ...prev, amount: e.target.value }))}
+                                    onChange={(e) => setRecord((prev) => ({ ...prev, amount: sanitizeDecimal(e.target.value) }))}
                                     error={errors.amount}
                                     placeholder="0.00"
-                                    min={0}
                                     required
                                 />
                             </div>
@@ -286,11 +291,13 @@ const CreateArPayment = ({ modalRef, modalInstance, dataTableRef, setMessage, pr
                                 />
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
+                                {/* QA CXC Bug 2 (2026-06-03 / IEEE AR-RF-02): notas opcionales, max 500. */}
                                 <InputModal
                                     type="text"
                                     id="ar_payment_notes"
-                                    label="Notas"
+                                    label="Notas (opcional)"
                                     value={record.notes}
+                                    maxLength={500}
                                     onChange={(e) => setRecord((prev) => ({ ...prev, notes: e.target.value }))}
                                     error={errors.notes}
                                     placeholder="Observaciones opcionales"

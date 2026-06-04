@@ -6,6 +6,7 @@ import AlertPage from '../../../components/molecules/AlertPage';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText } from '../../../utils/fieldValidations';
 
 const UpdateBankAccount = ({
     modalRef,
@@ -207,10 +208,13 @@ const UpdateBankAccount = ({
     // campos requeridos antes del PUT. Si fallan, abortar.
     const validateRequiredUpdate = () => {
         const next = {};
-        if (!record.accountName || !String(record.accountName).trim()) next.accountName = 'El nombre es requerido';
-        if (!record.changeReason || String(record.changeReason).trim().length < 10) {
-            next.changeReason = 'El motivo del cambio debe tener al menos 10 caracteres';
-        }
+        // QA BNK (2026-06-03 / doc validaciones BNK-RF-02): longitudes + clase de caracteres.
+        next.accountName      = validateText(record.accountName,      { required: true, min: 3, max: 100, patternKey: 'name',       label: 'El nombre de cuenta' });
+        next.accountExecutive = validateText(record.accountExecutive, { min: 0,         max: 100, patternKey: 'personName',  label: 'El ejecutivo de cuenta' });
+        next.description      = validateText(record.description,      { min: 0,         max: 500, patternKey: 'description', label: 'La descripción' });
+        // Motivo del cambio: min 5, max 300 (doc BNK-RF-02).
+        next.changeReason     = validateText(record.changeReason,     { required: true, min: 5, max: 300, patternKey: 'description', label: 'El motivo del cambio' });
+        Object.keys(next).forEach(k => { if (next[k] == null) delete next[k]; });
         return next;
     };
 
@@ -365,6 +369,7 @@ const UpdateBankAccount = ({
                                         <InputModal
                                             type="text" id="upd_accountName" label="Nombre de cuenta"
                                             value={record.accountName}
+                                            maxLength={100}
                                             onChange={e => field('accountName', e.target.value)}
                                             error={errors.accountName} required
                                         />
@@ -411,8 +416,9 @@ const UpdateBankAccount = ({
                                     <div className="col-md-6 mb-4">
                                         <InputModal
                                             type="text" id="upd_accountExecutive" label="Ejecutivo de cuenta"
-                                            placeholder="Nombre del ejecutivo"
+                                            placeholder="Ej: María Gómez P."
                                             value={record.accountExecutive}
+                                            maxLength={100}
                                             onChange={e => field('accountExecutive', e.target.value)}
                                             error={errors.accountExecutive}
                                         />
@@ -434,6 +440,7 @@ const UpdateBankAccount = ({
                                             type="text" id="upd_description" label="Descripción"
                                             placeholder="Descripción de la cuenta"
                                             value={record.description}
+                                            maxLength={500}
                                             onChange={e => field('description', e.target.value)}
                                             error={errors.description}
                                         />
@@ -537,10 +544,12 @@ const UpdateBankAccount = ({
                                 </p>
                                 <div className="row">
                                     <div className="col-md-12 mb-4">
+                                        {/* QA BNK (2026-06-03 / doc validaciones BNK-RF-02): motivo del cambio entre 5 y 300 caracteres. */}
                                         <InputModal
                                             type="text" id="upd_changeReason" label="Motivo del cambio"
-                                            placeholder="Describa brevemente el motivo de la modificación (mínimo 10 caracteres)"
+                                            placeholder="Describa brevemente el motivo de la modificación (entre 5 y 300 caracteres)"
                                             value={record.changeReason}
+                                            maxLength={300}
                                             onChange={e => field('changeReason', e.target.value)}
                                             error={errors.changeReason} required
                                         />

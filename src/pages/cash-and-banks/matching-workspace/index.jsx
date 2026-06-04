@@ -104,6 +104,14 @@ const MatchingWorkspace = () => {
             window.Swal.fire({ icon: 'info', title: 'Selección incompleta', text: 'Seleccione al menos un movimiento de cada lado.' });
             return;
         }
+        // QA BNK (2026-06-03) BNK-RF-35/45: cuando se requiere motivo (N:M o
+        // diferencia tolerada > 0) debe tener min 30 / max 500 + clase de caracteres.
+        if (requiereMotivo) {
+            const m = (motivo || '').trim();
+            if (m.length < 30) { window.Swal.fire({ icon: 'warning', title: 'Motivo requerido', text: 'El motivo debe tener al menos 30 caracteres.' }); return; }
+            if (m.length > 500) { window.Swal.fire({ icon: 'warning', title: 'Motivo muy largo', text: 'El motivo no puede superar los 500 caracteres.' }); return; }
+            if (!/^[\p{L}0-9 .,;_-]+$/u.test(m)) { window.Swal.fire({ icon: 'warning', title: 'Motivo inválido', text: 'El motivo contiene caracteres no válidos.' }); return; }
+        }
         try {
             await fetchHelper.post(base_url(['api', 'v1', 'banks', 'emparejamientos']),
                 { bankAccountId: Number(accountId), extractoIds: selExt, librosIds: selLib, motivo }, {}, 1000, true);
@@ -235,7 +243,7 @@ const MatchingWorkspace = () => {
                 {requiereMotivo && (
                     <div className="mb-2">
                         <label className="form-label">Motivo de la agrupación {sums.dif > 0 ? '(diferencia tolerada)' : '(N:M)'} — mínimo 30 caracteres</label>
-                        <textarea className="form-control" rows="2" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Explique la agrupación / la diferencia..."></textarea>
+                        <textarea className="form-control" rows="3" maxLength={500} value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Explique la agrupación / la diferencia (entre 30 y 500 caracteres)..."></textarea>
                     </div>
                 )}
                 <button className="btn btn-primary" disabled={!accountId || !selExt.length || !selLib.length} onClick={emparejar}>

@@ -68,13 +68,19 @@ const ApplyApAdvance = ({ modalRef, modalInstance, dataTableRef, advance, setMes
         setErrorMessage('');
     }, [invoiceId, amount]);
 
+    // AP-RF-05 E6 (Bloque DV): el tope es el DISPONIBLE del anticipo (no el monto
+    // total), porque el anticipo puede haberse aplicado parcialmente a otras facturas.
+    const available = advance?.availableAmount != null
+        ? Number(advance.availableAmount)
+        : (Number(advance?.amount || 0) - Number(advance?.appliedAmount || 0));
+
     const handleSubmit = async () => {
         const nextErrors = { invoiceId: '', amount: '' };
         let valid = true;
         if (!invoiceId) { nextErrors.invoiceId = 'Debe seleccionar una factura'; valid = false; }
         if (!amount || Number(amount) <= 0) { nextErrors.amount = 'El monto debe ser mayor a cero'; valid = false; }
-        if (advance?.amount !== undefined && Number(amount) > Number(advance.amount)) {
-            nextErrors.amount = `Excede el monto del anticipo (${formatCurrency(advance.amount)})`;
+        if (Number(amount) > available) {
+            nextErrors.amount = `Excede el monto del anticipo. Disponible: ${formatCurrency(available)}`;
             valid = false;
         }
         setErrors(nextErrors);
@@ -121,6 +127,7 @@ const ApplyApAdvance = ({ modalRef, modalInstance, dataTableRef, advance, setMes
                             <div className="alert alert-info">
                                 <strong>Proveedor:</strong> {advance.thirdPartyName || '-'}<br />
                                 <strong>Monto del anticipo:</strong> {formatCurrency(advance.amount)}<br />
+                                <strong>Disponible para aplicar:</strong> {formatCurrency(available)}<br />
                                 <strong>Estado:</strong> {advance.status || '-'}
                             </div>
                         )}

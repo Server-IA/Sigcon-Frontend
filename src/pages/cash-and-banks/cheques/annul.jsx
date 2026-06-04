@@ -6,10 +6,12 @@ import TextareaModal from '../../../components/molecules/TextareaModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText } from '../../../utils/fieldValidations';
 
 const ANULAR_URL = (id) => ['api', 'v1', 'banks', 'checks', id, 'void'];
 
 const MIN_MOTIVO = 40;
+const MAX_MOTIVO = 500;
 
 const AnnulCheque = ({
     modalRef, modalInstance, record, dataTableRef, setMessage, onReportLost,
@@ -43,9 +45,14 @@ const AnnulCheque = ({
     };
 
     // Etapa 1 → 2
+    // QA BNK (2026-06-03) BNK-RF-19: motivo min 40 / max 500 + clase de caracteres.
     const handleContinue = () => {
-        if (!motivo || motivo.trim().length < MIN_MOTIVO) {
-            setErrorMessage(`El motivo de anulación debe tener al menos ${MIN_MOTIVO} caracteres`);
+        const motivoErr = validateText(motivo, {
+            required: true, min: MIN_MOTIVO, max: MAX_MOTIVO,
+            patternKey: 'description', label: 'El motivo de anulación',
+        });
+        if (motivoErr) {
+            setErrorMessage(motivoErr);
             return;
         }
         setErrorMessage('');
@@ -146,10 +153,12 @@ const AnnulCheque = ({
                                 <TextareaModal
                                     id="annul_motivo"
                                     label="Motivo de anulación"
-                                    placeholder={`Ingrese el motivo (mínimo ${MIN_MOTIVO} caracteres)`}
+                                    placeholder={`Ingrese el motivo (entre ${MIN_MOTIVO} y ${MAX_MOTIVO} caracteres)`}
                                     value={motivo}
                                     onChange={(e) => setMotivo(e.target.value)}
                                     error=""
+                                    maxLength={MAX_MOTIVO}
+                                    rows={4}
                                     required
                                 />
                                 <small className={`d-block mt-1 mb-2 text-${motivo.trim().length >= MIN_MOTIVO ? 'success' : 'muted'}`}>

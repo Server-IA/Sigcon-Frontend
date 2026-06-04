@@ -8,6 +8,7 @@ import InputDate from '../../../components/molecules/InputDate';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText } from '../../../utils/fieldValidations';
 
 // Endpoint oficial para actualizar chequeras por ID.
 const UPDATE_URL = (id) => ['api', 'v1', 'banks', 'checkbooks', id];
@@ -135,19 +136,24 @@ const UpdatedCheckbook = ({
             nextErrors.bankAccountId = 'La cuenta bancaria es obligatoria';
             valid = false;
         }
-        if (!checkbookNumber) {
-            nextErrors.checkbookNumber = 'El numero de chequera es obligatorio';
-            valid = false;
-        } else if (checkbookNumber.length > MAX_CHECKBOOK_NUMBER) {
-            nextErrors.checkbookNumber = `Maximo ${MAX_CHECKBOOK_NUMBER} caracteres`;
+        // QA BNK (2026-06-03 / doc validaciones BNK-RF-14): numero min 2 / max 20 + clase de caracteres.
+        const numErr = validateText(record.checkbookNumber, { required: true, min: 2, max: 20, patternKey: 'code', label: 'El número de chequera' });
+        if (numErr) { nextErrors.checkbookNumber = numErr; valid = false; }
+        // Banco emisor: min 3 / max 120 + clase de caracteres (cuando se informa).
+        if (issuingBank) {
+            const bankErr = validateText(issuingBank, { min: 3, max: 120, patternKey: 'bankFullName', label: 'El banco emisor' });
+            if (bankErr) { nextErrors.issuingBank = bankErr; valid = false; }
+        }
+        // Cheque inicial / final: entero 1..99999999, final >= inicial.
+        if (!checkStartNumber || checkStartNumber < 1 || checkStartNumber > 99999999) {
+            nextErrors.checkStartNumber = 'Ingrese un número entre 1 y 99999999';
             valid = false;
         }
-        if (!checkStartNumber || checkStartNumber <= 0) {
-            nextErrors.checkStartNumber = 'Ingrese un numero valido';
+        if (!checkEndNumber || checkEndNumber < 1 || checkEndNumber > 99999999) {
+            nextErrors.checkEndNumber = 'Ingrese un número entre 1 y 99999999';
             valid = false;
-        }
-        if (!checkEndNumber || checkEndNumber <= 0) {
-            nextErrors.checkEndNumber = 'Ingrese un numero valido';
+        } else if (checkStartNumber && checkEndNumber < checkStartNumber) {
+            nextErrors.checkEndNumber = 'El cheque final debe ser mayor o igual al cheque inicial';
             valid = false;
         }
         if (!receivedDate) {
@@ -162,8 +168,10 @@ const UpdatedCheckbook = ({
             nextErrors.status = 'El estado es obligatorio';
             valid = false;
         }
-        if (observations.length > MAX_OBSERVATIONS) {
-            nextErrors.observations = `Maximo ${MAX_OBSERVATIONS} caracteres`;
+        // Observaciones: max 500 + clase de caracteres (BNK-RF-14).
+        const obsErr = validateText(record.observations, { min: 0, max: MAX_OBSERVATIONS, patternKey: 'descriptionSemicolon', label: 'Las observaciones' });
+        if (obsErr) {
+            nextErrors.observations = obsErr;
             valid = false;
         }
 

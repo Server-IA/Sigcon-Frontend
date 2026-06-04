@@ -269,9 +269,10 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                             id="tp_nit_create"
                                             label="NIT"
                                             value={thirdParty.nit}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, nit: e.target.value })}
+                                            onChange={(e) => setThirdParty({ ...thirdParty, nit: e.target.value.replace(/\D+/g, '') })}
                                             error={errors.nit}
                                             placeholder="Ej. 9001234567"
+                                            inputMode="numeric"
                                             required={true}
                                         />
                                     </div>
@@ -281,9 +282,10 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                             id="tp_dv_create"
                                             label="DV"
                                             value={thirdParty.dv}
-                                            onChange={(e) => setThirdParty({ ...thirdParty, dv: e.target.value })}
+                                            onChange={(e) => setThirdParty({ ...thirdParty, dv: e.target.value.replace(/\D+/g, '') })}
                                             error={errors.dv}
                                             placeholder="0"
+                                            inputMode="numeric"
                                             required={true}
                                         />
                                     </div>
@@ -503,8 +505,9 @@ const CreateThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty, 
                                                     id={`tp_contactPhone_${idx}_create`}
                                                     label="Teléfono"
                                                     value={contact.phone}
-                                                    onChange={(e) => updateContact(idx, 'phone', e.target.value)}
+                                                    onChange={(e) => updateContact(idx, 'phone', e.target.value.replace(/\D+/g, ''))}
                                                     placeholder="Ej. 3001234567"
+                                                    inputMode="numeric"
                                                 />
                                             </div>
                                             <div className="col-md-6 mb-2">

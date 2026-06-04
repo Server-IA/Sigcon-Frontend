@@ -7,6 +7,7 @@ import InputDate from '../../../components/molecules/InputDate';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { sanitizeDecimal } from '../../../utils/inputSanitize';
 
 /**
  * Modal para registrar un nuevo Anticipo de cliente.
@@ -184,15 +185,17 @@ const CreateArAdvance = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
                                 />
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
+                                {/* QA CXC Bug 3 (2026-06-03 / IEEE AR-RF-09): el monto solo admite
+                                    numeros (cross-browser via text + sanitizeDecimal). */}
                                 <InputModal
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
                                     id="ar_adv_amount"
                                     label="Monto del Anticipo"
                                     value={record.amount}
-                                    onChange={(e) => setRecord((prev) => ({ ...prev, amount: e.target.value }))}
+                                    onChange={(e) => setRecord((prev) => ({ ...prev, amount: sanitizeDecimal(e.target.value) }))}
                                     error={errors.amount}
                                     placeholder="0.00"
-                                    min={0}
                                     required
                                 />
                             </div>
@@ -212,11 +215,13 @@ const CreateArAdvance = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
                                 />
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
+                                {/* QA CXC Bug 3 (2026-06-03 / IEEE AR-RF-09): referencia max 100 chars. */}
                                 <InputModal
                                     type="text"
                                     id="ar_adv_reference"
                                     label="Referencia"
                                     value={record.advanceReference}
+                                    maxLength={100}
                                     onChange={(e) => setRecord((prev) => ({ ...prev, advanceReference: e.target.value }))}
                                     error={errors.advanceReference}
                                     placeholder="Numero de referencia"
@@ -251,11 +256,13 @@ const CreateArAdvance = ({ modalRef, modalInstance, dataTableRef, setMessage }) 
 
                         <div className="row">
                             <div className="col-12 mb-4 mt-2">
+                                {/* QA CXC Bug 3 (2026-06-03 / IEEE AR-RF-09): notas max 500 chars. */}
                                 <InputModal
                                     type="text"
                                     id="ar_adv_notes"
                                     label="Notas"
                                     value={record.notes}
+                                    maxLength={500}
                                     onChange={(e) => setRecord((prev) => ({ ...prev, notes: e.target.value }))}
                                     error={errors.notes}
                                     placeholder="Observaciones"

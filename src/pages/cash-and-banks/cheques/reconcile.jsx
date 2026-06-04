@@ -7,6 +7,7 @@ import InputSelectModal from '../../../components/molecules/inputSelectModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText } from '../../../utils/fieldValidations';
 
 const RECONCILE_URL = (id) => ['api', 'v1', 'banks', 'checks', id, 'reconcile'];
 
@@ -88,10 +89,11 @@ const ReconcileCheque = ({
             setErrorMessage('Seleccione el método de conciliación');
             return;
         }
-        if (!form.referenciaCobro || form.referenciaCobro.trim() === '') {
-            setErrorMessage('La referencia de cobro es obligatoria');
-            return;
-        }
+        // QA BNK (2026-06-03) BNK-RF-21: referencia min 3 / max 100 + clase reference.
+        const refErr = validateText(form.referenciaCobro, {
+            required: true, min: 3, max: 100, patternKey: 'reference', label: 'La referencia de cobro',
+        });
+        if (refErr) { setErrorMessage(refErr); return; }
         if (form.metodoConciliacion === 'AUTOMATICA') {
             if (!record.idCuentaBancaria) {
                 setErrorMessage('La chequera no tiene cuenta bancaria asociada; no puede usar conciliación automática.');
@@ -245,10 +247,11 @@ const ReconcileCheque = ({
                                     type="text"
                                     id="rec_referencia"
                                     label="Referencia / N° transacción"
-                                    placeholder="Número de referencia del cobro"
+                                    placeholder="Ej: TRX-12345 (entre 3 y 100 caracteres)"
                                     value={form.referenciaCobro}
                                     onChange={(e) => setForm(prev => ({ ...prev, referenciaCobro: e.target.value }))}
                                     error=""
+                                    maxLength={100}
                                     required
                                 />
                             </div>

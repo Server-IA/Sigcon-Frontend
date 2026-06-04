@@ -53,14 +53,12 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
         setAllModulesPermissions(filtered.map(m => ({ ...m, checked: false })));
     }, [modules]);
 
-    useEffect(() => {
-        const permissions = allModulesPermissions.filter(m => m.checked).map(m => m.permissions.map(p => p.id));
-        setRole({
-            ...role,
-            permissionIds: permissions.flat(),
-        });
-        console.log("Permissions", permissions);    
-    }, [allModulesPermissions]);
+    // QA Parametrización (2026-06-04) Bug 3: se ELIMINÓ el efecto que recalculaba
+    // role.permissionIds desde los flags `module.checked`. Hacía que "Seleccionar
+    // todos" de un módulo descartara los permisos individuales de los demás. La
+    // única fuente de verdad es `role.permissionIds`; los checkboxes individuales y
+    // el switch "Seleccionar todos" la modifican directamente tocando SOLO los ids
+    // de su propio módulo.
 
     const handleCreateRole = async () => {
         console.log("Role to create", role);
@@ -154,6 +152,12 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
 
                                         const permissionsModule = chunkArray(module.permissions, 2);
 
+                                        // QA Parametrización (2026-06-04) Bug 3: "Seleccionar todos" SOLO
+                                        // agrega/quita los permisos de ESTE módulo, sin tocar los demás.
+                                        const moduleIds = module.permissions.map(p => p.id);
+                                        const moduleAllChecked = moduleIds.length > 0
+                                            && moduleIds.every(id => role.permissionIds.includes(id));
+
                                         return (
                                             <div className="accordion-item" key={`${module.module.id}-accordion`}>
                                                 
@@ -183,14 +187,17 @@ const CreateRole = ({ modalRef, modalInstance, role, setRole, dataTableRef, setM
                                                     <div className="accordion-body">
                                                         <label className="switch switch-primary">
                                                             <input
-                                                                type="checkbox" 
+                                                                type="checkbox"
                                                                 className="switch-input"
                                                                 value={module.module.id}
-                                                                checked={module.checked}
+                                                                checked={moduleAllChecked}
                                                                 id={`${module.module.id}-permission`}
-                                                                onChange={(e) => setAllModulesPermissions([
-                                                                    ...allModulesPermissions.map(m => m.module.id === module.module.id ? { ...m, checked: !module.checked } : m),
-                                                                ])}
+                                                                onChange={() => {
+                                                                    const set = new Set(role.permissionIds);
+                                                                    if (moduleAllChecked) moduleIds.forEach(id => set.delete(id));
+                                                                    else moduleIds.forEach(id => set.add(id));
+                                                                    setRole({ ...role, permissionIds: [...set] });
+                                                                }}
                                                             />
                                                             <span className="switch-toggle-slider">
                                                                 <span className="switch-on">

@@ -88,15 +88,28 @@ const IndexSegmentation = () => {
     ];
 
     const columns = [
+        // BUG TER-RF-08 (2026-06-03 / Imagen 5): la barra de busqueda global no
+        // filtraba porque ID Cliente y Cliente estaban searchable:false con
+        // name:''. El backend (DataTableSpecificationBuilder) solo aplica el
+        // global search sobre columnas searchable=true con un name = path JPA
+        // real de la entidad. Se mapean a client.id / client.businessName
+        // (la relacion ManyToOne `client` -> ThirdParty) + una columna oculta
+        // searchable para client.nit (busqueda por identificacion).
         {
-            title: 'ID Cliente', data: 'clientId', name: '',
-            searchable: false, orderable: false,
+            title: 'ID Cliente', data: 'clientId', name: 'client.id',
+            searchable: true, orderable: true,
             render: (val) => val ?? '-'
         },
         {
-            title: 'Cliente', data: 'thirdParty', name: '',
-            searchable: false, orderable: false,
+            title: 'Cliente', data: 'thirdParty', name: 'client.businessName',
+            searchable: true, orderable: true,
             render: (val) => val?.businessName ?? '-'
+        },
+        // Columna oculta: habilita busqueda global por NIT del tercero asociado.
+        {
+            title: 'NIT', data: null, name: 'client.nit',
+            searchable: true, orderable: false, visible: false,
+            defaultContent: ''
         },
         {
             title: 'Segmentación', data: 'finalSegment', name: 'finalSegment',

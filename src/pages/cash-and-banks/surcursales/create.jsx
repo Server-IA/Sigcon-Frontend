@@ -7,6 +7,7 @@ import InputSelectModal from "../../../components/molecules/inputSelectModal";
 import { base_url } from "../../../utils/functions";
 import { fetchHelper } from "../../../utils/fetch";
 import { sanitizeSimpleText } from "../../../utils/bankUtils";
+import { validateText } from "../../../utils/fieldValidations";
 
 const API_STORE = ["api", "v1", "bank-branches", "store"];
 
@@ -15,11 +16,20 @@ const MAIN_BRANCH_OPTIONS = [
   { id: "false", label: "Secundaria" },
 ];
 
+// QA BNK (2026-06-03) BNK-RF-26: direccion min 5 / max 45 + clase address.
 const validateBranchForm = ({ branch }) => {
   const nextErrors = {};
 
   if (!branch.municipalityId) nextErrors.municipalityId = "Ciudad requerida";
-  if (!branch.address) nextErrors.address = "Direccion requerida";
+  nextErrors.address = validateText(branch.address, {
+    required: true,
+    min: 5,
+    max: 45,
+    patternKey: "address",
+    label: "La dirección",
+  });
+
+  Object.keys(nextErrors).forEach((k) => { if (nextErrors[k] == null) delete nextErrors[k]; });
   return { isValid: Object.keys(nextErrors).length === 0, errors: nextErrors };
 };
 
@@ -148,11 +158,12 @@ const CreateBankBranch = ({
                   label="Direccion"
                   value={branch.address}
                   onChange={(e) => {
-                    setBranch({ ...branch, address: sanitizeSimpleText(e.target.value, 150) });
+                    setBranch({ ...branch, address: sanitizeSimpleText(e.target.value, 45) });
                     setErrors({ ...errors, address: "" });
                   }}
                   error={errors.address}
                   placeholder="Ej: Calle 50 # 10-20"
+                  maxLength={45}
                   required
                 />
               </div>

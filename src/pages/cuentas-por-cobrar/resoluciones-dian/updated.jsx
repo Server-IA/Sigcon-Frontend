@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 
 import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
+import AlertPage from '../../../components/molecules/AlertPage';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { sanitizeInteger } from '../../../utils/inputSanitize';
 
 /** Modal de edicion de una Resolucion DIAN. */
 
@@ -17,6 +19,8 @@ const STATUS_OPTIONS = [
 const UpdatedDianResolution = ({ modalRef, modalInstance, dataTableRef, record, setMessage, reloadAlerts }) => {
     const [form, setForm] = useState({});
     const [errors, setErrors] = useState({});
+    // QA CXC Bug 5 (2026-06-03 / IEEE AR-RF-17): error general DENTRO del modal.
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         if (record) {
@@ -47,6 +51,7 @@ const UpdatedDianResolution = ({ modalRef, modalInstance, dataTableRef, record, 
         e.preventDefault();
         if (!record?.id) return;
         setErrors({});
+        setErrorMessage('');
         try {
             await fetchHelper.put(
                 base_url(['api', 'v1', 'ar', 'dian', 'resolutions', 'update', record.id]),
@@ -68,7 +73,8 @@ const UpdatedDianResolution = ({ modalRef, modalInstance, dataTableRef, record, 
                 err.errors.forEach((x) => { e[x.field] = x.message; });
                 setErrors(e);
             }
-            setMessage({ type: 'danger', show: true, message: err?.msg || err?.message || 'Error al actualizar.' });
+            // QA CXC Bug 5: el error general se muestra DENTRO del modal.
+            setErrorMessage(err?.msg || err?.message || 'Error al actualizar la resolucion.');
         }
     };
 
@@ -81,6 +87,9 @@ const UpdatedDianResolution = ({ modalRef, modalInstance, dataTableRef, record, 
                         <button type="button" className="btn-close" data-bs-dismiss="modal" />
                     </div>
                     <div className="modal-body">
+                        {/* QA CXC Bug 5 (2026-06-03 / IEEE AR-RF-17): error general DENTRO del modal. */}
+                        <AlertPage type="danger" message={errorMessage} show={!!errorMessage}
+                            onChange={() => setErrorMessage('')} />
                         <div className="row g-3">
                             <InputModal col="col-md-6" id="dian_u_res_num" label="# Resolucion" name="resolutionNumber" type="text"
                                 value={form.resolutionNumber || ''} onChange={setField('resolutionNumber')} error={errors.resolutionNumber} required />
@@ -90,17 +99,26 @@ const UpdatedDianResolution = ({ modalRef, modalInstance, dataTableRef, record, 
                                 <InputSelectModal id="dian_u_status" label="Estado"
                                     value={form.status || 'ACTIVE'} onChange={setField('status')} options={STATUS_OPTIONS} />
                             </div>
-                            <InputModal col="col-md-6" id="dian_u_start_num" label="Numero inicial" name="startNumber" type="number"
-                                value={form.startNumber ?? ''} onChange={setField('startNumber')} error={errors.startNumber} required />
-                            <InputModal col="col-md-6" id="dian_u_end_num" label="Numero final" name="endNumber" type="number"
-                                value={form.endNumber ?? ''} onChange={setField('endNumber')} error={errors.endNumber} required />
+                            {/* QA CXC Bug 5 (2026-06-03 / IEEE AR-RF-17): numero inicial/final solo digitos. */}
+                            <InputModal col="col-md-6" id="dian_u_start_num" label="Numero inicial" name="startNumber" type="text"
+                                inputMode="numeric"
+                                value={form.startNumber ?? ''}
+                                onChange={(e) => setForm((f) => ({ ...f, startNumber: sanitizeInteger(e.target.value) }))}
+                                error={errors.startNumber} required />
+                            <InputModal col="col-md-6" id="dian_u_end_num" label="Numero final" name="endNumber" type="text"
+                                inputMode="numeric"
+                                value={form.endNumber ?? ''}
+                                onChange={(e) => setForm((f) => ({ ...f, endNumber: sanitizeInteger(e.target.value) }))}
+                                error={errors.endNumber} required />
                             <InputModal col="col-md-6" id="dian_u_start_date" label="Fecha inicio" name="startDate" type="date"
                                 value={form.startDate || ''} onChange={setField('startDate')} error={errors.startDate} required />
                             <InputModal col="col-md-6" id="dian_u_end_date" label="Fecha fin" name="endDate" type="date"
                                 value={form.endDate || ''} onChange={setField('endDate')} error={errors.endDate} required />
                             <InputModal col="col-md-12" id="dian_u_key" label="Clave tecnica" name="technicalKey" type="text"
                                 value={form.technicalKey || ''} onChange={setField('technicalKey')} />
+                            {/* QA CXC Bug 5 (2026-06-03 / IEEE AR-RF-17): notas max 500. */}
                             <InputModal col="col-md-12" id="dian_u_notes" label="Notas" name="notes" type="text"
+                                maxLength={500}
                                 value={form.notes || ''} onChange={setField('notes')} />
                         </div>
                     </div>

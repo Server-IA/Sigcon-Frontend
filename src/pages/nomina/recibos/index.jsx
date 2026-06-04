@@ -20,6 +20,15 @@ const fmt = (n) => new Intl.NumberFormat('es-CO', {
     style: 'currency', currency: 'COP', maximumFractionDigits: 0
 }).format(Number(n) || 0);
 
+// NOM-3 (2026-06-04): nombres de mes en el filtro (antes era un input numerico
+// que mostraba "6" en vez de "Junio").
+const MONTHS = [
+    { v: 1, l: '01 - Enero' }, { v: 2, l: '02 - Febrero' }, { v: 3, l: '03 - Marzo' },
+    { v: 4, l: '04 - Abril' }, { v: 5, l: '05 - Mayo' }, { v: 6, l: '06 - Junio' },
+    { v: 7, l: '07 - Julio' }, { v: 8, l: '08 - Agosto' }, { v: 9, l: '09 - Septiembre' },
+    { v: 10, l: '10 - Octubre' }, { v: 11, l: '11 - Noviembre' }, { v: 12, l: '12 - Diciembre' },
+];
+
 const IndexRecibos = () => {
     const now = new Date();
     const [recibos, setRecibos] = useState([]);
@@ -327,8 +336,10 @@ const IndexRecibos = () => {
                         </div>
                         <div className="col-md-3">
                             <label className="form-label">Mes</label>
-                            <input type="number" min="1" max="12" className="form-control" value={filters.month}
-                                    onChange={e => setFilters({ ...filters, month: Number(e.target.value) })} />
+                            <select className="form-select" value={filters.month}
+                                    onChange={e => setFilters({ ...filters, month: Number(e.target.value) })}>
+                                {MONTHS.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+                            </select>
                         </div>
                         <div className="col-md-3 d-flex align-items-end">
                             <button className="btn btn-outline-primary w-100" onClick={load}>
@@ -430,7 +441,9 @@ const IndexRecibos = () => {
                                                 : <span className="text-muted">-</span>}
                                         </td>
                                         <td className="text-center">
-                                            <button className="btn btn-sm btn-label-info me-1"
+                                          {/* NOM-3: botones de accion en fila horizontal (flex + gap) */}
+                                          <div className="d-flex justify-content-center align-items-center gap-1 flex-wrap">
+                                            <button className="btn btn-sm btn-label-info"
                                                     onClick={() => openDetail(r)} title="Ver detalle">
                                                 <i className="ri-eye-line"></i>
                                             </button>
@@ -465,6 +478,7 @@ const IndexRecibos = () => {
                                                     <i className="ri-add-circle-line"></i>
                                                 </button>
                                             )}
+                                          </div>
                                         </td>
                                     </tr>
                                 ))}

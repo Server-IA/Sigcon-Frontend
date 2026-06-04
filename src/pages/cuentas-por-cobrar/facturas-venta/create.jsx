@@ -464,8 +464,10 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                     )}
                                 </div>
                                 <div className="col-md-6">
+                                    {/* QA CXC Bug 1 (2026-06-03 / IEEE AR-RF-01A): notas max 1000 chars. */}
                                     <InputModal label="Notas" name="notes" type="text"
                                         value={record.notes}
+                                        maxLength={1000}
                                         onChange={(e) => setRecord({ ...record, notes: e.target.value })} />
                                 </div>
                             </div>
@@ -496,9 +498,11 @@ const CreateSalesInvoice = ({ modalRef, modalInstance, dataTableRef, setMessage 
                                         </div>
                                         <div className="row g-3">
                                             <div className="col-md-5">
+                                                {/* QA CXC Bug 1 (2026-06-03 / IEEE AR-RF-01A): descripcion linea max 500. */}
                                                 <InputModal label="Descripcion" name={`desc_${idx}`} type="text"
                                                     value={line.description}
                                                     required
+                                                    maxLength={500}
                                                     error={!line.description?.trim() && fieldErrors[`lines[${idx}]`] ? 'Descripcion requerida' : ''}
                                                     onChange={(e) => updateLine(idx, 'description', e.target.value)} />
                                             </div>

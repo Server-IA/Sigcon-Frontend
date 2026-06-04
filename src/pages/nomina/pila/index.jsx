@@ -13,7 +13,10 @@ const IndexPila = () => {
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState({ show: false, type: '', message: '' });
 
-    const download = async () => {
+    // NOM-5 (2026-06-04): la PILA se puede descargar en CSV, TXT plano y XLSX.
+    const FORMATS = { csv: 'CSV', txt: 'TXT (plano)', xlsx: 'Excel (XLSX)' };
+
+    const download = async (fmt = 'csv') => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
@@ -44,7 +47,7 @@ const IndexPila = () => {
                 return;
             }
 
-            const url = base_url(['api', 'nomina', 'reportes', 'pila'], { year, month });
+            const url = base_url(['api', 'nomina', 'reportes', 'pila'], { year, month, format: fmt });
             const resp = await fetch(url, {
                 headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
@@ -53,14 +56,14 @@ const IndexPila = () => {
             const dlUrl = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = dlUrl;
-            a.download = `pila-${year}-${String(month).padStart(2, '0')}.csv`;
+            a.download = `pila-${year}-${String(month).padStart(2, '0')}.${fmt}`;
             a.click();
             URL.revokeObjectURL(dlUrl);
             setAlert({ show: true, type: 'success',
-                message: `CSV PILA descargado para ${year}-${String(month).padStart(2, '0')}` });
+                message: `PILA ${FORMATS[fmt] || fmt.toUpperCase()} descargado para ${year}-${String(month).padStart(2, '0')}` });
         } catch (err) {
             setAlert({ show: true, type: 'danger',
-                message: err.message || 'No se pudo generar el CSV PILA.' });
+                message: err.message || 'No se pudo generar el archivo PILA.' });
         } finally {
             setLoading(false);
         }
@@ -80,9 +83,9 @@ const IndexPila = () => {
 
                 <div className="alert alert-info mb-3">
                     <i className="ri-information-line me-2"></i>
-                    Genera un archivo CSV compatible con operadores PILA de seguridad social
-                    (Decreto 1772/1994, Ley 100/1993). Solo incluye recibos en estado <b>APROBADO</b> o <b>CERRADO</b>
-                    del periodo seleccionado.
+                    Genera el archivo PILA compatible con operadores de seguridad social
+                    (Decreto 1772/1994, Ley 100/1993) en <b>CSV</b>, <b>texto plano (.txt)</b> o <b>Excel (.xlsx)</b>.
+                    Solo incluye recibos en estado <b>APROBADO</b> o <b>CERRADO</b> del periodo seleccionado.
                 </div>
 
                 <div className="row g-3 mb-3">
@@ -110,10 +113,19 @@ const IndexPila = () => {
                         </select>
                     </div>
                     <div className="col-md-4 d-flex align-items-end">
-                        <button className="btn btn-primary w-100" onClick={download} disabled={loading}>
-                            {loading && <span className="spinner-border spinner-border-sm me-2"></span>}
-                            <i className="ri-download-line me-1"></i> Descargar CSV PILA
-                        </button>
+                        {/* NOM-5: descarga en los 3 formatos */}
+                        <div className="d-flex gap-2 w-100">
+                            <button className="btn btn-primary flex-fill" onClick={() => download('csv')} disabled={loading} title="Descargar CSV">
+                                {loading && <span className="spinner-border spinner-border-sm me-1"></span>}
+                                <i className="ri-file-text-line me-1"></i> CSV
+                            </button>
+                            <button className="btn btn-outline-primary flex-fill" onClick={() => download('txt')} disabled={loading} title="Descargar TXT (archivo plano)">
+                                <i className="ri-file-list-2-line me-1"></i> TXT
+                            </button>
+                            <button className="btn btn-success flex-fill" onClick={() => download('xlsx')} disabled={loading} title="Descargar Excel (XLSX)">
+                                <i className="ri-file-excel-2-line me-1"></i> Excel
+                            </button>
+                        </div>
                     </div>
                 </div>
 

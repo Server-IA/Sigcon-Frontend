@@ -4,6 +4,7 @@ import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import TextareaModal from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText } from '../../../utils/fieldValidations';
 
 const API_UPDATE        = (id) => ['api', 'v1', 'cash', 'update', id];
 const API_UPDATE_STATUS = (id) => ['api', 'v1', 'cash', id, 'status'];
@@ -76,10 +77,13 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
 
     const validate = () => {
         const e = {};
-        if (!cajaUpdated.codigoCaja?.trim())      e.codigoCaja             = 'Campo requerido';
-        if (!cajaUpdated.nombreCaja?.trim())      e.nombreCaja             = 'Campo requerido';
+        // QA BNK (2026-06-03 / doc validaciones BNK-RF-09): longitudes + clase de caracteres.
+        // El código es inmutable (read-only en edición): solo se exige presente.
+        if (!cajaUpdated.codigoCaja?.trim()) e.codigoCaja = 'Campo requerido';
+        e.nombreCaja      = validateText(cajaUpdated.nombreCaja,      { required: true, min: 3, max: 100, patternKey: 'name',        label: 'El nombre de la caja' });
+        e.ubicacionFisica = validateText(cajaUpdated.ubicacionFisica, { required: true, min: 5, max: 200, patternKey: 'address',     label: 'La ubicación física' });
+        e.descripcion     = validateText(cajaUpdated.descripcion,     { min: 0,         max: 500, patternKey: 'descriptionSemicolon', label: 'La descripción' });
         if (!cajaUpdated.tipoCaja)                e.tipoCaja               = 'Campo requerido';
-        if (!cajaUpdated.ubicacionFisica?.trim()) e.ubicacionFisica        = 'Campo requerido';
         if (!cajaUpdated.idResponsablePrincipal)  e.idResponsablePrincipal = 'Campo requerido';
         if (!cajaUpdated.monedaCodigo)            e.monedaCodigo           = 'Campo requerido';
         if (cajaUpdated.saldoInicial === '')      e.saldoInicial           = 'Campo requerido';
@@ -94,25 +98,23 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
             Number(cajaUpdated.limiteMaximo) <= Number(cajaUpdated.limiteMinimo)) e.limiteMaximo = 'Debe ser mayor que el límite mínimo';
         if (cajaUpdated.requiereAutorizacion && cajaUpdated.montoMaxSinAutorizacion === '')
             e.montoMaxSinAutorizacion = 'Requerido cuando se activa autorización';
-        // Validaciones BNK-RF-12: cambio de estado
+        // Validaciones BNK-RF-11: motivo del cambio de estado (min 10, max 500).
         if (statusChanged && (cajaUpdated.estadoCaja === 'INACTIVE' || cajaUpdated.estadoCaja === 'CLOSED')) {
-            if (!cajaUpdated.statusReason?.trim() || cajaUpdated.statusReason.trim().length < 10)
-                e.statusReason = 'Motivo requerido (mínimo 10 caracteres)';
+            e.statusReason = validateText(cajaUpdated.statusReason, { required: true, min: 10, max: 500, patternKey: 'description', label: 'El motivo del cambio de estado' });
         }
         if (statusChanged && cajaUpdated.estadoCaja === 'CLOSED') {
             if (!cajaUpdated.closingDate) e.closingDate = 'Fecha de cierre requerida para CLOSED';
         }
-        // QA Bloque AU+ (2026-05-07) Bug 4: motivo del cambio AHORA es obligatorio
-        // al editar cualquier cosa de la caja (trazabilidad por exigencia de la HU).
-        // Antes era opcional y solo se validaba si el usuario llenaba algo.
-        if (!cajaUpdated.motivoCambio || cajaUpdated.motivoCambio.trim().length < 10) {
-            e.motivoCambio = `El motivo del cambio es obligatorio y debe tener mínimo 10 caracteres (actual: ${(cajaUpdated.motivoCambio || '').trim().length}).`;
-        }
+        // QA Bloque AU+ (2026-05-07) Bug 4: motivo del cambio obligatorio al editar.
+        // QA BNK (2026-06-03 / doc validaciones BNK-RF-09): min 10, max 500 + clase de caracteres.
+        e.motivoCambio = validateText(cajaUpdated.motivoCambio, { required: true, min: 10, max: 500, patternKey: 'description', label: 'El motivo del cambio' });
         // QA Bloque AU (2026-05-06) — Bug 1: principal y suplente no pueden ser iguales.
         if (cajaUpdated.idResponsablePrincipal && cajaUpdated.idResponsableSuplente
             && String(cajaUpdated.idResponsablePrincipal) === String(cajaUpdated.idResponsableSuplente)) {
             e.idResponsableSuplente = 'El suplente debe ser una persona distinta del responsable principal.';
         }
+        // validateText devuelve null cuando el campo es valido -> quitar esas claves.
+        Object.keys(e).forEach(k => { if (e[k] == null) delete e[k]; });
         return e;
     };
 
@@ -239,7 +241,7 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                         required={true} disabled readOnly />
                                 </div>
                                 <div className="col-md-3 mb-3">
-                                    <InputModal id="cu_nombre" label="Nombre de Caja" value={cajaUpdated.nombreCaja}
+                                    <InputModal id="cu_nombre" label="Nombre de Caja" value={cajaUpdated.nombreCaja} maxLength={100}
                                         onChange={e => set('nombreCaja', e.target.value)} error={errors.nombreCaja}
                                         required={true} disabled={readOnly} />
                                 </div>
@@ -256,9 +258,9 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                 {!readOnly && statusChanged && (cajaUpdated.estadoCaja === 'INACTIVE' || cajaUpdated.estadoCaja === 'CLOSED') && (
                                     <div className="col-md-12 mb-3">
                                         <TextareaModal id="cu_status_reason" label="Motivo del cambio de estado"
-                                            value={cajaUpdated.statusReason}
+                                            value={cajaUpdated.statusReason} maxLength={500} rows={3}
                                             onChange={e => set('statusReason', e.target.value)} error={errors.statusReason}
-                                            placeholder="Mínimo 10 caracteres" required={true} />
+                                            placeholder="Entre 10 y 500 caracteres" required={true} />
                                     </div>
                                 )}
                                 {!readOnly && statusChanged && cajaUpdated.estadoCaja === 'CLOSED' && (
@@ -269,9 +271,9 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                     </div>
                                 )}
                                 <div className="col-md-12 mb-3">
-                                    <TextareaModal id="cu_desc" label="Descripción" value={cajaUpdated.descripcion}
+                                    <TextareaModal id="cu_desc" label="Descripción" value={cajaUpdated.descripcion} maxLength={500} rows={3}
                                         onChange={e => set('descripcion', e.target.value)} error={errors.descripcion}
-                                        placeholder="Descripción adicional o notas" disabled={readOnly} />
+                                        placeholder="Descripción adicional o notas (máx 500)" disabled={readOnly} />
                                 </div>
                             </div>
                         )}
@@ -280,7 +282,7 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                         {activeTab === 'ubicacion' && (
                             <div className="row">
                                 <div className="col-md-6 mb-3">
-                                    <InputModal id="cu_ubicacion" label="Ubicación Física" value={cajaUpdated.ubicacionFisica}
+                                    <InputModal id="cu_ubicacion" label="Ubicación Física" value={cajaUpdated.ubicacionFisica} maxLength={200}
                                         onChange={e => set('ubicacionFisica', e.target.value)} error={errors.ubicacionFisica}
                                         required={true} disabled={readOnly} />
                                 </div>
@@ -345,9 +347,12 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                         error={errors.idResponsablePrincipal} required={true} disabled={readOnly} /> */}
                                 </div>
                                 <div className="col-md-6 mb-3">
+                                    {/* QA BNK (2026-06-03): el suplente es OPCIONAL; `clearable` agrega el
+                                        boton "x" de Select2 para deseleccionarlo cuando por error coincide
+                                        con el principal. */}
                                     <InputSelectModal id="cu_resp_s" label="Responsable Suplente" value={cajaUpdated.idResponsableSuplente}
                                         onChange={v => set('idResponsableSuplente', v)} error={errors.idResponsableSuplente}
-                                        options={users} placeholder="Seleccione responsable suplente" disabled={readOnly} />
+                                        options={users} placeholder="Opcional (puede dejarse vacio)" clearable disabled={readOnly} />
                                     {/* <InputModal id="cu_resp_s" label="ID Responsable Suplente" type="number"
                                         value={cajaUpdated.idResponsableSuplente}
                                         onChange={e => set('idResponsableSuplente', e.target.value)}
@@ -488,7 +493,8 @@ export default function UpdatedCaja({ modalRef, modalInstance, caja, setCaja, da
                                 value={cajaUpdated.motivoCambio}
                                 onChange={e => set('motivoCambio', e.target.value)}
                                 error={errors.motivoCambio}
-                                placeholder="Obligatorio para cualquier edicion (minimo 10 caracteres)"
+                                placeholder="Obligatorio para cualquier edicion (entre 10 y 500 caracteres)"
+                                maxLength={500} rows={4}
                                 required />
                         </div>
                     )}

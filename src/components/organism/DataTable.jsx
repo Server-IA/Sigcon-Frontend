@@ -250,10 +250,16 @@ const DataTableReference = ({
             className="form-control"
             placeholder="Filtrar"
             aria-label="Buscar"
+            maxLength={100}
             disabled={!dataTableRef?.current}
             value={search.value}
             onChange={(e) => {
-              setSearch({ ...search, value: e.target.value });
+              // QA BNK (2026-06-03) BNK-RF-04/06/12/13/16/18/25/32/40: la busqueda
+              // global admite max 100 caracteres y rechaza ? * < > | \ (caracteres
+              // no validos para busqueda). El backend ya valida server-side; esto
+              // mejora la UX evitando que el usuario los teclee.
+              const clean = (e.target.value || "").replace(/[?*<>|\\]/g, "").slice(0, 100);
+              setSearch({ ...search, value: clean });
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {

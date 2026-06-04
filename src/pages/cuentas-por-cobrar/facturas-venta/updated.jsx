@@ -115,8 +115,10 @@ const UpdatedSalesInvoice = ({ modalRef, modalInstance, dataTableRef, record, se
                                 error={fieldErrors.resolutionNumber}
                                 onChange={(e) => setForm({ ...form, resolutionNumber: e.target.value })} />
 
+                            {/* QA CXC Bug 1 (2026-06-03 / IEEE AR-RF-01A): notas max 1000. */}
                             <InputModal label="Notas" name="notes" type="text"
                                 value={form.notes}
+                                maxLength={1000}
                                 error={fieldErrors.notes}
                                 onChange={(e) => setForm({ ...form, notes: e.target.value })} />
                         </div>

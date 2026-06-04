@@ -93,7 +93,7 @@ const CreateMenuPermission = ({ modalRef, modalInstance, menuPermission, setMenu
             <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content">
                 <div className="modal-header">
-                    <h4 className="modal-title" id="modalCenterTitle">Editar Menu</h4>
+                    <h4 className="modal-title" id="modalCenterTitle">Crear Permiso</h4>
                     <button
                         type="button"
                         className="btn-close"

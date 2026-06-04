@@ -49,6 +49,11 @@ const SAMPLE_ROWS = [
 
 const IndexInvoicesBulk = () => {
     const [file, setFile] = useState(null);
+    // QA CXP error 1b (Bloque DU, 2026-06-04): leemos el contenido a base64 en el
+    // momento de SELECCIONAR el archivo (no al subir). Asi el reintento usa el
+    // contenido ya cargado en memoria y NUNCA vuelve a leer una referencia File
+    // obsoleta (la causa del error "The requested file could not be read...").
+    const [fileBase64, setFileBase64] = useState('');
     const [delimiter, setDelimiter] = useState(',');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
@@ -73,22 +78,45 @@ const IndexInvoicesBulk = () => {
 
     const handleFileChange = (e) => {
         const f = e.target.files?.[0];
+        // Resetear el value del input INMEDIATAMENTE: asi re-seleccionar el MISMO
+        // archivo (ej. tras corregirlo en Excel) vuelve a disparar onChange y se
+        // re-lee su contenido. La referencia `f` ya esta capturada y sigue leible.
+        if (e.target) e.target.value = '';
         if (!f) {
             setFile(null);
+            setFileBase64('');
             return;
         }
         const valid = ['text/csv', 'text/plain', 'application/vnd.ms-excel'];
         if (!valid.includes(f.type) && !f.name.toLowerCase().match(/\.(csv|txt)$/)) {
+            setFile(null);
+            setFileBase64('');
             setMessage({ type: 'danger', show: true,
                 message: 'Solo se aceptan archivos CSV o TXT.' });
             return;
         }
         if (f.size > 5 * 1024 * 1024) {
+            setFile(null);
+            setFileBase64('');
             setMessage({ type: 'danger', show: true,
                 message: 'El archivo supera el limite de 5MB.' });
             return;
         }
         setFile(f);
+        // Leer el contenido AHORA (referencia mas fresca posible) y guardarlo.
+        const reader = new FileReader();
+        reader.onload = () => {
+            const base64 = String(reader.result).split(',')[1] || '';
+            setFileBase64(base64);
+        };
+        reader.onerror = () => {
+            setFile(null);
+            setFileBase64('');
+            setMessage({ type: 'danger', show: true,
+                message: 'No se pudo leer el archivo. Vuelva a seleccionarlo '
+                    + '(puede haberse movido o modificado en el disco).' });
+        };
+        reader.readAsDataURL(f);
     };
 
     /** Lee el archivo, lo encodea a base64 y lo envia al backend. */
@@ -98,7 +126,7 @@ const IndexInvoicesBulk = () => {
                 message: 'No tiene permiso para realizar la carga masiva de facturas.' });
             return;
         }
-        if (!file) {
+        if (!file || !fileBase64) {
             setMessage({ type: 'warning', show: true, message: 'Seleccione un archivo CSV.' });
             return;
         }
@@ -106,18 +134,8 @@ const IndexInvoicesBulk = () => {
             setLoading(true);
             setResult(null);
 
-            const fileBase64 = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const result = reader.result;
-                    // result = "data:text/csv;base64,XXXX..."
-                    const base64 = String(result).split(',')[1] || '';
-                    resolve(base64);
-                };
-                reader.onerror = () => reject(reader.error);
-                reader.readAsDataURL(file);
-            });
-
+            // El contenido ya se leyo a base64 al seleccionar el archivo (handleFileChange):
+            // no volvemos a tocar la referencia File -> sin error "could not be read".
             const response = await fetchHelper.post(
                 base_url(['api', 'v1', 'invoices', 'bulk', 'store']),
                 { fileBase64, delimiter: delimiter || ',' },
@@ -149,6 +167,7 @@ const IndexInvoicesBulk = () => {
 
     const handleClear = () => {
         setFile(null);
+        setFileBase64('');
         setResult(null);
         const input = document.getElementById('bulk_invoice_file_input');
         if (input) input.value = '';
@@ -226,7 +245,7 @@ const IndexInvoicesBulk = () => {
                     <div className="col-md-3">
                         <button className="btn btn-primary w-100"
                             onClick={handleUpload}
-                            disabled={loading || !file || !canBulk}
+                            disabled={loading || !file || !fileBase64 || !canBulk}
                             title={!canBulk ? 'No tiene permiso para carga masiva de facturas' : ''}>
                             {loading ? 'Procesando...' : 'Importar'}
                         </button>

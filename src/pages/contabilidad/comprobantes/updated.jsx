@@ -3,6 +3,7 @@ import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { sanitizeInteger } from '../../../utils/inputSanitize';
 
 /**
  * Modal de edicion de Comprobante Contable (HU-CG-07A).
@@ -255,9 +256,11 @@ const UpdateComprobante = ({ modalRef, modalInstance, dataTableRef, setMessage, 
                                                         </select>
                                                     </td>
                                                     <td>
-                                                        <input type="text" className="form-control form-control-sm"
+                                                        {/* QA CG (2026-06-03): NIT del tercero (opcional) solo digitos. */}
+                                                        <input type="text" inputMode="numeric" maxLength="20"
+                                                            className="form-control form-control-sm"
                                                             value={l.thirdPartyNit}
-                                                            onChange={e => setLine(i, 'thirdPartyNit', e.target.value)}
+                                                            onChange={e => setLine(i, 'thirdPartyNit', sanitizeInteger(e.target.value))}
                                                             placeholder="Opcional" />
                                                     </td>
                                                     <td>

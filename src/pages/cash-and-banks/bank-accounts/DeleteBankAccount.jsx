@@ -5,6 +5,7 @@ import AlertPage from '../../../components/molecules/AlertPage';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText } from '../../../utils/fieldValidations';
 
 const DeleteBankAccount = ({
     modalRef,
@@ -28,13 +29,10 @@ const DeleteBankAccount = ({
     }, [modalRef]);
 
     const handleDelete = async () => {
-        const trimmed = motivo.trim();
-        if (!trimmed) {
-            setErrors({ motivo: 'El motivo de eliminación es requerido.' });
-            return;
-        }
-        if (trimmed.length < 5) {
-            setErrors({ motivo: `El motivo debe tener al menos 5 caracteres (actual: ${trimmed.length}).` });
+        // QA BNK (2026-06-03 / doc validaciones BNK-RF-03): motivo min 5 / max 300 + clase de caracteres.
+        const motivoErr = validateText(motivo, { required: true, min: 5, max: 300, patternKey: 'description', label: 'El motivo de eliminación' });
+        if (motivoErr) {
+            setErrors({ motivo: motivoErr });
             return;
         }
 
@@ -103,8 +101,9 @@ const DeleteBankAccount = ({
                                 type="text"
                                 id="del_motivo"
                                 label="Motivo de eliminación"
-                                placeholder="Ingrese el motivo de eliminación"
+                                placeholder="Ingrese el motivo (entre 5 y 300 caracteres)"
                                 value={motivo}
+                                maxLength={300}
                                 onChange={e => setMotivo(e.target.value)}
                                 error={errors.motivo}
                                 required

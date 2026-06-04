@@ -3,6 +3,7 @@ import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { sanitizeInteger } from '../../../utils/inputSanitize';
 
 /**
  * Modal para crear un nuevo Comprobante Contable (Journal Entry).
@@ -250,11 +251,14 @@ const CreateComprobante = ({ modalRef, modalInstance, dataTableRef, setMessage }
                                                 />
                                             </td>
                                             <td>
+                                                {/* QA CG (2026-06-03): el NIT del tercero (opcional) solo
+                                                    admite digitos. type=number no es seguro cross-browser
+                                                    (Firefox muestra letras), por eso text + inputMode + sanitize. */}
                                                 <input
-                                                    type="text" maxLength="20"
+                                                    type="text" inputMode="numeric" maxLength="20"
                                                     className="form-control form-control-sm"
                                                     value={l.thirdPartyNit}
-                                                    onChange={e => setLine(idx, 'thirdPartyNit', e.target.value)}
+                                                    onChange={e => setLine(idx, 'thirdPartyNit', sanitizeInteger(e.target.value))}
                                                     placeholder="Opcional"
                                                 />
                                             </td>

@@ -43,11 +43,22 @@ const CreateCommercialData = ({
      * Envia el formulario de creacion al backend.
      */
     const handleCreate = async () => {
+        // TER-RF-11/12 (doc QA v2, 2026-06-03 / Imagen 3): el limite de credito
+        // es OBLIGATORIO, numerico y mayor que cero. Bloquear el guardado en la
+        // UI con mensajes claros antes de enviar al backend.
+        const rawLimit = String(commercialData.limitCredit ?? '').trim();
+        const fe = {};
+        if (rawLimit === '') fe.limitCredit = 'Debe diligenciar el límite de crédito';
+        else if (!/^\d+(\.\d+)?$/.test(rawLimit)) fe.limitCredit = 'El límite de crédito debe ser un valor numérico';
+        else if (Number(rawLimit) <= 0) fe.limitCredit = 'El límite de crédito debe ser mayor que cero';
+        if (!commercialData.currencyId) fe.currencyId = 'Debe seleccionar la moneda asociada al límite de crédito';
+        if (Object.keys(fe).length > 0) { setErrors(fe); return; }
+
         try {
             const payload = {
                 thirdPartyId: Number(commercialData.thirdPartyId),
                 paymentTermId: commercialData.paymentTermId ? Number(commercialData.paymentTermId) : null,
-                limitCredit: commercialData.limitCredit ? Number(commercialData.limitCredit) : null,
+                limitCredit: Number(rawLimit),
                 currencyId: commercialData.currencyId ? Number(commercialData.currencyId) : null,
                 riskLevel: commercialData.riskLevel || null,
                 validityFrom: commercialData.validityFrom || null,
@@ -104,14 +115,15 @@ const CreateCommercialData = ({
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
                                 <InputModal
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
                                     id="cd_limitCredit_create"
                                     label="Limite de Credito"
                                     value={commercialData.limitCredit}
-                                    onChange={(e) => setCommercialData({ ...commercialData, limitCredit: e.target.value })}
+                                    onChange={(e) => setCommercialData({ ...commercialData, limitCredit: e.target.value.replace(/[^\d.]/g, '') })}
                                     error={errors.limitCredit}
                                     placeholder="Ej. 5000000"
-                                    min="0"
+                                    required={true}
                                 />
                             </div>
                         </div>

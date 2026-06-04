@@ -8,13 +8,14 @@ import TextareaModal    from '../../../components/molecules/TextareaModal';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText, validateNumber } from '../../../utils/fieldValidations';
 
 const CHEQUERAS_URL = ['api', 'v1', 'banks', 'checkbooks', 'search'];
 const CREAR_URL     = ['api', 'v1', 'banks', 'checks', 'store'];
 
 const emptyErrors = {
     idChequera: '', numeroCheque: '', beneficiario: '', valorCheque: '',
-    concepto: '', fechaExpedicion: '',
+    concepto: '', fechaExpedicion: '', observaciones: '',
 };
 
 const CreateCheque = ({
@@ -137,18 +138,19 @@ const CreateCheque = ({
             }
         }
 
-        if (!record.beneficiario || record.beneficiario.trim() === '') {
-            errs.beneficiario = 'El beneficiario es obligatorio';
-            valid = false;
-        }
-        if (!record.valorCheque || Number(record.valorCheque) <= 0) {
-            errs.valorCheque = 'El valor debe ser mayor a cero (BNK-ERR-094)';
-            valid = false;
-        }
-        if (!record.concepto || record.concepto.trim() === '') {
-            errs.concepto = 'El concepto es obligatorio';
-            valid = false;
-        }
+        // QA BNK (2026-06-03) BNK-RF-17: beneficiario/concepto min 3 / max 200
+        // (clase payee), valor > 0 hasta 2 decimales, observaciones max 500.
+        const benErr = validateText(record.beneficiario, { required: true, min: 3, max: 200, patternKey: 'payee', label: 'El beneficiario' });
+        if (benErr) { errs.beneficiario = benErr; valid = false; }
+
+        const valErr = validateNumber(record.valorCheque, { required: true, gtZero: true, max: 999999999.99, decimals: 2, label: 'El valor del cheque' });
+        if (valErr) { errs.valorCheque = valErr; valid = false; }
+
+        const conErr = validateText(record.concepto, { required: true, min: 3, max: 200, patternKey: 'payee', label: 'El concepto' });
+        if (conErr) { errs.concepto = conErr; valid = false; }
+
+        const obsErr = validateText(record.observaciones, { required: false, min: 0, max: 500, patternKey: 'description', label: 'Las observaciones' });
+        if (obsErr) { errs.observaciones = obsErr; valid = false; }
         if (!record.fechaExpedicion) {
             errs.fechaExpedicion = 'La fecha de expedición es obligatoria';
             valid = false;
@@ -395,6 +397,7 @@ const CreateCheque = ({
                                     value={record.beneficiario}
                                     onChange={(e) => setRecord(prev => ({ ...prev, beneficiario: e.target.value }))}
                                     error={errors.beneficiario}
+                                    maxLength={200}
                                     required
                                 />
                             </div>
@@ -432,10 +435,11 @@ const CreateCheque = ({
                             <TextareaModal
                                 id="cheque_concepto"
                                 label="Concepto"
-                                placeholder="Descripción del pago"
+                                placeholder="Descripción del pago (entre 3 y 200 caracteres)"
                                 value={record.concepto}
                                 onChange={(e) => setRecord(prev => ({ ...prev, concepto: e.target.value }))}
                                 error={errors.concepto}
+                                maxLength={200}
                                 required
                             />
                         </div>
@@ -445,10 +449,11 @@ const CreateCheque = ({
                             <TextareaModal
                                 id="cheque_observaciones"
                                 label="Observaciones"
-                                placeholder="Observaciones adicionales (opcional)"
+                                placeholder="Observaciones adicionales (opcional, máximo 500)"
                                 value={record.observaciones}
                                 onChange={(e) => setRecord(prev => ({ ...prev, observaciones: e.target.value }))}
-                                error=""
+                                error={errors.observaciones}
+                                maxLength={500}
                             />
                         </div>
 

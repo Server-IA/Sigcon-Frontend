@@ -82,6 +82,15 @@ const IndexApAdvances = () => {
             name: 'amount',
             render: (val) => formatCurrency(val),
         },
+        {
+            // AP-RF-05 E6 (Bloque DV): disponible del anticipo (puede aplicarse a varias facturas).
+            title: 'Disponible',
+            data: 'availableAmount',
+            name: 'availableAmount',
+            searchable: false,
+            render: (val, _t, row) => formatCurrency(val != null ? val
+                : (Number(row?.amount || 0) - Number(row?.appliedAmount || 0))),
+        },
         { title: 'Fecha', data: 'advanceDate', name: 'advanceDate' },
         {
             title: 'Estado',
@@ -102,11 +111,21 @@ const IndexApAdvances = () => {
             data: 'id',
             searchable: false,
             render: (id, _type, row) => {
-                // QA-BLOQUE-AO (2026-04-29): status real del backend es PENDING (no AVAILABLE).
-                const canApply = row?.status === 'PENDING';
-                // QA CXP item 5: "Aplicar a Factura" solo si el rol puede crear anticipos.
+                // AP-RF-05 E6/E7 (Bloque DV):
+                //  - aplicar: mientras haya disponible (PENDING o PARTIALLY_APPLIED).
+                //  - revertir aplicacion: si hay aplicaciones (APPLIED o PARTIALLY_APPLIED).
+                //  - anular: solo PENDING (sin aplicaciones).
+                const available = row?.availableAmount != null
+                    ? Number(row.availableAmount)
+                    : (Number(row?.amount || 0) - Number(row?.appliedAmount || 0));
+                const st = row?.status;
+                const canApply = (st === 'PENDING' || st === 'PARTIALLY_APPLIED') && available > 0;
+                const hasApplications = st === 'APPLIED' || st === 'PARTIALLY_APPLIED';
+                const canVoid = st === 'PENDING';
                 const btns = [`<button class="btn btn-sm btn-label-info action-btn" data-action="view" data-id="${id}" title="Ver"><i class="ri-eye-line"></i></button>`];
-                if (canCreate) btns.push(`<button class="btn btn-sm btn-label-success action-btn" data-action="apply" data-id="${id}" title="Aplicar a Factura" ${!canApply ? 'disabled' : ''}><i class="ri-links-line"></i></button>`);
+                if (canCreate && canApply) btns.push(`<button class="btn btn-sm btn-label-success action-btn" data-action="apply" data-id="${id}" title="Aplicar a Factura"><i class="ri-links-line"></i></button>`);
+                if (canCreate && hasApplications) btns.push(`<button class="btn btn-sm btn-label-warning action-btn" data-action="reverse" data-id="${id}" title="Revertir aplicacion"><i class="ri-arrow-go-back-line"></i></button>`);
+                if (canCreate && canVoid) btns.push(`<button class="btn btn-sm btn-label-danger action-btn" data-action="void" data-id="${id}" title="Anular anticipo"><i class="ri-close-circle-line"></i></button>`);
                 return `<div class="d-flex gap-1">${btns.join('')}</div>`;
             },
         },
@@ -157,24 +176,44 @@ const IndexApAdvances = () => {
         const table = dataTableRef?.current;
         if (!table) return;
 
-        const handler = function () {
+        const handler = async function () {
             const action = $(this).data('action');
             const id = String($(this).data('id'));
             const selected = rows.find((item) => String(item.id) === id);
             if (!selected) return;
 
+            const available = selected.availableAmount != null
+                ? Number(selected.availableAmount)
+                : (Number(selected.amount || 0) - Number(selected.appliedAmount || 0));
+
             if (action === 'view') {
+                // AP-RF-05 E6: el detalle muestra disponible + las aplicaciones a facturas.
+                let appsHtml = '';
+                try {
+                    const res = await fetchHelper.get(base_url(['api', 'v1', 'ap', 'advances', id, 'applications']), {}, 0);
+                    const apps = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
+                    if (apps.length) {
+                        appsHtml = '<hr/><p class="mb-1"><strong>Aplicaciones:</strong></p>'
+                            + '<table class="table table-sm"><thead><tr><th>Factura</th><th>Monto</th><th>Estado</th></tr></thead><tbody>'
+                            + apps.map(a => `<tr><td>${a.invoiceNumber || ('#' + a.invoiceId)}</td><td>${formatCurrency(a.amount)}</td><td>${a.status === 'ACTIVE' ? 'Activa' : 'Revertida'}</td></tr>`).join('')
+                            + '</tbody></table>';
+                    } else {
+                        appsHtml = '<hr/><p class="text-muted mb-0">Sin aplicaciones registradas.</p>';
+                    }
+                } catch (e) { /* tolerante */ }
                 window.Swal.fire({
                     title: `Anticipo #${selected.id}`,
                     html: `
                         <div class="text-start">
                             <p><strong>Proveedor:</strong> ${selected.thirdPartyName || '-'}</p>
                             <p><strong>Monto:</strong> ${formatCurrency(selected.amount)}</p>
+                            <p><strong>Disponible:</strong> ${formatCurrency(available)}</p>
                             <p><strong>Fecha:</strong> ${selected.advanceDate || '-'}</p>
                             <p><strong>Estado:</strong> ${traducir(selected.status)}</p>
                             <p><strong>Notas:</strong> ${selected.notes || '-'}</p>
+                            ${appsHtml}
                         </div>`,
-                    width: 500,
+                    width: 560,
                     confirmButtonText: 'Cerrar',
                 });
                 return;
@@ -182,6 +221,75 @@ const IndexApAdvances = () => {
 
             if (action === 'apply') {
                 openModalApply(selected);
+                return;
+            }
+
+            // AP-RF-05 E7: anular anticipo PENDIENTE (motivo >= 10).
+            if (action === 'void') {
+                const r = await window.Swal.fire({
+                    title: '¿Anular anticipo?',
+                    html: `<p class="text-start mb-2">Se reversará el asiento contable y se liberarán los fondos del anticipo ${formatCurrency(selected.amount)} a <strong>${selected.thirdPartyName || '-'}</strong>.</p>`,
+                    input: 'textarea',
+                    inputLabel: 'Motivo de anulación (mínimo 10 caracteres)',
+                    inputAttributes: { maxlength: 500 },
+                    showCancelButton: true,
+                    confirmButtonText: 'Anular',
+                    cancelButtonText: 'Cancelar',
+                    inputValidator: (v) => (!v || v.trim().length < 10)
+                        ? 'El motivo es obligatorio y debe tener al menos 10 caracteres' : undefined,
+                });
+                if (!r.isConfirmed) return;
+                try {
+                    await fetchHelper.post(base_url(['api', 'v1', 'ap', 'advances', id, 'void']), { reason: r.value }, {}, 1000);
+                    dataTableRef?.current?.ajax.reload(null, false);
+                    setMessage({ type: 'success', show: true, message: 'Anticipo anulado correctamente; fondos liberados.' });
+                } catch (e) {
+                    setMessage({ type: 'danger', show: true, message: e?.msg || 'No se pudo anular el anticipo.' });
+                }
+                return;
+            }
+
+            // AP-RF-05 E7: revertir una aplicacion sobre su factura destino.
+            if (action === 'reverse') {
+                let apps = [];
+                try {
+                    const res = await fetchHelper.get(base_url(['api', 'v1', 'ap', 'advances', id, 'applications']), {}, 0);
+                    const all = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
+                    apps = all.filter(a => a.status === 'ACTIVE');
+                } catch (e) { /* */ }
+                if (!apps.length) {
+                    setMessage({ type: 'warning', show: true, message: 'No hay aplicaciones activas para revertir.' });
+                    return;
+                }
+                const optionsHtml = apps.map(a => `<option value="${a.id}">${a.invoiceNumber || ('Factura #' + a.invoiceId)} — ${formatCurrency(a.amount)}</option>`).join('');
+                const r = await window.Swal.fire({
+                    title: 'Revertir aplicación',
+                    html: `
+                        <div class="text-start">
+                            <label class="form-label">Aplicación a revertir</label>
+                            <select id="rev_app_sel" class="form-select mb-3">${optionsHtml}</select>
+                            <label class="form-label">Motivo (opcional)</label>
+                            <textarea id="rev_app_reason" class="form-control" maxlength="500" rows="3"></textarea>
+                        </div>`,
+                    showCancelButton: true,
+                    confirmButtonText: 'Revertir',
+                    cancelButtonText: 'Cancelar',
+                    preConfirm: () => ({
+                        appId: document.getElementById('rev_app_sel')?.value,
+                        reason: document.getElementById('rev_app_reason')?.value || '',
+                    }),
+                });
+                if (!r.isConfirmed || !r.value?.appId) return;
+                try {
+                    await fetchHelper.post(
+                        base_url(['api', 'v1', 'ap', 'advances', id, 'applications', r.value.appId, 'reverse']),
+                        { reason: r.value.reason }, {}, 1000);
+                    dataTableRef?.current?.ajax.reload(null, false);
+                    setMessage({ type: 'success', show: true, message: 'Aplicación revertida; saldo de la factura restaurado.' });
+                } catch (e) {
+                    setMessage({ type: 'danger', show: true, message: e?.msg || 'No se pudo revertir la aplicación.' });
+                }
+                return;
             }
         };
 
@@ -244,10 +352,10 @@ const IndexApAdvances = () => {
                     { column: 'amount:name', label: 'Monto', type: 'number' },
                     { column: 'advanceDate:name', label: 'Fecha', type: 'date' },
                     { column: 'status:name', label: 'Estado', type: 'select', options: [
-                        { id: 'AVAILABLE', label: 'Disponible' },
-                        { id: 'APPLIED', label: 'Aplicado' },
+                        { id: 'PENDING', label: 'Pendiente' },
                         { id: 'PARTIALLY_APPLIED', label: 'Parcialmente Aplicado' },
-                        { id: 'REVERSED', label: 'Reversado' },
+                        { id: 'APPLIED', label: 'Aplicado' },
+                        { id: 'CANCELLED', label: 'Anulado' },
                     ]},
                 ]}
             />

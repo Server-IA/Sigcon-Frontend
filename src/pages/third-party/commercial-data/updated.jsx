@@ -46,15 +46,21 @@ const UpdatedCommercialData = ({
     const handleUpdate = async () => {
         // HU-TER-12 E2 (2026-04-27): validar motivo del cambio min 30 chars
         const reason = (commercialData.changeReason || '').trim();
-        if (reason.length < 30) {
-            setErrors(prev => ({ ...prev, changeReason: 'Debe ingresar el motivo del cambio (minimo 30 caracteres).' }));
-            return;
-        }
+        // TER-RF-11/12 (doc QA v2, 2026-06-03 / Imagen 3): limite de credito
+        // OBLIGATORIO, numerico y > 0 tambien al actualizar.
+        const rawLimit = String(commercialData.limitCredit ?? '').trim();
+        const fe = {};
+        if (rawLimit === '') fe.limitCredit = 'Debe diligenciar el límite de crédito';
+        else if (!/^\d+(\.\d+)?$/.test(rawLimit)) fe.limitCredit = 'El límite de crédito debe ser un valor numérico';
+        else if (Number(rawLimit) <= 0) fe.limitCredit = 'El límite de crédito debe ser mayor que cero';
+        if (!commercialData.currencyId) fe.currencyId = 'Debe seleccionar la moneda asociada al límite de crédito';
+        if (reason.length < 30) fe.changeReason = 'Debe ingresar el motivo del cambio (minimo 30 caracteres).';
+        if (Object.keys(fe).length > 0) { setErrors(prev => ({ ...prev, ...fe })); return; }
         try {
             const payload = {
                 thirdPartyId: Number(commercialData.thirdPartyId),
                 paymentTermId: commercialData.paymentTermId ? Number(commercialData.paymentTermId) : null,
-                limitCredit: commercialData.limitCredit ? Number(commercialData.limitCredit) : null,
+                limitCredit: Number(rawLimit),
                 currencyId: commercialData.currencyId ? Number(commercialData.currencyId) : null,
                 riskLevel: commercialData.riskLevel || null,
                 validityFrom: commercialData.validityFrom || null,
@@ -117,14 +123,15 @@ const UpdatedCommercialData = ({
                             </div>
                             <div className="col-md-6 mb-4 mt-2">
                                 <InputModal
-                                    type="number"
+                                    type="text"
+                                    inputMode="decimal"
                                     id="cd_limitCredit_update"
                                     label="Limite de Credito"
                                     value={commercialData.limitCredit}
-                                    onChange={(e) => setCommercialData({ ...commercialData, limitCredit: e.target.value })}
+                                    onChange={(e) => setCommercialData({ ...commercialData, limitCredit: e.target.value.replace(/[^\d.]/g, '') })}
                                     error={errors.limitCredit}
                                     placeholder="Ej. 5000000"
-                                    min="0"
+                                    required={true}
                                 />
                             </div>
                         </div>

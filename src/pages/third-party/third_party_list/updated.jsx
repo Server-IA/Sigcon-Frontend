@@ -724,8 +724,9 @@ const UpdatedThirdParty = ({ modalRef, modalInstance, thirdParty, setThirdParty,
                                                     id={`tp_contactPhone_${idx}_update`}
                                                     label="Teléfono"
                                                     value={contact.phone}
-                                                    onChange={(e) => !readOnly && updateContact(idx, 'phone', e.target.value)}
+                                                    onChange={(e) => !readOnly && updateContact(idx, 'phone', e.target.value.replace(/\D+/g, ''))}
                                                     placeholder="Ej. 3001234567"
+                                                    inputMode="numeric"
                                                     disabled={readOnly} readOnly={readOnly}
                                                 />
                                             </div>

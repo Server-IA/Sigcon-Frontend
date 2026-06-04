@@ -3,6 +3,7 @@ import { fetchHelper } from '../../../utils/fetch';
 import { base_url } from '../../../utils/functions';
 import InputModal from '../../../components/molecules/InputModal';
 import InputSelectModal from '../../../components/molecules/inputSelectModal';
+import { validateText, validateNumber, validateDateNotFuture } from '../../../utils/fieldValidations';
 
 /**
  * Modal para crear un nuevo movimiento financiero manual.
@@ -113,6 +114,17 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
             setErrors({ bankAccountId: 'La cuenta bancaria es obligatoria' });
             return;
         }
+
+        // QA BNK (2026-06-03) BNK-RF-33: fecha no futura, monto != 0 hasta 2
+        // decimales en +/-999.999.999,99, descripcion 0/500, referencia 0/100.
+        const next = {};
+        next.movementDate = validateDateNotFuture(form.movementDate, { required: true, label: 'La fecha del movimiento' });
+        next.amount = validateNumber(form.amount, { required: true, min: -999999999.99, max: 999999999.99, decimals: 2, label: 'El monto' });
+        if (!next.amount && Number(form.amount) === 0) next.amount = 'El monto debe ser distinto de cero';
+        next.description = validateText(form.description, { required: false, min: 0, max: 500, patternKey: 'description', label: 'La descripción' });
+        next.externalReference = validateText(form.externalReference, { required: false, min: 0, max: 100, patternKey: 'reference', label: 'La referencia externa' });
+        Object.keys(next).forEach(k => { if (next[k] == null) delete next[k]; });
+        if (Object.keys(next).length > 0) { setErrors(next); return; }
 
         try {
             const url = base_url(['api', 'v1', 'financial-movements', 'store']) + `?bankAccountId=${form.bankAccountId}`;
@@ -255,6 +267,7 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
                                         value={form.description}
                                         onChange={(e) => handleChange('description', e.target.value)}
                                         error={errors.description}
+                                        maxLength={500}
                                     />
                                 </div>
                                 <div className="col-md-6">
@@ -264,6 +277,7 @@ const CreateFinancialMovement = ({ modalRef, modalInstance, dataTableRef, setIte
                                         value={form.externalReference}
                                         onChange={(e) => handleChange('externalReference', e.target.value)}
                                         error={errors.externalReference}
+                                        maxLength={100}
                                     />
                                 </div>
                             </div>

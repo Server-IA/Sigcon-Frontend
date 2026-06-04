@@ -32,6 +32,7 @@ import {
   sanitizeSimpleText,
   sanitizeSwift,
 } from "../../../utils/bankUtils";
+import { validateText, validateNumber } from "../../../utils/fieldValidations";
 
 
 
@@ -68,23 +69,29 @@ const buildBankPayload = (bank) => ({
   status: bank.ESTADO || "ACTIVE",
 });
 
+// QA BNK (2026-06-03) BNK-RF-07: longitud + clase de caracteres por campo
+// segun "VALIDACIONES CAMPOS BNK Y CAJAS". El codigo y el pais son inmutables.
 const validateBankForm = ({ bank, sensitiveChanged }) => {
   const nextErrors = {};
 
   if (!bank.CODIGO_BANCO) nextErrors.CODIGO_BANCO = "Codigo requerido";
-  if (!bank.NIT_BANCO) nextErrors.NIT_BANCO = "NIT requerido";
-  if (!bank.NOMBRE_BANCO) nextErrors.NOMBRE_BANCO = "Nombre requerido";
-  if (!bank.NOMBRE_CORTO) nextErrors.NOMBRE_CORTO = "Nombre corto requerido";
+  nextErrors.NIT_BANCO = validateText(bank.NIT_BANCO, { required: true, min: 5, max: 45, patternKey: "nit", label: "El NIT" });
+  nextErrors.NOMBRE_BANCO = validateText(bank.NOMBRE_BANCO, { required: true, min: 5, max: 100, patternKey: "bankFullName", label: "El nombre del banco" });
+  nextErrors.NOMBRE_CORTO = validateText(bank.NOMBRE_CORTO, { required: true, min: 2, max: 45, patternKey: "bankShortName", label: "El nombre corto" });
   if (!bank.TIPO_BANCO) nextErrors.TIPO_BANCO = "Tipo de banco requerido";
   if (!bank.PAIS_ID) nextErrors.PAIS_ID = "Pais requerido";
-  if (!bank.CODIGO_SWIFT) nextErrors.CODIGO_SWIFT = "Codigo SWIFT requerido";
+  nextErrors.CODIGO_SWIFT = validateText(bank.CODIGO_SWIFT, { required: true, min: 8, max: 30, patternKey: "swift", label: "El código SWIFT" });
+  nextErrors.CODIGO_ACH = validateText(bank.CODIGO_ACH, { required: false, min: 0, max: 45, patternKey: "ach", label: "El código ACH" });
+  nextErrors.DIAS_CONCILIACION = validateNumber(bank.DIAS_CONCILIACION, { required: false, min: 1, max: 31, integer: true, label: "Los días de conciliación" });
   if (!bank.ESTADO) nextErrors.ESTADO = "Estado requerido";
   if (bank.FORMATO_EXTRACTO === "API" && !bank.URL_WEBSERVICE) {
     nextErrors.URL_WEBSERVICE = "URL webservice requerida";
   }
-  if (sensitiveChanged && (!bank.MOTIVO_CAMBIO || bank.MOTIVO_CAMBIO.trim().length < 10)) {
-    nextErrors.MOTIVO_CAMBIO = "Motivo de cambio requerido";
+  if (sensitiveChanged) {
+    nextErrors.MOTIVO_CAMBIO = validateText(bank.MOTIVO_CAMBIO, { required: true, min: 10, max: 500, patternKey: "description", label: "El motivo del cambio" });
   }
+
+  Object.keys(nextErrors).forEach((k) => { if (nextErrors[k] == null) delete nextErrors[k]; });
 
   return {
     isValid: Object.keys(nextErrors).length === 0,
@@ -223,6 +230,7 @@ const UpdatedCashAndBanks = ({
                     setErrors({ ...errors, NIT_BANCO: "" });
                   }}
                   error={errors.NIT_BANCO}
+                  maxLength={45}
                   required={!readOnly}
                   readOnly={readOnly}
                 />
@@ -242,6 +250,7 @@ const UpdatedCashAndBanks = ({
                     setErrors({ ...errors, NOMBRE_BANCO: "" });
                   }}
                   error={errors.NOMBRE_BANCO}
+                  maxLength={100}
                   required={!readOnly}
                   readOnly={readOnly}
                 />
@@ -254,10 +263,11 @@ const UpdatedCashAndBanks = ({
                   value={bank.NOMBRE_CORTO ?? ""}
                   onChange={(e) => {
                     if (readOnly) return;
-                    setBank({ ...bank, NOMBRE_CORTO: sanitizeSimpleText(e.target.value, 50) });
+                    setBank({ ...bank, NOMBRE_CORTO: sanitizeSimpleText(e.target.value, 45) });
                     setErrors({ ...errors, NOMBRE_CORTO: "" });
                   }}
                   error={errors.NOMBRE_CORTO}
+                  maxLength={45}
                   required={!readOnly}
                   readOnly={readOnly}
                 />
@@ -308,6 +318,7 @@ const UpdatedCashAndBanks = ({
                     setErrors({ ...errors, CODIGO_SWIFT: "" });
                   }}
                   error={errors.CODIGO_SWIFT}
+                  maxLength={30}
                   required={!readOnly}
                   readOnly={readOnly}
                 />
@@ -323,10 +334,12 @@ const UpdatedCashAndBanks = ({
                   value={bank.CODIGO_ACH ?? ""}
                   onChange={(e) => {
                     if (readOnly) return;
-                    setBank({ ...bank, CODIGO_ACH: sanitizeUpperAlphaNum(e.target.value) });
+                    // BNK-RF-07: ACH admite alfanumericos y guiones.
+                    setBank({ ...bank, CODIGO_ACH: e.target.value.replace(/[^A-Za-z0-9-]/g, "") });
                     setErrors({ ...errors, CODIGO_ACH: "" });
                   }}
                   error={errors.CODIGO_ACH}
+                  maxLength={45}
                   readOnly={readOnly}
                 />
               </div>
@@ -342,6 +355,8 @@ const UpdatedCashAndBanks = ({
                     setErrors({ ...errors, DIAS_CONCILIACION: "" });
                   }}
                   error={errors.DIAS_CONCILIACION}
+                  min={1}
+                  max={31}
                   readOnly={readOnly}
                 />
               </div>
@@ -423,7 +438,9 @@ const UpdatedCashAndBanks = ({
                       setErrors({ ...errors, MOTIVO_CAMBIO: "" });
                     }}
                     error={errors.MOTIVO_CAMBIO}
-                    placeholder="Describa el motivo del cambio (minimo 10 caracteres)"
+                    placeholder="Describa el motivo del cambio (entre 10 y 500 caracteres)"
+                    maxLength={500}
+                    rows={4}
                     required
                   />
                 </div>

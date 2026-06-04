@@ -4,6 +4,7 @@ import InputSelectModal from '../../../components/molecules/inputSelectModal';
 import TextareaModal from '../../../components/molecules/TextareaModal';
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText } from '../../../utils/fieldValidations';
 
 const API_CREATE = ['api', 'v1', 'cash', 'store'];
 
@@ -66,10 +67,12 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
 
     const validate = () => {
         const e = {};
-        if (!caja.codigoCaja?.trim())          e.codigoCaja             = 'Campo requerido';
-        if (!caja.nombreCaja?.trim())          e.nombreCaja             = 'Campo requerido';
+        // QA BNK (2026-06-03 / doc validaciones BNK-RF-09): longitudes + clase de caracteres.
+        e.codigoCaja      = validateText(caja.codigoCaja,      { required: true, min: 2, max: 20,  patternKey: 'code',        label: 'El código de caja' });
+        e.nombreCaja      = validateText(caja.nombreCaja,      { required: true, min: 3, max: 100, patternKey: 'name',        label: 'El nombre de la caja' });
+        e.ubicacionFisica = validateText(caja.ubicacionFisica, { required: true, min: 5, max: 200, patternKey: 'address',     label: 'La ubicación física' });
+        e.descripcion     = validateText(caja.descripcion,     { min: 0,         max: 500, patternKey: 'descriptionSemicolon', label: 'La descripción' });
         if (!caja.tipoCaja)                    e.tipoCaja               = 'Campo requerido';
-        if (!caja.ubicacionFisica?.trim())     e.ubicacionFisica        = 'Campo requerido';
         if (!caja.idResponsablePrincipal)      e.idResponsablePrincipal = 'Campo requerido';
         if (!caja.monedaCodigo?.trim())        e.monedaCodigo           = 'Campo requerido';
         if (caja.saldoInicial === '')          e.saldoInicial           = 'Campo requerido';
@@ -94,6 +97,8 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
             && String(caja.idResponsablePrincipal) === String(caja.idResponsableSuplente)) {
             e.idResponsableSuplente = 'El suplente debe ser una persona distinta del responsable principal.';
         }
+        // validateText devuelve null cuando el campo es valido -> quitar esas claves.
+        Object.keys(e).forEach(k => { if (e[k] == null) delete e[k]; });
         return e;
     };
 
@@ -197,11 +202,11 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                         {activeTab === 'identificacion' && (
                             <div className="row">
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cc_codigo" label="Código de Caja" value={caja.codigoCaja}
+                                    <InputModal id="cc_codigo" label="Código de Caja" value={caja.codigoCaja} maxLength={20}
                                         onChange={e => set('codigoCaja', e.target.value)} error={errors.codigoCaja} required={true} />
                                 </div>
                                 <div className="col-md-4 mb-3">
-                                    <InputModal id="cc_nombre" label="Nombre de Caja" value={caja.nombreCaja}
+                                    <InputModal id="cc_nombre" label="Nombre de Caja" value={caja.nombreCaja} maxLength={100}
                                         onChange={e => set('nombreCaja', e.target.value)} error={errors.nombreCaja} required={true} />
                                 </div>
                                 <div className="col-md-4 mb-3">
@@ -210,9 +215,9 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                                         options={TIPOS_CAJA} placeholder="Seleccione tipo" required={true} />
                                 </div>
                                 <div className="col-md-12 mb-3">
-                                    <TextareaModal id="cc_desc" label="Descripción" value={caja.descripcion}
+                                    <TextareaModal id="cc_desc" label="Descripción" value={caja.descripcion} maxLength={500} rows={3}
                                         onChange={e => set('descripcion', e.target.value)} error={errors.descripcion}
-                                        placeholder="Descripción adicional o notas (opcional)" />
+                                        placeholder="Descripción adicional o notas (opcional, máx 500)" />
                                 </div>
                             </div>
                         )}
@@ -221,7 +226,7 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                         {activeTab === 'ubicacion' && (
                             <div className="row">
                                 <div className="col-md-6 mb-3">
-                                    <InputModal id="cc_ubicacion" label="Ubicación Física" value={caja.ubicacionFisica}
+                                    <InputModal id="cc_ubicacion" label="Ubicación Física" value={caja.ubicacionFisica} maxLength={200}
                                         onChange={e => set('ubicacionFisica', e.target.value)} error={errors.ubicacionFisica} required={true} />
                                 </div>
                                 {/* QA Bloque AU (2026-05-06) — Bug 5: horario
@@ -288,9 +293,13 @@ export default function CreateCaja({ modalRef, modalInstance, caja, setCaja, dat
                                         error={errors.idResponsablePrincipal} required={true} /> */}
                                 </div>
                                 <div className="col-md-6 mb-3">
+                                    {/* QA BNK (2026-06-03 / IEEE BNK-RF-09): el suplente es OPCIONAL y debe
+                                        diferir del principal. `clearable` habilita el boton "x" de Select2
+                                        para deseleccionarlo (antes no habia forma de limpiarlo si por error
+                                        se elegia el mismo que el principal). */}
                                     <InputSelectModal id="cc_resp_s" label="Responsable Suplente" value={caja.idResponsableSuplente}
                                         onChange={v => set('idResponsableSuplente', v)} error={errors.idResponsableSuplente}
-                                        options={users} placeholder="Seleccione responsable suplente" placeholder="Opcional" />
+                                        options={users} placeholder="Opcional (puede dejarse vacio)" clearable />
                                     {/* <InputModal id="cc_resp_s" label="ID Responsable Suplente" type="number"
                                         value={caja.idResponsableSuplente}
                                         onChange={e => set('idResponsableSuplente', e.target.value)}

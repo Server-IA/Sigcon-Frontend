@@ -54,6 +54,11 @@ const NavHorizontal = () => {
                     // Backend pudo invalidar el token igual; el front debe seguir.
                     console.warn('[logout] backend devolvio error, se cierra sesion localmente:', err);
                 }
+                // BUG-Login (doc QA v2, 2026-06-03): al cerrar sesion EXPLICITAMENTE
+                // se elimina la marca "Recuérdame" para que los campos aparezcan
+                // vacios en el siguiente acceso. (El cierre por expiracion de token
+                // no pasa por aqui, asi que la marca sobrevive en ese caso.)
+                try { localStorage.removeItem('sigcon_remember'); } catch { /* ignore */ }
                 dispatch({ type: "LOGOUT" });
                 window.location.href = base_redirect_path(true);
             }
@@ -243,12 +248,18 @@ const NavHorizontal = () => {
                             {
                                 modulos?.filter((module) => module?.id == 1).map((module) => {
                                     /* Bloque AM ajuste fino (2026-05-03): el admin de
-                                       empresa NO necesita Parametros (es config sistema).
-                                       SI necesita Navegacion y Notificaciones por rol para
-                                       personalizar su empresa. */
+                                       empresa SI necesita Navegacion y Notificaciones por
+                                       rol para personalizar su empresa.
+                                       BUG-PA (doc QA v2, 2026-06-03 / Imagen 1): PARAMETROS
+                                       sale de PLATFORM_ONLY para que el ADMIN_EMPRESA
+                                       tambien vea "Parametros" en el dropdown y cree
+                                       parametros de SU empresa desde la UI (el criterio del
+                                       doc lo exige). El PLATFORM_ADMIN lo sigue viendo (no
+                                       esta en TENANT_ONLY). El acceso lo gatekeepea
+                                       AdminRoute (adminOnly) en map_menu.jsx. */
                                     const PLATFORM_ONLY = new Set([
                                         'MODULOS','MENUS','PERMISSIONS','MENUSPERMISSIONS',
-                                        'PAISES','MUNICIPIOS','PARAMETROS'
+                                        'PAISES','MUNICIPIOS'
                                     ]);
                                     const TENANT_ONLY = new Set([
                                         'IDENTIDAD_VISUAL','REPORT_TYPES','REPORT_TEMPLATES',

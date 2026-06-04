@@ -34,6 +34,7 @@ import {
   formatBankStatus,
   sanitizeSimpleText,
 } from "../../../utils/bankUtils";
+import { validateText } from "../../../utils/fieldValidations";
 
 import CreateCashAndBanks from "./create";
 import UpdatedCashAndBanks from "./updated";
@@ -209,19 +210,26 @@ const IndexCashAndBanks = () => {
   const handleDelete = async () => {
     if (!deleteTarget?.ID_BANCO) return;
 
-    if (deleteConfirmation.trim().toUpperCase() !== "INACTIVAR") {
+    // BNK-RF-08: la confirmacion debe ser EXACTAMENTE "INACTIVAR" (mayusculas,
+    // sin espacios ni otros caracteres).
+    if (deleteConfirmation !== "INACTIVAR") {
       setBankError({
         show: true,
-        message: "BNK-ERR-057: Confirmacion reforzada requerida (escriba INACTIVAR)",
+        message: "BNK-ERR-057: Debe escribir exactamente INACTIVAR para confirmar",
       });
       return;
     }
 
-    if (deleteReason.trim().length < 40) {
-      setBankError({
-        show: true,
-        message: "BNK-ERR-058: Motivo de eliminacion requerido (minimo 40 caracteres)",
-      });
+    // BNK-RF-08: motivo min 40 / max 1000 + clase de caracteres.
+    const motivoErr = validateText(deleteReason, {
+      required: true,
+      min: 40,
+      max: 1000,
+      patternKey: "description",
+      label: "El motivo de desactivación",
+    });
+    if (motivoErr) {
+      setBankError({ show: true, message: `BNK-ERR-058: ${motivoErr}` });
       return;
     }
 
@@ -556,13 +564,14 @@ const IndexCashAndBanks = () => {
               <p className="text-muted mb-2">
                 Esta accion realiza eliminacion logica cambiando el estado a INACTIVE.
               </p>
-              <label className="form-label">Motivo de eliminacion (minimo 40 caracteres)</label>
+              <label className="form-label">Motivo de eliminacion (entre 40 y 1000 caracteres)</label>
               <textarea
                 className="form-control mb-3"
-                rows={4}
+                rows={5}
+                maxLength={1000}
                 value={deleteReason}
-                onChange={(e) => setDeleteReason(sanitizeSimpleText(e.target.value, 500))}
-                placeholder="Describa el motivo"
+                onChange={(e) => setDeleteReason(sanitizeSimpleText(e.target.value, 1000))}
+                placeholder="Describa el motivo (minimo 40 caracteres)"
               />
 
               <label className="form-label">
@@ -571,8 +580,9 @@ const IndexCashAndBanks = () => {
               <input
                 className="form-control"
                 value={deleteConfirmation}
-                onChange={(e) => setDeleteConfirmation(sanitizeSimpleText(e.target.value, 20))}
+                onChange={(e) => setDeleteConfirmation(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
                 placeholder="INACTIVAR"
+                maxLength={20}
               />
             </div>
             <div className="modal-footer justify-content-end">

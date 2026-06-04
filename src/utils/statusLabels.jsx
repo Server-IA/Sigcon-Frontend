@@ -47,6 +47,8 @@ export const LABELS = {
     // --- Motor de matching / pagos ---
     PROPUESTO: 'Propuesto', CONFIRMADO: 'Confirmado', CONFIRMED: 'Confirmado',
     APPLIED: 'Aplicado', AMBIGUO: 'Ambiguo',
+    // AP-RF-05 E6 (Bloque DV): anticipo aplicado parcialmente (queda disponible).
+    PARTIALLY_APPLIED: 'Parcialmente aplicado',
     AUTOMATICO: 'Automatico', MANUAL: 'Manual',
     AUTOMATICO_EXACTO: 'Automatico exacto', AUTOMATICO_ALTO: 'Automatico alto',
     AUTOMATICO_MEDIO: 'Automatico medio',
@@ -109,6 +111,7 @@ const BADGE = {
     APPROVED: 'bg-label-success', APROBADO: 'bg-label-success', APROBADA: 'bg-label-success',
     PAID: 'bg-label-success', POSTED: 'bg-label-success', COMPLETED: 'bg-label-success',
     CONFIRMADO: 'bg-label-success', CONFIRMED: 'bg-label-success', APPLIED: 'bg-label-success',
+    PARTIALLY_APPLIED: 'bg-label-info',
     CONCILIADO: 'bg-label-success', RECEIVED: 'bg-label-success',
     COBRADO: 'bg-label-success', ISSUED: 'bg-label-success', EMITIDA: 'bg-label-success',
     EMITIDO: 'bg-label-success', EJECUTADA: 'bg-label-success', ENABLED: 'bg-label-success',

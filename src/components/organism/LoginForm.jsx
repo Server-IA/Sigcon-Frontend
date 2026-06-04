@@ -17,8 +17,12 @@ const LoginForm = ({
     onSubmit(e);
   };
 
+  // BUG-Login (2026-06-03 / Imagen 2): autoComplete="off" evita que el navegador
+  // precargue/autocomplete credenciales no controladas. La precarga real (campos
+  // con superadmin@gmail.com / 123456) venia de valores hardcodeados en el estado
+  // de LoginPage, ya removidos alli.
   return (
-    <form onSubmit={handleFormSubmit} className="login-form">
+    <form onSubmit={handleFormSubmit} className="login-form" autoComplete="off">
       {error && (
         <ErrorAlert 
           message={error}

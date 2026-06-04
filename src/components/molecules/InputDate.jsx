@@ -62,7 +62,10 @@ const InputDate = ({ id, label, date, onChange, error, placeholder, required, da
                 required={required}
                 ref={dateRef}
             />
-            <label htmlFor={id}>{label}</label>
+            {/* QA CXC Bug 2/3 (2026-06-03): pintar el asterisco de obligatorio
+                cuando `required`, igual que InputModal. Antes el label de fecha
+                NO mostraba asterisco aunque el campo fuera requerido. */}
+            <label htmlFor={id}>{label} {required && <span className="text-danger">*</span>}</label>
             {error && <div className="invalid-feedback">{error}</div>}
         </div>
     )

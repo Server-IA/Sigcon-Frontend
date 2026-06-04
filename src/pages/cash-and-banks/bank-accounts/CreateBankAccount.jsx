@@ -7,6 +7,7 @@ import AlertPage from '../../../components/molecules/AlertPage';
 
 import { base_url } from '../../../utils/functions';
 import { fetchHelper } from '../../../utils/fetch';
+import { validateText } from '../../../utils/fieldValidations';
 
 const CreateBankAccount = ({
     modalRef,
@@ -46,12 +47,17 @@ const CreateBankAccount = ({
     const validateRequired = () => {
         const next = {};
         if (!record.code || !String(record.code).trim()) next.code = 'El código es requerido';
-        if (!record.accountNumber || !String(record.accountNumber).trim()) next.accountNumber = 'El número de cuenta es requerido';
-        if (!record.accountName || !String(record.accountName).trim()) next.accountName = 'El nombre es requerido';
+        // QA BNK (2026-06-03 / doc validaciones BNK-RF-01): longitudes + clase de caracteres.
+        next.accountNumber    = validateText(record.accountNumber,    { required: true, min: 3, max: 50,  patternKey: 'accountNumber', label: 'El número de cuenta' });
+        next.accountName      = validateText(record.accountName,      { required: true, min: 1, max: 100, patternKey: 'name',          label: 'El nombre de cuenta' });
+        next.accountExecutive = validateText(record.accountExecutive, { min: 0,         max: 100, patternKey: 'personName',     label: 'El ejecutivo de cuenta' });
+        next.description      = validateText(record.description,      { min: 0,         max: 500, patternKey: 'description',    label: 'La descripción' });
         if (!record.accountType) next.accountType = 'Seleccione el tipo de cuenta';
         if (!record.bankId || Number(record.bankId) <= 0) next.bankId = 'Seleccione el banco';
         if (!record.currencyTypeId || Number(record.currencyTypeId) <= 0) next.currencyTypeId = 'Seleccione la moneda';
         if (!record.accountingAccountId || Number(record.accountingAccountId) <= 0) next.accountingAccountId = 'Seleccione la cuenta contable';
+        // validateText devuelve null cuando el campo es valido -> quitar esas claves.
+        Object.keys(next).forEach(k => { if (next[k] == null) delete next[k]; });
         return next;
     };
 
@@ -159,8 +165,9 @@ const CreateBankAccount = ({
                             <div className="col-md-4 mb-4">
                                 <InputModal
                                     type="text" id="ba_accountNumber" label="Número de cuenta"
-                                    placeholder="Ej: 1234567890"
+                                    placeholder="Ej: 1234-567890-01"
                                     value={record.accountNumber}
+                                    maxLength={50}
                                     onChange={e => field('accountNumber', e.target.value)}
                                     error={errors.accountNumber} required
                                 />
@@ -168,8 +175,9 @@ const CreateBankAccount = ({
                             <div className="col-md-4 mb-4">
                                 <InputModal
                                     type="text" id="ba_accountName" label="Nombre de cuenta"
-                                    placeholder="Ej: Cuenta Corriente Principal"
+                                    placeholder="Ej: Cuenta Corriente - Principal"
                                     value={record.accountName}
+                                    maxLength={100}
                                     onChange={e => field('accountName', e.target.value)}
                                     error={errors.accountName} required
                                 />
@@ -279,8 +287,9 @@ const CreateBankAccount = ({
                             <div className="col-md-4 mb-4">
                                 <InputModal
                                     type="text" id="ba_accountExecutive" label="Ejecutivo de cuenta"
-                                    placeholder="Ej: Carlos Pérez"
+                                    placeholder="Ej: María Gómez P."
                                     value={record.accountExecutive}
+                                    maxLength={100}
                                     onChange={e => field('accountExecutive', e.target.value)}
                                     error={errors.accountExecutive}
                                 />
@@ -313,6 +322,7 @@ const CreateBankAccount = ({
                                     type="text" id="ba_description" label="Descripción"
                                     placeholder="Descripción opcional de la cuenta"
                                     value={record.description}
+                                    maxLength={500}
                                     onChange={e => field('description', e.target.value)}
                                     error={errors.description}
                                 />

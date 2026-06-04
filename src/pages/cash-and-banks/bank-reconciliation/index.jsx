@@ -43,6 +43,18 @@ const parseOptionalMoney = (raw) => {
 
 const fmtMoney = (v) => (v == null || v === '' ? '—' : formatPrice(Number(v)));
 
+// QA BNK (2026-06-04) Caso 1: en los libros contables de conciliación la columna
+// IMPORTE debe mostrar el SIGNO antes del símbolo de pesos ("-$ 450.000", no
+// "$ -450.000"). Intl.NumberFormat puede colocar el menos después del símbolo según
+// el runtime, así que el signo se compone aquí de forma determinista sobre el valor
+// absoluto.
+const fmtImporte = (v) => {
+    if (v == null || v === '') return '—';
+    const n = Number(v);
+    if (Number.isNaN(n)) return '—';
+    return (n < 0 ? '-' : '') + formatPrice(Math.abs(n));
+};
+
 // Mapea el estado de la sesión rica a etiqueta + color de badge.
 const ESTADO_BADGE = {
     BORRADOR:    { label: 'Borrador',    cls: 'bg-label-warning' },
@@ -103,7 +115,7 @@ const BankReconciliation = () => {
     // ---- Sesión rica (backbone del flujo) ----
     const [sessions, setSessions] = useState([]);
     const [selectedSessionId, setSelectedSessionId] = useState('');
-    const [sessionForm, setSessionForm] = useState({ periodStart: '', periodEnd: '', saldoExtracto: '' });
+    const [sessionForm, setSessionForm] = useState({ periodStart: '', periodEnd: '' });
     const [showNewSession, setShowNewSession] = useState(false);
     const [libros, setLibros] = useState([]);
     const [librosLoading, setLibrosLoading] = useState(false);
@@ -359,10 +371,14 @@ const BankReconciliation = () => {
                 + `</div>`,
             focusConfirm: false, showCancelButton: true, confirmButtonText: 'Solicitar código', cancelButtonText: 'Cancelar',
             preConfirm: () => {
-                const documento = document.getElementById('sw-doc').value;
+                const documento = (document.getElementById('sw-doc').value || '').trim();
                 const tarjetaProfesional = document.getElementById('sw-tp').value;
                 const confirmado = document.getElementById('sw-confirm').checked;
-                if (!documento || !documento.trim()) { window.Swal.showValidationMessage('Ingrese el documento de identidad'); return false; }
+                // QA BNK (2026-06-03) BNK-RF-24/38: documento de identidad min 5 / max 20,
+                // solo digitos y guion (ej: cedula colombiana).
+                if (!documento) { window.Swal.showValidationMessage('Ingrese el documento de identidad'); return false; }
+                if (documento.length < 5 || documento.length > 20) { window.Swal.showValidationMessage('El documento de identidad debe tener entre 5 y 20 caracteres'); return false; }
+                if (!/^[0-9-]+$/.test(documento)) { window.Swal.showValidationMessage('El documento de identidad solo admite dígitos y guion'); return false; }
                 if (!confirmado) { window.Swal.showValidationMessage('Debe marcar la confirmación de aprobación'); return false; }
                 return { documento, tarjetaProfesional };
             },
@@ -440,12 +456,15 @@ const BankReconciliation = () => {
         const { value: f } = await window.Swal.fire({
             title: `Reabrir conciliación — sesión #${sid}`,
             html: `<div class="alert alert-info small text-start mb-2">Se creará una nueva versión <b>REABIERTA</b> conservando la versión anterior intacta. Indique el motivo de la reapertura.</div>`
-                + `<textarea id="sw-mot" class="swal2-textarea" placeholder="Motivo de la reapertura (mínimo 20 caracteres)"></textarea>`
+                + `<textarea id="sw-mot" class="swal2-textarea" maxlength="500" placeholder="Motivo de la reapertura (entre 20 y 500 caracteres)"></textarea>`
                 + `<input id="sw-ev" class="swal2-input" placeholder="Nombre del archivo de evidencia (opcional)">`,
             focusConfirm: false, showCancelButton: true, confirmButtonText: 'Reabrir', cancelButtonText: 'Cancelar',
+            // QA BNK (2026-06-03) BNK-RF-38/46: motivo de reapertura min 20 / max 500 + clase.
             preConfirm: () => {
-                const motivo = document.getElementById('sw-mot').value;
-                if (!motivo || motivo.trim().length < 20) { window.Swal.showValidationMessage('El motivo debe tener al menos 20 caracteres'); return false; }
+                const motivo = (document.getElementById('sw-mot').value || '').trim();
+                if (motivo.length < 20) { window.Swal.showValidationMessage('El motivo debe tener al menos 20 caracteres'); return false; }
+                if (motivo.length > 500) { window.Swal.showValidationMessage('El motivo no puede superar los 500 caracteres'); return false; }
+                if (!/^[\p{L}0-9 .,_-]+$/u.test(motivo)) { window.Swal.showValidationMessage('El motivo contiene caracteres no válidos'); return false; }
                 return { motivo, evidenciaFileName: document.getElementById('sw-ev').value };
             },
         });
@@ -466,7 +485,14 @@ const BankReconciliation = () => {
                 + `<input id="sw-doc" class="swal2-input" placeholder="Documento">`
                 + `<input id="sw-tp" class="swal2-input" placeholder="Tarjeta profesional">`,
             focusConfirm: false, showCancelButton: true, confirmButtonText: 'Aprobar', cancelButtonText: 'Cancelar',
-            preConfirm: () => ({ confirmText: document.getElementById('sw-cf').value, documento: document.getElementById('sw-doc').value, tarjetaProfesional: document.getElementById('sw-tp').value }),
+            // QA BNK (2026-06-03) BNK-RF-24/38: confirmacion exacta "REABRIR" + documento min 5 / max 20 (digitos+guion).
+            preConfirm: () => {
+                const confirmText = (document.getElementById('sw-cf').value || '').trim();
+                const documento = (document.getElementById('sw-doc').value || '').trim();
+                if (confirmText !== 'REABRIR') { window.Swal.showValidationMessage('Escriba exactamente REABRIR para confirmar'); return false; }
+                if (documento.length < 5 || documento.length > 20 || !/^[0-9-]+$/.test(documento)) { window.Swal.showValidationMessage('El documento de identidad debe tener entre 5 y 20 dígitos (admite guion)'); return false; }
+                return { confirmText, documento, tarjetaProfesional: document.getElementById('sw-tp').value };
+            },
         });
         if (!f) return;
         try {
@@ -577,9 +603,17 @@ const BankReconciliation = () => {
             title: 'Motivo del emparejamiento',
             input: 'textarea',
             inputLabel: 'Explique por qué este movimiento corresponde a este comprobante/asiento (mínimo 10 caracteres)',
-            inputPlaceholder: 'Motivo de la conciliación…',
+            inputPlaceholder: 'Motivo de la conciliación (entre 10 y 500 caracteres)…',
+            inputAttributes: { maxlength: 500 },
             showCancelButton: true, confirmButtonText: 'Emparejar', cancelButtonText: 'Cancelar',
-            inputValidator: (v) => (!v || v.trim().length < 10) ? 'El motivo debe tener al menos 10 caracteres' : undefined,
+            // QA BNK (2026-06-03) BNK-RF-23: motivo de emparejamiento min 10 / max 500 + clase.
+            inputValidator: (v) => {
+                const t = (v || '').trim();
+                if (t.length < 10) return 'El motivo debe tener al menos 10 caracteres';
+                if (t.length > 500) return 'El motivo no puede superar los 500 caracteres';
+                if (!/^[\p{L}0-9 .,;_-]+$/u.test(t)) return 'El motivo contiene caracteres no válidos';
+                return undefined;
+            },
         });
         if (!motivo) return;
         try {
@@ -682,7 +716,14 @@ const BankReconciliation = () => {
             inputAttributes: { maxlength: 500 },
             showCancelButton: true, confirmButtonText: 'Desvincular', cancelButtonText: 'Cancelar',
             confirmButtonColor: '#dc3545',
-            inputValidator: (v) => (!v || v.trim().length < 10) ? 'El motivo debe tener al menos 10 caracteres' : undefined,
+            // QA BNK (2026-06-03) BNK-RF-36: motivo del desemparejamiento min 10 / max 500 + clase.
+            inputValidator: (v) => {
+                const t = (v || '').trim();
+                if (t.length < 10) return 'El motivo debe tener al menos 10 caracteres';
+                if (t.length > 500) return 'El motivo no puede superar los 500 caracteres';
+                if (!/^[\p{L}0-9 .,;_-]+$/u.test(t)) return 'El motivo contiene caracteres no válidos';
+                return undefined;
+            },
         });
         if (!motivo) return;
         try {
@@ -754,13 +795,13 @@ const BankReconciliation = () => {
                 periodStart: sessionForm.periodStart,
                 periodEnd: sessionForm.periodEnd,
             };
-            const saldo = parseOptionalMoney(sessionForm.saldoExtracto);
-            if (saldo !== undefined) body.saldoExtracto = saldo;
+            // QA BNK (2026-06-03 / IEEE BNK-RF-37): el saldo del extracto NO es entrada
+            // al crear la sesion; se quito del formulario y ya no se envia.
             const res = await fetchHelper.post(
                 base_url(['api', 'v1', 'banks', 'sesiones-conciliacion']), body, {}, 1000);
             const created = res?.data ?? res;
             notify('Sesión de conciliación creada (borrador)');
-            setSessionForm({ periodStart: '', periodEnd: '', saldoExtracto: '' });
+            setSessionForm({ periodStart: '', periodEnd: '' });
             setShowNewSession(false);
             await loadSessions();
             if (created?.id) { setSelectedSessionId(String(created.id)); setActiveStep(1); }
@@ -794,6 +835,13 @@ const BankReconciliation = () => {
     const importCsv = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        // QA BNK (2026-06-03) BNK-RF-22/34: extension .csv, nombre solo
+        // alfanumericos/puntos/guiones/guion_bajo (sin espacios ni simbolos),
+        // tamano maximo 20 MB.
+        if (!/\.csv$/i.test(file.name)) { notify('El archivo debe tener extensión .csv', 'warning'); e.target.value = ''; return; }
+        const baseName = file.name.replace(/\.csv$/i, '');
+        if (!/^[A-Za-z0-9._-]+$/.test(baseName)) { notify('El nombre del archivo solo admite letras, números, puntos, guiones y guion bajo (sin espacios ni símbolos)', 'warning'); e.target.value = ''; return; }
+        if (file.size > 20 * 1024 * 1024) { notify('El archivo supera el tamaño máximo permitido (20 MB)', 'warning'); e.target.value = ''; return; }
         const fd = new FormData();
         fd.append('file', file);
         // Conciliación I2/I3: la importación se acota al período de la sesión seleccionada.
@@ -915,14 +963,11 @@ const BankReconciliation = () => {
                                         onChange={(value) => setSessionForm((f) => ({ ...f, periodEnd: value }))}
                                     />
                                 </div>
-                                <div className="col-md-2">
-                                    <InputModal
-                                        id="saldoExtracto" label="Saldo extracto (opc.)" placeholder="0"
-                                        value={sessionForm.saldoExtracto}
-                                        onChange={(e) => setSessionForm((f) => ({ ...f, saldoExtracto: e.target.value.replace(',', '.').replace(/[^\d.\-]/g, '') }))}
-                                    />
-                                </div>
-                                <div className="col-md-2">
+                                {/* QA BNK (2026-06-03 / IEEE BNK-RF-37): la casilla "Saldo extracto (opc.)"
+                                    se quito del formulario de crear sesion. Las entradas de RF-37 son
+                                    solo cuenta + fecha inicial + fecha final; el saldo del extracto no
+                                    es una entrada al crear la sesion. */}
+                                <div className="col-md-4">
                                     <button type="button" className="btn btn-success btn-sm w-100" onClick={createSession}>
                                         Crear sesión
                                     </button>
@@ -999,7 +1044,7 @@ const BankReconciliation = () => {
                                                 {libros.map((m) => (
                                                     <tr key={m.id} className={m.bloqueado ? 'text-muted bg-light' : ''}>
                                                         <td>{m.fecha}</td>
-                                                        <td className="text-end text-nowrap">{formatPrice(m.importe)}</td>
+                                                        <td className="text-end text-nowrap">{fmtImporte(m.importe)}</td>
                                                         <td>{m.descripcion || '—'}</td>
                                                         <td><small>{m.referencia || '—'}</small></td>
                                                         <td>
@@ -1049,7 +1094,7 @@ const BankReconciliation = () => {
                                             {extracto.map((m) => (
                                                 <tr key={m.id} className={m.bloqueado ? 'text-muted bg-light' : ''}>
                                                     <td>{m.fecha}</td>
-                                                    <td className="text-end text-nowrap">{formatPrice(m.importe)}</td>
+                                                    <td className="text-end text-nowrap">{fmtImporte(m.importe)}</td>
                                                     <td>{m.descripcion || '—'}{m.referencia ? <small className="text-muted d-block">Ref: {m.referencia}</small> : null}</td>
                                                     <td><small>{m.tipoMovimiento || '—'}</small></td>
                                                     <td className="text-center"><span className={`badge ${confBadge(m.clasificacionConfianza)}`}>{m.clasificacionConfianza ?? '—'}</span></td>
@@ -1394,23 +1439,33 @@ const BankReconciliation = () => {
                                 <div>Herramientas de la conciliación de <strong>esta cuenta</strong> ({accountLabel}): reportes de la sesión, conservación de soportes, reapertura y versionado.</div>
                             </div>
 
-                            {/* Reportes / reapertura / versionado de la sesión seleccionada */}
+                            {/* Reportes / reapertura / versionado de la sesión seleccionada.
+                                QA BNK (2026-06-04) Caso 3: el VERSIONADO (badge de versión, "Reabrir
+                                conciliación" e "Historial de versiones") corresponde a las
+                                conciliaciones CERRADAS/REABIERTAS, no a las que están en BORRADOR /
+                                revisión / aprobadas. Por eso esos elementos solo se muestran cuando la
+                                sesión está cerrada; para el resto se muestran solo los reportes. */}
                             <div className="border rounded p-3 mb-4">
-                                <h6 className="fw-semibold mb-3"><i className="ri-file-chart-line me-1" />Reportes y versionado de la sesión</h6>
+                                <h6 className="fw-semibold mb-3"><i className="ri-file-chart-line me-1" />{['CERRADA', 'REABIERTA'].includes(selectedSession?.estado) ? 'Reportes y versionado de la sesión' : 'Reportes de la sesión'}</h6>
                                 {selectedSession ? (
                                     <>
                                         <div className="mb-2 small text-muted">
                                             Sesión #{selectedSession.id} · {selectedSession.periodStart} → {selectedSession.periodEnd} ·
-                                            <span className={`badge ms-1 ${estadoBadge(selectedSession.estado).cls}`}>{estadoBadge(selectedSession.estado).label}</span> · v{selectedSession.version}
+                                            <span className={`badge ms-1 ${estadoBadge(selectedSession.estado).cls}`}>{estadoBadge(selectedSession.estado).label}</span>
+                                            {['CERRADA', 'REABIERTA'].includes(selectedSession.estado) ? ` · v${selectedSession.version}` : ''}
                                         </div>
                                         <div className="d-flex flex-wrap gap-2">
                                             <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => descargarPdf(selectedSession.id)}><i className="ri-download-line me-1" />Informe PDF</button>
                                             <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verificarFirmas(selectedSession.id)}><i className="ri-shield-check-line me-1" />Verificar firmas</button>
-                                            <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => solicitarReapertura(selectedSession.id)}><i className="ri-folder-open-line me-1" />Reabrir conciliación</button>
-                                            {/* QA 2026-05-28: boton "Solicitudes" ocultado a peticion del usuario (ambas instancias del archivo).
-                                                Para reactivar, descomentar la siguiente linea. */}
-                                            {/* <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verSolicitudes(selectedSession.id)}><i className="ri-list-check-2 me-1" />Solicitudes</button> */}
-                                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verHistorial(selectedSession.id)}><i className="ri-history-line me-1" />Historial de versiones</button>
+                                            {['CERRADA', 'REABIERTA'].includes(selectedSession.estado) && (
+                                                <>
+                                                    <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => solicitarReapertura(selectedSession.id)}><i className="ri-folder-open-line me-1" />Reabrir conciliación</button>
+                                                    {/* QA 2026-05-28: boton "Solicitudes" ocultado a peticion del usuario (ambas instancias del archivo).
+                                                        Para reactivar, descomentar la siguiente linea. */}
+                                                    {/* <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verSolicitudes(selectedSession.id)}><i className="ri-list-check-2 me-1" />Solicitudes</button> */}
+                                                    <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => verHistorial(selectedSession.id)}><i className="ri-history-line me-1" />Historial de versiones</button>
+                                                </>
+                                            )}
                                         </div>
                                     </>
                                 ) : (
